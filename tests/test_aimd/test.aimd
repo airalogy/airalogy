@@ -1,0 +1,66 @@
+# Research Node Example: PCR
+
+## Basic Experiment Information
+
+Experimenter: {{var|user}}
+Experiment Time: {{var|current_time}}
+
+## Experiment Steps
+
+{{step|step_1}} Step 1
+{{step|step_1_1, 2}} This is step 1.1
+{{step|step_1_2, 2, check=True}}
+{{step|step_1_3, 2, check=True, checked_message="The next step is very important, please be careful."}}
+
+{{step|step_2, 1}} PCR reaction.
+
+Test image upload
+{{var|rv_image}}
+
+Test assigner processing image
+{{var|rv_image_flip}}
+
+Enumeration type variable:
+{{var|rv_enum_01}}
+
+The reaction program is as follows:
+
+| Process | Temperature | Time |
+| - | - | - |
+| Pre-denaturation | {{var|pcr_temp_denaturation_pre}} | {{var|pcr_time_denaturation_pre}} |
+| Denaturation | {{var|pcr_temp_denaturation}} | {{var|pcr_time_denaturation}} |
+| Annealing | {{var|pcr_temp_annealing}} | {{var|pcr_time_annealing}} |
+| Extension | {{var|pcr_temp_extension}} | {{var|pcr_time_extension}} |
+| Final extension | {{var|pcr_temp_extension_post}} | {{var|pcr_time_extension_post}} |
+| Hold | {{var|pcr_temp_keep}} | {{var|pcr_time_keep}} |
+
+Repeat the "denaturation-annealing-extension" cycle {{var|pcr_cycle}} times.
+
+{{step|step_3, check=True}} Record data
+{{step|step_3_1, 2}} Record data 1
+{{step|step_3_2, 2}} Record data 2
+
+Test var_table
+{{var_table|pcr_dna_groups, subvars=[pcr_identifier, forward_primer_sequence, reverse_primer_sequence, template_dna_sequence, template_dna_concentration]}}
+
+Test multi-line var_table
+{{var_table|pcr_dna_groups_2,
+subvars=[pcr_identifier, forward_primer_sequence, reverse_primer_sequence, template_dna_sequence, template_dna_concentration]
+}}
+
+Test rv_assigner
+- Here is variable 1: {{var|var_01}}
+- Here is variable 2: {{var|var_02}}
+- Here is variable 3: {{var|var_03}} (var_03 = var_01 + var_02)
+- Here is variable 4: {{var|var_04}} (var_04 = var_01 * 100.0 / var_03)
+- Here is variable 5: {{var|var_05}}
+- Here is variable 6: {{var|var_06}} (var_06 = var_03 - var_05)
+
+Research Checkpoint syntax
+{{check|check_1}} check1
+check 2: {{check|check_2}}
+{{check|check_3, checked_message="Please be careful not to let the condensation on the PCR tube wall drop into the PCR reaction system."}}
+
+## Experiment Results
+
+{{var|pcr_result}}
