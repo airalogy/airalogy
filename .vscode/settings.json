@@ -1,0 +1,18 @@
+{
+    "markdownlint.config": {
+        "MD024": {
+            "siblings_only": true
+        },
+        "MD036": false,
+    },
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true
+    },
+    "cSpell.words": [
+        "airalogy"
+    ],
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda",
+    "python-envs.pythonProjects": [],
+}
