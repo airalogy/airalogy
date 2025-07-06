@@ -1,50 +1,116 @@
-# Airalogy
+# `airalogy`
 
-本项目要求 Python 版本 `>=3.12`
+**The world's first universal framework for standardized data digitization**  
 
-## 安装
+- [Airalogy Platform](https://airalogy.com)
+- [Docs (English)](docs/en/README.md)
+- [Docs (Chinese)](docs/zh/README.md)
+- [Good practices for documentation](docs/README.md)
 
-```shell
+## Key Features
+
+Airalogy lets you create fully custom protocols (**Airalogy Protocols**) for defining how data is collected, validated, and processed.
+
+| Area | Highlights |
+| - | - |
+| **Airalogy Markdown** | Define rich, custom data fields directly in Markdown—variables (`{{var}}`), procedural steps (`{{step}}`), checkpoints (`{{check}}`), and more. |
+| **Model-based Data Validation** | Attach a model to every protocol for strict type checking—supports  datetime, enums, nested models, lists, etc.; and Airalogy-specific *built-in types* (`UserName`, `CurrentTime`, `AiralogyMarkdown`, file IDs, ...). |
+| **Assigner for Auto-Computation** | Use the declarative `@assigner` decorator to compute field values automatically. |
+
+## Requirements
+
+Python ≥ 3.12
+
+## Installation
+
+```bash
 pip install airalogy
 ```
 
-## 开发
+## Quick Start
 
-开发过程中本项目使用到的工具：
+**Create a Protocol**
 
-- [pdm](https://pdm-project.org/en/stable/) 管理项目依赖
-- [hatchling](https://github.com/pypa/hatch) 打包
-- [ruff](https://github.com/astral-sh/ruff) 代码检查和格式化工具
-
-安装 `pdm` (Linux/Mac)
-
-```shell
-curl -sSL https://pdm-project.org/install-pdm.py | python3 -
+```text
+protocol/
+├─ protocol.aimd  # Airalogy Markdown
+├─ model.py       # Optional: Define data validation model
+└─ assigner.py    # Optional: Define auto-computation logic
 ```
 
-安装 `ruff` `hatchling`
+**`protocol.aimd`**
 
-```shell
-pip install -U ruff hatchling
+```aimd
+# Reagent preparation
+Solvent name: {{var|solvent_name}}
+Target solution volume (L): {{var|target_solution_volume}}
+Solute name: {{var|solute_name}}
+Solute molar mass (g/mol): {{var|solute_molar_mass}}
+Target molar concentration (mol/L): {{var|target_molar_concentration}}
+Required solute mass (g): {{var|required_solute_mass}}
 ```
 
-安装项目依赖
+**`model.py`**
 
-```shell
-pdm sync
+```python
+from pydantic import BaseModel, Field
+
+class VarModel(BaseModel):
+    solvent_name: str
+    target_solution_volume: float = Field(gt=0)
+    solute_name: str
+    solute_molar_mass: float = Field(gt=0)
+    target_molar_concentration: float = Field(gt=0)
+    required_solute_mass: float = Field(gt=0)
 ```
 
-## 测试
+**`assigner.py`**
 
-```shell
+```python
+from airalogy.assigner import AssignerBase, AssignerResult, assigner
+
+
+class Assigner(AssignerBase):
+    @assigner(
+        assigned_fields=["required_solute_mass"],
+        dependent_fields=[
+            "target_solution_volume",
+            "solute_molar_mass",
+            "target_molar_concentration",
+        ],
+        mode="auto",
+    )
+    def calculate_required_solute_mass(dependent_fields: dict) -> AssignerResult:
+        target_solution_volume = dependent_fields["target_solution_volume"]
+        solute_molar_mass = dependent_fields["solute_molar_mass"]
+        target_molar_concentration = dependent_fields["target_molar_concentration"]
+
+        required_solute_mass = (
+            target_solution_volume * target_molar_concentration * solute_molar_mass
+        )
+
+        return AssignerResult(
+            assigned_fields={
+                "required_solute_mass": required_solute_mass,
+            },
+        )
+```
+
+## Development Setup
+
+We use [pdm](https://pdm-project.org/en/stable/) for dependency management, [ruff](https://github.com/astral-sh/ruff) for lint/format, and [hatchling](https://github.com/pypa/hatch) for builds.
+
+## Testing
+
+```bash
 pytest
 ```
 
 ## License
 
-Apache-2.0
+Apache 2.0
 
-## 引用
+## Cite This Framework
 
 ```bibtex
 @misc{yang2025airalogyaiempowereduniversaldata,

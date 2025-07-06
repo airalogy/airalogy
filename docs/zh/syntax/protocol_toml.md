@@ -41,7 +41,7 @@ license = "CC-BY-4.0"
 - `description`（可选）：可以写一小段关于该Protocol的简短描述。
 - `authors`（可选）：Protocol的作者。该字段用于定义Protocol的作者信息。其格式为一个列表，列表中的每个元素是一个作者信息，包括作者的：姓名、邮箱（可选）、Airalogy User ID（可选）。
 - `maintainers`（可选）：Protocol的维护者。该字段用于定义Protocol的维护者信息。其格式为一个列表，列表中的每个元素是一个维护者信息，包括维护者的：姓名、邮箱（可选）、Airalogy User ID（可选）。
-- `disciplines`：Protocol的学科领域。该字段用于定义Protocol的学科领域。其格式为一个列表，列表中的每个元素是一个学科领域的名称。至少包含一个学科领域。其中列表中的第一个元素被视为该Protocol的主要学科领域。
+- `disciplines`（可选）：Protocol的学科领域。该字段用于定义Protocol的学科领域。其格式为一个列表，列表中的每个元素是一个学科领域的名称。其中列表中的第一个元素被视为该Protocol的主要学科领域。
 - `keywords`（可选）：Protocol的关键词。该字段用于定义Protocol的关键词。其格式为一个列表，列表中的每个元素是一个关键词。
 - `license`（可选）：Protocol的许可证。由于一个Airalogy Protocol以和代码包一样的形式管理，因此用户可以在`protocol.toml`中定义Protocol的许可证，以帮助用户更好的理解该Protocol的使用限制。该字段的值为一个字符串，表示许可证的名称。如果用户没有手动定义，则默认为空字符串（表示不使用许可证）。
 
