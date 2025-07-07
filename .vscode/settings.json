@@ -16,4 +16,9 @@
     "python-envs.defaultEnvManager": "ms-python.python:conda",
     "python-envs.defaultPackageManager": "ms-python.python:conda",
     "python-envs.pythonProjects": [],
+    "github.copilot.chat.commitMessageGeneration.instructions": [
+        {
+            "text": "Please write the commit message in English."
+        }
+    ]
 }
