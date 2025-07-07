@@ -70,6 +70,38 @@ class Airalogy:
         """
         return base64.b64encode(self.download_file_bytes(file_id)).decode()
 
+    def get_file_url(self, file_id: str) -> str:
+        """
+        Get the download URL for an Airalogy File.
+
+        Parameters:
+            file_id (str): Each file uploaded to Airalogy is assigned a unique ID (Airalogy File ID). The ID has a consistent format: airalogy.id.file.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+        Returns:
+            str: The download URL for the file.
+
+        Example:
+            >>> airalogy_client = Airalogy()
+            >>> file_url = airalogy_client.get_file_url(file_id="airalogy.id.file.12345678-1234-1234-1234-123456789012")
+            >>> print(file_url)  # Returns the actual download URL from the API
+
+        Raises:
+            Exception: If the API call fails to retrieve the file URL.
+        """
+
+        res = httpx.get(
+            f"{self._airalogy_endpoint}/airalogy/get_file_url/{file_id}",
+            headers={"AIRALOGY-API-KEY": self._airalogy_api_key},
+        )
+
+        if res.status_code != 200:
+            raise Exception(
+                f"Failed to get file URL for file_id {file_id}, error: {res.content}"
+            )
+
+        response_data = res.json()
+        return response_data["url"]
+
     def upload_file_bytes(self, file_name: str, file_bytes: bytes) -> dict[str, str]:
         """
         Upload a file in bytes format to the Airalogy service.
