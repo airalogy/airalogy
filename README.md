@@ -1,5 +1,7 @@
 # `airalogy`
 
+[![PyPI version](https://img.shields.io/pypi/v/airalogy.svg)](https://pypi.org/project/airalogy/)
+
 **The world's first universal framework for standardized data digitization**  
 
 - [Airalogy Platform](https://airalogy.com)
