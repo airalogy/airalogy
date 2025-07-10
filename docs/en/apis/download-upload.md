@@ -13,6 +13,8 @@ airalogy.id.file.<UUID>.<ext>
 - `<UUID>`: A standard UUID (e.g. `d2f2cbe4-e566-4a22-8f4e-41246d163947`)
 - `<ext>`: The original file extension (`png`, `pdf`, `mp4`, etc.)
 
+### Download and Upload Files
+
 You can download or upload files as raw **bytes** or **base64** strings.
 
 ```python
@@ -57,6 +59,23 @@ airalogy_client.upload_file_base64(
 
 > **Why the response is an object, not a plain string?**
 > We mirror the OpenAI API design, leaving room to add attributes such as size, upload timestamp, checksum, etc.
+
+### Get a Temporary File URL
+
+When you upload a file to the Airalogy platform, you may need to obtain a temporary URL for that file. Use the following code:
+
+```py
+from airalogy import Airalogy
+airalogy_client = Airalogy()
+
+file_id = "airalogy.id.file.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.yyy"
+# Get a temporary file URL
+file_url: str = airalogy_client.get_file_url(
+    file_id=file_id,
+)
+```
+
+For files uploaded to a **private Airalogy Protocol**, the generated URL remains valid for **24 hours**.
 
 ## Records
 

@@ -10,6 +10,8 @@ airalogy.id.file.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.yyy
 
 其中，`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`是一个UUID，`yyy`是文件的后缀名。
 
+### 下载和上传文件
+
 每个文件都可以以二进制（bytes）或者Base64的形式进行下载和上传。
 
 ```py
@@ -55,6 +57,23 @@ file = airalogy_client.upload_file_base64(
     file_base64 = file_base64
 )
 ```
+
+### 获取临时文件URL
+
+在有的时候当我们在Airalogy平台上上传了一个文件后，我们可能需要获取这个文件的临时URL，可以使用以下代码：
+
+```py
+from airalogy import Airalogy
+airalogy_client = Airalogy()
+
+file_id = "airalogy.id.file.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.yyy"
+# 获取临时文件URL
+file_url: str = airalogy_client.get_file_url(
+    file_id = file_id,
+)
+```
+
+对于上传至Airalogy平台上私有Airalogy Protocol中的文件，该URL的有效期为24小时。
 
 ## Record
 
