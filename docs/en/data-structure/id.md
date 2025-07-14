@@ -109,15 +109,13 @@ Protocols are typically stored with five fields:
 }
 ```
 
-### 4.2 · Internal Protocol ID
+### Internal ID
 
-Internally, each protocol also receives a UUID-based ID:
+At the data layer of the Airalogy Platform, every Airalogy Protocol is automatically assigned an **internal ID** (called the **Protocol UUID**, `protocol_uuid`). This UUID is independent of Lab, Project, or other context—making it globally unique and stable even if the associated Lab or Project changes. Although this ID is not normally shown to end-users, it is used internally for global indexing. Its format is:
 
 ```txt
-airalogy.id.protocol.<uuid>.v.<protocol_version>
+airalogy.id.protocol.<protocol_uuid>.v.<protocol_version>
 ```
-
-This ID is not exposed to end-users.
 
 ## Airalogy Record ID (Global)
 

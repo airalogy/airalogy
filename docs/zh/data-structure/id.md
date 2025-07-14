@@ -126,10 +126,10 @@ airalogy.id.lab.lab_demo.project.project_demo.protocol.protocol_demo.v.0.0.1
 
 ### 内部ID
 
-在Airalogy Platform数据底层，每个Airalogy Protocol也会分配一个内部ID，该ID是一个UUID，不与Lab、Project等信息相关联。该ID通常不会直接展现给用户，但会作为一个内部ID用于全局索引。该ID的格式如下：
+在Airalogy Platform数据底层，每个Airalogy Protocol也会被自动分配一个内部ID（被称为Protocol UUID, `protocol_uuid`），该ID是一个UUID，不与Lab、Project等信息相关联（因此该ID是全局唯一的，并且即使当Lab/Project等信息发生变化时，该ID仍然保持不变）。该ID通常不会直接展现给用户，但会作为一个内部ID用于全局索引。该ID的格式如下：
 
 ```txt
-airalogy.id.protocol.<uuid>.v.<protocol_version>
+airalogy.id.protocol.<protocol_uuid>.v.<protocol_version>
 ```
 
 ## Airalogy Record ID (global)
