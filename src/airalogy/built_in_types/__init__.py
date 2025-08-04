@@ -25,6 +25,7 @@ __all__ = [
     "FileIdPDF",
     "Recommended",
     "IgnoreStr",
+    "ATCG",
 ]
 
 
@@ -52,3 +53,4 @@ from .file import (
 from .aimd import AiralogyMarkdown
 from .user_name import UserName
 from .ignore import IgnoreStr
+from .atcg import ATCG

@@ -135,3 +135,39 @@ class VarModel(BaseModel):
 
 Each of these types renders a language-specific code editor with syntax highlighting.
 The field value is stored as a plain string.
+
+## `ATCG`
+
+`ATCG` is a built-in type for managing DNA sequences. It only allows strings containing the four letters A, T, C, and G. Any other character will raise a validation error.
+
+```python
+from airalogy.built_in_types import ATCG
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
+    dna_seq: ATCG
+```
+
+A field declared as `ATCG` will only accept valid DNA sequences. The type also provides a `.complement()` method to get the complementary DNA strand (A<->T, C<->G):
+
+```python
+seq = ATCG("ATCG")
+print(seq.complement())  # Output: TAGC
+```
+
+The JSON-Schema for a model using `ATCG` will include:
+
+```json
+{
+  "title": "VarModel",
+  "type": "object",
+  "properties": {
+    "dna_seq": {
+      "title": "Dna Seq",
+      "type": "string",
+      "airalogy_built_in_type": "ATCG"
+    }
+  },
+  "required": ["dna_seq"]
+}
+```

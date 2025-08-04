@@ -138,3 +138,39 @@ class VarModel(BaseModel):
 定义为`PyStr`类型的字段，可以在Airalogy平台上自动生成一个Python代码编辑器，用于编辑Python代码。该编辑器会提供语法高亮等功能。该Field的值以`str`形式存储。
 
 其他编程语言相关字符串类型类似。
+
+## ATCG
+
+`ATCG` 是用于管理DNA序列的内置类型。该类型只允许包含A、T、C、G四个字母的字符串，若包含其他字符会抛出校验错误。
+
+```py
+from airalogy.built_in_types import ATCG
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
+    dna_seq: ATCG
+```
+
+定义为 `ATCG` 类型的字段，只能输入有效的DNA序列。该类型还提供 `.complement()` 方法用于获取互补链（A<->T, C<->G）：
+
+```py
+seq = ATCG("ATCG")
+print(seq.complement())  # 输出: TAGC
+```
+
+使用 `ATCG` 的模型生成的JSON Schema如下：
+
+```json
+{
+  "title": "VarModel",
+  "type": "object",
+  "properties": {
+    "dna_seq": {
+      "title": "Dna Seq",
+      "type": "string",
+      "airalogy_built_in_type": "ATCG"
+    }
+  },
+  "required": ["dna_seq"]
+}
+```
