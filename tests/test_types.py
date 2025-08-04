@@ -1,5 +1,5 @@
 import pytest
-from airalogy.types import VersionStr, SnakeStr
+from airalogy.types import VersionStr, SnakeStr, AiralogyProtocolId, AiralogyRecordId
 
 
 class TestVersionStr:
@@ -96,3 +96,111 @@ class TestSnakeStr:
         # Type checking should work (runtime)
         assert isinstance(a_str, SnakeStr)
         assert isinstance(a_str, str)
+
+
+class TestAiralogyProtocolId:
+    """Tests for AiralogyProtocolId type"""
+
+    def test_valid_protocol_ids(self):
+        valid_id = (
+            "airalogy.id.lab.my_lab.project.test_project.protocol.data_analysis.v.1.2.3"
+        )
+        protocol_id = AiralogyProtocolId(valid_id)
+        assert protocol_id == valid_id
+        assert isinstance(protocol_id, AiralogyProtocolId)
+
+        # Test with numbers in components
+        valid_id2 = "airalogy.id.lab.lab1.project.proj2.protocol.proto3.v.0.0.1"
+        protocol_id2 = AiralogyProtocolId(valid_id2)
+        assert protocol_id2 == valid_id2
+
+    def test_create_method(self):
+        protocol_id = AiralogyProtocolId.create(
+            "my_lab", "test_project", "data_analysis", "1.2.3"
+        )
+        expected = (
+            "airalogy.id.lab.my_lab.project.test_project.protocol.data_analysis.v.1.2.3"
+        )
+        assert protocol_id == expected
+
+    def test_invalid_protocol_ids(self):
+        # Wrong format
+        with pytest.raises(ValueError):
+            AiralogyProtocolId("wrong.format")
+
+        # Invalid snake_case components
+        with pytest.raises(ValueError):
+            AiralogyProtocolId.create(
+                "Invalid-Lab", "test_project", "data_analysis", "1.2.3"
+            )
+
+        # Invalid version
+        with pytest.raises(ValueError):
+            AiralogyProtocolId.create(
+                "my_lab", "test_project", "data_analysis", "invalid.version"
+            )
+
+        # Consecutive underscores
+        with pytest.raises(ValueError):
+            AiralogyProtocolId(
+                "airalogy.id.lab.my__lab.project.test_project.protocol.data_analysis.v.1.2.3"
+            )
+
+
+class TestAiralogyRecordId:
+    """Tests for AiralogyRecordId type"""
+
+    def test_valid_record_ids(self):
+        valid_id = "airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.1"
+        record_id = AiralogyRecordId(valid_id)
+        assert record_id == valid_id
+        assert isinstance(record_id, AiralogyRecordId)
+
+        # Test with higher version
+        valid_id2 = "airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.999"
+        record_id2 = AiralogyRecordId(valid_id2)
+        assert record_id2 == valid_id2
+
+    def test_create_method(self):
+        uuid_str = "550e8400-e29b-41d4-a716-446655440000"
+        record_id = AiralogyRecordId.create(uuid_str, 1)
+        expected = f"airalogy.id.lab.{uuid_str}.v.1"
+        assert record_id == expected
+
+        # Test with higher version
+        record_id2 = AiralogyRecordId.create(uuid_str, 999)
+        expected2 = f"airalogy.id.lab.{uuid_str}.v.999"
+        assert record_id2 == expected2
+
+    def test_create_method_invalid(self):
+        """Test invalid inputs to create method"""
+        # Invalid version in create method
+        with pytest.raises(ValueError):
+            AiralogyRecordId.create("550e8400-e29b-41d4-a716-446655440000", 0)
+
+        # Invalid UUID in create method
+        with pytest.raises(ValueError):
+            AiralogyRecordId.create("invalid-uuid", 1)
+
+        # Negative version
+        with pytest.raises(ValueError):
+            AiralogyRecordId.create("550e8400-e29b-41d4-a716-446655440000", -1)
+
+    def test_invalid_record_ids(self):
+        # Wrong format
+        with pytest.raises(ValueError):
+            AiralogyRecordId("wrong.format")
+
+        # Invalid UUID
+        with pytest.raises(ValueError):
+            AiralogyRecordId("airalogy.id.lab.invalid-uuid.v.1")
+
+        # Version < 1
+        with pytest.raises(ValueError):
+            AiralogyRecordId("airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.0")
+
+        # Negative version
+        with pytest.raises(ValueError):
+            AiralogyRecordId(
+                "airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.-1"
+            )
