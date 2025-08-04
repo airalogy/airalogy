@@ -83,7 +83,8 @@ from airalogy.built_in_types import (
     FileIdAIMD, FileIdMD, FileIdTXT,
     FileIdCSV, FileIdJSON,
     FileIdDOCX, FileIdXLSX, FileIdPPTX,
-    FileIdPDF
+    FileIdPDF,
+    FileIdDna  # SnapGene's .dna file type
 )
 from pydantic import BaseModel
 
@@ -104,6 +105,7 @@ class VarModel(BaseModel):
     xlsx_file_id: FileIdXLSX
     pptx_file_id: FileIdPPTX
     pdf_file_id:  FileIdPDF
+    dna_file_id:  FileIdDna
 ```
 
 ## `IgnoreStr`

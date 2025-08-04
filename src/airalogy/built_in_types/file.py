@@ -54,3 +54,5 @@ FileIdXLSX = Annotated[str, FileIdField("xlsx")]
 FileIdPPTX = Annotated[str, FileIdField("pptx")]
 
 FileIdPDF = Annotated[str, FileIdField("pdf")]
+
+FileIdDna = Annotated[str, FileIdField("dna")]

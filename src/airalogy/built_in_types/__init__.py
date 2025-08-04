@@ -1,5 +1,5 @@
 """
-This module contains the built-in types for Research Node. This types could be used to define the Research Node Model.
+This module contains the built-in types for Airalogy. These types could be used to define the Airalogy Protocol Model.
 """
 
 __all__ = [
@@ -23,6 +23,7 @@ __all__ = [
     "FileIdXLSX",
     "FileIdPPTX",
     "FileIdPDF",
+    "FileIdDna",
     "Recommended",
     "IgnoreStr",
     "ATCG",
@@ -49,6 +50,7 @@ from .file import (
     FileIdTXT,
     FileIdWEBP,
     FileIdXLSX,
+    FileIdDna,
 )
 from .aimd import AiralogyMarkdown
 from .user_name import UserName
