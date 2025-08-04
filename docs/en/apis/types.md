@@ -1,11 +1,11 @@
-# Airalogy Built-in Types
+# Airalogy Types
 
 `airalogy` offers a set of built-in data types that the platform understands natively. When you define data fields in an **Airalogy Protocol Model** with these types, the platform can automatically parse them and provide extra features—such as auto-filling values from a user’s profile or rendering specialised UI controls.
 
 ## `UserName`
 
 ```python
-from airalogy.built_in_types import UserName
+from airalogy.types import UserName
 from pydantic import BaseModel
 
 class VarModel(BaseModel):
@@ -14,7 +14,7 @@ class VarModel(BaseModel):
 
 A field declared as `UserName` is automatically populated with the current user’s login name.
 
-All built-in types add an extra JSON-Schema attribute—`airalogy_built_in_type`—to indicate the specific Airalogy type. The schema for the class above is therefore:
+All built-in types add an extra JSON-Schema attribute—`airalogy_type`—to indicate the specific Airalogy type. The schema for the class above is therefore:
 
 ```json
 {
@@ -24,7 +24,7 @@ All built-in types add an extra JSON-Schema attribute—`airalogy_built_in_type`
     "user_name": {
       "title": "User Name",
       "type": "string",
-      "airalogy_built_in_type": "UserName"
+      "airalogy_type": "UserName"
     }
   },
   "required": ["user_name"]
@@ -34,7 +34,7 @@ All built-in types add an extra JSON-Schema attribute—`airalogy_built_in_type`
 ## `CurrentTime`
 
 ```python
-from airalogy.built_in_types import CurrentTime
+from airalogy.types import CurrentTime
 from pydantic import BaseModel
 
 class VarModel(BaseModel):
@@ -46,7 +46,7 @@ class VarModel(BaseModel):
 ## `AiralogyMarkdown`
 
 ```python
-from airalogy.built_in_types import AiralogyMarkdown
+from airalogy.types import AiralogyMarkdown
 from pydantic import BaseModel
 
 class VarModel(BaseModel):
@@ -55,10 +55,49 @@ class VarModel(BaseModel):
 
 Fields of type `AiralogyMarkdown` render a Markdown editor that supports **Airalogy Markdown**, the platform’s own dialect. Using a distinct name avoids confusion with the many Markdown variants and guarantees consistent rendering.
 
+## SnakeStr
+
+```python
+from airalogy.types import SnakeStr
+from pydantic import BaseModel
+class VarModel(BaseModel):
+    snake_case_string: SnakeStr
+```
+
+A field declared as `SnakeStr` requires the string to follow Python's snake_case naming convention. This type is typically used for string fields that need to adhere to specific naming standards.
+
+## VersionStr
+
+```python
+from airalogy.types import VersionStr
+from pydantic import BaseModel
+class VarModel(BaseModel):
+    version: VersionStr
+```
+
+A field declared as `VersionStr` requires the string to conform to Semantic Versioning (SemVer) standards, formatted as `x.y.z`, where `x`, `y`, and `z` are non-negative integers. This type is commonly used to represent version numbers.
+
+## ProtocolId
+
+```python
+from airalogy.types import ProtocolId
+from pydantic import BaseModel
+class Model(BaseModel):
+    protocol_id: ProtocolId
+```
+
+A field declared as `ProtocolId` requires the string to follow the Airalogy Protocol ID format, which is typically used to uniquely identify a Protocol. The format is:
+
+```
+airalogy.id.lab.{lab_id}.project.{project_id}.protocol.{protocol_id}.v.{version}
+```
+
+where `lab_id`, `project_id`, and `protocol_id` must conform to the `SnakeStr` format, and `version` must conform to the `VersionStr` format.
+
 ## `RecordId`
 
 ```python
-from airalogy.built_in_types import RecordId
+from airalogy.types import RecordId
 from pydantic import BaseModel
 
 class VarModel(BaseModel):
@@ -72,7 +111,7 @@ Declaring a field as `RecordId` produces a dropdown that lets the user pick an e
 When a field uses any `FileId*` type, the UI shows an upload button. The uploaded file is stored in Airalogy’s file system and assigned a unique string ID.
 
 ```python
-from airalogy.built_in_types import (
+from airalogy.types import (
     # Images
     FileIdPNG, FileIdJPG, FileIdSVG, FileIdWEBP, FileIdTIFF,
     # Video
@@ -114,7 +153,7 @@ class VarModel(BaseModel):
 Use this for secrets such as API keys that you need at runtime but do not want persisted.
 
 ```python
-from airalogy.built_in_types import IgnoreStr
+from airalogy.types import IgnoreStr
 from pydantic import BaseModel
 
 class VarModel(BaseModel):
@@ -126,7 +165,7 @@ class VarModel(BaseModel):
 ### `PyStr`, `JsStr`, `TsStr`
 
 ```python
-from airalogy.built_in_types import PyStr, JsStr, TsStr
+from airalogy.types import PyStr, JsStr, TsStr
 from pydantic import BaseModel
 
 class VarModel(BaseModel):
@@ -143,7 +182,7 @@ The field value is stored as a plain string.
 `ATCG` is a built-in type for managing DNA sequences. It only allows strings containing the four letters A, T, C, and G. Any other character will raise a validation error.
 
 ```python
-from airalogy.built_in_types import ATCG
+from airalogy.types import ATCG
 from pydantic import BaseModel
 
 class VarModel(BaseModel):
@@ -167,7 +206,7 @@ The JSON-Schema for a model using `ATCG` will include:
     "dna_seq": {
       "title": "Dna Seq",
       "type": "string",
-      "airalogy_built_in_type": "ATCG"
+      "airalogy_type": "ATCG"
     }
   },
   "required": ["dna_seq"]

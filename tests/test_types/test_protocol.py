@@ -1,5 +1,5 @@
 import pytest
-from airalogy.types import VersionStr, SnakeStr, AiralogyProtocolId, AiralogyRecordId
+from airalogy.types import VersionStr, SnakeStr, ProtocolId, RecordId
 
 
 class TestVersionStr:
@@ -34,6 +34,26 @@ class TestVersionStr:
         # Type checking should work (runtime)
         assert isinstance(version, VersionStr)
         assert isinstance(version, str)
+
+    def test_pydantic_integration(self):
+        """Test VersionStr with Pydantic models"""
+        from pydantic import BaseModel, ValidationError
+
+        class Model(BaseModel):
+            version: VersionStr
+
+        # Valid case
+        m = Model(version="1.2.3")
+        assert isinstance(m.version, VersionStr)
+        assert m.version == "1.2.3"
+
+        # Invalid case
+        with pytest.raises(ValidationError):
+            Model(version="invalid.version")
+
+        # Schema should contain airalogy_type
+        schema = Model.model_json_schema()
+        assert schema["properties"]["version"]["airalogy_type"] == "VersionStr"
 
 
 class TestSnakeStr:
@@ -97,25 +117,45 @@ class TestSnakeStr:
         assert isinstance(a_str, SnakeStr)
         assert isinstance(a_str, str)
 
+    def test_pydantic_integration(self):
+        """Test SnakeStr with Pydantic models"""
+        from pydantic import BaseModel, ValidationError
 
-class TestAiralogyProtocolId:
-    """Tests for AiralogyProtocolId type"""
+        class Model(BaseModel):
+            name: SnakeStr
+
+        # Valid case
+        m = Model(name="snake_case")
+        assert isinstance(m.name, SnakeStr)
+        assert m.name == "snake_case"
+
+        # Invalid case
+        with pytest.raises(ValidationError):
+            Model(name="CamelCase")
+
+        # Schema should contain airalogy_type
+        schema = Model.model_json_schema()
+        assert schema["properties"]["name"]["airalogy_type"] == "SnakeStr"
+
+
+class TestProtocolId:
+    """Tests for ProtocolId type"""
 
     def test_valid_protocol_ids(self):
         valid_id = (
             "airalogy.id.lab.my_lab.project.test_project.protocol.data_analysis.v.1.2.3"
         )
-        protocol_id = AiralogyProtocolId(valid_id)
+        protocol_id = ProtocolId(valid_id)
         assert protocol_id == valid_id
-        assert isinstance(protocol_id, AiralogyProtocolId)
+        assert isinstance(protocol_id, ProtocolId)
 
         # Test with numbers in components
         valid_id2 = "airalogy.id.lab.lab1.project.proj2.protocol.proto3.v.0.0.1"
-        protocol_id2 = AiralogyProtocolId(valid_id2)
+        protocol_id2 = ProtocolId(valid_id2)
         assert protocol_id2 == valid_id2
 
     def test_create_method(self):
-        protocol_id = AiralogyProtocolId.create(
+        protocol_id = ProtocolId.create(
             "my_lab", "test_project", "data_analysis", "1.2.3"
         )
         expected = (
@@ -126,49 +166,70 @@ class TestAiralogyProtocolId:
     def test_invalid_protocol_ids(self):
         # Wrong format
         with pytest.raises(ValueError):
-            AiralogyProtocolId("wrong.format")
+            ProtocolId("wrong.format")
 
         # Invalid snake_case components
         with pytest.raises(ValueError):
-            AiralogyProtocolId.create(
-                "Invalid-Lab", "test_project", "data_analysis", "1.2.3"
-            )
+            ProtocolId.create("Invalid-Lab", "test_project", "data_analysis", "1.2.3")
 
         # Invalid version
         with pytest.raises(ValueError):
-            AiralogyProtocolId.create(
+            ProtocolId.create(
                 "my_lab", "test_project", "data_analysis", "invalid.version"
             )
 
         # Consecutive underscores
         with pytest.raises(ValueError):
-            AiralogyProtocolId(
+            ProtocolId(
                 "airalogy.id.lab.my__lab.project.test_project.protocol.data_analysis.v.1.2.3"
             )
 
+    def test_pydantic_integration(self):
+        """Test ProtocolId with Pydantic models"""
+        from pydantic import BaseModel, ValidationError
 
-class TestAiralogyRecordId:
-    """Tests for AiralogyRecordId type"""
+        class Model(BaseModel):
+            protocol_id: ProtocolId
+
+        # Valid case
+        valid_id = (
+            "airalogy.id.lab.my_lab.project.test_project.protocol.data_analysis.v.1.2.3"
+        )
+        m = Model(protocol_id=valid_id)
+        assert isinstance(m.protocol_id, ProtocolId)
+        assert m.protocol_id == valid_id
+
+        # Invalid case
+        with pytest.raises(ValidationError):
+            Model(protocol_id="invalid.protocol.id")
+
+        # Schema should contain airalogy_type
+        schema = Model.model_json_schema()
+        assert schema["properties"]["protocol_id"]["airalogy_type"] == "ProtocolId"
+
+
+class TestRecordId:
+    """Tests for RecordId type"""
 
     def test_valid_record_ids(self):
         valid_id = "airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.1"
-        record_id = AiralogyRecordId(valid_id)
+        record_id = RecordId(valid_id)
         assert record_id == valid_id
-        assert isinstance(record_id, AiralogyRecordId)
+        assert isinstance(record_id, RecordId)
 
         # Test with higher version
         valid_id2 = "airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.999"
-        record_id2 = AiralogyRecordId(valid_id2)
+        record_id2 = RecordId(valid_id2)
         assert record_id2 == valid_id2
 
     def test_create_method(self):
         uuid_str = "550e8400-e29b-41d4-a716-446655440000"
-        record_id = AiralogyRecordId.create(uuid_str, 1)
+        record_id = RecordId.create(uuid_str, 1)
         expected = f"airalogy.id.lab.{uuid_str}.v.1"
         assert record_id == expected
 
         # Test with higher version
-        record_id2 = AiralogyRecordId.create(uuid_str, 999)
+        record_id2 = RecordId.create(uuid_str, 999)
         expected2 = f"airalogy.id.lab.{uuid_str}.v.999"
         assert record_id2 == expected2
 
@@ -176,31 +237,50 @@ class TestAiralogyRecordId:
         """Test invalid inputs to create method"""
         # Invalid version in create method
         with pytest.raises(ValueError):
-            AiralogyRecordId.create("550e8400-e29b-41d4-a716-446655440000", 0)
+            RecordId.create("550e8400-e29b-41d4-a716-446655440000", 0)
 
         # Invalid UUID in create method
         with pytest.raises(ValueError):
-            AiralogyRecordId.create("invalid-uuid", 1)
+            RecordId.create("invalid-uuid", 1)
 
         # Negative version
         with pytest.raises(ValueError):
-            AiralogyRecordId.create("550e8400-e29b-41d4-a716-446655440000", -1)
+            RecordId.create("550e8400-e29b-41d4-a716-446655440000", -1)
 
     def test_invalid_record_ids(self):
         # Wrong format
         with pytest.raises(ValueError):
-            AiralogyRecordId("wrong.format")
+            RecordId("wrong.format")
 
         # Invalid UUID
         with pytest.raises(ValueError):
-            AiralogyRecordId("airalogy.id.lab.invalid-uuid.v.1")
+            RecordId("airalogy.id.lab.invalid-uuid.v.1")
 
         # Version < 1
         with pytest.raises(ValueError):
-            AiralogyRecordId("airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.0")
+            RecordId("airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.0")
 
         # Negative version
         with pytest.raises(ValueError):
-            AiralogyRecordId(
-                "airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.-1"
-            )
+            RecordId("airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.-1")
+
+    def test_pydantic_integration(self):
+        """Test RecordId with Pydantic models"""
+        from pydantic import BaseModel, ValidationError
+
+        class Model(BaseModel):
+            record_id: RecordId
+
+        # Valid case
+        valid_id = "airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.1"
+        m = Model(record_id=valid_id)
+        assert isinstance(m.record_id, RecordId)
+        assert m.record_id == valid_id
+
+        # Invalid case
+        with pytest.raises(ValidationError):
+            Model(record_id="invalid.record.id")
+
+        # Schema should contain airalogy_type
+        schema = Model.model_json_schema()
+        assert schema["properties"]["record_id"]["airalogy_type"] == "RecordId"

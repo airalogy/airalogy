@@ -48,8 +48,8 @@ class ATCG(str):
     @classmethod
     def __get_pydantic_json_schema__(cls, core_schema, handler):
         """
-        Modify the generated JSON Schema to add the airalogy_built_in_type property.
+        Modify the generated JSON Schema to add the airalogy_type property.
         """
         json_schema = handler(core_schema)
-        json_schema.update({"airalogy_built_in_type": "ATCG"})
+        json_schema.update({"airalogy_type": "ATCG"})
         return json_schema

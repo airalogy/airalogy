@@ -17,7 +17,7 @@ def FileIdField(file_extension: str):
             f"airalogy.id.file.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.{file_extension.lower()}"
         ],
         json_schema_extra={
-            "airalogy_built_in_type": "FileId",
+            "airalogy_type": "FileId",
             "file_extension": file_extension.lower(),
         },
     )
@@ -54,3 +54,5 @@ FileIdXLSX = Annotated[str, FileIdField("xlsx")]
 FileIdPPTX = Annotated[str, FileIdField("pptx")]
 
 FileIdPDF = Annotated[str, FileIdField("pdf")]
+
+FileIdDNA = Annotated[str, FileIdField("dna")]

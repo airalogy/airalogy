@@ -1,5 +1,5 @@
 import pytest
-from airalogy.built_in_types import ATCG
+from airalogy.types import ATCG
 
 
 def test_valid_atcg():
@@ -42,4 +42,4 @@ def test_pydantic_model_with_atcg():
 
     # Schema should contain airalogy_built_in_type
     schema = DNA.model_json_schema()
-    assert schema["properties"]["seq"]["airalogy_built_in_type"] == "ATCG"
+    assert schema["properties"]["seq"]["airalogy_type"] == "ATCG"
