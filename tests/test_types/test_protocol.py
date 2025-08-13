@@ -54,6 +54,7 @@ class TestVersionStr:
         # Schema should contain airalogy_type
         schema = Model.model_json_schema()
         assert schema["properties"]["version"]["airalogy_type"] == "VersionStr"
+        assert schema["properties"]["version"]["pattern"] == r"^\d+\.\d+\.\d+$"
 
 
 class TestSnakeStr:
@@ -212,25 +213,25 @@ class TestRecordId:
     """Tests for RecordId type"""
 
     def test_valid_record_ids(self):
-        valid_id = "airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.1"
+        valid_id = "airalogy.id.record.550e8400-e29b-41d4-a716-446655440000.v.1"
         record_id = RecordId(valid_id)
         assert record_id == valid_id
         assert isinstance(record_id, RecordId)
 
         # Test with higher version
-        valid_id2 = "airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.999"
+        valid_id2 = "airalogy.id.record.550e8400-e29b-41d4-a716-446655440000.v.999"
         record_id2 = RecordId(valid_id2)
         assert record_id2 == valid_id2
 
     def test_create_method(self):
         uuid_str = "550e8400-e29b-41d4-a716-446655440000"
         record_id = RecordId.create(uuid_str, 1)
-        expected = f"airalogy.id.lab.{uuid_str}.v.1"
+        expected = f"airalogy.id.record.{uuid_str}.v.1"
         assert record_id == expected
 
         # Test with higher version
         record_id2 = RecordId.create(uuid_str, 999)
-        expected2 = f"airalogy.id.lab.{uuid_str}.v.999"
+        expected2 = f"airalogy.id.record.{uuid_str}.v.999"
         assert record_id2 == expected2
 
     def test_create_method_invalid(self):
@@ -254,15 +255,15 @@ class TestRecordId:
 
         # Invalid UUID
         with pytest.raises(ValueError):
-            RecordId("airalogy.id.lab.invalid-uuid.v.1")
+            RecordId("airalogy.id.record.invalid-uuid.v.1")
 
         # Version < 1
         with pytest.raises(ValueError):
-            RecordId("airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.0")
+            RecordId("airalogy.id.record.550e8400-e29b-41d4-a716-446655440000.v.0")
 
         # Negative version
         with pytest.raises(ValueError):
-            RecordId("airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.-1")
+            RecordId("airalogy.id.record.550e8400-e29b-41d4-a716-446655440000.v.-1")
 
     def test_pydantic_integration(self):
         """Test RecordId with Pydantic models"""
@@ -272,7 +273,7 @@ class TestRecordId:
             record_id: RecordId
 
         # Valid case
-        valid_id = "airalogy.id.lab.550e8400-e29b-41d4-a716-446655440000.v.1"
+        valid_id = "airalogy.id.record.550e8400-e29b-41d4-a716-446655440000.v.1"
         m = Model(record_id=valid_id)
         assert isinstance(m.record_id, RecordId)
         assert m.record_id == valid_id
@@ -284,3 +285,7 @@ class TestRecordId:
         # Schema should contain airalogy_type
         schema = Model.model_json_schema()
         assert schema["properties"]["record_id"]["airalogy_type"] == "RecordId"
+        assert (
+            schema["properties"]["record_id"]["pattern"]
+            == r"^airalogy\.id\.record\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.v\.(\d+)$"
+        )

@@ -3,6 +3,7 @@ __all__ = ["VersionStr", "SnakeStr", "ProtocolId", "RecordId"]
 
 import re
 from uuid import UUID
+from pydantic_core import core_schema
 
 
 class VersionStr(str):
@@ -22,7 +23,6 @@ class VersionStr(str):
         """
         Make Pydantic treat VersionStr as a string type for validation and schema generation.
         """
-        from pydantic_core import core_schema
 
         def validate(value):
             return cls(value)
@@ -34,37 +34,32 @@ class VersionStr(str):
         )
 
     @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema, handler):
+    def __get_pydantic_json_schema__(cls, schema, handler):
         """
         Modify the generated JSON Schema to add the airalogy_type property.
         """
-        json_schema = handler(core_schema)
-        json_schema.update({"airalogy_type": "VersionStr"})
+        json_schema = handler(schema)
+        json_schema.update(
+            {"airalogy_type": "VersionStr", "pattern": cls._PATTERN.pattern}
+        )
         return json_schema
-
-
-_SNAKE = re.compile(
-    r"^[a-z]([a-z\d_]*[a-z\d])?$"
-)  # starts with letter, ends with letter or digit (not underscore), no consecutive underscores checked separately
-_NO_CONSECUTIVE_UNDERSCORES = re.compile(r"__")  # check for consecutive underscores
 
 
 class SnakeStr(str):
     """Snake case string validation (e.g., my_variable_name)"""
 
+    _PATTERN = re.compile(r"^(?!.*__)[a-z](?:[a-z\d_]*[a-z\d])?$")
+
     def __new__(cls, value: str) -> "SnakeStr":
         if not isinstance(value, str):
             raise TypeError("Snake case string must be a string.")
-        if not _SNAKE.fullmatch(value) or _NO_CONSECUTIVE_UNDERSCORES.search(value):
+        if not cls._PATTERN.fullmatch(value):
             raise ValueError(f"{value!r} is not valid snake_case")
         return super().__new__(cls, value)
 
     @classmethod
     def __get_pydantic_core_schema__(cls, _source_type, _handler):
-        """
-        Make Pydantic treat SnakeStr as a string type for validation and schema generation.
-        """
-        from pydantic_core import core_schema
+        """Make Pydantic treat SnakeStr as a string type for validation and schema generation."""
 
         def validate(value):
             return cls(value)
@@ -76,12 +71,12 @@ class SnakeStr(str):
         )
 
     @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema, handler):
-        """
-        Modify the generated JSON Schema to add the airalogy_type property.
-        """
-        json_schema = handler(core_schema)
-        json_schema.update({"airalogy_type": "SnakeStr"})
+    def __get_pydantic_json_schema__(cls, schema, handler):
+        """Modify the generated JSON Schema to add the airalogy_type property."""
+        json_schema = handler(schema)
+        json_schema.update(
+            {"airalogy_type": "SnakeStr", "pattern": cls._PATTERN.pattern}
+        )
         return json_schema
 
 
@@ -131,7 +126,6 @@ class ProtocolId(str):
         """
         Make Pydantic treat ProtocolId as a string type for validation and schema generation.
         """
-        from pydantic_core import core_schema
 
         def validate(value):
             return cls(value)
@@ -143,20 +137,22 @@ class ProtocolId(str):
         )
 
     @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema, handler):
+    def __get_pydantic_json_schema__(cls, schema, handler):
         """
         Modify the generated JSON Schema to add the airalogy_type property.
         """
-        json_schema = handler(core_schema)
-        json_schema.update({"airalogy_type": "ProtocolId"})
+        json_schema = handler(schema)
+        json_schema.update(
+            {"airalogy_type": "ProtocolId"}
+        )  # Here, we do not add the full pattern of ProtocolId into the JSON schema, because it is too complex and hard to understand at a glance. However, we include the basic structure for clarity.
         return json_schema
 
 
 class RecordId(str):
-    """Airalogy Record ID format: airalogy.id.lab.<UUID>.v.<positive_integer>"""
+    """Airalogy Record ID format: airalogy.id.record.<UUID>.v.<positive_integer>"""
 
     _PATTERN = re.compile(
-        r"^airalogy\.id\.lab\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.v\.(\d+)$"
+        r"^airalogy\.id\.record\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.v\.(\d+)$"
     )
 
     def __new__(cls, value: str) -> "RecordId":
@@ -182,16 +178,16 @@ class RecordId(str):
         return super().__new__(cls, value)
 
     @classmethod
-    def create(cls, lab_uuid: str, version: int) -> "RecordId":
+    def create(cls, record_uuid: str, version: int) -> "RecordId":
         """Create AiralogyRecordId from components with validation"""
         # Validate UUID
-        uuid_obj = UUID(lab_uuid)
+        uuid_obj = UUID(record_uuid)
 
         # Validate version
         if version < 1:
             raise ValueError(f"Version must be >= 1, got {version}")
 
-        value = f"airalogy.id.lab.{uuid_obj}.v.{version}"
+        value = f"airalogy.id.record.{uuid_obj}.v.{version}"
         return cls(value)
 
     @classmethod
@@ -199,7 +195,6 @@ class RecordId(str):
         """
         Make Pydantic treat RecordId as a string type for validation and schema generation.
         """
-        from pydantic_core import core_schema
 
         def validate(value):
             return cls(value)
@@ -211,10 +206,12 @@ class RecordId(str):
         )
 
     @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema, handler):
+    def __get_pydantic_json_schema__(cls, schema, handler):
         """
         Modify the generated JSON Schema to add the airalogy_type property.
         """
-        json_schema = handler(core_schema)
-        json_schema.update({"airalogy_type": "RecordId"})
+        json_schema = handler(schema)
+        json_schema.update(
+            {"airalogy_type": "RecordId", "pattern": cls._PATTERN.pattern}
+        )
         return json_schema

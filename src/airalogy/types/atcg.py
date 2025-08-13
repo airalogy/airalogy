@@ -10,8 +10,7 @@ class ATCG(str):
     Only allows strings containing the four letters A, T, C, G.
     """
 
-    _pattern = r"^[ATCG]*$"
-    _pattern_compiled = re.compile(_pattern)
+    _PATTERN = re.compile(r"^[ATCG]*$")
 
     def __new__(cls, value: str):
         """
@@ -19,7 +18,7 @@ class ATCG(str):
         """
         if not isinstance(value, str):
             raise TypeError("ATCG sequence must be a string.")
-        if not cls._pattern_compiled.fullmatch(value):
+        if not cls._PATTERN.fullmatch(value):
             raise ValueError("ATCG sequence can only contain the letters A, T, C, G.")
         return str.__new__(cls, value)
 
@@ -55,7 +54,7 @@ class ATCG(str):
         json_schema.update(
             {
                 "airalogy_type": "ATCG",
-                "pattern": cls._pattern,
+                "pattern": cls._PATTERN.pattern,
             }
         )
         return json_schema
