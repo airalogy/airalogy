@@ -209,7 +209,8 @@ print(seq.complement())  # 输出: TAGC
     "dna_seq": {
       "title": "Dna Seq",
       "type": "string",
-      "airalogy_type": "ATCG"
+      "airalogy_type": "ATCG",
+      "pattern": "^[ATCG]*$"
     }
   },
   "required": ["dna_seq"]

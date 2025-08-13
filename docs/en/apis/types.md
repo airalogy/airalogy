@@ -206,7 +206,8 @@ The JSON-Schema for a model using `ATCG` will include:
     "dna_seq": {
       "title": "Dna Seq",
       "type": "string",
-      "airalogy_type": "ATCG"
+      "airalogy_type": "ATCG",
+      "pattern": "^[ATCG]*$"
     }
   },
   "required": ["dna_seq"]
