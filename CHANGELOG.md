@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.0.6 (20250821)
+
+- Enhancement: Add support for dumping `airalogy.types` pattern to JSON schema.
+
 ## 0.0.5 (20250804)
 
 ### 1. Refactoring
