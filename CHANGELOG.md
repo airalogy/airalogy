@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.0.7 (20250827)
+
+- Fix: Removed the `CurrentTime` pattern that was causing pydantic to fail validation.
+
 ## 0.0.6 (20250821)
 
 - Enhancement: Add support for dumping `airalogy.types` pattern to JSON schema.
