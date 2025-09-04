@@ -2,7 +2,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/airalogy.svg)](https://pypi.org/project/airalogy/)
 
-**The world's first universal framework for standardized data digitization**  
+**The world's first universal framework for data digitization**  
 
 - [Airalogy Platform](https://airalogy.com)
 - [Docs (English)](docs/en/README.md)
