@@ -21,7 +21,7 @@ Airalogy lets you create fully custom protocols (**Airalogy Protocols**) for def
 
 ## Requirements
 
-Python ≥ 3.12
+Python ≥ 3.13
 
 ## Installation
 

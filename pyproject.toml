@@ -4,12 +4,12 @@ version = "0.0.7"
 description = "The world's first universal framework for standardized data digitization"
 readme = "README.md"
 authors = [{ name = "Airalogy Team" }]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = ["pydantic == 2.11.5", "httpx == 0.28.1", "isodate == 0.7.2"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 license = { text = "Apache-2.0" }
