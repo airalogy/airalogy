@@ -100,12 +100,17 @@ class Assigner(AssignerBase):
 
 ## Development Setup
 
-We use [pdm](https://pdm-project.org/en/stable/) for dependency management, [ruff](https://github.com/astral-sh/ruff) for lint/format, and [hatchling](https://github.com/pypa/hatch) for builds.
+We use [uv](https://docs.astral.sh/uv/) for environment management and build, [ruff](https://docs.astral.sh/ruff/) for lint/format.
+
+setup project environment:
+```bash
+uv sync
+```
 
 ## Testing
 
 ```bash
-pytest
+uv run pytest
 ```
 
 ## License

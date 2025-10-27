@@ -20,13 +20,10 @@ Documentation = "https://github.com/airalogy/airalogy#readme"
 Source = "https://github.com/airalogy/airalogy"
 
 
+[dependency-groups]
+dev = ["pytest==8.4.2"]
+
+
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-
-[tool.pdm]
-distribution = true
-
-[tool.pdm.dev-dependencies]
-test = ["pytest==8.3.5"]
+requires = ["uv_build>=0.9.5,<0.10.0"]
+build-backend = "uv_build"
