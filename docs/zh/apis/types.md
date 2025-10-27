@@ -32,7 +32,9 @@ class VarModel(BaseModel):
 }
 ```
 
-## CurrentTime
+## Current
+
+### CurrentTime
 
 ```py
 from airalogy.types import CurrentTime
@@ -43,6 +45,30 @@ class VarModel(BaseModel):
 ```
 
 定义为`CurrentTime`类型的字段，可以在Airalogy平台上自动赋值为当前时间，时间所属时区为用户浏览器的时区。
+
+### CurrentProtocolId
+
+```py
+from airalogy.types import CurrentProtocolID
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
+    current_protocol_id: CurrentProtocolID
+```
+
+定义为`CurrentProtocolID`类型的字段，可以在Airalogy平台上自动赋值为当前Protocol的Airalogy Protocol ID。
+
+### CurrentRecordId
+
+```py
+from airalogy.types import CurrentRecordId
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
+    current_record_id: CurrentRecordId
+```
+
+定义为`CurrentRecordId`类型的字段，可以在Airalogy平台上自动赋值为当前Record的Airalogy Record ID。
 
 ## AiralogyMarkdown
 

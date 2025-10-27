@@ -5,6 +5,8 @@ This module contains the built-in types for Airalogy. These types could be used 
 __all__ = [
     "UserName",
     "CurrentTime",
+    "CurrentProtocolId",
+    "CurrentRecordId",
     "AiralogyMarkdown",
     "RecordId",
     "FileIdPNG",
@@ -35,7 +37,7 @@ __all__ = [
 
 
 from .recommended import Recommended
-from .current_time import CurrentTime
+from .current import CurrentTime, CurrentProtocolId, CurrentRecordId
 from .file import (
     FileIdCSV,
     FileIdDOCX,

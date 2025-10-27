@@ -31,7 +31,9 @@ All built-in types add an extra JSON-Schema attribute—`airalogy_type`—to ind
 }
 ```
 
-## `CurrentTime`
+## Current
+
+### `CurrentTime`
 
 ```python
 from airalogy.types import CurrentTime
@@ -42,6 +44,30 @@ class VarModel(BaseModel):
 ```
 
 `CurrentTime` is automatically filled with the current time in the user’s browser time-zone.
+
+### `CurrentProtocolId`
+
+```python
+from airalogy.types import CurrentProtocolId
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
+    current_protocol_id: CurrentProtocolId
+```
+
+A field declared as `CurrentProtocolId` is automatically populated with the Airalogy Protocol ID of the current Protocol.
+
+### `CurrentRecordId`
+
+```python
+from airalogy.types import CurrentRecordId
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
+    current_record_id: CurrentRecordId
+```
+
+A field declared as `CurrentRecordId` is automatically populated with the Airalogy Record ID of the current Record.
 
 ## `AiralogyMarkdown`
 
