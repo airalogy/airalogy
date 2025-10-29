@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 0.0.8 (20251029)
+
+### Features
+- Add `CurrentProtocolId` and `CurrentRecordId` types
+
+### Development
+- Migrate from pdm to uv
+- Update minimum Python version requirement to 3.13
+- Add GitHub workflow for CI
+- Add build status badge
+
+### Dependencies
+- Update pydantic dependency from 2.11.5 to 2.12.3
+
+### Fixes
+- Fix description
+
 ## 0.0.7 (20250827)
 
 - Fix: Removed the `CurrentTime` pattern that was causing pydantic to fail validation.
