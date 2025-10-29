@@ -5,7 +5,7 @@ description = "The world's first universal framework for standardized data digit
 readme = "README.md"
 authors = [{ name = "Airalogy Team" }]
 requires-python = ">=3.13"
-dependencies = ["pydantic == 2.11.5", "httpx == 0.28.1", "isodate == 0.7.2"]
+dependencies = ["pydantic == 2.12.3", "httpx == 0.28.1", "isodate == 0.7.2"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python",
