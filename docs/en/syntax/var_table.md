@@ -1,142 +1,212 @@
 # Variable Table
 
-A **Variable Table** lets one `{{var}}` hold a **list of sub-variables** (rows).
-The list is dynamically sized, and the front-end renders it as an editable table.
+## Syntax
 
-## 1 AIMD Syntax
+In Airalogy Protocol, there is a special recording pattern where the value of one `{{var}}` is a **list**, and each element of that list is itself a **sub-variable object**. The list is typically variable-length. In this case, the front end renders the variable **as a table** instead of a single input. To support this, you can declare a **Variable Table** by adding a `subvars` parameter to the `var` template.
 
-```aimd
-{{var_table|<var_id>, subvars=[<subvar_id_1>, <subvar_id_2>, ...]}}
-```
-
-*Because a variable table is still a variable, data are stored under the regular `var` namespace.*
-
-You can break the `subvars` list over multiple lines for readability:
+Basic syntax:
 
 ```aimd
-{{var_table|testees, subvars=[
-    name,
-    age
-]}}
+{{var|<var_id>, subvars=[<subvar_id_1>, <subvar_id_2>, ...]}}
 ```
 
-## 2 `model.py`
+When there are many `subvars`, you can split them across multiple lines for readability:
 
-Define a nested Pydantic model for one **row**, then use a list of that model:
+```aimd
+{{var|<var_id>, subvars=[
+    <subvar_id_1>, 
+    <subvar_id_2>, 
+    ...
+]
+}}
+```
 
-```python
+Example:
+
+```aimd
+<!-- File: protocol.aimd -->
+
+{{var|testees, subvars=[name, age]}}
+```
+
+This renders on the front end as a table:
+
+| name           | age            |
+| -------------- | -------------- |
+| [to_be_filled] | [to_be_filled] |
+
+```py
+# File: model.py
+
 from pydantic import BaseModel
 
-class Testee(BaseModel):  # row schema
+class Testee(BaseModel):
+    # Testee is an intermediate class used to enable nested models.
+    # Its name can in fact be arbitrary, as long as it matches the class
+    # referenced inside the list type in VarModel. By convention, we use
+    # the PascalCase singular form of the corresponding var_id.
     name: str
     age: float
 
 class VarModel(BaseModel):
-    testees: list[Testee]  # table = list of rows
+    testees: list[Testee]
+    # 'testees' corresponds to the 'testees' in AIMD above and is constrained
+    # to be a list of Testee.
 ```
 
-### Titles and Descriptions
+### Titles and Descriptions for Variable Table / Sub Variables
 
-```python
+As with ordinary variables, you can add `title` and `description` to the `var` itself and to each sub-variable.
+
+Do this by adding `Field` metadata in `VarModel`. For example:
+
+```py
+# File: model.py
+
 from pydantic import BaseModel, Field
 
 class Testee(BaseModel):
-    name: str  = Field(title="Name", description="Name of the testee.")
-    age:  float = Field(title="Age",  description="Age of the testee.")
+    name: str  = Field(title="Name", description="The name of the testee.")
+    age:  float = Field(title="Age",  description="The age of the testee.")
 
 class VarModel(BaseModel):
-    testees: list[Testee] = Field(
-        title="Testees",
-        description="Participants recorded in the experiment."
-    )
+    testees: list[Testee] = Field(title="Testees", description="The testees of the experiment.")
 ```
 
-`title` and `description` are optional—as with ordinary variables.
+`title` and `description` are optional. You may provide neither, both, or only some of them. When present, they will be shown in the UI.
 
-## 3 Naming Rules
+## Assigner for Variable Table
 
-- `var_id` and each `subvar_id` follow the standard variable-name rules:
-  - No leading underscore.
-  - No duplicated names (including variations with extra underscores).
-  - Must appear somewhere in AIMD.
+### Compute some Sub Variables from other Sub Variables
 
-## 4 Assigners for Variable Tables
+In real protocols, values of certain sub-variables in a Variable Table can be derived from others. To support such dependency-based auto-calculation, you can use an **Assigner**.
 
-### 4.1 Row-level calculation (common use)
+For example, suppose the value of `var_1_2_sum` in `var_1` should be computed from `var_1` and `var_2`. You can implement this with three files:
 
-You can auto-compute one sub-variable from others **within the same row**.
-
-**AIMD**
+**File 1: AIMD**
 
 ```aimd
-{{var_table|measurements, subvars=[a, b, sum_ab]}}
+<!-- File: protocol.aimd -->
+
+{{var|var_1, subvars=[var_1, var_2, var_1_2_sum]}}
 ```
 
-**Model**
+**File 2: Model**
 
-```python
-class Measurement(BaseModel):
-    a: int
-    b: int
-    sum_ab: int
+```py
+# File: model.py
+
+from pydantic import BaseModel
+
+class VarTable1(BaseModel):
+    var_1: int
+    var_2: int
+    var_1_2_sum: int
 
 class VarModel(BaseModel):
-    measurements: list[Measurement]
+    var_1: list[VarTable1]
 ```
 
-**Assigner**
+**File 3: Assigner**
 
-```python
-from airalogy.assigner import AssignerBase, AssignerResult, assigner
+```py
+# File: assigner.py
+
+from airalogy.assigner import (
+    AssignerBase,
+    AssignerResult,
+    assigner,
+)
 
 class Assigner(AssignerBase):
-
     @assigner(
-        assigned_fields  = ["measurements.sum_ab"],
-        dependent_fields = ["measurements.a", "measurements.b"],
+        assigned_fields=[
+            "var_1.var_1_2_sum",
+        ],
+        dependent_fields=[
+            "var_1.var_1",
+            "var_1.var_2",
+        ],  # When a Variable Table participates in an Assigner, the names in
+            # assigned_fields and dependent_fields must be prefixed with the
+            # Variable Table name and may refer to AT MOST ONE Variable Table.
+            # Cross-table calculations are not allowed.
         mode="auto",
     )
-    def calc_sum(dep: dict) -> AssignerResult:
-        a = dep["measurements.a"]
-        b = dep["measurements.b"]
+    def calculate_var_1(dependent_fields: dict) -> AssignerResult:
+        v1 = dependent_fields["var_1.var_1"]
+        v2 = dependent_fields["var_1.var_2"]
+
+        v_sum = v1 + v2
+
         return AssignerResult(
-            assigned_fields={"measurements.sum_ab": a + b}
+            assigned_fields={
+                "var_1.var_1_2_sum": v_sum,
+            },
         )
 ```
 
-**Rules**
+**Notes when using a Variable Table Assigner:**
 
-1. **Row-scoped**: each calculation uses only values from the *current* row.
-2. Trigger: the front-end runs the assigner once all dependent fields in a row are filled.
+1. **Row independence.** Each row’s data are independent, so the Assigner’s logic must compute **per row**. Rows must not affect each other.
+2. **Row-level trigger.** Because users typically fill the table row by row, the front end listens for completion of all `dependent_fields` **within a row** and triggers the Assigner only for that row to compute its `assigned_fields`. Other rows are not computed until their dependencies are complete.
 
-### 4.2 Table-level calculation
+### Using the entire Variable Table as a dependent field
 
-Sometimes you need the **entire table** as input or output.
+A common use for Variable Tables is **batch configuration**. For example, you might use a Variable Table to set multiple chart-drawing parameters. You can take the **entire Variable Table** as a single dependent field and compute a summary result.
 
-```python
-class FontCfg(BaseModel):
-    font_size:  int
+`model.py`:
+
+```py
+class VarTable1(BaseModel):
+    font_size: int
     font_color: str
 
 class VarModel(BaseModel):
-    font_table: list[FontCfg]
-    summary:    str
+    var_table_1: list[VarTable1]
+    font_config_summary: str
 ```
 
-```python
+If the table data are:
+
+| font_size | font_color |
+| --------- | ---------- |
+| 12        | red        |
+| 14        | blue       |
+
+the corresponding JSON looks like:
+
+```json
+{
+  "var_table_1": [
+    { "font_size": 12, "font_color": "red" },
+    { "font_size": 14, "font_color": "blue" }
+  ]
+}
+```
+
+Then we can write an Assigner to compute `font_config_summary`:
+
+`assigner.py`:
+
+```py
 class Assigner(AssignerBase):
-
     @assigner(
-        assigned_fields  = ["summary"],
-        dependent_fields = ["font_table"],
-        mode="auto"
+        assigned_fields=[
+            "font_config_summary",
+        ],
+        dependent_fields=[
+            "var_table_1",
+        ],
+        mode="auto",
     )
-    def summarise(dependent_fields: dict) -> AssignerResult:
-        lines = [
-            f"font_size={row['font_size']}, font_color={row['font_color']}"
-            for row in dependent_fields["font_table"]
-        ]
-        return AssignerResult(assigned_fields={"summary": "\n".join(lines)})
+    def calculate_font_config_summary(dependent_fields: dict) -> AssignerResult:
+        font_config_summary = "\n".join(
+            f"font_size: {row['font_size']}, font_color: {row['font_color']}"
+            for row in dependent_fields["var_table_1"]
+        )
+        return AssignerResult(
+            assigned_fields={"font_config_summary": font_config_summary}
+        )
 ```
 
-*If you **assign** an entire table, you replace the previous table; row-level assigners are then unnecessary.*
+You can also make a **Variable Table** itself an **assigned field** (returned by the Assigner). In that case, **each run replaces the entire table** rather than a single row. If the table already has data, it will be overwritten. When a whole-table assignment is used, **row-level assigners are not supported** at the same time, because returning the entire table enables you to include any row-level logic within the full-table computation itself.

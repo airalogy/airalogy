@@ -59,7 +59,64 @@ class VarModel(BaseModel):
 
 这样，Airalogy会自动将这些信息转换为相应的Pydantic字段定义，从而实现类型和校验功能。
 
-## `var`类型语法糖语法的通用结构
+## 在AIMD中定义含有Sub Vars的Var Table
+
+在某些场景下，我们需要定义一个含有多个子字段（Sub Vars）的复合字段（Var Table）。例如，假设我们需要记录多个学生的信息，每个学生包含姓名和年龄两个字段。在传统的双文件语法下，我们可以通过如下方式定义：
+
+`protocol.aimd`:
+
+```aimd
+学生列表：{{var|students, subvars=[name, age]}}
+```
+
+`model.py`:
+
+```py
+from pydantic import BaseModel, Field
+
+class Student(BaseModel):
+    name: str = Field(title="学生姓名", description="学生的全名", max_length=50)
+    age: int = Field(title="学生年龄", description="学生的年龄，单位为岁", ge=0)
+
+class VarModel(BaseModel):
+    students: list[Student] = Field(title="学生列表", description="记录学生的姓名和年龄")
+```
+
+在AIMD类型语法糖中，其可以在`protocol.aimd`中通过如下方式定义：
+
+```aimd
+{{var|students: list[Student], 
+    title="学生信息",
+    description="记录学生的姓名和年龄",
+    subvars=[
+        var(
+            name: str = "张三",
+            title="学生姓名",
+            description="学生的全名",
+            max_length=50
+        ),
+        var(
+            age: int = 18,
+            title="学生年龄",
+            description="学生的年龄，单位为岁",
+            ge=0
+        )
+    ]
+}}
+```
+
+如果`subvar`中每个字段不需要额外的信息，则可以简化为如下语法糖：
+
+```aimd
+{{var|students: list[Student], subvars=[name: str = "张三", age: int = 18]}}
+```
+
+额外的：
+
+1. Sub Vars的定义顺序会影响前端显示顺序，例如上述案例中，`name`会显示在`age`的前面。
+2. 当我们不对主`var`定义类型时，Airalogy会默认将其类型设置为`list[xxx]`，其中`xxx`根据`subvars`的名字自动构造一个PascalCase的Pydantic Model类名，例如上述案例中，主`var`的类型会被自动设置为`list[NameAge]`，其中`NameAge`为`subvars`中字段名`name`和`age`构造的PascalCase类名。
+
+## `var`类型语法糖语法的通用结构和语法原理
 
 可以看到，在上述AIMD语法糖中，`var`类型的通用结构如下：
 
@@ -67,9 +124,7 @@ class VarModel(BaseModel):
 {{var|<var_id>: <var_type> = <default_value>, **kwargs}}
 ```
 
-### 语法设计说明
-
-其中`<var_id>: <var_type> = <default_value>, **kwargs`的语法表达结构和Python中函数定义类似：
+其语法表达结构本质可以被理解为一种特殊的语法糖，其对应等价为一次抽象的Python函数调用：
 
 ```py
 def var(<var_id>: <var_type> = <default_value>, **kwargs):
@@ -77,6 +132,60 @@ def var(<var_id>: <var_type> = <default_value>, **kwargs):
 ```
 
 因此，该语法天然具有可解析性。为此，`default_value`的引号包裹原则和Python完全一致，对于`str`类型的默认值，必须使用双引号`""`包裹，而对于`int`、`float`、`bool`等类型的默认值，则不需要引号包裹。
+
+### 含有`subvars`的嵌套`var`类型
+
+当我们使用类似：
+
+```aimd
+{{var|students, subvars=[name, age]}}
+```
+
+或
+
+```aimd
+{{var|students, subvars=[name: str, age: int]}}
+```
+
+或
+
+```aimd
+{{var|students, subvars=[name: str = "张三", age: int = 18]}}
+```
+
+其每个`subvar`的构造本质都是一种具有严格形式的语法糖，其每个`subvar`的构建实际上都可以理解为一次对`var`函数的调用。因此每个`subvar`均可以使用上述的类型语法糖，从而实现对嵌套`var`的类型定义，其去语法糖（desugaring）后的等价结构为：
+
+```aimd
+{{var|students, subvars=[
+    var(name: str = "张三"),
+    var(age: int = 18)
+]}}
+```
+
+在此基础上，我们可以为主`var`和每个`subvar`分别定义类型和参数信息，例如：
+
+```aimd
+{{var|students,
+    title="学生信息",
+    description="记录学生的姓名和年龄",
+    subvars=[
+        var(
+             name: str = "张三",
+             title="学生姓名",
+             description="学生的全名",
+             max_length=50
+        ),
+        var(
+            age: int = 18,
+            title="学生年龄",
+            description="学生的年龄，单位为岁",
+            ge=0
+        )
+    ]
+}}
+```
+
+由此，`var`中调用`subvars`本质上`var`的调用是递归的，因此理论上可以实现任意层级的嵌套`var`类型定义。
 
 ### 支持的类型
 

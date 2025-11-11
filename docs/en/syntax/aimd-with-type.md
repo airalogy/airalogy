@@ -59,36 +59,145 @@ School: {{var|school: str = "School of Life Sciences"}}
 
 Airalogy will automatically translate this information into the corresponding Pydantic field definitions to enable typing and validation.
 
-## General Structure of the `var` Syntactic Sugar
+## Defining a Var Table with Sub Vars in AIMD
 
-As shown above, the general structure for a `var` field in AIMD is:
+In some scenarios, we need a composite field (a **Var Table**) that contains multiple sub-fields (**Sub Vars**). For example, we want to record multiple students, each with a name and age. With the classic approach:
+
+`protocol.aimd`:
+
+```aimd
+Student List: {{var|students, subvars=[name, age]}}
+```
+
+`model.py`:
+
+```py
+from pydantic import BaseModel, Field
+
+class Student(BaseModel):
+    name: str = Field(title="Student Name", description="The student's full name", max_length=50)
+    age: int = Field(title="Student Age", description="Age in years", ge=0)
+
+class VarModel(BaseModel):
+    students: list[Student] = Field(title="Student List", description="Record each student's name and age")
+```
+
+With the AIMD typing sugar, we can write everything directly in `protocol.aimd` as follows:
+
+```aimd
+{{var|students: list[Student], 
+    title="Student Information",
+    description="Record each student's name and age",
+    subvars=[
+        var(
+            name: str = "ZHANG San",
+            title="Student Name",
+            description="The student's full name",
+            max_length=50
+        ),
+        var(
+            age: int = 18,
+            title="Student Age",
+            description="Age in years",
+            ge=0
+        )
+    ]
+}}
+```
+
+If each subvar does not need extra metadata, you can use a shorter sugar:
+
+```aimd
+{{var|students: list[Student], subvars=[name: str = "ZHANG San", age: int = 18]}}
+```
+
+Additional notes:
+
+1. The order of Sub Vars affects the column order in the UI. In the example above, `name` appears before `age`.
+2. If the main `var` has no explicit type, Airalogy will default it to `list[xxx]`, where `xxx` is an auto-constructed PascalCase Pydantic model name based on the `subvars`. In the example above, the type would default to `list[NameAge]`, where `NameAge` is formed from the subvar IDs `name` and `age`.
+
+## General Structure and Rationale of the `var` Syntactic Sugar
+
+In AIMD, the general structure of a `var` is:
 
 ```aimd
 {{var|<var_id>: <var_type> = <default_value>, **kwargs}}
 ```
 
-### Notes on the Syntax Design
-
-The expression `<var_id>: <var_type> = <default_value>, **kwargs` mirrors Python’s function parameter syntax:
+Conceptually, this syntax sugar is equivalent to an abstract Python function call:
 
 ```py
 def var(<var_id>: <var_type> = <default_value>, **kwargs):
     pass
 ```
 
-Therefore, the syntax is naturally parsable. The quoting rule for `default_value` follows Python exactly: for `str` defaults, you **must** wrap the value in double quotes `""`; for `int`, `float`, `bool`, etc., no quotes are used.
+This makes the syntax naturally parsable. The quoting rule for `default_value` follows Python exactly: for strings, you **must** use double quotes `""`; for `int`, `float`, `bool`, etc., no quotes are used.
+
+### Nested `var` with `subvars`
+
+When we write:
+
+```aimd
+{{var|students, subvars=[name, age]}}
+```
+
+or
+
+```aimd
+{{var|students, subvars=[name: str, age: int]}}
+```
+
+or
+
+```aimd
+{{var|students, subvars=[name: str = "ZHANG San", age: int = 18]}}
+```
+
+each `subvar` is, in essence, a strictly-formed syntactic sugar that can be viewed as a call to `var(...)`. After desugaring, we have:
+
+```aimd
+{{var|students, subvars=[
+    var(name: str = "ZHANG San"),
+    var(age: int = 18)
+]}}
+```
+
+On this basis, we can define types and parameters for both the main `var` and each `subvar`:
+
+```aimd
+{{var|students,
+    title="Student Information",
+    description="Record each student's name and age",
+    subvars=[
+        var(
+             name: str = "ZHANG San",
+             title="Student Name",
+             description="The student's full name",
+             max_length=50
+        ),
+        var(
+            age: int = 18,
+            title="Student Age",
+            description="Age in years",
+            ge=0
+        )
+    ]
+}}
+```
+
+Since `var` calls are recursive when used with `subvars`, in principle you can define arbitrarily nested `var` types.
 
 ### Supported Types
 
-The types you can use in AIMD align with Python’s built-in types (e.g., `str`, `int`, `float`, `bool`, `list`, `dict`, `list[str]`, etc.). You can also use custom types defined in `airalogy.types`, such as `UserName`. As in Python, type names are **not** quoted.
+The types supported in AIMD match Python’s built-in types (`str`, `int`, `float`, `bool`, `list`, `dict`, `list[str]`, etc.). Custom types defined in `airalogy.types` (e.g., `UserName`) are also supported. As in Python, **type names are not quoted**.
 
-### About `**kwargs`
+### Notes on `**kwargs`
 
-For any `var` field, `**kwargs` generally falls into two categories: (1) **type-agnostic** common parameters such as `title` and `description`; and (2) **type-specific** parameters (for example, `str` fields can use `max_length`, `min_length`, etc.).
+For any `var`, `**kwargs` falls into two categories: (1) type-agnostic parameters such as `title`, `description`, etc.; and (2) type-specific parameters (e.g., for `str`, `max_length`, `min_length`, etc.).
 
-#### How It Works
+#### Syntax Principle
 
-You can think of each `var` as implicitly supporting a common kwargs schema and an additional type-specific kwargs schema. In Python notation:
+You can understand this as each `var` having a default set of common parameters:
 
 ```py
 common_kwargs = {
@@ -98,7 +207,7 @@ common_kwargs = {
 }
 ```
 
-For each concrete type, there is a dedicated kwargs schema. For example, for `str`:
+Each concrete type has its own type-specific parameter set. For `str`, for example:
 
 ```py
 str_kwargs = {
@@ -108,7 +217,7 @@ str_kwargs = {
 }
 ```
 
-The final kwargs for a `str`-typed `var` is the merge of the two:
+The final parameter set for a `str`-typed `var` is the merge of the two:
 
 ```py
 var_str_kwargs = {
@@ -117,7 +226,7 @@ var_str_kwargs = {
 }
 ```
 
-Accordingly, in AIMD, a `str`-typed `var` accepts any parameter contained in `var_str_kwargs`:
+Thus, in AIMD, a `str`-typed `var` supports all parameters included in `var_str_kwargs`:
 
 ```aimd
 {{var|<var_id>: str, **var_str_kwargs}}
