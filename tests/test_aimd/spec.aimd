@@ -1,0 +1,216 @@
+# AIMD Syntax Specification Test File
+# This file tests ALL possible AIMD syntax variations
+
+## 1. Simple Variables (Basic Syntax)
+
+Simple variable without type:
+{{var|simple_var}}
+
+Variable with simple type:
+{{var|typed_var: str}}
+{{var|int_var: int}}
+{{var|float_var: float}}
+{{var|bool_var: bool}}
+
+Variable with list type (basic):
+{{var|str_list: list[str]}}
+{{var|int_list: list[int]}}
+
+Variable with default value:
+{{var|var_with_default: str = "default_value"}}
+{{var|int_with_default: int = 42}}
+{{var|float_with_default: float = 3.14}}
+{{var|bool_with_default: bool = True}}
+
+Variable with Airalogy custom types:
+{{var|user_name: UserName}}
+{{var|current_time: CurrentTime}}
+{{var|protocol_id: ProtocolId}}
+{{var|record_id: RecordId}}
+{{var|atcg_sequence: ATCG}}
+{{var|markdown_content: AiralogyMarkdown}}
+
+Variable with file ID types:
+{{var|image_png: FileIdPNG}}
+{{var|image_jpg: FileIdJPG}}
+{{var|document_pdf: FileIdPDF}}
+{{var|data_csv: FileIdCSV}}
+{{var|data_json: FileIdJSON}}
+{{var|doc_word: FileIdDOCX}}
+{{var|spreadsheet: FileIdXLSX}}
+{{var|presentation: FileIdPPTX}}
+{{var|audio_mp3: FileIdMP3}}
+{{var|video_mp4: FileIdMP4}}
+{{var|vector_svg: FileIdSVG}}
+{{var|image_webp: FileIdWEBP}}
+{{var|image_tiff: FileIdTIFF}}
+{{var|text_md: FileIdMD}}
+{{var|text_txt: FileIdTXT}}
+{{var|aimd_file: FileIdAIMD}}
+{{var|dna_file: FileIdDNA}}
+
+## 2. Variables with Field Parameters
+
+Variable with title and description:
+{{var|var_with_metadata: str = "value", title = "Variable Title", description = "This is a description"}}
+
+Variable with string constraints:
+{{var|constrained_str: str, title = "Constrained String", max_length = 100, min_length = 5, pattern = "^[A-Z][a-z]+$"}}
+
+Variable with numeric constraints:
+{{var|constrained_int: int = 10, title = "Constrained Int", ge = 0, le = 100, multiple_of = 2}}
+{{var|constrained_float: float = 0.5, title = "Constrained Float", ge = 0.0, le = 1.0}}
+
+## 3. Legacy Variable Tables (var_table syntax)
+
+Legacy var_table with simple subvars:
+{{var_table|legacy_table_simple, subvars=[name, age, email]}}
+
+Legacy var_table with multiline:
+{{var_table|legacy_table_multiline,
+subvars=[
+    field1,
+    field2,
+    field3
+]
+}}
+
+## 4. New Variable Tables (var syntax with subvars)
+
+Simple var table:
+{{var|simple_table, subvars=[name, age, email]}}
+
+Var table with typed subvars:
+{{var|typed_table, subvars=[name: str, age: int, email: str]}}
+
+Var table with defaults:
+{{var|table_with_defaults, subvars=[name: str = "Unknown", age: int = 18, active: bool = True]}}
+
+Var table with explicit list type:
+{{var|explicit_type_table: list[CustomItem], subvars=[name: str, value: int]}}
+
+Var table with only list type (no subvars - auto-detected):
+{{var|auto_list_table: list}}
+
+Var table with list item type (no subvars):
+{{var|auto_typed_list: list[str]}}
+
+Var table with custom list item type (no subvars):
+{{var|auto_custom_list: list[Student]}}
+
+Var table with var() syntax:
+{{var|var_syntax_table, subvars=[
+    var(name: str = "Default", title="Full Name", max_length=100),
+    var(age: int = 0, title="Age", ge=0, le=120)
+]}}
+
+Var table with mixed parameters:
+{{var|mixed_table: list[MixedItem], title = "Mixed Table", description = "A table with various features",
+subvars=[
+    var(id: int = 1, title="ID", description="Unique identifier"),
+    var(name: str, title="Name")
+]
+}}
+
+## 5. Empty Tables and Edge Cases
+
+Empty var table:
+{{var|empty_table, subvars=[]}}
+
+Var with empty subvars (another form):
+{{var|another_empty, subvars = []}}
+
+## 6. Steps
+
+Simple step:
+{{step|simple_step}}
+
+Step with level:
+{{step|step_level_2, 2}}
+
+Step with level 3:
+{{step|step_level_3, 3}}
+
+Step with check:
+{{step|step_with_check, 1, check=True}}
+
+Step with check and message:
+{{step|step_with_message, 2, check=True, checked_message="This is a checked message"}}
+
+Step with only message (no level specified, check=True required):
+{{step|step_check_only, check=True, checked_message="Another message"}}
+
+## 7. Checkpoints
+
+Simple checkpoint:
+{{check|simple_check}}
+
+Checkpoint with message:
+{{check|check_with_message, checked_message="Please verify this carefully"}}
+
+## 8. References
+
+Reference to variable:
+{{ref_var|simple_var}}
+{{ref_var|typed_var}}
+
+Reference to step:
+{{ref_step|simple_step}}
+{{ref_step|step_with_check}}
+
+Reference to figure:
+{{ref_fig|figure_1}}
+{{ref_fig|figure_2}}
+
+## 9. Citations
+
+Simple citation:
+{{cite|ref1}}
+
+Multiple citations:
+{{cite|ref1,ref2,ref3}}
+
+Citation with spaces (should work):
+{{cite|doi:12345,pubmed:67890}}
+
+## 10. Complex Nested Structures
+
+Multiple var tables in one document:
+{{var|students, subvars=[name: str, age: int]}}
+{{var|teachers, subvars=[name: str, subject: str, years_experience: int]}}
+{{var|courses, subvars=[course_name: str, course_code: str, credits: int]}}
+
+Mixed regular vars and tables:
+Regular variable: {{var|regular_var: str}}
+Then a table: {{var|mixed_table2, subvars=[field1: str, field2: int]}}
+Another regular: {{var|another_regular: int = 42}}
+
+## 11. Real-world Example
+
+# Research Protocol Example
+
+Experiment Information:
+Experimenter: {{var|experimenter: UserName}}
+Date: {{var|experiment_date: CurrentTime}}
+Protocol: {{var|protocol: ProtocolId}}
+
+Equipment Setup:
+{{step|setup_equipment, 1, check=True, checked_message="Equipment ready"}}
+{{step|calibrate_instruments, 2, check=True}}
+
+Sample Preparation:
+{{var|samples, subvars=[
+    var(sample_id: str, title="Sample ID"),
+    var(concentration: float = 0.0, title="Concentration", ge=0),
+    var(volume: float = 100.0, title="Volume", gt=0)
+]}}
+
+Quality Control:
+{{check|sample_quality, checked_message="All samples passed QC"}}
+
+References in text:
+See experimenter: {{ref_var|experimenter}}
+Refer to step: {{ref_step|setup_equipment}}
+
+Citations:
+{{cite|method_paper_2023,protocol_reference}}
