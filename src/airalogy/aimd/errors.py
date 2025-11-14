@@ -2,13 +2,15 @@
 Parser exceptions and error handling.
 """
 
-from typing import Optional
+from typing import List, Optional
 
 from .tokens import Position
 
 
 class AimdParseError(Exception):
     """Base exception for AIMD parsing errors."""
+
+    message: str
 
     def __init__(
         self,
@@ -24,6 +26,7 @@ class AimdParseError(Exception):
             position: Position object (preferred)
             line_number: Line number (for backwards compatibility)
         """
+        self.message = message
         self.position = position
         if line_number is not None and position is None:
             # Backwards compatibility
@@ -64,3 +67,26 @@ class TypeAnnotationError(AimdParseError):
     """Error for type annotation parsing."""
 
     pass
+
+
+class ErrorCollector:
+    """Collects parsing errors instead of raising exceptions immediately."""
+
+    def __init__(self):
+        self.errors: List[AimdParseError] = []
+
+    def add_error(self, error: AimdParseError):
+        """Add an error to the collection."""
+        self.errors.append(error)
+
+    def has_errors(self) -> bool:
+        """Check if any errors have been collected."""
+        return len(self.errors) > 0
+
+    def get_errors(self) -> List[AimdParseError]:
+        """Get all collected errors."""
+        return self.errors.copy()
+
+    def clear(self):
+        """Clear all collected errors."""
+        self.errors.clear()

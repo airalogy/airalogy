@@ -99,6 +99,58 @@ class Assigner(AssignerBase):
         )
 ```
 
+## Command Line Interface
+
+Airalogy provides a CLI tool for common operations. After installation, you can use the `airalogy` command:
+
+```bash
+$ airalogy --help
+usage: airalogy [-h] [-v] {check,c,generate_model,gm} ...
+
+Airalogy CLI - Tools for Airalogy
+
+positional arguments:
+  {check,c,generate_model,gm}
+                        Available commands
+    check (c)           Check AIMD syntax
+    generate_model (gm)
+                        Generate VarModel
+
+options:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+```
+
+### Syntax Checking
+
+Check AIMD syntax: 
+
+```bash
+# Check default protocol.aimd file
+airalogy check
+
+# Check specific AIMD file
+airalogy check my_protocol.aimd
+
+# Using alias
+airalogy c my_protocol.aimd
+```
+
+### Model Generation
+
+Generate VarModel from AIMD file:
+
+```bash
+# Generate model.py from protocol.aimd
+airalogy generate_model
+
+# Generate with custom output file
+airalogy generate_model my_protocol.aimd -o my_model.py
+
+# Using alias
+airalogy gm my_protocol.aimd -o custom_model.py
+```
+
 ## Development Setup
 
 We use [uv](https://docs.astral.sh/uv/) for environment management and build, [ruff](https://docs.astral.sh/ruff/) for lint/format.

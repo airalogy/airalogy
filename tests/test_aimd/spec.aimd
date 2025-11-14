@@ -95,8 +95,8 @@ Var table with only list type (no subvars - auto-detected):
 Var table with list item type (no subvars):
 {{var|auto_typed_list: list[str]}}
 
-Var table with custom list item type (no subvars):
-{{var|auto_custom_list: list[Student]}}
+Var table with custom list item type (with subvars):
+{{var|auto_custom_list: list[Student], subvars=[name: str, age: int]}}
 
 Var table with var() syntax:
 {{var|var_syntax_table, subvars=[

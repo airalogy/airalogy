@@ -9,6 +9,7 @@ from airalogy.aimd import (
     CheckNode,
     DuplicateNameError,
     InvalidNameError,
+    InvalidSyntaxError,
     Lexer,
     StepNode,
     TokenType,
@@ -273,8 +274,38 @@ subvars=[
         assert len(var_table.subvars) == 0
 
     def test_parse_list_with_explicit_item_type_as_var_table(self):
-        """Test that list[CustomType] without subvars is treated as var table"""
+        """Test that list[CustomType] without subvars raises an error"""
         content = "{{var|students: list[Student]}}"
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+
+        assert "Invalid type annotation 'list[Student]'" in str(exc_info.value)
+        assert "Custom type 'Student' requires explicit subvars definition" in str(
+            exc_info.value
+        )
+
+    def test_parse_list_with_basic_types_allowed_without_subvars(self):
+        """Test that list[basic_type] without subvars is allowed for basic types"""
+        basic_types = ["str", "int", "float", "bool"]
+
+        for basic_type in basic_types:
+            content = f"{{{{var|items: list[{basic_type}]}}}}"
+            parser = AimdParser(content)
+            result = parser.parse()
+
+            assert len(result["vars"]) == 1
+            var_table = result["vars"][0]
+            assert isinstance(var_table, VarTableNode)
+            assert var_table.name == "items"
+            assert var_table.type_annotation == f"list[{basic_type}]"
+            assert var_table.list_item_type == basic_type
+            assert len(var_table.subvars) == 0
+
+    def test_parse_list_with_custom_types_allowed_with_subvars(self):
+        """Test that list[CustomType] is allowed when subvars are provided"""
+        content = "{{var|students: list[Student], subvars=[name: str, age: int]}}"
         parser = AimdParser(content)
         result = parser.parse()
 
@@ -284,7 +315,7 @@ subvars=[
         assert var_table.name == "students"
         assert var_table.type_annotation == "list[Student]"
         assert var_table.list_item_type == "Student"
-        assert len(var_table.subvars) == 0
+        assert len(var_table.subvars) == 2
 
     def test_parse_step(self):
         content = "{{step|prepare_sample}}"
@@ -402,7 +433,7 @@ subvars=[
 
         with pytest.raises(DuplicateNameError) as exc_info:
             parser.parse()
-        assert "Duplicate name" in str(exc_info.value)
+        assert "Duplicate var name" in str(exc_info.value)
 
     def test_duplicate_names_normalized(self):
         """Test that user_a and user__a are treated as duplicates."""
@@ -414,7 +445,7 @@ subvars=[
 
         with pytest.raises(DuplicateNameError) as exc_info:
             parser.parse()
-        assert "Duplicate name" in str(exc_info.value)
+        assert "Duplicate var name" in str(exc_info.value)
 
     def test_duplicate_across_types(self):
         """Test that duplicate names are caught across var/step/check."""
@@ -426,7 +457,7 @@ subvars=[
 
         with pytest.raises(DuplicateNameError) as exc_info:
             parser.parse()
-        assert "Duplicate name" in str(exc_info.value)
+        assert "Duplicate var name" in str(exc_info.value)
 
 
 class TestExtractVars:

@@ -210,12 +210,16 @@ class TestSpecFile:
         assert auto_typed.list_item_type == "str"
         assert len(auto_typed.subvars) == 0
 
-        # list[Student] without subvars
+        # list[Student] with subvars
         auto_custom = var_dict["auto_custom_list"]
         assert isinstance(auto_custom, VarTableNode)
         assert auto_custom.type_annotation == "list[Student]"
         assert auto_custom.list_item_type == "Student"
-        assert len(auto_custom.subvars) == 0
+        assert len(auto_custom.subvars) == 2
+        # Check the subvars have the expected structure
+        subvar_names = [sv.name for sv in auto_custom.subvars]
+        assert "name" in subvar_names
+        assert "age" in subvar_names
 
     def test_var_syntax_table(self, parsed_result):
         """Test var() syntax in subvars."""

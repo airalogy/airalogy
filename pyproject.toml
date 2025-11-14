@@ -1,6 +1,6 @@
 [project]
 name = "airalogy"
-version = "0.0.8"
+version = "0.0.9"
 description = "The world's first universal framework for standardized data digitization"
 readme = "README.md"
 authors = [{ name = "Airalogy Team" }]
@@ -18,6 +18,9 @@ license = { text = "Apache-2.0" }
 [project.urls]
 Documentation = "https://github.com/airalogy/airalogy#readme"
 Source = "https://github.com/airalogy/airalogy"
+
+[project.scripts]
+airalogy = "airalogy.cli:main"
 
 
 [dependency-groups]

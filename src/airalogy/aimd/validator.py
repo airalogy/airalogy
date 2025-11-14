@@ -4,7 +4,6 @@ Syntax validator for AIMD.
 
 from typing import List, Tuple
 
-from .errors import AimdParseError
 from .parser import AimdParser
 
 
@@ -54,7 +53,8 @@ class AimdValidator:
             content: AIMD document content
         """
         self.content = content
-        self.parser = AimdParser(content)
+        # Use non-strict mode parser to collect all errors
+        self.parser = AimdParser(content, strict=False)
 
     def validate(self) -> Tuple[bool, List[ValidationError]]:
         """
@@ -67,55 +67,56 @@ class AimdValidator:
         """
         errors = []
 
-        try:
-            # Try to parse
-            result = self.parser.parse()
+        # Parse with error collection (non-strict mode)
+        result = self.parser.parse()
 
-            # Additional validations can be added here
-            # For example: check that ref_var/ref_step references exist
-
-            # Check that referenced variables exist
-            var_names = {var.name for var in result["vars"]}
-            step_names = {step.name for step in result["steps"]}
-
-            for ref_var in result["ref_vars"]:
-                if ref_var.ref_id not in var_names:
-                    errors.append(
-                        ValidationError(
-                            f"Reference to undefined variable: {ref_var.ref_id}",
-                            ref_var.position.start_line,
-                            ref_var.position.end_line,
-                            ref_var.position.start_col,
-                            ref_var.position.end_col,
-                        )
-                    )
-
-            for ref_step in result["ref_steps"]:
-                if ref_step.ref_id not in step_names:
-                    errors.append(
-                        ValidationError(
-                            f"Reference to undefined step: {ref_step.ref_id}",
-                            ref_step.position.start_line,
-                            ref_step.position.end_line,
-                            ref_step.position.start_col,
-                            ref_step.position.end_col,
-                        )
-                    )
-
-        except AimdParseError as e:
-            # Convert parse error to validation error
-            if e.position:
+        # Convert parser errors to validation errors
+        parser_errors = self.parser.get_errors()
+        for parser_error in parser_errors:
+            if parser_error.position:
                 errors.append(
                     ValidationError(
-                        str(e).split(" at ")[0],  # Get message without position
-                        e.position.start_line,
-                        e.position.end_line,
-                        e.position.start_col,
-                        e.position.end_col,
+                        parser_error.message,
+                        parser_error.position.start_line,
+                        parser_error.position.end_line,
+                        parser_error.position.start_col,
+                        parser_error.position.end_col,
                     )
                 )
             else:
-                errors.append(ValidationError(str(e), 0, 0, 0, 0))
+                errors.append(ValidationError(str(parser_error), 0, 0, 0, 0))
+
+        # Additional semantic validations
+        # Check that referenced variables exist
+        var_names = {var.name for var in result["vars"] if var}
+        step_names = {step.name for step in result["steps"]}
+
+        for ref_var in result["ref_vars"]:
+            if ref_var.ref_id not in var_names:
+                errors.append(
+                    ValidationError(
+                        f"Reference to undefined variable: {ref_var.ref_id}",
+                        ref_var.position.start_line,
+                        ref_var.position.end_line,
+                        ref_var.position.start_col,
+                        ref_var.position.end_col,
+                    )
+                )
+
+        for ref_step in result["ref_steps"]:
+            if ref_step.ref_id not in step_names:
+                errors.append(
+                    ValidationError(
+                        f"Reference to undefined step: {ref_step.ref_id}",
+                        ref_step.position.start_line,
+                        ref_step.position.end_line,
+                        ref_step.position.start_col,
+                        ref_step.position.end_col,
+                    )
+                )
+
+        # Sort errors by position (line first, then column)
+        errors.sort(key=lambda error: (error.start_line, error.start_col))
 
         return (len(errors) == 0, errors)
 

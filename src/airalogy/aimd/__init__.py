@@ -5,7 +5,6 @@ This module provides comprehensive parsing, validation, and model generation
 for AIMD documents.
 """
 
-# Backwards compatibility: export from old parser
 from .ast_nodes import (
     CheckNode,
     CiteNode,
@@ -18,26 +17,25 @@ from .ast_nodes import (
 )
 from .errors import (
     DuplicateNameError,
+    ErrorCollector,
     InvalidNameError,
     InvalidSyntaxError,
     TypeAnnotationError,
 )
 from .lexer import Lexer
-
-# But use new parser for extract_vars to support typed syntax
-# New parser exports
+from .model_generator import generate_model
 from .parser import AimdParser, extract_vars
 from .tokens import Position, Token, TokenType
 from .validator import AimdValidator, ValidationError, validate_aimd
 
 __all__ = [
-    "extract_vars",
-    # New parser API
+    # Parser
     "AimdParser",
     "Lexer",
     "Token",
     "TokenType",
     "Position",
+    "extract_vars",
     # AST nodes
     "VarNode",
     "VarTableNode",
@@ -52,8 +50,11 @@ __all__ = [
     "DuplicateNameError",
     "InvalidSyntaxError",
     "TypeAnnotationError",
+    "ErrorCollector",
     # Validation
     "AimdValidator",
     "ValidationError",
     "validate_aimd",
+    # Model generation
+    "generate_model",
 ]

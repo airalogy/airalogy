@@ -17,7 +17,9 @@ from .ast_nodes import (
     VarTableNode,
 )
 from .errors import (
+    AimdParseError,
     DuplicateNameError,
+    ErrorCollector,
     InvalidNameError,
     InvalidSyntaxError,
 )
@@ -36,17 +38,37 @@ class AimdParser:
     # Name validation pattern: must not start with _, no spaces, valid Python identifier
     NAME_PATTERN = re.compile(r"^[a-zA-Z][a-zA-Z0-9_]*$")
 
-    def __init__(self, content: str):
+    def __init__(self, content: str, strict: bool = True):
         """
         Initialize parser with AIMD content.
 
         Args:
             content: AIMD document content
+            strict: If True, raise exceptions on first error. If False, collect all errors.
         """
         self.content = content
         self.lexer = Lexer(content)
         self.tokens = list(self.lexer.tokenize())
         self.current_index = 0
+        self.strict = strict
+        self.error_collector = ErrorCollector() if not strict else None
+
+    def _handle_error(self, error: AimdParseError):
+        """
+        Handle parsing error based on strict mode.
+
+        Args:
+            error: The parsing error to handle
+
+        Returns:
+            None if in strict mode (exception will be raised),
+            or a placeholder value if in non-strict mode
+        """
+        if self.strict:
+            raise error
+        else:
+            self.error_collector.add_error(error)
+            return None
 
     def _normalize_name(self, name: str) -> str:
         """
@@ -63,7 +85,7 @@ class AimdParser:
         """
         return re.sub(r"_+", "_", name)
 
-    def _validate_name(self, name: str, name_type: str, token: Token) -> None:
+    def _validate_name(self, name: str, name_type: str, token: Token) -> bool:
         """
         Validate a variable/step/check name.
 
@@ -72,22 +94,42 @@ class AimdParser:
             name_type: Type of name (for error messages)
             token: Token for position information
 
+        Returns:
+            True if name is valid, False otherwise
+
         Raises:
-            InvalidNameError: If name is invalid
+            InvalidNameError: If name is invalid and in strict mode
         """
         if not name:
-            raise InvalidNameError(f"Empty {name_type} name", position=token.position)
+            error = InvalidNameError(f"Empty {name_type} name", position=token.position)
+            if self.strict:
+                raise error
+            else:
+                self.error_collector.add_error(error)
+                return False
 
         if name.startswith("_"):
-            raise InvalidNameError(
+            error = InvalidNameError(
                 f"{name_type.capitalize()} name cannot start with underscore: {name}",
                 position=token.position,
             )
+            if self.strict:
+                raise error
+            else:
+                self.error_collector.add_error(error)
+                return False
 
         if not self.NAME_PATTERN.match(name):
-            raise InvalidNameError(
+            error = InvalidNameError(
                 f"Invalid {name_type} name: {name}", position=token.position
             )
+            if self.strict:
+                raise error
+            else:
+                self.error_collector.add_error(error)
+                return False
+
+        return True
 
     def _parse_var_typed(
         self, token: Token
@@ -492,7 +534,11 @@ class AimdParser:
         """
         # Parse the variable using the updated logic
         name, type_annotation, default_value, kwargs = self._parse_var_typed(token)
-        self._validate_name(name, "variable", token)
+        is_valid_name = self._validate_name(name, "variable", token)
+
+        # Skip processing invalid variables in non-strict mode
+        if not self.strict and not is_valid_name:
+            return None
 
         # Determine if this is a var table based on:
         # 1. Presence of subvars parameter (traditional syntax)
@@ -527,12 +573,39 @@ class AimdParser:
                 # Validate type annotation if present
                 if type_annotation:
                     if not re.match(r"^list$|^list\[.*\]$", type_annotation):
-                        raise InvalidSyntaxError(
+                        error = InvalidSyntaxError(
                             f"Invalid type annotation for var table: {type_annotation}, var table type must be a list",
                             position=token.position,
                         )
-                    if type_annotation.startswith("list["):
+                        if self.strict:
+                            raise error
+                        else:
+                            self.error_collector.add_error(error)
+                            # Continue with default type annotation
+                            type_annotation = "list"
+                    elif type_annotation.startswith("list["):
                         list_item_type = type_annotation[5:-1]
+            else:
+                # No explicit subvars - validate that list item type is basic if specified
+                if list_item_type:
+                    # Define basic types that are allowed without subvars
+                    basic_types = {"str", "int", "float", "bool"}
+
+                    # Strip any whitespace from the item type
+                    list_item_type = list_item_type.strip()
+
+                    if list_item_type not in basic_types:
+                        error = InvalidSyntaxError(
+                            f"Invalid type annotation '{type_annotation}': when subvars is empty, list item type must be a basic type (str, int, float, bool). "
+                            f"Custom type '{list_item_type}' requires explicit subvars definition.",
+                            position=token.position,
+                        )
+                        if self.strict:
+                            raise error
+                        else:
+                            self.error_collector.add_error(error)
+                            # Reset list_item_type to continue processing
+                            list_item_type = None
 
             # Return VarTableNode
             return VarTableNode(
@@ -775,7 +848,9 @@ class AimdParser:
 
         for token in self.tokens:
             if token.type == TokenType.VAR:
-                vars_list.append(self._parse_var(token))
+                var_result = self._parse_var(token)
+                if var_result is not None:
+                    vars_list.append(var_result)
             elif token.type == TokenType.VAR_TABLE:
                 vars_list.append(self._parse_var_table(token))
             elif token.type == TokenType.STEP:
@@ -793,8 +868,9 @@ class AimdParser:
             elif token.type == TokenType.EOF:
                 break
 
-        # Validate uniqueness
-        self._validate_uniqueness(vars_list, steps, checks)
+        # Validate uniqueness (only if we have valid items)
+        if vars_list or steps or checks:
+            self._validate_uniqueness(vars_list, steps, checks)
 
         return {
             "vars": vars_list,
@@ -818,7 +894,7 @@ class AimdParser:
             checks: List of CheckNode
 
         Raises:
-            DuplicateNameError: If duplicate names are found
+            DuplicateNameError: If duplicate names are found and in strict mode
         """
         seen_names = {}
 
@@ -826,31 +902,72 @@ class AimdParser:
         for step in steps:
             normalized = self._normalize_name(step.name)
             if normalized in seen_names:
-                raise DuplicateNameError(
-                    f"Duplicate name '{step.name}' (conflicts with '{seen_names[normalized][1]}' at line {seen_names[normalized][0]})",
+                error = DuplicateNameError(
+                    f"Duplicate step name '{step.name}' (conflicts with '{seen_names[normalized][1]}' at line {seen_names[normalized][0]})",
                     position=step.position,
                 )
-            seen_names[normalized] = (step.position.start_line, step.name, "step")
+                if self.strict:
+                    raise error
+                else:
+                    self.error_collector.add_error(error)
+            else:
+                seen_names[normalized] = (step.position.start_line, step.name, "step")
 
         # Check vars
         for var in vars_list:
             normalized = self._normalize_name(var.name)
             if normalized in seen_names:
-                raise DuplicateNameError(
-                    f"Duplicate name '{var.name}' (conflicts with '{seen_names[normalized][1]}' at line {seen_names[normalized][0]})",
+                error = DuplicateNameError(
+                    f"Duplicate var name '{var.name}' (conflicts with '{seen_names[normalized][1]}' at line {seen_names[normalized][0]})",
                     position=var.position,
                 )
-            seen_names[normalized] = (var.position.start_line, var.name, "var")
+                if self.strict:
+                    raise error
+                else:
+                    self.error_collector.add_error(error)
+            else:
+                seen_names[normalized] = (var.position.start_line, var.name, "var")
 
         # Check checks
         for check in checks:
             normalized = self._normalize_name(check.name)
             if normalized in seen_names:
-                raise DuplicateNameError(
-                    f"Duplicate name '{check.name}' (conflicts with '{seen_names[normalized][1]}' at line {seen_names[normalized][0]})",
+                error = DuplicateNameError(
+                    f"Duplicate check name '{check.name}' (conflicts with '{seen_names[normalized][1]}' at line {seen_names[normalized][0]})",
                     position=check.position,
                 )
-            seen_names[normalized] = (check.position.start_line, check.name, "check")
+                if self.strict:
+                    raise error
+                else:
+                    self.error_collector.add_error(error)
+            else:
+                seen_names[normalized] = (
+                    check.position.start_line,
+                    check.name,
+                    "check",
+                )
+
+    def get_errors(self) -> List[AimdParseError]:
+        """
+        Get all collected errors (only in non-strict mode).
+
+        Returns:
+            List of collected errors, empty list if in strict mode or no errors
+        """
+        if self.error_collector:
+            return self.error_collector.get_errors()
+        return []
+
+    def has_errors(self) -> bool:
+        """
+        Check if any errors were collected (only in non-strict mode).
+
+        Returns:
+            True if errors were collected, False otherwise
+        """
+        if self.error_collector:
+            return self.error_collector.has_errors()
+        return False
 
 
 def extract_vars(aimd_content: str) -> dict:
