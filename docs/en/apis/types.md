@@ -239,3 +239,46 @@ The JSON-Schema for a model using `ATCG` will include:
   "required": ["dna_seq"]
 }
 ```
+
+## Chinese Enum Types
+
+`airalogy.types.chinese` bundles several enumerations that match common demographic fields in mainland China scenarios.
+
+```python
+from airalogy.types import (
+    ChineseEthnicGroup,
+    ChineseProvinceLevelRegion,
+    ChineseGender,
+    ChineseMaritalStatus,
+    ChineseEducationLevel,
+)
+from pydantic import BaseModel
+
+
+class DemographicModel(BaseModel):
+    ethnic_group: ChineseEthnicGroup
+    province: ChineseProvinceLevelRegion
+    gender: ChineseGender
+    marital_status: ChineseMaritalStatus
+    education_level: ChineseEducationLevel
+```
+
+### `ChineseEthnicGroup`
+
+Enumerates all 56 ethnic groups officially recognised by the State Council (e.g. "汉族", "藏族", "维吾尔族"). Use it when a protocol needs a user’s ethnicity with the legally defined list of options.
+
+### `ChineseProvinceLevelRegion`
+
+Covers every current province-level administrative region—34 in total (23 provinces, 5 autonomous regions, 4 municipalities, and 2 Special Administrative Regions)—so values such as "北京", "广东", "新疆", or "香港" are all available.
+
+### `ChineseGender`
+
+Restricts input to "男" or "女", matching the gender labels commonly used in national resident registries.
+
+### `ChineseMaritalStatus`
+
+Provides the five statuses "未婚", "已婚", "丧偶", "离婚", and "再婚" for forms that need a standard marital-status question.
+
+### `ChineseEducationLevel`
+
+Represents the nine education levels ("无学历", "小学", "初中", "高中", "中专", "大专", "本科", "硕士", "博士") to keep education background data aligned with domestic conventions.

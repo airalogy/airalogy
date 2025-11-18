@@ -242,3 +242,46 @@ print(seq.complement())  # 输出: TAGC
   "required": ["dna_seq"]
 }
 ```
+
+## 中国常用枚举类
+
+`airalogy.types.chinese` 中内置了若干个在中国业务场景中常用的枚举字段，可用于快速构建人口统计信息相关的数据模型。
+
+```py
+from airalogy.types import (
+    ChineseEthnicGroup,
+    ChineseProvinceLevelRegion,
+    ChineseGender,
+    ChineseMaritalStatus,
+    ChineseEducationLevel,
+)
+from pydantic import BaseModel
+
+
+class DemographicModel(BaseModel):
+    ethnic_group: ChineseEthnicGroup
+    province: ChineseProvinceLevelRegion
+    gender: ChineseGender
+    marital_status: ChineseMaritalStatus
+    education_level: ChineseEducationLevel
+```
+
+### ChineseEthnicGroup
+
+使用中国国务院公布的 56 个法定民族（如“汉族”“藏族”“维吾尔族”等）作为可选值。该枚举类型通常用于要求用户明确选择其民族的场景。
+
+### ChineseProvinceLevelRegion
+
+涵盖当前 34 个省级行政区（23 个省、5 个自治区、4 个直辖市、2 个特别行政区），枚举值为“北京”“广东”“新疆”“香港”等。适合需要采集常住地或户籍所在省份的字段。
+
+### ChineseGender
+
+固定取值为“男”或“女”，可用来快速生成符合中国居民登记习惯的性别选择字段。
+
+### ChineseMaritalStatus
+
+包含“未婚”“已婚”“丧偶”“离婚”“再婚”五种状态，可用于婚姻状况调查或表单。
+
+### ChineseEducationLevel
+
+覆盖“无学历”“小学”“初中”“高中”“中专”“大专”“本科”“硕士”“博士”九档文化程度，使模型在采集教育背景时保持一致的描述方式。

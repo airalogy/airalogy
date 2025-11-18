@@ -7,6 +7,11 @@ __all__ = [
     "CurrentTime",
     "CurrentProtocolId",
     "CurrentRecordId",
+    "ChineseEducationLevel",
+    "ChineseEthnicGroup",
+    "ChineseGender",
+    "ChineseMaritalStatus",
+    "ChineseProvinceLevelRegion",
     "AiralogyMarkdown",
     "RecordId",
     "FileIdPNG",
@@ -62,3 +67,10 @@ from .ignore import IgnoreStr
 from .atcg import ATCG
 from .aimd import AiralogyMarkdown
 from .protocol import SnakeStr, VersionStr, ProtocolId, RecordId
+from .chinese import (
+    ChineseEthnicGroup,
+    ChineseEducationLevel,
+    ChineseProvinceLevelRegion,
+    ChineseGender,
+    ChineseMaritalStatus,
+)
