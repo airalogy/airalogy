@@ -112,37 +112,32 @@ class VarModel(BaseModel):
 ```py
 # File: assigner.py
 
-from airalogy.assigner import (
-    AssignerBase,
-    AssignerResult,
-    assigner,
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=[
+        "var_1.var_1_2_sum",
+    ],
+    dependent_fields=[
+        "var_1.var_1",
+        "var_1.var_2",
+    ],  # When a Variable Table participates in an Assigner, the names in
+        # assigned_fields and dependent_fields must be prefixed with the
+        # Variable Table name and may refer to AT MOST ONE Variable Table.
+        # Cross-table calculations are not allowed.
+    mode="auto",
 )
+def calculate_var_1(dependent_fields: dict) -> AssignerResult:
+    v1 = dependent_fields["var_1.var_1"]
+    v2 = dependent_fields["var_1.var_2"]
 
-class Assigner(AssignerBase):
-    @assigner(
-        assigned_fields=[
-            "var_1.var_1_2_sum",
-        ],
-        dependent_fields=[
-            "var_1.var_1",
-            "var_1.var_2",
-        ],  # When a Variable Table participates in an Assigner, the names in
-            # assigned_fields and dependent_fields must be prefixed with the
-            # Variable Table name and may refer to AT MOST ONE Variable Table.
-            # Cross-table calculations are not allowed.
-        mode="auto",
+    v_sum = v1 + v2
+
+    return AssignerResult(
+        assigned_fields={
+            "var_1.var_1_2_sum": v_sum,
+        },
     )
-    def calculate_var_1(dependent_fields: dict) -> AssignerResult:
-        v1 = dependent_fields["var_1.var_1"]
-        v2 = dependent_fields["var_1.var_2"]
-
-        v_sum = v1 + v2
-
-        return AssignerResult(
-            assigned_fields={
-                "var_1.var_1_2_sum": v_sum,
-            },
-        )
 ```
 
 **Notes when using a Variable Table Assigner:**
@@ -189,24 +184,25 @@ Then we can write an Assigner to compute `font_config_summary`:
 `assigner.py`:
 
 ```py
-class Assigner(AssignerBase):
-    @assigner(
-        assigned_fields=[
-            "font_config_summary",
-        ],
-        dependent_fields=[
-            "var_table_1",
-        ],
-        mode="auto",
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=[
+        "font_config_summary",
+    ],
+    dependent_fields=[
+        "var_table_1",
+    ],
+    mode="auto",
+)
+def calculate_font_config_summary(dependent_fields: dict) -> AssignerResult:
+    font_config_summary = "\n".join(
+        f"font_size: {row['font_size']}, font_color: {row['font_color']}"
+        for row in dependent_fields["var_table_1"]
     )
-    def calculate_font_config_summary(dependent_fields: dict) -> AssignerResult:
-        font_config_summary = "\n".join(
-            f"font_size: {row['font_size']}, font_color: {row['font_color']}"
-            for row in dependent_fields["var_table_1"]
-        )
-        return AssignerResult(
-            assigned_fields={"font_config_summary": font_config_summary}
-        )
+    return AssignerResult(
+        assigned_fields={"font_config_summary": font_config_summary}
+    )
 ```
 
 You can also make a **Variable Table** itself an **assigned field** (returned by the Assigner). In that case, **each run replaces the entire table** rather than a single row. If the table already has data, it will be overwritten. When a whole-table assignment is used, **row-level assigners are not supported** at the same time, because returning the entire table enables you to include any row-level logic within the full-table computation itself.

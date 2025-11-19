@@ -30,22 +30,22 @@ Because `timedelta` is represented in JSON Schema as a `duration` string (e.g., 
 
 ```python
 from datetime import timedelta
+from airalogy.assigner import AssignerResult, assigner
 from airalogy.iso import timedelta_to_iso
 
-class Assigner(AssignerBase):
-    @assigner(
-        assigned_fields=["duration"],
-        dependent_fields=["seconds"],
-        mode="auto",
+@assigner(
+    assigned_fields=["duration"],
+    dependent_fields=["seconds"],
+    mode="auto",
+)
+def convert_seconds_to_duration(dependent_fields: dict) -> AssignerResult:
+    seconds = dependent_fields["seconds"]
+    duration = timedelta(seconds=seconds)
+    return AssignerResult(
+        assigned_fields={
+            "duration": timedelta_to_iso(duration),
+        },
     )
-    def convert_seconds_to_duration(dependent_fields: dict) -> AssignerResult:
-        seconds = dependent_fields["seconds"]
-        duration = timedelta(seconds=seconds)
-        return AssignerResult(
-            assigned_fields={
-                "duration": timedelta_to_iso(duration),
-            },
-        )
 ```
 
 Incorrect (unsafe) implementation that may fail JSON Schema validation:

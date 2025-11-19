@@ -67,32 +67,26 @@ By contrast, **regular models** such as `CheckValue` or `StepValue` exist purely
 
 ```python
 # assigner.py
-from airalogy.assigner import (
-    AssignerBase,
-    AssignerResult,
-    assigner,
-)
+from airalogy.assigner import AssignerResult, assigner
 from airalogy.models import CheckValue
 
-class Assigner(AssignerBase):
-
-    @assigner(
-        assigned_fields=["a_gt_b"],
-        dependent_fields=["a", "b"],   # both floats
-        mode="auto",
+@assigner(
+    assigned_fields=["a_gt_b"],
+    dependent_fields=["a", "b"],   # both floats
+    mode="auto",
+)
+def check_a_gt_b(dependent_fields: dict) -> AssignerResult:
+    a = dependent_fields["a"]
+    b = dependent_fields["b"]
+    result = a > b
+    return AssignerResult(
+        assigned_fields={
+            "a_gt_b": CheckValue(
+                checked=result,
+                annotation="a > b"
+            )
+        }
     )
-    def check_a_gt_b(dependent_fields: dict) -> AssignerResult:
-        a = dependent_fields["a"]
-        b = dependent_fields["b"]
-        result = a > b
-        return AssignerResult(
-            assigned_fields={
-                "a_gt_b": CheckValue(
-                    checked=result,
-                    annotation="a > b"
-                )
-            }
-        )
 ```
 
 In this snippet, `CheckValue` enforces a consistent structure for the data that the Assigner returns, while any UI-related fields (e.g. `UserName`) would be handled elsewhere in the protocol.
