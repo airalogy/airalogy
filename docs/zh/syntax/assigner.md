@@ -40,39 +40,38 @@ class VarModel(BaseModel):
 
 # 首先，我们从`airalogy`中的相关模块导入必要的类和函数
 from airalogy.assigner import (
-    AssignerBase, # 用于定义Assigner的基类
     AssignerResult, # 用于约束Assigner的返回结果的数据结构
     assigner, # 用于定义Assigner的装饰器
 )
 
-class Assigner(AssignerBase): # 必须定义一个继承自`AssignerBase`的名为`Assigner`的类
-    @assigner( # 被该装饰器装饰的函数被视为Assigner类中的一个静态方法，用于定义一个Assigner的赋值单元
-        assigned_fields=[ # 所赋值的Fields的名称
-            "var_3",
-        ],
-        dependent_fields=[ # 依赖的Fields的名称
-            "var_1",
-            "var_2",
-        ],
-        mode="auto", # 用于定义Assigner的模式。
-        # 不同模式的含义如下：
-        # "auto": 自动计算的赋值单元，即只要其依赖的Fields的值发生变化，该Assigner就会自动执行，以更新其赋值的Fields的值
-        # "manual": 手动计算的赋值单元，即需要用户手动点击前端的赋值按钮来执行
-    )
-    def calculate_var_3(dependent_fields: dict) -> AssignerResult: # 赋值函数的函数名可以任意命名，但其接收的参数必须为`dependent_fields`，且返回值必须为一个AssignerResult对象。其中`dependent_fields`字典必须包含所有依赖的Fields的值（即`dependent_fields`中的key-value对应于Fields的名称和值，且必须一一对应）
-        var_1_value = dependent_fields["var_1"] # 从`dependent_fields`字典中取出`var_1`的值
-        var_2_value = dependent_fields["var_2"] # 从`dependent_fields`字典中取出`var_2`的值
-        
-        var_3_value = var_1_value * var_2_value # 计算`var_3`的值
+@assigner( # 被该装饰器装饰的函数会自动注册到一个默认的Assigner中
+    assigned_fields=[ # 所赋值的Fields的名称
+        "var_3",
+    ],
+    dependent_fields=[ # 依赖的Fields的名称
+        "var_1",
+        "var_2",
+    ],
+    mode="auto", # 用于定义Assigner的模式。
+    # 不同模式的含义如下：
+    # "auto": 自动计算的赋值单元，即只要其依赖的Fields的值发生变化，该Assigner就会自动执行，以更新其赋值的Fields的值
+    # "manual": 手动计算的赋值单元，即需要用户手动点击前端的赋值按钮来执行
+)
+def calculate_var_3(dependent_fields: dict) -> AssignerResult: # 赋值函数的函数名可以任意命名，但其接收的参数必须为`dependent_fields`，且返回值必须为一个AssignerResult对象。其中`dependent_fields`字典必须包含所有依赖的Fields的值（即`dependent_fields`中的key-value对应于Fields的名称和值，且必须一一对应）
+    var_1_value = dependent_fields["var_1"] # 从`dependent_fields`字典中取出`var_1`的值
+    var_2_value = dependent_fields["var_2"] # 从`dependent_fields`字典中取出`var_2`的值
+    
+    var_3_value = var_1_value * var_2_value # 计算`var_3`的值
 
-        # 该函数的返回值为一个AssignerResult对象，其中包含了Assigner的执行结果
-        return AssignerResult(
-            success=True, # 用于表示Assigner是否成功执行
-            assigned_fields={ # 用于表示Assigner执行成功后，所赋值的Fields的名称和值。该字典中的keys对应于`assigned_rvs`中的`var`s的名称，且必须一一对应
-                "var_3": var_3_value,
-            },
-            error_message=None, # 当Assigner执行失败时，用于表示失败的原因。由于此时`success`为True，因此该字段必须为None
-        )
+    # 该函数的返回值为一个AssignerResult对象，其中包含了Assigner的执行结果
+    return AssignerResult(
+        success=True, # 用于表示Assigner是否成功执行
+        assigned_fields={ # 用于表示Assigner执行成功后，所赋值的Fields的名称和值。该字典中的keys对应于`assigned_rvs`中的`var`s的名称，且必须一一对应
+            "var_3": var_3_value,
+        },
+        error_message=None, # 当Assigner执行失败时，用于表示失败的原因。由于此时`success`为True，因此该字段必须为None
+    )
+
 ```
 
 注意：
@@ -134,34 +133,29 @@ class VarModel(BaseModel):
 # File: assigner.py
 
 from datetime import datetime, timedelta
-from airalogy.assigner import (
-    AssignerBase,
-    AssignerResult,
-    assigner,
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=[
+        "record_time_plus_1_day",
+    ],
+    dependent_fields=[
+        "record_time",
+    ],
+    mode="auto",
 )
+def calculate_rerecord_time_plus_1_day(dependent_fields: dict) -> AssignerResult:
+    record_time_str = dependent_fields["rerecord_time"] # datetime类型在JSON Schema中储存为字符串
+    record_time = datetime.fromisoformat(rerecord_time_str) # 将字符串转换为datetime类型
 
-class Assigner(AssignerBase):
-    @assigner(
-        assigned_fields=[
-            "record_time_plus_1_day",
-        ],
-        dependent_fields=[
-            "record_time",
-        ],
-        mode="auto",
+    record_time_plus_1_day = rerecord_time + timedelta(days=1)
+    record_time_plus_1_day_str = record_time_plus_1_day.isoformat() # 将datetime类型转换为字符串以保证通信可行性
+
+    return AssignerResult(
+        assigned_fields={
+            "record_time_plus_1_day": record_time_plus_1_day_str,
+        },
     )
-    def calculate_rerecord_time_plus_1_day(dependent_fields: dict) -> AssignerResult:
-        record_time_str = dependent_fields["rerecord_time"] # datetime类型在JSON Schema中储存为字符串
-        record_time = datetime.fromisoformat(rerecord_time_str) # 将字符串转换为datetime类型
-
-        record_time_plus_1_day = rerecord_time + timedelta(days=1)
-        record_time_plus_1_day_str = record_time_plus_1_day.isoformat() # 将datetime类型转换为字符串以保证通信可行性
-
-        return AssignerResult(
-            assigned_fields={
-                "record_time_plus_1_day": record_time_plus_1_day_str,
-            },
-        )
 ```
 
 ## Assigner for Checkpoint-class Fields
@@ -204,41 +198,36 @@ class VarModel(BaseModel):
 ```py
 # File: assigner.py
 
-from airalogy.assigner import (
-    AssignerBase,
-    AssignerResult,
-    assigner,
-)
+from airalogy.assigner import AssignerResult, assigner
 from airalogy.model import CheckValue # 用于约束`check`的值的数据类型
 
-class Assigner(AssignerBase):
-    @rc_assigner(
-        assigned_fields=[
-            "var_1_2_sum", # 注意这里被赋值的是一个RV
-            "check_sum_gt_10", # 注意这里被赋值的是一个`check`
-        ],
-        dependent_fields=[
-            "var_1",
-            "var_2",
-        ],
-        mode="auto",
+@assigner(
+    assigned_fields=[
+        "var_1_2_sum", # 注意这里被赋值的是一个`var`
+        "check_sum_gt_10", # 注意这里被赋值的是一个`check`
+    ],
+    dependent_fields=[
+        "var_1",
+        "var_2",
+    ],
+    mode="auto",
+)
+def check_sum_gt_10(dependent_fields: dict) -> AssignerResult:
+    var_1_value = dependent_fields["var_1"]
+    var_2_value = dependent_fields["var_2"]
+
+    var_1_2_sum = var_1_value + var_2_value
+    check_sum_gt_10_checked = var_1_2_sum > 10
+
+    return AssignerResult(
+        assigned_fields={
+            "var_1_2_sum": var_1_2_sum,
+            "check_sum_gt_10": CheckValue( # 由于`check`的值有特殊的数据结构，即包含`checked`和`annotation`两个字段，因此在赋值时需要使用`CheckValue`类对数据结构进行约束
+                checked=check_sum_gt_10_checked, 
+                annotation=f"var_1 + var_2 = {var_1_2_sum}, which is {'>' if check_sum_gt_10_checked else '<='} 10"
+            )
+        },
     )
-    def check_sum_gt_10(dependent_fields: dict) -> AssignerResult:
-        var_1_value = dependent_fields["var_1"]
-        var_2_value = dependent_fields["var_2"]
-
-        var_1_2_sum = var_1_value + var_2_value
-        check_sum_gt_10_checked = var_1_2_sum > 10
-
-        return AssignerResult(
-            assigned_fields={
-                "var_1_2_sum": var_1_2_sum,
-                "check_sum_gt_10": CheckValue( # 由于`check`的值有特殊的数据结构，即包含`checked`和`annotation`两个字段，因此在赋值时需要使用`CheckValue`类对数据结构进行约束
-                    checked=check_sum_gt_10_checked, 
-                    annotation=f"var_1 + var_2 = {var_1_2_sum}, which is {'>' if check_sum_gt_10_checked else '<='} 10"
-                )
-            },
-        )
 ```
 
 注：`step`也可以通过Assigner进行自动计算，其方法与`check`类似。
@@ -246,3 +235,26 @@ class Assigner(AssignerBase):
 ## 其他Assigner
 
 - [Assigner for Variable Table](var_table.md#assigner-for-variable-table)
+
+## 旧版`Assigner`类语法（计划废弃）
+
+在历史版本中，编写Assigner时必须手动定义`class Assigner(AssignerBase)`并把函数写成静态方法。该写法仍可在旧项目中使用，但将来会被完全移除，推荐尽快迁移到本文前面介绍的函数式语法。
+
+```py
+from airalogy.assigner import AssignerBase, AssignerResult, assigner
+
+class Assigner(AssignerBase):
+    @assigner(
+        assigned_fields=["var_3"],
+        dependent_fields=["var_1", "var_2"],
+        mode="auto",
+    )
+    def calculate_var_3(dependent_fields: dict) -> AssignerResult:
+        var_1_value = dependent_fields["var_1"]
+        var_2_value = dependent_fields["var_2"]
+        return AssignerResult(
+            assigned_fields={"var_3": var_1_value + var_2_value},
+        )
+```
+
+> ⚠️ 注意：新版的模块级函数语法具备同样的功能且更加简洁。若无特殊兼容性需求，请勿再新增此旧语法的代码。

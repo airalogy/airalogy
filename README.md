@@ -70,33 +70,32 @@ class VarModel(BaseModel):
 **`assigner.py`**
 
 ```python
-from airalogy.assigner import AssignerBase, AssignerResult, assigner
+from airalogy.assigner import AssignerResult, assigner
 
 
-class Assigner(AssignerBase):
-    @assigner(
-        assigned_fields=["required_solute_mass"],
-        dependent_fields=[
-            "target_solution_volume",
-            "solute_molar_mass",
-            "target_molar_concentration",
-        ],
-        mode="auto",
+@assigner(
+    assigned_fields=["required_solute_mass"],
+    dependent_fields=[
+        "target_solution_volume",
+        "solute_molar_mass",
+        "target_molar_concentration",
+    ],
+    mode="auto",
+)
+def calculate_required_solute_mass(dependent_fields: dict) -> AssignerResult:
+    target_solution_volume = dependent_fields["target_solution_volume"]
+    solute_molar_mass = dependent_fields["solute_molar_mass"]
+    target_molar_concentration = dependent_fields["target_molar_concentration"]
+
+    required_solute_mass = (
+        target_solution_volume * target_molar_concentration * solute_molar_mass
     )
-    def calculate_required_solute_mass(dependent_fields: dict) -> AssignerResult:
-        target_solution_volume = dependent_fields["target_solution_volume"]
-        solute_molar_mass = dependent_fields["solute_molar_mass"]
-        target_molar_concentration = dependent_fields["target_molar_concentration"]
 
-        required_solute_mass = (
-            target_solution_volume * target_molar_concentration * solute_molar_mass
-        )
-
-        return AssignerResult(
-            assigned_fields={
-                "required_solute_mass": required_solute_mass,
-            },
-        )
+    return AssignerResult(
+        assigned_fields={
+            "required_solute_mass": required_solute_mass,
+        },
+    )
 ```
 
 ## Command Line Interface

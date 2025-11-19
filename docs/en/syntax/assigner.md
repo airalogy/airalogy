@@ -40,28 +40,22 @@ class VarModel(BaseModel):
 #### File 3: `assigner.py`
 
 ```python
-from airalogy.assigner import (
-    AssignerBase,
-    AssignerResult,
-    assigner,
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=["var_3"],  # fields to assign
+    dependent_fields=["var_1", "var_2"],  # fields that this function depends on
+    mode="auto",  # "auto" = run whenever dependencies change
+                  # "manual" = user must click "Assign" button in the UI
 )
+def calculate_var_3(dependent_fields: dict) -> AssignerResult:
+    v1 = dependent_fields["var_1"]
+    v2 = dependent_fields["var_2"]
+    v3 = v1 + v2
 
-class Assigner(AssignerBase):
-
-    @assigner(
-        assigned_fields=["var_3"],  # fields to assign
-        dependent_fields=["var_1", "var_2"],  # fields that this function depends on
-        mode="auto",  # "auto" = run whenever dependencies change
-                      # "manual" = user must click "Assign" button in the UI
+    return AssignerResult(
+        assigned_fields={"var_3": v3}
     )
-    def calculate_var_3(dependent_fields: dict) -> AssignerResult:
-        v1 = dependent_fields["var_1"]
-        v2 = dependent_fields["var_2"]
-        v3 = v1 + v2
-
-        return AssignerResult(
-            assigned_fields={"var_3": v3}
-        )
 ```
 
 > **Many-to-many is allowed**
@@ -80,27 +74,25 @@ Convert it to a native Python object before calculation, then convert back:
 
 ```python
 from datetime import datetime, timedelta
-from airalogy.assigner import AssignerBase, AssignerResult, assigner
+from airalogy.assigner import AssignerResult, assigner
 
-class Assigner(AssignerBase):
+@assigner(
+    assigned_fields=["record_time_plus_1_day"],
+    dependent_fields=["record_time"],
+    mode="auto",
+)
+def plus_one_day(dep: dict) -> AssignerResult:
+    # JSON → Python
+    t0 = datetime.fromisoformat(dep["record_time"])
 
-    @assigner(
-        assigned_fields=["record_time_plus_1_day"],
-        dependent_fields=["record_time"],
-        mode="auto",
+    t1 = t0 + timedelta(days=1)
+
+    # Python → JSON
+    return AssignerResult(
+        assigned_fields={
+            "record_time_plus_1_day": t1.isoformat()
+        }
     )
-    def plus_one_day(dep: dict) -> AssignerResult:
-        # JSON → Python
-        t0 = datetime.fromisoformat(dep["record_time"])
-
-        t1 = t0 + timedelta(days=1)
-
-        # Python → JSON
-        return AssignerResult(
-            assigned_fields={
-                "record_time_plus_1_day": t1.isoformat()
-            }
-        )
 ```
 
 ## 4 Assigners for Checkpoints
@@ -108,31 +100,29 @@ class Assigner(AssignerBase):
 Checkpoints (`check`) can be calculated the same way, but you must return a `CheckValue`:
 
 ```python
-from airalogy.assigner import AssignerBase, AssignerResult, assigner
+from airalogy.assigner import AssignerResult, assigner
 from airalogy.models import CheckValue
 
-class Assigner(AssignerBase):
+@assigner(
+    assigned_fields=["var_1_2_sum", "check_sum_gt_10"],
+    dependent_fields=["var_1", "var_2"],
+    mode="auto",
+)
+def check_sum(dep: dict) -> AssignerResult:
+    v1 = dep["var_1"]
+    v2 = dep["var_2"]
+    total = v1 + v2
+    passed = total > 10
 
-    @assigner(
-        assigned_fields=["var_1_2_sum", "check_sum_gt_10"],
-        dependent_fields=["var_1", "var_2"],
-        mode="auto",
+    return AssignerResult(
+        assigned_fields={
+            "var_1_2_sum": total,
+            "check_sum_gt_10": CheckValue(
+                checked=passed,
+                annotation=f"var_1 + var_2 = {total} ({'>' if passed else '<='} 10)"
+            )
+        }
     )
-    def check_sum(dep: dict) -> AssignerResult:
-        v1 = dep["var_1"]
-        v2 = dep["var_2"]
-        total = v1 + v2
-        passed = total > 10
-
-        return AssignerResult(
-            assigned_fields={
-                "var_1_2_sum": total,
-                "check_sum_gt_10": CheckValue(
-                    checked=passed,
-                    annotation=f"var_1 + var_2 = {total} ({'>' if passed else '<='} 10)"
-                )
-            }
-        )
 ```
 
 > The same pattern works for `step` fields—return the helper model `StepValue`.
@@ -156,3 +146,24 @@ class Assigner(AssignerBase):
 ## Other Assigners
 
 - [Variable Table Assigners](./var_table.md)
+
+## Legacy Class Syntax (To Be Deprecated)
+
+Older versions required an explicit `class Assigner(AssignerBase)` with static methods. This style is still supported for backward compatibility but will be removed in a future release, so please migrate new code to the function-based API shown earlier.
+
+```python
+from airalogy.assigner import AssignerBase, AssignerResult, assigner
+
+class Assigner(AssignerBase):
+    @assigner(
+        assigned_fields=["var_3"],
+        dependent_fields=["var_1", "var_2"],
+        mode="auto",
+    )
+    def calculate_var_3(dependent_fields: dict) -> AssignerResult:
+        return AssignerResult(
+            assigned_fields={"var_3": dependent_fields["var_1"] + dependent_fields["var_2"]}
+        )
+```
+
+> ⚠️ New development should **not** add more class-based Assigners unless absolutely necessary for legacy interoperability.

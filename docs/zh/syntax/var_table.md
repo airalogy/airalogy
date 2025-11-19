@@ -110,34 +110,29 @@ class VarModel(BaseModel):
 ```py
 # File: assigner.py
 
-from airalogy.assigner import (
-    AssignerBase,
-    AssignerResult
-    assigner,
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=[
+        "var_1.var_1_2_sum",
+    ],
+    dependent_fields=[
+        "var_1.var_1",
+        "var_1.var_2",
+    ], # 注意，当Variable Table参与Assigner计算时，其assigned_fields和dependent_fields的名称需要加上Variable Table的名称前缀，并且最多来源于一个Variable Table。不得跨Variable Table进行计算
+    mode="auto",
 )
+def calculate_var_1(dependent_fields: dict) -> AssignerResult:
+    var_1 = dependent_fields["var_1.var_1"]
+    var_2 = dependent_fields["var_1.var_2"]
 
-class Assigner(AssignerBase):
-    @assigner(
-        assigned_fields=[
-            "var_1.var_1_2_sum",
-        ],
-        dependent_fields=[
-            "var_1.var_1",
-            "var_1.var_2",
-        ], # 注意，当Variable Table参与Assigner计算时，其assigned_fields和dependent_fields的名称需要加上Variable Table的名称前缀，并且最多来源于一个Variable Table。不得跨Variable Table进行计算
-        mode="auto",
+    var_1_2_sum = var_1 + var_2
+
+    return AssignerResult(
+        assigned_fields={
+            "var_1.var_1_2_sum": var_1_2_sum,
+        },
     )
-    def calculate_var_1(dependent_fields: dict) -> AssignerResult:
-        var_1 = dependent_fields["var_1.var_1"]
-        var_2 = dependent_fields["var_1.var_2"]
-
-        var_1_2_sum = var_1 + var_2
-
-        return AssignerResult(
-            assigned_fields={
-                "var_1.var_1_2_sum": var_1_2_sum,
-            },
-        )
 ```
 
 在使用Variable Table Assigner时，我们需要注意以下几点：
@@ -190,29 +185,30 @@ class VarModel(BaseModel):
 `assigner.py`:
 
 ```py
-class Assigner(AssignerBase):
-    @assigner(
-        assigned_fields=[
-            "font_config_summary",
-        ],
-        dependent_fields=[
-            "var_table_1",
-        ],
-        mode="auto",
-    )
-    def calculate_font_config_summary(dependent_fields: dict) -> AssignerResult:
-        font_config_summary = "\n".join(
-            [
-                f"font_size: {row['font_size']}, font_color: {row['font_color']}"
-                for row in dependent_fields["var_table_1"]
-            ]
-        )
+from airalogy.assigner import AssignerResult, assigner
 
-        return AssignerResult(
-            assigned_fields={
-                "font_config_summary": font_config_summary,
-            },
-        )
+@assigner(
+    assigned_fields=[
+        "font_config_summary",
+    ],
+    dependent_fields=[
+        "var_table_1",
+    ],
+    mode="auto",
+)
+def calculate_font_config_summary(dependent_fields: dict) -> AssignerResult:
+    font_config_summary = "\n".join(
+        [
+            f"font_size: {row['font_size']}, font_color: {row['font_color']}"
+            for row in dependent_fields["var_table_1"]
+        ]
+    )
+
+    return AssignerResult(
+        assigned_fields={
+            "font_config_summary": font_config_summary,
+        },
+    )
 ```
 
 当然，我们也可以把一个Variable Table作为一个Assigned Field作为Assigner的传出。注意此时，每次Assigner的计算都会返回一个完整的Variable Table，而不是单行的Variable Table。因此如果Variable Table已经有数据了，则此种情况下会覆盖原有的Variable Table数据。注意，当将整个Variable Table作为Assigned Field时，不支持再在此基础上进行基于行的Assigner计算，因为本质上既然都能够返回整个Variable Table了，那么就不需要再进行行级的计算了（因为可以在整个Table计算的过程中将行计算的逻辑也包含在内）。

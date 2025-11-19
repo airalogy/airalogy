@@ -78,30 +78,24 @@ class VarModel(BaseModel):
 `assigner.py`:
 
 ```py
-from airalogy.assigner import (
-    AssignerBase,
-    AssignerResult,
-    assigner,
-)
+from airalogy.assigner import AssignerResult, assigner
 from airalogy.models import CheckValue
 
-
-class Assigner(AssignerBase):
-    @assigner(
-        assigned_fields=[
-            "a_gt_b",
-        ],
-        dependent_fields=[
-            "a",  # float
-            "b",  # float
-        ],
-        mode="auto",
+@assigner(
+    assigned_fields=[
+        "a_gt_b",
+    ],
+    dependent_fields=[
+        "a",  # float
+        "b",  # float
+    ],
+    mode="auto",
+)
+def check_a_gt_b(dependent_fields: dict) -> AssignerResult:
+    a = dependent_fields["a"]
+    b = dependent_fields["b"]
+    a_gt_b = a > b
+    return AssignerResult(
+        assigned_fields={"a_gt_b": CheckValue(checked=a_gt_b, annotation="a > b")},
     )
-    def check_a_gt_b(dependent_fields: dict) -> AssignerResult:
-        a = dependent_fields["a"]
-        b = dependent_fields["b"]
-        a_gt_b = a > b
-        return AssignerResult(
-            assigned_fields={"a_gt_b": CheckValue(checked=a_gt_b, annotation="a > b")},
-        )
 ```
