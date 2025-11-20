@@ -4,6 +4,8 @@ VarModel generator - generates Pydantic models from parsed AIMD.
 
 from typing import Any, Dict, List, Set
 
+from airalogy import types
+
 from .ast_nodes import VarNode, VarTableNode
 from .parser import AimdParser
 
@@ -16,47 +18,6 @@ class ModelGenerator:
     the variable definitions found in an AIMD document.
     """
 
-    # Map of AIMD types to Python/Pydantic types
-    TYPE_MAP = {
-        "str": "str",
-        "int": "int",
-        "float": "float",
-        "bool": "bool",
-        "list": "list",
-        "dict": "dict",
-        # Add Airalogy custom types
-        "UserName": "UserName",
-        "CurrentTime": "CurrentTime",
-        "CurrentProtocolId": "CurrentProtocolId",
-        "CurrentRecordId": "CurrentRecordId",
-        "ProtocolId": "ProtocolId",
-        "RecordId": "RecordId",
-        "SnakeStr": "SnakeStr",
-        "VersionStr": "VersionStr",
-        "IgnoreStr": "IgnoreStr",
-        "Recommended": "Recommended",
-        "ATCG": "ATCG",
-        "AiralogyMarkdown": "AiralogyMarkdown",
-        # File ID types
-        "FileIdPNG": "FileIdPNG",
-        "FileIdJPG": "FileIdJPG",
-        "FileIdPDF": "FileIdPDF",
-        "FileIdCSV": "FileIdCSV",
-        "FileIdJSON": "FileIdJSON",
-        "FileIdDOCX": "FileIdDOCX",
-        "FileIdXLSX": "FileIdXLSX",
-        "FileIdPPTX": "FileIdPPTX",
-        "FileIdMP3": "FileIdMP3",
-        "FileIdMP4": "FileIdMP4",
-        "FileIdSVG": "FileIdSVG",
-        "FileIdWEBP": "FileIdWEBP",
-        "FileIdTIFF": "FileIdTIFF",
-        "FileIdMD": "FileIdMD",
-        "FileIdTXT": "FileIdTXT",
-        "FileIdAIMD": "FileIdAIMD",
-        "FileIdDNA": "FileIdDNA",
-    }
-
     def __init__(self, aimd_content: str):
         """
         Initialize generator with AIMD content.
@@ -66,6 +27,7 @@ class ModelGenerator:
         """
         self.parser = AimdParser(aimd_content)
         self.parsed = self.parser.parse()
+        self.airalogy_type_names = set(types.__all__)
 
     def _get_imports(self) -> Set[str]:
         """
@@ -78,39 +40,6 @@ class ModelGenerator:
         has_field_usage = False
         airalogy_types_used = set()
 
-        # All Airalogy custom types
-        airalogy_type_names = {
-            "UserName",
-            "CurrentTime",
-            "CurrentProtocolId",
-            "CurrentRecordId",
-            "ProtocolId",
-            "RecordId",
-            "SnakeStr",
-            "VersionStr",
-            "IgnoreStr",
-            "Recommended",
-            "ATCG",
-            "AiralogyMarkdown",
-            "FileIdPNG",
-            "FileIdJPG",
-            "FileIdPDF",
-            "FileIdCSV",
-            "FileIdJSON",
-            "FileIdDOCX",
-            "FileIdXLSX",
-            "FileIdPPTX",
-            "FileIdMP3",
-            "FileIdMP4",
-            "FileIdSVG",
-            "FileIdWEBP",
-            "FileIdTIFF",
-            "FileIdMD",
-            "FileIdTXT",
-            "FileIdAIMD",
-            "FileIdDNA",
-        }
-
         for var in self.parsed["vars"]:
             # Check if Field is needed (for any kwargs or special parameters)
             if isinstance(var, VarNode):
@@ -119,7 +48,7 @@ class ModelGenerator:
 
                 # Check if any Airalogy types are used
                 if var.type_annotation:
-                    for airalogy_type in airalogy_type_names:
+                    for airalogy_type in self.airalogy_type_names:
                         if airalogy_type in var.type_annotation:
                             airalogy_types_used.add(airalogy_type)
 
@@ -129,7 +58,7 @@ class ModelGenerator:
                         if subvar.kwargs or subvar.default_value is not None:
                             has_field_usage = True
                         if subvar.type_annotation:
-                            for airalogy_type in airalogy_type_names:
+                            for airalogy_type in self.airalogy_type_names:
                                 if airalogy_type in subvar.type_annotation:
                                     airalogy_types_used.add(airalogy_type)
 
@@ -218,11 +147,11 @@ class ModelGenerator:
         # For auto-generated types (from var name without explicit type), always generate class
         # For explicitly specified basic types (like list[int]), don't generate class
         # For explicitly specified complex types (like list[Employee]), generate class only if we have subvars
-        should_generate_model = (
-            item_type_name not in basic_types and (
-                var.auto_item_type is not None or  # Auto-generated type, always generate
-                (var.list_item_type is not None and var.subvars)  # Explicit type with subvars
-            )
+        should_generate_model = item_type_name not in basic_types and (
+            var.auto_item_type is not None  # Auto-generated type, always generate
+            or (
+                var.list_item_type is not None and var.subvars
+            )  # Explicit type with subvars
         )
 
         if should_generate_model:

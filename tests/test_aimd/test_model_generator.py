@@ -56,6 +56,7 @@ class TestVarModelGenerator:
 {{var|user_name: UserName}}
 {{var|current_time: CurrentTime}}
 {{var|avatar: FileIdJPG}}
+{{var|gender: ChineseGender}}
 """
         code = generate_model(content)
 
@@ -69,6 +70,7 @@ class TestVarModelGenerator:
         assert "user_name: UserName" in code
         assert "current_time: CurrentTime" in code
         assert "avatar: FileIdJPG" in code
+        assert "gender: ChineseGender" in code
 
     def test_generate_simple_var_table(self):
         """Test generating model from simple var table."""
