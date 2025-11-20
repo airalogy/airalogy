@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.0.9 (20251120)
+
+### Features
+- Add Typed AIMD variable syntax support
+- Add command-line interface (CLI) with syntax checking and model generation commands
+- Add Chinese demographic enum types for enhanced data modeling
+- Support standalone assigner functions with simplified decorator syntax
+
+### Documentation
+- Add typed AIMD variable syntax documentation
+- Simplify Assigner syntax documentation by removing class-based definitions
+
+### Development
+- New parser implementation
+
 ## 0.0.8 (20251029)
 
 ### Features
