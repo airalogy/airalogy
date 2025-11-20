@@ -1,6 +1,7 @@
 from airalogy.assigner import (
     AssignerBase,
     AssignerResult,
+    DefaultAssigner,
     assigner,
 )
 from airalogy.models.check import CheckValue
@@ -236,3 +237,99 @@ def test_rv_assigner():
             checked=True, annotation="rc_04 = rv_01 + rv_02 - rv_09, value is: 27"
         ),
     }
+
+
+@assigner(
+    assigned_fields=[
+        "standalone_rv_total",
+    ],
+    dependent_fields=[
+        "standalone_rv_a",
+        "standalone_rv_b",
+    ],
+    mode="auto",
+)
+def assign_standalone_total(dependent_fields: dict) -> AssignerResult:
+    total = dependent_fields["standalone_rv_a"] + dependent_fields["standalone_rv_b"]
+
+    return AssignerResult(
+        success=True,
+        assigned_fields={"standalone_rv_total": total},
+        error_message=None,
+    )
+
+
+@assigner(
+    assigned_fields=[
+        "standalone_rv_net",
+    ],
+    dependent_fields=[
+        "standalone_rv_total",
+        "standalone_rv_discount",
+    ],
+    mode="manual",
+)
+def assign_standalone_net(dependent_fields: dict) -> AssignerResult:
+    net = (
+        dependent_fields["standalone_rv_total"]
+        - dependent_fields["standalone_rv_discount"]
+    )
+
+    return AssignerResult(
+        success=True,
+        assigned_fields={"standalone_rv_net": net},
+        error_message=None,
+    )
+
+
+def test_standalone_assigner_registration_and_execution():
+    assert (
+        DefaultAssigner.get_assign_func_of_assigned_key("standalone_rv_total").__name__
+        == assign_standalone_total.__name__
+    )
+
+    result = DefaultAssigner.assign(
+        "standalone_rv_total",
+        {
+            "standalone_rv_a": 5,
+            "standalone_rv_b": 7,
+        },
+    )
+    assert result.success
+    assert result.assigned_fields == {"standalone_rv_total": 12}
+
+    result = DefaultAssigner.assign(
+        "standalone_rv_total",
+        {
+            "standalone_rv_a": 5,
+        },
+    )
+    assert not result.success
+    assert result.assigned_fields is None
+    assert "Missing dependent" in result.error_message
+
+
+def test_standalone_manual_assigner():
+    depent_files = DefaultAssigner.get_dependent_fields_of_assigned_key(
+        "standalone_rv_net"
+    )
+    assert sorted(depent_files) == sorted(
+        [
+            "standalone_rv_a",
+            "standalone_rv_b",
+            "standalone_rv_discount",
+            "standalone_rv_total",
+        ]
+    )
+    # Manual assigners rely on caller-provided dependent data
+    result = DefaultAssigner.assign(
+        "standalone_rv_net",
+        {
+            "standalone_rv_a": 10,
+            "standalone_rv_b": 10,
+            "standalone_rv_discount": 3,
+        },
+    )
+
+    assert result.success
+    assert result.assigned_fields == {"standalone_rv_net": 17}

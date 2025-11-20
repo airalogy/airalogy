@@ -22,6 +22,15 @@ def unique_list(lst):
 AssignerMode = Literal["manual", "auto_first", "auto", "auto_force"]
 
 
+def _is_function_defined_in_class(func: Callable) -> bool:
+    """Return True when `func` is declared directly inside a class body."""
+
+    qualname = getattr(func, "__qualname__", "")
+    if not qualname or "<locals>" in qualname:
+        return False
+    return "." in qualname
+
+
 class AssignerBase:
     _lock = threading.Lock()
     assigned_info: dict[str, tuple[list[str], Callable, AssignerMode]] = {}
@@ -195,9 +204,30 @@ class AssignerBase:
         return assign_func(dependent_data)
 
 
+class DefaultAssigner(AssignerBase):
+    """Default assigner container for standalone @assigner functions."""
+
+
 def assigner(
     assigned_fields: list[str],
     dependent_fields: list[str],
     mode: AssignerMode = "auto_first",
 ):
-    return AssignerBase.assigner(assigned_fields, dependent_fields, mode)
+    def decorator(assign_func: Callable):
+        if _is_function_defined_in_class(assign_func):
+            class_decorator = AssignerBase.assigner(
+                assigned_fields, dependent_fields, mode
+            )
+            return class_decorator(assign_func)
+
+        default_decorator = DefaultAssigner.assigner(
+            assigned_fields,
+            dependent_fields,
+            mode,
+        )
+        wrapped = default_decorator(assign_func)
+        if isinstance(wrapped, staticmethod):
+            return wrapped.__func__
+        return wrapped
+
+    return decorator
