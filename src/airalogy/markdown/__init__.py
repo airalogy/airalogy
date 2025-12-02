@@ -26,6 +26,7 @@ from .lexer import Lexer
 from .model_generator import generate_model
 from .parser import AimdParser, extract_vars
 from .tokens import Position, Token, TokenType
+from .get import get_airalogy_image_ids
 from .validator import AimdValidator, ValidationError, validate_aimd
 
 __all__ = [
@@ -57,4 +58,6 @@ __all__ = [
     "validate_aimd",
     # Model generation
     "generate_model",
+    # Markdown helpers
+    "get_airalogy_image_ids",
 ]

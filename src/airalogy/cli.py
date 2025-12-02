@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .aimd import generate_model, validate_aimd
+from .markdown import generate_model, validate_aimd
 
 
 def check_command(args):

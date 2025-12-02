@@ -4,7 +4,7 @@ Comprehensive tests for spec.aimd - testing all AIMD syntax variations.
 
 import pytest
 
-from airalogy.aimd import (
+from airalogy.markdown import (
     AimdParser,
     CheckNode,
     StepNode,
@@ -17,7 +17,7 @@ from airalogy.aimd import (
 @pytest.fixture
 def spec_content():
     """Load spec.aimd content."""
-    with open("tests/test_aimd/spec.aimd") as f:
+    with open("tests/test_markdown/spec.aimd") as f:
         return f.read()
 
 
@@ -404,16 +404,22 @@ class TestSpecFile:
         assert "auto_list_table" in var_names
 
         # Check a var table has subvars
-        simple_table = next(v for v in extracted_result["vars"] if v["name"] == "simple_table")
+        simple_table = next(
+            v for v in extracted_result["vars"] if v["name"] == "simple_table"
+        )
         assert "subvars" in simple_table
         assert len(simple_table["subvars"]) == 3
 
         # Check a typed var has type_annotation
-        typed_var = next(v for v in extracted_result["vars"] if v["name"] == "typed_var")
+        typed_var = next(
+            v for v in extracted_result["vars"] if v["name"] == "typed_var"
+        )
         assert typed_var["type_annotation"] == "str"
 
         # Check vars with defaults
-        var_default = next(v for v in extracted_result["vars"] if v["name"] == "var_with_default")
+        var_default = next(
+            v for v in extracted_result["vars"] if v["name"] == "var_with_default"
+        )
         assert var_default["default_value"] == "default_value"
 
     def test_extract_vars_step_correctness(self, extracted_result):
@@ -426,11 +432,15 @@ class TestSpecFile:
         assert "step_with_message" in step_names
 
         # Check step with check
-        step_check = next(s for s in extracted_result["steps"] if s["name"] == "step_with_check")
+        step_check = next(
+            s for s in extracted_result["steps"] if s["name"] == "step_with_check"
+        )
         assert step_check["check"] is True
 
         # Check step with message
-        step_msg = next(s for s in extracted_result["steps"] if s["name"] == "step_with_message")
+        step_msg = next(
+            s for s in extracted_result["steps"] if s["name"] == "step_with_message"
+        )
         assert step_msg["check"] is True
         assert step_msg["checked_message"] == "This is a checked message"
 
@@ -442,7 +452,9 @@ class TestSpecFile:
         assert "check_with_message" in check_names
 
         # Check with message
-        check_msg = next(c for c in extracted_result["checks"] if c["name"] == "check_with_message")
+        check_msg = next(
+            c for c in extracted_result["checks"] if c["name"] == "check_with_message"
+        )
         assert check_msg["checked_message"] == "Please verify this carefully"
 
     def test_extract_vars_ref_correctness(self, extracted_result):
@@ -510,7 +522,7 @@ class TestExtractVarsBackwardCompatibility:
 
     def test_extract_vars_old_format_fields(self):
         """Test that extract_vars output has backward compatible field names."""
-        with open("tests/test_aimd/spec.aimd") as f:
+        with open("tests/test_markdown/spec.aimd") as f:
             content = f.read()
 
         result = extract_vars(content)
@@ -524,13 +536,21 @@ class TestExtractVarsBackwardCompatibility:
 
     def test_extract_vars_structure(self):
         """Test extract_vars returns correct structure."""
-        with open("tests/test_aimd/spec.aimd") as f:
+        with open("tests/test_markdown/spec.aimd") as f:
             content = f.read()
 
         result = extract_vars(content)
 
         # Should have exactly these keys
-        expected_keys = {"vars", "steps", "checks", "ref_vars", "ref_steps", "ref_figs", "cites"}
+        expected_keys = {
+            "vars",
+            "steps",
+            "checks",
+            "ref_vars",
+            "ref_steps",
+            "ref_figs",
+            "cites",
+        }
         assert set(result.keys()) == expected_keys
 
         # All values should be lists
