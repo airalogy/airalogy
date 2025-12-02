@@ -1,4 +1,4 @@
-from airalogy.aimd import (
+from airalogy.markdown import (
     validate_aimd,
 )
 

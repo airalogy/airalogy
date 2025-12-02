@@ -4,7 +4,7 @@ Tests for the AIMD parser.
 
 import pytest
 
-from airalogy.aimd import (
+from airalogy.markdown import (
     AimdParser,
     CheckNode,
     DuplicateNameError,

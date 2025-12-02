@@ -2,7 +2,7 @@
 Comprehensive tests for VarModel generator.
 """
 
-from airalogy.aimd import generate_model
+from airalogy.markdown import generate_model
 
 
 class TestVarModelGenerator:
