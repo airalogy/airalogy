@@ -16,7 +16,7 @@ Airalogy lets you create fully custom protocols (**Airalogy Protocols**) for def
 
 | Area | Highlights |
 | - | - |
-| **Airalogy Markdown** | Define rich, custom data fields directly in Markdown—variables (`{{var}}`), procedural steps (`{{step}}`), checkpoints (`{{check}}`), and more. |
+| **Airalogy Markdown (AIMD)** | Define rich, custom data fields directly in Markdown—variables (`{{var}}`), procedural steps (`{{step}}`), checkpoints (`{{check}}`), and more. |
 | **Model-based Data Validation** | Attach a model to every protocol for strict type checking—supports  datetime, enums, nested models, lists, etc.; and Airalogy-specific *built-in types* (`UserName`, `CurrentTime`, `AiralogyMarkdown`, file IDs, ...). |
 | **Assigner for Auto-Computation** | Use the declarative `@assigner` decorator to compute field values automatically. |
 
@@ -32,7 +32,29 @@ pip install airalogy
 
 ## Quick Start
 
-**Create a Protocol**
+### Use one typed AIMD
+
+**`protocol.aimd`**
+
+```aimd
+# Serum sample collection
+Participant: {{var|subject_name: UserName, title="Participant name"}}
+Collection time: {{var|collected_at: CurrentTime}}
+Serum volume (mL): {{var|serum_volume: float, gt=0}}
+Ice-bath time (min): {{var|ice_time: int = 0, ge=0}}
+Sample photo: {{var|sample_photo: FileIdPNG, description="Upload collection photo"}}
+
+{{step|collect}} Collect serum sample as per standard procedure.
+{{step|verify_labels, 2}} Verify labels and IDs.
+{{step|ice_hold, 2}} Immediately place sample on ice.
+
+{{check|info_confirmed}} Confirm details and metadata.
+```
+
+- Run `airalogy check` to validate the AIMD and use it directly.
+- Need an explicit model file? `airalogy generate_model protocol.aimd -o model.py` auto-generates the Pydantic model that matches these types.
+
+### Extended: add model and assigner
 
 ```text
 protocol/
@@ -122,7 +144,7 @@ options:
 
 ### Syntax Checking
 
-Check AIMD syntax: 
+Check AIMD syntax:
 
 ```bash
 # Check default protocol.aimd file
@@ -155,6 +177,7 @@ airalogy gm my_protocol.aimd -o custom_model.py
 We use [uv](https://docs.astral.sh/uv/) for environment management and build, [ruff](https://docs.astral.sh/ruff/) for lint/format.
 
 setup project environment:
+
 ```bash
 uv sync
 ```
