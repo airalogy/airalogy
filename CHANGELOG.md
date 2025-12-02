@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.0.10 (20251202)
+
+### Features
+- Rename `airalogy.aimd` module to `airalogy.markdown` for better clarity
+- Add `get_airalogy_image_ids` API for `airalogy.markdown`
+
 ## 0.0.9 (20251120)
 
 ### Features
