@@ -71,7 +71,7 @@ class RvAssigner(AssignerBase):
             "rv_04",
             "rv_06",
         ],
-        mode="auto_force",
+        mode="auto",
     )
     def assign_rv07(dependent_fields: dict) -> AssignerResult:
         rv_07 = dependent_fields["rv_04"] + dependent_fields["rv_07"]
@@ -198,7 +198,7 @@ def test_all_assigned_fields():
         "rv_05",
         "rv_06",
     ]
-    assert rfs["rv_07"]["mode"] == "auto_force"
+    assert rfs["rv_07"]["mode"] == "auto"
 
 
 def test_rv_assigner():
@@ -333,3 +333,31 @@ def test_standalone_manual_assigner():
 
     assert result.success
     assert result.assigned_fields == {"standalone_rv_net": 17}
+
+
+class ReadonlyRvAssigner(AssignerBase):
+    @assigner(
+        assigned_fields=["rv_readonly_auto"],
+        dependent_fields=["rv_01"],
+        mode="auto_readonly",
+    )
+    def assign_readonly_auto(dependent_fields: dict) -> AssignerResult:
+        return AssignerResult(
+            assigned_fields={"rv_readonly_auto": dependent_fields["rv_01"]}
+        )
+
+    @assigner(
+        assigned_fields=["rv_readonly_manual"],
+        dependent_fields=[],
+        mode="manual_readonly",
+    )
+    def assign_readonly_manual(_dependent_fields: dict) -> AssignerResult:
+        return AssignerResult(assigned_fields={"rv_readonly_manual": 1})
+
+
+def test_readonly_modes_exposed_in_all_assigned_fields():
+    rfs = ReadonlyRvAssigner.all_assigned_fields()
+
+    assert rfs["rv_readonly_auto"]["mode"] == "auto_readonly"
+
+    assert rfs["rv_readonly_manual"]["mode"] == "manual_readonly"

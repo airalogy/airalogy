@@ -19,7 +19,17 @@ def unique_list(lst):
     return list(set(lst))
 
 
-AssignerMode = Literal["manual", "auto_first", "auto", "auto_force"]
+AssignerMode = Literal[
+    "manual",
+    "manual_readonly",
+    "auto_first",
+    "auto",
+    "auto_readonly",
+]
+
+
+def is_manual_assigner(mode: AssignerMode) -> bool:
+    return mode in ("manual", "manual_readonly")
 
 
 def _is_function_defined_in_class(func: Callable) -> bool:
@@ -55,7 +65,7 @@ class AssignerBase:
                 raise ValueError(
                     f"assigned_fields must be not empty when using {assign_func.__name__}."
                 )
-            if len(dependent_fields) == 0 and mode != "manual":
+            if len(dependent_fields) == 0 and not is_manual_assigner(mode):
                 raise ValueError(
                     f"dependent_fields must be not empty when using {assign_func.__name__} in mode {mode}."
                 )
@@ -166,7 +176,7 @@ class AssignerBase:
             return []
 
     @classmethod
-    def all_assigned_fields(cls) -> dict[str, list[str]]:
+    def all_assigned_fields(cls) -> dict[str, dict[str, object]]:
         return {
             k: {
                 "dependent_fields": cls.get_dependent_fields_of_assigned_key(k),

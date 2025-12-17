@@ -52,10 +52,7 @@ from airalogy.assigner import (
         "var_1",
         "var_2",
     ],
-    mode="auto", # 用于定义Assigner的模式。
-    # 不同模式的含义如下：
-    # "auto": 自动计算的赋值单元，即只要其依赖的Fields的值发生变化，该Assigner就会自动执行，以更新其赋值的Fields的值
-    # "manual": 手动计算的赋值单元，即需要用户手动点击前端的赋值按钮来执行
+    mode="auto", # 用于定义Assigner的模式（见下文“Assigner模式”小节）
 )
 def calculate_var_3(dependent_fields: dict) -> AssignerResult: # 赋值函数的函数名可以任意命名，但其接收的参数必须为`dependent_fields`，且返回值必须为一个AssignerResult对象。其中`dependent_fields`字典必须包含所有依赖的Fields的值（即`dependent_fields`中的key-value对应于Fields的名称和值，且必须一一对应）
     var_1_value = dependent_fields["var_1"] # 从`dependent_fields`字典中取出`var_1`的值
@@ -88,6 +85,16 @@ return AssignerResult(
     },
 )
 ```
+
+## Assigner模式
+
+`mode` 会影响 Assigner 的**触发时机**，以及被赋值 Fields 在赋值后是否应允许用户继续编辑（由前端/执行器实现交互策略）。
+
+- `"auto"`：当依赖字段发生变化时自动触发，并**强制覆写**被赋值 Fields 的当前值。
+- `"manual"`：不自动触发；需要用户在前端点击“Assign/赋值”按钮才执行。如果不希望依赖字段每次变化都触发，建议使用该模式。
+- `"auto_first"`：自动触发**一次**（通常是依赖字段首次齐备时），之后不再自动刷新；触发行为上可理解为“先自动执行一次，后续等价于 `manual`（需要手动触发才会再次执行）”。
+- `"auto_readonly"`：与 `"auto"` 相同，但一旦赋值后前端应禁止用户手动修改被赋值 Fields。
+- `"manual_readonly"`：与 `"manual"` 相同，但一旦赋值后前端应禁止用户手动修改被赋值 Fields。
 
 ### `dependent_fields`/`assigned_fields`的数据结构
 
