@@ -1,41 +1,59 @@
 # CHANGELOG
 
+## 0.0.11 (20251217)
+
+### Features
+
+- Add new Assigner Modes: `auto_readonly` and `manual_readonly`, allowing assigned fields to be locked in the UI after assignment.
+
+### Breaking
+
+- Remove Assigner mode `auto_force`; `auto` is now defined as auto-trigger on dependency change with force overwrite.
+
 ## 0.0.10 (20251202)
 
 ### Features
+
 - Rename `airalogy.aimd` module to `airalogy.markdown` for better clarity
 - Add `get_airalogy_image_ids` API for `airalogy.markdown`
 
 ## 0.0.9 (20251120)
 
 ### Features
+
 - Add Typed AIMD variable syntax support
 - Add command-line interface (CLI) with syntax checking and model generation commands
 - Add Chinese demographic enum types for enhanced data modeling
 - Support standalone assigner functions with simplified decorator syntax
 
 ### Documentation
+
 - Add typed AIMD variable syntax documentation
 - Simplify Assigner syntax documentation by removing class-based definitions
 
 ### Development
+
 - New parser implementation
 
 ## 0.0.8 (20251029)
 
 ### Features
+
 - Add `CurrentProtocolId` and `CurrentRecordId` types
 
 ### Development
+
 - Migrate from pdm to uv
 - Update minimum Python version requirement to 3.13
 - Add GitHub workflow for CI
 - Add build status badge
 
 ### Dependencies
+
 - Update pydantic dependency from 2.11.5 to 2.12.3
 
 ### Fixes
+
 - Fix description
 
 ## 0.0.7 (20250827)

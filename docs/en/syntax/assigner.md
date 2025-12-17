@@ -45,8 +45,7 @@ from airalogy.assigner import AssignerResult, assigner
 @assigner(
     assigned_fields=["var_3"],  # fields to assign
     dependent_fields=["var_1", "var_2"],  # fields that this function depends on
-    mode="auto",  # "auto" = run whenever dependencies change
-                  # "manual" = user must click "Assign" button in the UI
+    mode="auto",  # See "Assigner Modes" below
 )
 def calculate_var_3(dependent_fields: dict) -> AssignerResult:
     v1 = dependent_fields["var_1"]
@@ -61,13 +60,23 @@ def calculate_var_3(dependent_fields: dict) -> AssignerResult:
 > **Many-to-many is allowed**
 > An Assigner can read *any* number of fields and assign *any* number of fields—across `var`, `step`, and `check` alike.
 
-## 2 `dependent_fields` and `assigned_fields`
+## 2 Assigner Modes
+
+The `mode` affects **when** the Assigner is triggered, and whether it is expected to be **user-editable** after assignment.
+
+- `"auto"`: run whenever dependencies change, and **overwrite** the assigned field value with the new result.
+- `"manual"`: do **not** auto-run; user must click an "Assign" button in the UI. Use this if you don't want auto-trigger on every dependency change.
+- `"auto_first"`: run automatically **once** (typically when dependencies become available), then stop auto-refresh; behavior-wise you can think of it as “auto once, then like `manual` (needs a manual trigger to run again)”.
+- `"auto_readonly"`: same as `"auto"`, but UI should lock assigned fields after filling.
+- `"manual_readonly"`: same as `"manual"`, but UI should lock assigned fields after filling.
+
+## 3 `dependent_fields` and `assigned_fields`
 
 - Both are plain Python **dicts** whose keys are field names.
 - Values follow the JSON Schema of the protocol; i.e. only JSON-serialisable types.
 - For special field classes (e.g. a checkpoint) you may need to wrap the value in a helper model such as `CheckValue`.
 
-## 3 Working with Complex Types
+## 4 Working with Complex Types
 
 If a field stores a complex type (e.g. `datetime`) it is transmitted as a JSON-compatible value (usually a string).
 Convert it to a native Python object before calculation, then convert back:
@@ -95,7 +104,7 @@ def plus_one_day(dep: dict) -> AssignerResult:
     )
 ```
 
-## 4 Assigners for Checkpoints
+## 5 Assigners for Checkpoints
 
 Checkpoints (`check`) can be calculated the same way, but you must return a `CheckValue`:
 
@@ -133,7 +142,7 @@ def check_sum(dep: dict) -> AssignerResult:
 | - | - |
 | `assigned_fields` | List of field names the function assigns |
 | `dependent_fields` | List of field names the function depends on |
-| `mode` | `"auto"` (run on change) or `"manual"` (run on button click) |
+| `mode` | `"auto"` (run on change + overwrite), `"manual"` (button click), `"auto_first"` (run once), `"auto_readonly"` (auto + lock), or `"manual_readonly"` (manual + lock) |
 
 ### `AssignerResult`
 
