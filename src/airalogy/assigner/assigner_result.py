@@ -33,11 +33,7 @@ class AssignerResult(BaseModel):
                 raise ValueError(
                     "When success is True, assigned_fields must not be None."
                 )
-            if self.error_message is not None:
-                raise ValueError("When success is True, error_message must be None.")
         else:
-            if self.assigned_fields is not None:
-                raise ValueError("When success is False, assigned_fields must be None.")
             if self.error_message is None:
                 raise ValueError(
                     "When success is False, error_message must not be None."
