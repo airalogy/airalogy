@@ -28,5 +28,8 @@ dev = ["pytest==8.4.2"]
 
 
 [build-system]
-requires = ["uv_build>=0.9.5,<0.10.0"]
+requires = ["uv_build>=0.9.18,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.uv]
+required-version = ">=0.9.18,<0.10.0"
