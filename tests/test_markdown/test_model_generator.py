@@ -485,3 +485,174 @@ Regular: {{var|regular_var: str}}
         # Only comments/whitespace
         code = generate_model("   \n  # Just a comment  \n   ")
         assert "class VarModel(BaseModel):" in code
+
+    def test_standard_library_datetime_types(self):
+        """Test that datetime types are properly imported."""
+        content = """
+{{var|created_at: datetime}}
+{{var|birth_date: date}}
+{{var|start_time: time}}
+{{var|duration: timedelta}}
+"""
+        code = generate_model(content)
+
+        # Should import datetime module with all used types
+        assert "from datetime import" in code
+        assert "datetime" in code
+        assert "date" in code
+        assert "time" in code
+        assert "timedelta" in code
+        assert "created_at: datetime" in code
+        assert "birth_date: date" in code
+        assert "start_time: time" in code
+        assert "duration: timedelta" in code
+
+        # Verify generated code can be executed and model_json_schema works
+        namespace = {}
+        exec(code, namespace)
+        VarModel = namespace["VarModel"]
+        schema = VarModel.model_json_schema()
+        assert "created_at" in schema["properties"]
+        assert "birth_date" in schema["properties"]
+        assert "start_time" in schema["properties"]
+        assert "duration" in schema["properties"]
+
+    def test_standard_library_decimal_type(self):
+        """Test that Decimal type is properly imported."""
+        content = "{{var|price: Decimal}}"
+        code = generate_model(content)
+
+        # Should import Decimal from decimal module
+        assert "from decimal import Decimal" in code
+        assert "price: Decimal" in code
+
+        # Verify generated code can be executed and model_json_schema works
+        namespace = {}
+        exec(code, namespace)
+        VarModel = namespace["VarModel"]
+        schema = VarModel.model_json_schema()
+        assert "price" in schema["properties"]
+
+    def test_standard_library_uuid_type(self):
+        """Test that UUID type is properly imported."""
+        content = "{{var|id: UUID}}"
+        code = generate_model(content)
+
+        # Should import UUID from uuid module
+        assert "from uuid import UUID" in code
+        assert "id: UUID" in code
+
+        # Verify generated code can be executed and model_json_schema works
+
+        namespace = {}
+        exec(code, namespace)
+        VarModel = namespace["VarModel"]
+        schema = VarModel.model_json_schema()
+        assert "id" in schema["properties"]
+
+    def test_standard_library_ipaddress_types(self):
+        """Test that ipaddress types are properly imported."""
+        content = """
+{{var|ipv4: IPv4Address}}
+{{var|ipv6: IPv6Address}}
+"""
+        code = generate_model(content)
+
+        # Should import IPv4Address and IPv6Address from ipaddress module
+        assert "from ipaddress import" in code
+        assert "IPv4Address" in code
+        assert "IPv6Address" in code
+        assert "ipv4: IPv4Address" in code
+        assert "ipv6: IPv6Address" in code
+
+        # Verify generated code can be executed and model_json_schema works
+        namespace = {}
+        exec(code, namespace)
+        VarModel = namespace["VarModel"]
+        schema = VarModel.model_json_schema()
+        assert "ipv4" in schema["properties"]
+        assert "ipv6" in schema["properties"]
+
+    def test_mixed_airalogy_and_standard_library_types(self):
+        """Test that both Airalogy types and standard library types are imported."""
+        content = """
+{{var|user_name: UserName}}
+{{var|created_at: datetime}}
+{{var|avatar: FileIdJPG}}
+{{var|uuid: UUID}}
+{{var|birth_date: date}}
+"""
+        code = generate_model(content)
+
+        # Should import both Airalogy types and standard library types
+        assert "from airalogy.types import" in code
+        assert "from datetime import" in code
+        assert "from uuid import" in code
+
+        # Check that all types are present
+        assert "user_name: UserName" in code
+        assert "created_at: datetime" in code
+        assert "avatar: FileIdJPG" in code
+        assert "uuid: UUID" in code
+        assert "birth_date: date" in code
+
+        # Verify generated code can be executed and model_json_schema works
+        namespace = {}
+        exec(code, namespace)
+        VarModel = namespace["VarModel"]
+        schema = VarModel.model_json_schema()
+        assert "user_name" in schema["properties"]
+        assert "created_at" in schema["properties"]
+        assert "avatar" in schema["properties"]
+        assert "uuid" in schema["properties"]
+        assert "birth_date" in schema["properties"]
+
+    def test_var_table_with_standard_library_types(self):
+        """Test that var tables with standard library types work correctly."""
+        content = """
+{{var|events, subvars=[
+    name: str,
+    timestamp: datetime,
+    duration: timedelta,
+    id: UUID
+]}}
+"""
+        code = generate_model(content)
+
+        # Should import datetime, timedelta, UUID
+        assert "from datetime import" in code
+        assert "from uuid import" in code
+        assert "class EventsItem(BaseModel):" in code
+        assert "name: str" in code
+        assert "timestamp: datetime" in code
+        assert "duration: timedelta" in code
+        assert "id: UUID" in code
+
+        # Verify generated code can be executed and model_json_schema works
+        namespace = {}
+        exec(code, namespace)
+        VarModel = namespace["VarModel"]
+        schema = VarModel.model_json_schema()
+        assert "events" in schema["properties"]
+
+    def test_datetime_with_field_kwargs(self):
+        """Test that datetime types work with Field kwargs."""
+        content = '{{var|created_at: datetime = "default", title="Created At", description="Timestamp of creation"}}'
+        code = generate_model(content)
+
+        # Should import both datetime and Field
+        assert "from pydantic import BaseModel, Field" in code
+        assert "from datetime import datetime" in code
+        assert (
+            'created_at: datetime = Field(default="default", title="Created At", description="Timestamp of creation")'
+            in code
+        )
+
+        # Verify generated code can be executed and model_json_schema works
+
+        namespace = {}
+        exec(code, namespace)
+        VarModel = namespace["VarModel"]
+        schema = VarModel.model_json_schema()
+        assert "created_at" in schema["properties"]
+        assert schema["properties"]["created_at"]["title"] == "Created At"

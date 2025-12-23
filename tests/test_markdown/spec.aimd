@@ -11,6 +11,7 @@ Variable with simple type:
 {{var|int_var: int}}
 {{var|float_var: float}}
 {{var|bool_var: bool}}
+{{var|datetime_var: datetime}}
 
 Variable with list type (basic):
 {{var|str_list: list[str]}}

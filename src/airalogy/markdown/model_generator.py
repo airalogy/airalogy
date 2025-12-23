@@ -2,12 +2,52 @@
 VarModel generator - generates Pydantic models from parsed AIMD.
 """
 
-from typing import Any, Dict, List, Set
+import re
+from typing import Any, Dict, List, Set, Tuple
 
 from airalogy import types
 
 from .ast_nodes import VarNode, VarTableNode
 from .parser import AimdParser
+
+# Mapping of standard library type names to (module, name) tuples for imports.
+# These are types from Python's standard library that work with Pydantic
+# and can be dumped to JSON schema via model_json_schema().
+STANDARD_LIBRARY_TYPES: Dict[str, Tuple[str, str]] = {
+    # datetime module
+    "datetime": ("datetime", "datetime"),
+    "date": ("datetime", "date"),
+    "time": ("datetime", "time"),
+    "timedelta": ("datetime", "timedelta"),
+    # decimal module
+    "Decimal": ("decimal", "Decimal"),
+    # uuid module
+    "UUID": ("uuid", "UUID"),
+    # ipaddress module
+    "IPv4Address": ("ipaddress", "IPv4Address"),
+    "IPv6Address": ("ipaddress", "IPv6Address"),
+}
+
+
+def _type_matches(type_name: str, annotation: str) -> bool:
+    """
+    Check if a type name appears in a type annotation using word boundary matching.
+
+    This prevents false matches like "date" matching in "datetime".
+
+    Args:
+        type_name: The type name to look for (e.g., "date", "datetime")
+        annotation: The type annotation string to search in
+
+    Returns:
+        True if the type name is found as a whole word in the annotation
+    """
+    # Match whole word boundaries for the type name
+    # This handles cases like:
+    # - "date" matches "date" but not "datetime"
+    # - "datetime" matches "datetime" or "list[datetime]" but not "datetime_date"
+    pattern = r"\b" + re.escape(type_name) + r"\b"
+    return re.search(pattern, annotation) is not None
 
 
 class ModelGenerator:
@@ -28,6 +68,7 @@ class ModelGenerator:
         self.parser = AimdParser(aimd_content)
         self.parsed = self.parser.parse()
         self.airalogy_type_names = set(types.__all__)
+        self.standard_library_types = set(STANDARD_LIBRARY_TYPES.keys())
 
     def _get_imports(self) -> Set[str]:
         """
@@ -39,6 +80,7 @@ class ModelGenerator:
         imports = {"from pydantic import BaseModel"}
         has_field_usage = False
         airalogy_types_used = set()
+        standard_library_types_used: Dict[str, Set[str]] = {}  # module -> set of types
 
         for var in self.parsed["vars"]:
             # Check if Field is needed (for any kwargs or special parameters)
@@ -49,8 +91,16 @@ class ModelGenerator:
                 # Check if any Airalogy types are used
                 if var.type_annotation:
                     for airalogy_type in self.airalogy_type_names:
-                        if airalogy_type in var.type_annotation:
+                        if _type_matches(airalogy_type, var.type_annotation):
                             airalogy_types_used.add(airalogy_type)
+
+                    # Check for standard library types
+                    for std_type in self.standard_library_types:
+                        if _type_matches(std_type, var.type_annotation):
+                            module, name = STANDARD_LIBRARY_TYPES[std_type]
+                            if module not in standard_library_types_used:
+                                standard_library_types_used[module] = set()
+                            standard_library_types_used[module].add(name)
 
                 # For VarTableNode, also check subvars for Field usage and types
                 if isinstance(var, VarTableNode):
@@ -59,8 +109,16 @@ class ModelGenerator:
                             has_field_usage = True
                         if subvar.type_annotation:
                             for airalogy_type in self.airalogy_type_names:
-                                if airalogy_type in subvar.type_annotation:
+                                if _type_matches(airalogy_type, subvar.type_annotation):
                                     airalogy_types_used.add(airalogy_type)
+
+                            # Check for standard library types
+                            for std_type in self.standard_library_types:
+                                if _type_matches(std_type, subvar.type_annotation):
+                                    module, name = STANDARD_LIBRARY_TYPES[std_type]
+                                    if module not in standard_library_types_used:
+                                        standard_library_types_used[module] = set()
+                                    standard_library_types_used[module].add(name)
 
         if has_field_usage:
             imports.add("from pydantic import BaseModel, Field")
@@ -70,6 +128,11 @@ class ModelGenerator:
             # Create specific imports
             types_list = ", ".join(sorted(airalogy_types_used))
             imports.add(f"from airalogy.types import {types_list}")
+
+        # Add standard library imports
+        for module, type_names in sorted(standard_library_types_used.items()):
+            types_list = ", ".join(sorted(type_names))
+            imports.add(f"from {module} import {types_list}")
 
         return imports
 
