@@ -14,11 +14,26 @@ class Lexer:
 
     Tokenizes AIMD content into a stream of tokens, identifying template
     expressions like {{var|...}}, {{step|...}}, etc.
+
+    Code blocks (both inline with backticks and multi-line with triple backticks)
+    are skipped and not parsed as template expressions.
     """
 
     # Template pattern: {{type|content}}
     TEMPLATE_PATTERN = re.compile(
         r"\{\{(var_table|var|step|check|ref_var|ref_step|ref_fig|cite)\|([^}]*(?:\}(?!\})[^}]*)*)\}\}",
+        re.MULTILINE | re.DOTALL,
+    )
+
+    # Inline code pattern: `code` (not containing newlines)
+    INLINE_CODE_PATTERN = re.compile(
+        r"`[^`\n]+`",
+        re.MULTILINE | re.DOTALL,
+    )
+
+    # Multi-line code block pattern: ```lang ... ``` or ``` ... ```
+    CODE_BLOCK_PATTERN = re.compile(
+        r"```[a-zA-Z0-9_]*\n[\s\S]*?```",
         re.MULTILINE | re.DOTALL,
     )
 
@@ -42,6 +57,53 @@ class Lexer:
         """
         self.content = content
         self.lines = content.splitlines(keepends=True)
+        self._excluded_ranges = self._find_excluded_ranges()
+
+    def _find_excluded_ranges(self) -> list[tuple[int, int]]:
+        """
+        Find all code block ranges that should be excluded from parsing.
+
+        Returns:
+            List of (start, end) tuples representing excluded ranges
+        """
+        excluded_ranges = []
+
+        # Find multi-line code blocks
+        for match in self.CODE_BLOCK_PATTERN.finditer(self.content):
+            excluded_ranges.append((match.start(), match.end()))
+
+        # Find inline code blocks
+        for match in self.INLINE_CODE_PATTERN.finditer(self.content):
+            excluded_ranges.append((match.start(), match.end()))
+
+        # Sort ranges by start position and merge overlapping ones
+        excluded_ranges.sort()
+        merged_ranges = []
+        for start, end in excluded_ranges:
+            if merged_ranges and start <= merged_ranges[-1][1]:
+                # Overlapping or adjacent ranges - merge them
+                merged_ranges[-1] = (merged_ranges[-1][0], max(merged_ranges[-1][1], end))
+            else:
+                merged_ranges.append((start, end))
+
+        return merged_ranges
+
+    def _is_in_excluded_range(self, offset: int, length: int) -> bool:
+        """
+        Check if a given range is within any excluded code block.
+
+        Args:
+            offset: Start offset in content
+            length: Length of the range
+
+        Returns:
+            True if the range is within an excluded range, False otherwise
+        """
+        end = offset + length
+        for start, excl_end in self._excluded_ranges:
+            if offset >= start and end <= excl_end:
+                return True
+        return False
 
     def _get_position(self, offset: int, length: int) -> Position:
         """
@@ -90,10 +152,15 @@ class Lexer:
             Token objects for each template found in the content
         """
         for match in self.TEMPLATE_PATTERN.finditer(self.content):
-            type_name = match.group(1)
-            value = match.group(2).strip()
             start_offset = match.start()
             raw = match.group(0)
+
+            # Skip matches within code blocks
+            if self._is_in_excluded_range(start_offset, len(raw)):
+                continue
+
+            type_name = match.group(1)
+            value = match.group(2).strip()
 
             token_type = self.TOKEN_TYPE_MAP[type_name]
             position = self._get_position(start_offset, len(raw))

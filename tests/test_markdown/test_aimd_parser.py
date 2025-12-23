@@ -63,6 +63,123 @@ class TestLexer:
         assert var_token.position.start_col == 1
         assert var_token.position.end_col == len("{{var|test}}")
 
+    def test_inline_code_block_is_skipped(self):
+        """Test that variables in inline code blocks are not parsed."""
+        content = "This is `{{var|abc}}` in inline code"
+        lexer = Lexer(content)
+        tokens = list(lexer.tokenize())
+
+        # Should only have EOF token, no VAR token
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.EOF
+
+    def test_inline_code_blocks_mixed_with_normal_vars(self):
+        """Test mixed content with inline code and normal variables."""
+        content = "{{var|real_var}} but `{{var|code_var}}` is code"
+        lexer = Lexer(content)
+        tokens = list(lexer.tokenize())
+
+        # Should have VAR + EOF, code_var should be skipped
+        assert len(tokens) == 2
+        assert tokens[0].type == TokenType.VAR
+        assert tokens[0].value == "real_var"
+        assert tokens[1].type == TokenType.EOF
+
+    def test_multiline_code_block_is_skipped(self):
+        """Test that variables in multi-line code blocks are not parsed."""
+        content = """
+```
+{{var|abc}}
+```
+"""
+        lexer = Lexer(content)
+        tokens = list(lexer.tokenize())
+
+        # Should only have EOF token
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.EOF
+
+    def test_multiline_code_block_with_language_is_skipped(self):
+        """Test that variables in code blocks with language spec are not parsed."""
+        content = """
+```aimd
+{{var|abc}}
+```
+"""
+        lexer = Lexer(content)
+        tokens = list(lexer.tokenize())
+
+        # Should only have EOF token
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.EOF
+
+    def test_multiline_code_blocks_mixed_with_normal_vars(self):
+        """Test mixed content with code blocks and normal variables."""
+        content = """
+{{var|real_var}}
+
+```
+{{var|code_var}}
+```
+
+{{var|another_var}}
+"""
+        lexer = Lexer(content)
+        tokens = list(lexer.tokenize())
+
+        # Should have 2 VAR tokens + EOF
+        assert len(tokens) == 3
+        assert tokens[0].type == TokenType.VAR
+        assert tokens[0].value == "real_var"
+        assert tokens[1].type == TokenType.VAR
+        assert tokens[1].value == "another_var"
+        assert tokens[2].type == TokenType.EOF
+
+    def test_code_block_with_multiple_variables(self):
+        """Test code block containing multiple variables."""
+        content = """
+```
+{{var|var1}}
+{{var|var2}}
+{{step|step1}}
+```
+"""
+        lexer = Lexer(content)
+        tokens = list(lexer.tokenize())
+
+        # All should be skipped
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.EOF
+
+    def test_parser_skips_inline_code_vars(self):
+        """Test that parser correctly skips variables in inline code."""
+        content = "{{var|real_var}} and `{{var|code_var}}`"
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["vars"]) == 1
+        assert result["vars"][0].name == "real_var"
+
+    def test_parser_skips_multiline_code_block_vars(self):
+        """Test that parser correctly skips variables in multi-line code blocks."""
+        content = """
+{{var|real_var}}
+
+```
+{{var|code_var}}
+{{step|code_step}}
+```
+
+{{step|real_step}}
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["vars"]) == 1
+        assert result["vars"][0].name == "real_var"
+        assert len(result["steps"]) == 1
+        assert result["steps"][0].name == "real_step"
+
 
 class TestParser:
     """Tests for the main parser."""
