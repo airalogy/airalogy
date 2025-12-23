@@ -188,16 +188,19 @@ class VarModel(BaseModel):
 
 ## Code-String Types
 
-### `PyStr`, `JsStr`, `TsStr`
+### `PyStr`, `JsStr`, `TsStr`, `JsonStr`, `TomlStr`, `YamlStr`
 
 ```python
-from airalogy.types import PyStr, JsStr, TsStr
+from airalogy.types import PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
 from pydantic import BaseModel
 
 class VarModel(BaseModel):
     python_code:     PyStr
     javascript_code: JsStr
     typescript_code: TsStr
+    json_str:        JsonStr
+    toml_str:        TomlStr
+    yaml_str:        YamlStr
 ```
 
 Each of these types renders a language-specific code editor with syntax highlighting.

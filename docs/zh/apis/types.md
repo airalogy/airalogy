@@ -190,16 +190,19 @@ from pydantic import BaseModel
 
 ## 编程语言相关代码字符串 (Code Strings)
 
-### PyStr, JsStr, TsStr
+### PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
 
 ```py
-from airalogy.types import PyStr, JsStr, TsStr
+from airalogy.types import PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
 from pydantic import BaseModel
 
 class VarModel(BaseModel):
     python_code: PyStr
     javascript_code: JsStr
     typescript_code: TsStr
+    json_str: JsonStr
+    toml_str: TomlStr
+    yaml_str: YamlStr
 ```
 
 定义为`PyStr`类型的字段，可以在Airalogy平台上自动生成一个Python代码编辑器，用于编辑Python代码。该编辑器会提供语法高亮等功能。该Field的值以`str`形式存储。

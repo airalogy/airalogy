@@ -7,7 +7,7 @@ from typing_extensions import Annotated
 from pydantic import Field
 
 
-__all__ = ["PyStr", "JsStr", "TsStr"]
+__all__ = ["PyStr", "JsStr", "TsStr", "JsonStr", "TomlStr", "YamlStr"]
 
 
 # --------------------------------------------------------------------------- #
@@ -47,3 +47,6 @@ def CodeStrField(language: str):
 PyStr = Annotated[str, CodeStrField("python")]
 JsStr = Annotated[str, CodeStrField("javascript")]
 TsStr = Annotated[str, CodeStrField("typescript")]
+JsonStr = Annotated[str, CodeStrField("json")]
+TomlStr = Annotated[str, CodeStrField("toml")]
+YamlStr = Annotated[str, CodeStrField("yaml")]

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.0.12 (20251223)
+
+### Features
+
+- Add new code-string types: `JsonStr`, `TomlStr`, `YamlStr`.
+
 ## 0.0.11 (20251217)
 
 ### Features
