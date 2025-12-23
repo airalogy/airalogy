@@ -5,6 +5,11 @@
 ### Features
 
 - Add new code-string types: `JsonStr`, `TomlStr`, `YamlStr`.
+- Add support for Python standard library types in `ModelGenerator`, including `datetime`, `date`, `time`, `timedelta`, `Decimal`, `UUID`, `Path`, `PurePath`, `IPv4Address`, and `IPv6Address`. 
+
+### Fixes
+
+- AIMD var defined in code blocks will not be parsed
 
 ## 0.0.11 (20251217)
 
