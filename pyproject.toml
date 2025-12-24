@@ -1,6 +1,7 @@
 [project]
 name = "airalogy"
-version = "0.0.12"
+# Release checklist: bump version here, update `src/airalogy/__init__.py`, and add an entry to `CHANGELOG.md`.
+version = "0.0.13"
 description = "The world's first universal framework for standardized data digitization"
 readme = "README.md"
 authors = [{ name = "Airalogy Team" }]
@@ -14,6 +15,11 @@ classifiers = [
 ]
 license = { text = "Apache-2.0" }
 
+[project.optional-dependencies]
+# `markitdown` uses its own optional extras per filetype (e.g. `pdf`, `docx`).
+# Our backend and tests cover PDF/DOCX, so we include these extras by default.
+markitdown = ["markitdown[pdf,docx]"]
+
 
 [project.urls]
 Documentation = "https://github.com/airalogy/airalogy#readme"
@@ -24,7 +30,7 @@ airalogy = "airalogy.cli:main"
 
 
 [dependency-groups]
-dev = ["pytest==8.4.2"]
+dev = ["pytest==8.4.2", "markitdown[pdf,docx]"]
 
 
 [build-system]

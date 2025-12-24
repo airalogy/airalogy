@@ -1,6 +1,6 @@
 # Airalogy
 
-本项目要求 Python 版本 `>=3.12`
+本项目要求 Python 版本 `>=3.13`
 
 ## 安装
 
@@ -8,36 +8,27 @@
 pip install airalogy
 ```
 
+## API 文档
+
+- AIMD 工具：`docs/zh/apis/markdown.md`
+- Types：`docs/zh/apis/types.md`
+- Models：`docs/zh/apis/models.md`
+- 下载/上传：`docs/zh/apis/download-upload.md`
+- 文档转换：`docs/zh/apis/convert.md`
+
 ## 开发
 
-开发过程中本项目使用到的工具：
-
-- [pdm](https://pdm-project.org/en/stable/) 管理项目依赖
-- [hatchling](https://github.com/pypa/hatch) 打包
-- [ruff](https://github.com/astral-sh/ruff) 代码检查和格式化工具
-
-安装 `pdm` (Linux/Mac)
+我们使用 `uv` 管理环境与构建，使用 `ruff` 进行 lint/format。
 
 ```shell
-curl -sSL https://pdm-project.org/install-pdm.py | python3 -
-```
-
-安装 `ruff` `hatchling`
-
-```shell
-pip install -U ruff hatchling
-```
-
-安装项目依赖
-
-```shell
-pdm sync
+uv sync
+uv run pytest
 ```
 
 ## 测试
 
 ```shell
-pytest
+uv run pytest
 ```
 
 ## License

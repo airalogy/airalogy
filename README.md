@@ -172,6 +172,23 @@ airalogy generate_model my_protocol.aimd -o my_model.py
 airalogy gm my_protocol.aimd -o custom_model.py
 ```
 
+## Document Conversion (MarkItDown)
+
+Airalogy provides a unified API to convert documents into Markdown.
+
+```bash
+pip install "airalogy[markitdown]"
+# or (uv)
+uv add "airalogy[markitdown]"
+```
+
+```python
+from airalogy.convert import to_markdown
+print(to_markdown("report.pdf", backend="markitdown").text)
+```
+
+See docs: `docs/en/apis/convert.md` / `docs/zh/apis/convert.md`.
+
 ## Development Setup
 
 We use [uv](https://docs.astral.sh/uv/) for environment management and build, [ruff](https://docs.astral.sh/ruff/) for lint/format.
@@ -180,6 +197,18 @@ setup project environment:
 
 ```bash
 uv sync
+```
+
+Install all optional backends (extras) as well:
+
+```bash
+uv sync --all-extras
+```
+
+Or install a specific extra (example: `markitdown`):
+
+```bash
+uv sync --extra markitdown
 ```
 
 ## Testing

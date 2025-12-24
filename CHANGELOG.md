@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.0.13 (20251224)
+
+### Features
+
+- Add unified document conversion API `airalogy.convert.to_markdown` with MarkItDown backend support.
+
 ## 0.0.12 (20251223)
 
 ### Features
