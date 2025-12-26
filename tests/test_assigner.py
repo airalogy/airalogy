@@ -1,8 +1,11 @@
+import pytest
+
 from airalogy.assigner import (
     AssignerBase,
     AssignerResult,
     DefaultAssigner,
     assigner,
+    load_inline_assigners,
 )
 from airalogy.models.check import CheckValue
 
@@ -361,3 +364,52 @@ def test_readonly_modes_exposed_in_all_assigned_fields():
     assert rfs["rv_readonly_auto"]["mode"] == "auto_readonly"
 
     assert rfs["rv_readonly_manual"]["mode"] == "manual_readonly"
+
+
+def test_load_inline_assigners_executes_inline_var_blocks():
+    content = """
+```assigner
+@assigner(
+    assigned_fields=["inline_var_total"],
+    dependent_fields=["inline_var_a", "inline_var_b"],
+    mode="auto",
+)
+def inline_total(dep: dict) -> AssignerResult:
+    return AssignerResult(
+        assigned_fields={
+            "inline_var_total": dep["inline_var_a"] + dep["inline_var_b"]
+        }
+    )
+```
+"""
+    blocks = load_inline_assigners(content)
+    assert len(blocks) == 1
+
+    result = DefaultAssigner.assign(
+        "inline_var_total",
+        {"inline_var_a": 2, "inline_var_b": 3},
+    )
+    assert result.success
+    assert result.assigned_fields == {"inline_var_total": 5}
+
+
+def test_inline_assigner_rejected_when_assigner_py_exists_for_inline_var(tmp_path):
+    content = """
+```assigner
+@assigner(
+    assigned_fields=["inline_only"],
+    dependent_fields=["inline_dep"],
+    mode="auto",
+)
+def inline_only(dep: dict) -> AssignerResult:
+    return AssignerResult(assigned_fields={"inline_only": dep["inline_dep"]})
+```
+"""
+    protocol_dir = tmp_path / "protocol"
+    protocol_dir.mkdir()
+    aimd_path = protocol_dir / "protocol.aimd"
+    aimd_path.write_text(content)
+    (protocol_dir / "assigner.py").write_text("# placeholder")
+
+    with pytest.raises(ValueError):
+        load_inline_assigners(content, aimd_path=aimd_path)

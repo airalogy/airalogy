@@ -210,3 +210,15 @@ class CiteNode(ASTNode):
         result = super().to_dict()
         result.update({"ref_ids": self.ref_ids})
         return result
+
+
+@dataclass
+class AssignerBlockNode(ASTNode):
+    """Inline assigner block: ```assigner ... ```"""
+
+    code: str
+
+    def to_dict(self) -> dict:
+        result = super().to_dict()
+        result["code"] = self.code
+        return result
