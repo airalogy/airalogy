@@ -4,14 +4,15 @@
 
 在真实的科研方案中，有很多数据字段（比如`var`、`step`、`check`）是可以通过其他字段计算得到的（也即存在字段依赖关系）。为了满足这种依赖的自动计算，Airalogy提供了高级功能/语法：赋值器（Assigner）。
 
-关于“如何定义字段（含类型）”，Assigner通常有两种写法：
+关于“如何定义字段（含类型）”，Assigner通常有三种写法：
 
 - **经典3文件写法（最基础、最完整）**：`protocol.aimd` + `model.py` + `assigner.py`。当你需要更精细的类型、校验、默认值、跨字段约束时，建议使用这种方式。
 - **2文件写法（更简单，覆盖大多数场景）**：使用 typed AIMD 把类型直接写进 `protocol.aimd`，再配合 `assigner.py`。大多数普通用户用这个就足够了。
+- **单文件写法（最轻量）**：仅 `protocol.aimd`，把 Assigner 写在标记为 `assigner` 的代码块内。适合简单计算或快速原型。
 
 typed AIMD 语法详见：[在Airalogy Markdown中使用类型](./aimd-with-type.md)。
 
-下面用同一个“`var_3 = var_1 + var_2`”的Assigner逻辑，展示两种等价写法。
+下面用同一个“`var_3 = var_1 + var_2`”的Assigner逻辑，展示三种等价写法。
 
 ### 写法A：经典3文件（`protocol.aimd` + `model.py` + `assigner.py`）
 
@@ -102,6 +103,50 @@ return AssignerResult(
 
 - 在上述案例中我们展示了从2个字段计算得到1个字段的情况。实际上，Assigner支持从任意多个字段计算得到任意多个字段，即被赋值字段和依赖字段的关系可以为多对多（multiple-to-multiple）。
 - 在真实 Airalogy Protocol 中，Assigner的`dependent_fields`也可以是`check`或`step`。
+
+### 写法C：单文件（AIMD + 内联 Assigner 代码块）
+
+**文件1：`protocol.aimd`**
+
+````aimd
+`var_1` 的值：{{var|var_1: int}}
+`var_2` 的值：{{var|var_2: int}}
+`var_3` 的值：{{var|var_3: int}}
+
+注：`var_3` = `var_1` + `var_2`
+
+```assigner
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=["var_3"],
+    dependent_fields=["var_1", "var_2"],
+    mode="auto",
+)
+def calculate_var_3(dep: dict) -> AssignerResult:
+    return AssignerResult(
+        assigned_fields={"var_3": dep["var_1"] + dep["var_2"]},
+    )
+```
+````
+
+在 Python 侧可以直接加载该 AIMD 中的内联 Assigner：
+
+```py
+from airalogy.assigner import load_inline_assigners
+
+with open("protocol.aimd", "r", encoding="utf-8") as f:
+    load_inline_assigners(f.read())
+```
+
+约束：**内联 Assigner 与 `assigner.py` 不可混用**。如果同一协议目录下存在 `assigner.py`，则 AIMD 内联的 `assigner` 代码块会被视为非法。
+
+建议：
+
+- `assigner` 代码块按 **Python** 语法编写，可被视为一个普通的 `.py` 文件片段。
+- 建议只写 **一个** `assigner` 代码块，并放在 AIMD 末尾，方便阅读与抽取。
+
+注：内联 Assigner 仍是完整的 Python 代码，适合轻量、确定性计算；复杂依赖或外部服务调用建议继续使用 `assigner.py`。
 
 ### 真实示例：配液计算（自动计算所需溶质质量）
 

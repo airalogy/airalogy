@@ -8,14 +8,15 @@ Airalogy offers a high-level feature called an **Assigner** to describe and exec
 ### 1.1 Typical Use Case
 
 Suppose `var_3` should always equal `var_1 + var_2`.
-There are two common ways to define protocol fields (including types):
+There are three common ways to define protocol fields (including types):
 
 1. **Classic 3-file style (most complete)**: `protocol.aimd` + `model.py` + `assigner.py`. Use this when you need advanced typing/validation (e.g., richer constraints in Pydantic).
 2. **2-file style (simpler, covers most cases)**: use typed AIMD to put types directly in `protocol.aimd`, plus `assigner.py`.
+3. **Single-file style (lightweight)**: only `protocol.aimd`, with inline Assigner code blocks.
 
 Typed AIMD syntax: [Using Types in Airalogy Markdown](./aimd-with-type.md).
 
-Below shows the same assigner logic in both styles. For brevity, the rest of this page uses the **2-file typed AIMD** style.
+Below shows the same assigner logic in these styles. For brevity, the rest of this page uses the **2-file typed AIMD** style.
 
 #### Style A: Classic 3-file (`protocol.aimd` + `model.py` + `assigner.py`)
 
@@ -84,6 +85,48 @@ Note: `var_3` = `var_1` + `var_2`
 
 > **Many-to-many is allowed**
 > An Assigner can read *any* number of fields and assign *any* number of fields—across `var`, `step`, and `check` alike.
+
+#### Style C: Single-file (AIMD + inline Assigner code block)
+
+**File 1: `protocol.aimd`**
+
+````aimd
+The value of `var_1`: {{var|var_1: int}}
+The value of `var_2`: {{var|var_2: int}}
+The value of `var_3`: {{var|var_3: int}}
+
+Note: `var_3` = `var_1` + `var_2`
+
+```assigner
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=["var_3"],
+    dependent_fields=["var_1", "var_2"],
+    mode="auto",
+)
+def calculate_var_3(dep: dict) -> AssignerResult:
+    return AssignerResult(
+        assigned_fields={"var_3": dep["var_1"] + dep["var_2"]},
+    )
+```
+````
+
+You can load inline assigners directly in Python:
+
+```python
+from airalogy.assigner import load_inline_assigners
+
+with open("protocol.aimd", "r", encoding="utf-8") as f:
+    load_inline_assigners(f.read())
+```
+
+Constraint: **inline Assigners cannot be mixed with `assigner.py`**. If `assigner.py` exists in the same protocol directory, inline `assigner` blocks are considered invalid.
+
+Recommendations:
+
+- The `assigner` block is **Python** code and can be treated like a regular `.py` snippet.
+- Prefer **one** `assigner` block placed at the end of the AIMD file for readability and extraction.
 
 ### 1.2 Real-world Example: Solution Preparation
 

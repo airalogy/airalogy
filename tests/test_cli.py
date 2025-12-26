@@ -21,6 +21,7 @@ def test_cli_help():
     assert "airalogy" in result.stdout
     assert "check" in result.stdout
     assert "generate_model" in result.stdout
+    assert "generate_assigner" in result.stdout
 
 
 def test_cli_version():
@@ -240,3 +241,47 @@ def test_generate_command_default_output():
             assert (Path(tmpdir) / "model.py").exists()
         finally:
             os.chdir(original_cwd)
+
+
+def test_generate_assigner_command():
+    """Test generate_assigner command."""
+    with TemporaryDirectory() as tmpdir:
+        input_file = Path(tmpdir) / "protocol.aimd"
+        output_file = Path(tmpdir) / "assigner.py"
+
+        input_file.write_text(
+            """
+{{var|x: int}}
+
+```assigner
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=["y"],
+    dependent_fields=["x"],
+    mode="auto",
+)
+def assign_y(dep: dict) -> AssignerResult:
+    return AssignerResult(assigned_fields={"y": dep["x"] + 1})
+```
+"""
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "ga",
+                str(input_file),
+                "-o",
+                str(output_file),
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        assert output_file.exists()
+        assert "def assign_y" in output_file.read_text()
+        assert "```assigner" not in input_file.read_text()

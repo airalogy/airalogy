@@ -6,6 +6,7 @@ for AIMD documents.
 """
 
 from .ast_nodes import (
+    AssignerBlockNode,
     CheckNode,
     CiteNode,
     RefFigNode,
@@ -24,7 +25,7 @@ from .errors import (
 )
 from .lexer import Lexer
 from .model_generator import generate_model
-from .parser import AimdParser, extract_vars
+from .parser import AimdParser, extract_assigner_blocks, extract_vars
 from .tokens import Position, Token, TokenType
 from .get import get_airalogy_image_ids
 from .validator import AimdValidator, ValidationError, validate_aimd
@@ -37,6 +38,7 @@ __all__ = [
     "TokenType",
     "Position",
     "extract_vars",
+    "extract_assigner_blocks",
     # AST nodes
     "VarNode",
     "VarTableNode",
@@ -46,6 +48,7 @@ __all__ = [
     "RefStepNode",
     "RefFigNode",
     "CiteNode",
+    "AssignerBlockNode",
     # Errors
     "InvalidNameError",
     "DuplicateNameError",
