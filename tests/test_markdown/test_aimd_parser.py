@@ -6,6 +6,7 @@ import pytest
 
 from airalogy.markdown import (
     AimdParser,
+    AssignerBlockNode,
     CheckNode,
     DuplicateNameError,
     InvalidNameError,
@@ -15,6 +16,7 @@ from airalogy.markdown import (
     TokenType,
     VarNode,
     VarTableNode,
+    extract_assigner_blocks,
     extract_vars,
 )
 
@@ -575,6 +577,39 @@ subvars=[
         with pytest.raises(DuplicateNameError) as exc_info:
             parser.parse()
         assert "Duplicate var name" in str(exc_info.value)
+
+
+class TestInlineAssignerBlocks:
+    """Tests for inline assigner code blocks in AIMD."""
+
+    def test_parse_assigner_block(self):
+        content = """
+{{var|x: int}}
+
+```assigner
+@assigner(assigned_fields=["y"], dependent_fields=["x"], mode="auto")
+def assign_y(dep: dict) -> AssignerResult:
+    return AssignerResult(assigned_fields={"y": dep["x"] + 1})
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert "assigners" in result
+        assert len(result["assigners"]) == 1
+        block = result["assigners"][0]
+        assert isinstance(block, AssignerBlockNode)
+        assert "def assign_y" in block.code
+
+    def test_extract_assigner_blocks(self):
+        content = """
+```assigner
+pass
+```
+"""
+        blocks = extract_assigner_blocks(content)
+        assert len(blocks) == 1
+        assert blocks[0]["code"] == "pass"
 
 
 class TestExtractVars:

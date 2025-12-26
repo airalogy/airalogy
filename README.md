@@ -126,16 +126,18 @@ Airalogy provides a CLI tool for common operations. After installation, you can 
 
 ```bash
 $ airalogy --help
-usage: airalogy [-h] [-v] {check,c,generate_model,gm} ...
+usage: airalogy [-h] [-v] {check,c,generate_model,gm,generate_assigner,ga} ...
 
 Airalogy CLI - Tools for Airalogy
 
 positional arguments:
-  {check,c,generate_model,gm}
+  {check,c,generate_model,gm,generate_assigner,ga}
                         Available commands
     check (c)           Check AIMD syntax
     generate_model (gm)
                         Generate VarModel
+    generate_assigner (ga)
+                        Generate Assigner
 
 options:
   -h, --help            show this help message and exit
@@ -170,6 +172,18 @@ airalogy generate_model my_protocol.aimd -o my_model.py
 
 # Using alias
 airalogy gm my_protocol.aimd -o custom_model.py
+```
+
+### Assigner Extraction
+
+Extract inline `assigner` code blocks into `assigner.py`:
+
+```bash
+# Generate assigner.py from protocol.aimd (and strip inline blocks)
+airalogy generate_assigner
+
+# Using alias
+airalogy ga my_protocol.aimd -o assigner.py
 ```
 
 ## Document Conversion (MarkItDown)

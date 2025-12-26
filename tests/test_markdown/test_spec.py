@@ -47,6 +47,7 @@ class TestSpecFile:
         assert "ref_steps" in parsed_result
         assert "ref_figs" in parsed_result
         assert "cites" in parsed_result
+        assert "assigners" in parsed_result
 
     def test_extract_vars_parses_without_errors(self, extracted_result):
         """Test that extract_vars can parse the spec file."""

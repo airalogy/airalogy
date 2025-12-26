@@ -4,9 +4,11 @@ Main AIMD parser - parses tokens into AST nodes.
 
 import ast
 import re
+import textwrap
 from typing import Any, Dict, List, Optional, Tuple
 
 from .ast_nodes import (
+    AssignerBlockNode,
     CheckNode,
     CiteNode,
     RefFigNode,
@@ -24,7 +26,7 @@ from .errors import (
     InvalidSyntaxError,
 )
 from .lexer import Lexer
-from .tokens import Token, TokenType
+from .tokens import Position, Token, TokenType
 
 
 class AimdParser:
@@ -819,6 +821,60 @@ class AimdParser:
         ref_ids = [ref.strip() for ref in value.split(",") if ref.strip()]
         return CiteNode(position=token.position, ref_ids=ref_ids)
 
+    def _get_position_from_offset(self, offset: int, length: int) -> Position:
+        """
+        Convert byte offset to line/column position.
+
+        Args:
+            offset: Start offset in content
+            length: Length of the span
+
+        Returns:
+            Position object with row and column info
+        """
+        span_text = self.content[offset : offset + length]
+        newlines_in_span = span_text.count("\n")
+
+        start_line = self.content[:offset].count("\n") + 1
+        end_line = start_line + newlines_in_span
+
+        line_start = self.content.rfind("\n", 0, offset) + 1
+        start_col = offset - line_start + 1
+
+        if newlines_in_span > 0:
+            last_newline_in_span = span_text.rfind("\n")
+            end_col = length - last_newline_in_span - 1
+        else:
+            end_col = start_col + length - 1
+
+        return Position(
+            start_line=start_line,
+            end_line=end_line,
+            start_col=start_col,
+            end_col=end_col,
+        )
+
+    def _parse_assigner_blocks(self) -> List[AssignerBlockNode]:
+        """
+        Extract inline assigner code blocks from AIMD content.
+
+        Returns:
+            List of AssignerBlockNode objects.
+        """
+        blocks: List[AssignerBlockNode] = []
+        for match in self.lexer.CODE_BLOCK_PATTERN.finditer(self.content):
+            lang = match.group("lang") or ""
+            if lang != "assigner":
+                continue
+
+            raw = match.group(0)
+            code = match.group("code").rstrip("\n\r")
+            code = textwrap.dedent(code)
+            position = self._get_position_from_offset(match.start(), len(raw))
+            blocks.append(AssignerBlockNode(position=position, code=code))
+
+        return blocks
+
     def parse(self) -> Dict[str, List]:
         """
         Parse all tokens into AST nodes.
@@ -832,7 +888,8 @@ class AimdParser:
                 "ref_vars": [RefVarNode, ...],
                 "ref_steps": [RefStepNode, ...],
                 "ref_figs": [RefFigNode, ...],
-                "cites": [CiteNode, ...]
+                "cites": [CiteNode, ...],
+                "assigners": [AssignerBlockNode, ...]
             }
 
         Raises:
@@ -845,6 +902,7 @@ class AimdParser:
         ref_steps = []
         ref_figs = []
         cites = []
+        assigners = self._parse_assigner_blocks()
 
         for token in self.tokens:
             if token.type == TokenType.VAR:
@@ -880,6 +938,7 @@ class AimdParser:
             "ref_steps": ref_steps,
             "ref_figs": ref_figs,
             "cites": cites,
+            "assigners": assigners,
         }
 
     def _validate_uniqueness(
@@ -996,3 +1055,18 @@ def extract_vars(aimd_content: str) -> dict:
         "ref_figs": [ref_fig.to_dict() for ref_fig in result["ref_figs"]],
         "cites": [cite.to_dict() for cite in result["cites"]],
     }
+
+
+def extract_assigner_blocks(aimd_content: str) -> list[dict]:
+    """
+    Extract inline assigner blocks from AIMD content.
+
+    Args:
+        aimd_content: AIMD document content
+
+    Returns:
+        List of assigner block dictionaries.
+    """
+    parser = AimdParser(aimd_content)
+    result = parser.parse()
+    return [block.to_dict() for block in result["assigners"]]
