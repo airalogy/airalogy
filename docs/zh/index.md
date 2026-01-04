@@ -1,20 +1,33 @@
-# Airalogy
+---
+layout: home
+hero:
+  name: Airalogy
+  text: 全球首个面向数据数字化与自动化的通用框架
+  tagline: 面向数据与文档的标准化处理、结构化建模与自动化流程
+features:
+  - icon: 🧾
+    title: 标准化语法
+    details: 统一协议语法，便于解析、抽取与复用。
+  - icon: 🧱
+    title: 清晰的数据结构
+    details: 结构化建模，保证类型安全与一致性。
+  - icon: 🔌
+    title: 实用 API
+    details: 覆盖模型、转换与上传下载等核心能力。
+  - icon: ⚙️
+    title: 自动化流程
+    details: 面向数据处理与研究工作流的自动化支持。
+---
 
-本项目要求 Python 版本 `>=3.13`
+## 环境要求
+
+Python `>=3.13`。
 
 ## 安装
 
 ```shell
 pip install airalogy
 ```
-
-## API 文档
-
-- AIMD 工具：`docs/zh/apis/markdown.md`
-- Types：`docs/zh/apis/types.md`
-- Models：`docs/zh/apis/models.md`
-- 下载/上传：`docs/zh/apis/download-upload.md`
-- 文档转换：`docs/zh/apis/convert.md`
 
 ## 开发
 

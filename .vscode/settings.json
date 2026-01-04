@@ -1,4 +1,5 @@
 {
+    "editor.formatOnSave": true,
     "markdownlint.config": {
         "MD024": {
             "siblings_only": true

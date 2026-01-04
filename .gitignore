@@ -140,6 +140,10 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# VitePress
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
 # mypy
 .mypy_cache/
 .dmypy.json
@@ -162,3 +166,5 @@ cython_debug/
 #.idea/
 
 .DS_Store
+
+node_modules/

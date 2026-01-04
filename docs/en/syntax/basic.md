@@ -6,15 +6,19 @@ This document explains the core syntax of an Airalogy Protocol Markdown file (`p
 
 In an Airalogy Markdown (AIMD) file, you can declare three types of data fields:
 
-| Field type | AIMD template | Typical purpose |
-| - | - | - |
-| **Variable**   | `{{var\|<var_id>}}` | Any research variable |
-| **Step**       | `{{step\|<step_id>, <level>}}` | A procedural step |
-| **Checkpoint** | `{{check\|<check_id>}}` | A critical checklist item |
+- **Field type: Variable**  
+  - **AIMD template:** `{{var|<var_id>}}`  
+- **Typical purpose:** Any research variable
+- **Field type: Step**  
+  - **AIMD template:** `{{step|<step_id>, <level>}}`  
+  - **Typical purpose:** A procedural step
+- **Field type: Checkpoint**  
+  - **AIMD template:** `{{check|<check_id>}}`  
+  - **Typical purpose:** A critical checklist item
 
 Below we cover the syntax and rules for each type of data field.
 
-### 1.1 Variable (`{{var}}`)
+### 1.1 Variable
 
 ```aimd
 {{var|<var_id>}}
