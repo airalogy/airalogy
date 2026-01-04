@@ -102,6 +102,9 @@ export default defineConfig({
     }
   },
   themeConfig: {
+    search: {
+      provider: 'local'
+    },
     siteTitle: false,
     logo: {
       light: '/logo-light.svg',
@@ -134,5 +137,4 @@ export default defineConfig({
   }
 
 })
-
 
