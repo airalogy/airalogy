@@ -6,9 +6,9 @@
 **The world's first universal framework for data digitization and automation**
 
 - [Airalogy Platform](https://airalogy.com)
-- [Docs (English)](docs/en/README.md)
-- [Docs (Chinese)](docs/zh/README.md)
-- [Good practices for documentation](docs/README.md)
+- [Docs (English)](https://airalogy.github.io/airalogy/en/)
+- [Docs (Chinese)](https://airalogy.github.io/airalogy/zh/)
+- [Good practices for documentation](docs/index.md)
 
 ## Key Features
 
