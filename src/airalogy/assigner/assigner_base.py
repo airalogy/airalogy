@@ -140,11 +140,13 @@ class AssignerBase:
     @classmethod
     def get_dependent_fields_of_assigned_key(cls, assigned_key: str) -> list[str]:
         if assigned_key in cls.assigned_info:
-            dependent_keys = cls.assigned_info[assigned_key][0]
+            # 创建副本，避免修改原始列表
+            dependent_keys = list(cls.assigned_info[assigned_key][0])
+            result = dependent_keys[:]
             for key in dependent_keys:
-                dependent_keys.extend(cls.get_dependent_fields_of_assigned_key(key))
+                result.extend(cls.get_dependent_fields_of_assigned_key(key))
 
-            return unique_list(flatten_list(dependent_keys))
+            return unique_list(flatten_list(result))
         else:
             return []
 
@@ -187,31 +189,124 @@ class AssignerBase:
 
     @classmethod
     def assign(cls, rf_name: str, dependent_data: dict) -> AssignerResult:
-        dep_rfs = cls.get_dependent_fields_of_assigned_key(rf_name)
-        for rf in dep_rfs:
+        """
+        计算指定字段的值
+        
+        使用拓扑排序确保正确的计算顺序，并防止重复计算
+        """
+        # 获取需要计算的字段（按拓扑顺序）
+        execution_order = cls._get_execution_order(rf_name)
+        
+        # 记录已计算的字段，防止重复计算
+        computed: set[str] = set()
+        last_result: AssignerResult | None = None
+        
+        for rf in execution_order:
+            if rf in computed:
+                continue
+                
             info = cls.assigned_info.get(rf)
-            if info and info[2] != "auto_first":
-                res = cls.assign(rf, dependent_data)
-                if res.success:
-                    dependent_data[rf] = res.assigned_fields[rf]
-                else:
-                    return res
-            if rf not in dependent_data:
+            if not info:
+                # 不是 assigned field，检查是否在 dependent_data 中
+                if rf not in dependent_data:
+                    return AssignerResult(
+                        success=False,
+                        assigned_fields=None,
+                        error_message=f"Missing dependent rf: {rf} for assigned rf: {rf_name}",
+                    )
+                continue
+            
+            # 跳过 auto_first 模式（如果已有值）
+            if info[2] == "auto_first" and rf in dependent_data:
+                computed.add(rf)
+                continue
+            
+            # 检查所有直接依赖是否就绪
+            direct_deps = info[0]
+            missing = [d for d in direct_deps if d not in dependent_data]
+            if missing:
                 return AssignerResult(
                     success=False,
                     assigned_fields=None,
-                    error_message=f"Missing dependent rf: {rf} for assigned rf: {rf_name}",
+                    error_message=f"Missing dependent rfs: {missing} for assigned rf: {rf}",
                 )
-
-        assign_func = cls.get_assign_func_of_assigned_key(rf_name)
-        if assign_func is None:
-            return AssignerResult(
-                success=False,
-                assigned_fields=None,
-                error_message=f"Cannot find assign function for rf: {rf_name}",
-            )
-
-        return assign_func(dependent_data)
+            
+            # 执行计算
+            assign_func = info[1]
+            res = assign_func(dependent_data)
+            
+            if res.success:
+                # 更新 dependent_data
+                for key, value in res.assigned_fields.items():
+                    dependent_data[key] = value
+                    computed.add(key)
+                
+                # 如果这是目标字段，保存结果
+                if rf == rf_name or rf_name in res.assigned_fields:
+                    last_result = res
+            else:
+                return res
+        
+        # 返回目标字段的结果
+        if last_result is not None:
+            return last_result
+        
+        return AssignerResult(
+            success=False,
+            assigned_fields=None,
+            error_message=f"Cannot find assign function for rf: {rf_name}",
+        )
+    
+    @classmethod
+    def _get_execution_order(cls, target: str) -> list[str]:
+        """
+        获取计算目标字段所需的执行顺序（拓扑排序）
+        
+        Returns:
+            按依赖顺序排列的字段列表（先计算的在前）
+        """
+        # 收集所有需要计算的 assigned fields
+        needed: set[str] = set()
+        all_deps: set[str] = set()
+        
+        def collect(field: str) -> None:
+            if field in cls.assigned_info:
+                if field not in needed:
+                    needed.add(field)
+                    for dep in cls.assigned_info[field][0]:
+                        all_deps.add(dep)
+                        collect(dep)
+        
+        collect(target)
+        
+        # 对 needed 进行拓扑排序
+        # 计算入度（只考虑 needed 中的字段之间的依赖）
+        in_degree: dict[str, int] = {f: 0 for f in needed}
+        
+        for field in needed:
+            for dep in cls.assigned_info[field][0]:
+                if dep in needed:
+                    in_degree[field] += 1
+        
+        # Kahn's algorithm
+        queue = [f for f in needed if in_degree[f] == 0]
+        result: list[str] = []
+        
+        while queue:
+            queue.sort()  # 保证确定性
+            node = queue.pop(0)
+            result.append(node)
+            
+            # 找依赖 node 的字段
+            for field in needed:
+                if node in cls.assigned_info[field][0]:
+                    in_degree[field] -= 1
+                    if in_degree[field] == 0:
+                        queue.append(field)
+        
+        # 添加非 assigned 的依赖（输入字段）
+        inputs = all_deps - needed
+        return list(inputs) + result
 
 
 class DefaultAssigner(AssignerBase):
