@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
 import enApisSidebar from './sidebars/en/apis.mjs'
 import enSyntaxSidebar from './sidebars/en/syntax.mjs'
@@ -66,7 +67,7 @@ const zhSidebar = {
   '/zh/data-structure/': zhDataStructureSidebar
 }
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: 'Airalogy',
   lang: 'en-US',
   description: 'Universal framework for standardized data digitization',
@@ -133,8 +134,8 @@ export default defineConfig({
         const html = defaultRender(tokens, idx, options, env, self)
         return html.replace('<code', '<code v-pre')
       }
+
     }
   }
 
-})
-
+}))
