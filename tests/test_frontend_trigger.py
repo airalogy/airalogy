@@ -9,12 +9,8 @@
 问题：如果没有正确的"脏标记"或"触发锁"，可能会无限循环
 """
 
+import pytest
 from airalogy.assigner import DefaultAssigner, assigner, AssignerResult
-
-
-# 清空注册
-DefaultAssigner.assigned_info = {}
-DefaultAssigner.dependent_info = {}
 
 
 class FrontendSimulator:
@@ -88,160 +84,86 @@ class FrontendSimulator:
 
 
 # ============================================================
+# Module-level registration with unique prefixes
+# ============================================================
+
+# 简单链式依赖: ft_chain_a → ft_chain_b → ft_chain_c
+@assigner(assigned_fields=["ft_chain_b"], dependent_fields=["ft_chain_a"], mode="auto")
+def calc_ft_chain_b(dep):
+    return AssignerResult(assigned_fields={"ft_chain_b": dep["ft_chain_a"] * 2})
+
+@assigner(assigned_fields=["ft_chain_c"], dependent_fields=["ft_chain_b"], mode="auto")
+def calc_ft_chain_c(dep):
+    return AssignerResult(assigned_fields={"ft_chain_c": dep["ft_chain_b"] + 10})
+
+# 菱形依赖
+@assigner(assigned_fields=["ft_diamond_b"], dependent_fields=["ft_diamond_a"], mode="auto")
+def calc_ft_diamond_b(dep):
+    return AssignerResult(assigned_fields={"ft_diamond_b": dep["ft_diamond_a"] * 2})
+
+@assigner(assigned_fields=["ft_diamond_c"], dependent_fields=["ft_diamond_a"], mode="auto")
+def calc_ft_diamond_c(dep):
+    return AssignerResult(assigned_fields={"ft_diamond_c": dep["ft_diamond_a"] * 3})
+
+@assigner(assigned_fields=["ft_diamond_d"], dependent_fields=["ft_diamond_b", "ft_diamond_c"], mode="auto")
+def calc_ft_diamond_d(dep):
+    return AssignerResult(assigned_fields={"ft_diamond_d": dep["ft_diamond_b"] + dep["ft_diamond_c"]})
+
+
+# ============================================================
 # 测试用例
 # ============================================================
 
-# 简单链式依赖
-@assigner(assigned_fields=["chain_b"], dependent_fields=["chain_a"], mode="auto")
-def calc_chain_b(dep):
-    return AssignerResult(assigned_fields={"chain_b": dep["chain_a"] * 2})
-
-@assigner(assigned_fields=["chain_c"], dependent_fields=["chain_b"], mode="auto")
-def calc_chain_c(dep):
-    return AssignerResult(assigned_fields={"chain_c": dep["chain_b"] + 10})
-
-
-# 菱形依赖
-@assigner(assigned_fields=["diamond_b"], dependent_fields=["diamond_a"], mode="auto")
-def calc_diamond_b(dep):
-    return AssignerResult(assigned_fields={"diamond_b": dep["diamond_a"] * 2})
-
-@assigner(assigned_fields=["diamond_c"], dependent_fields=["diamond_a"], mode="auto")
-def calc_diamond_c(dep):
-    return AssignerResult(assigned_fields={"diamond_c": dep["diamond_a"] * 3})
-
-@assigner(assigned_fields=["diamond_d"], dependent_fields=["diamond_b", "diamond_c"], mode="auto")
-def calc_diamond_d(dep):
-    return AssignerResult(assigned_fields={"diamond_d": dep["diamond_b"] + dep["diamond_c"]})
-
-
 def test_chain_trigger():
     """测试链式依赖的触发"""
-    print("\n" + "=" * 60)
-    print("测试 1: 链式依赖触发")
-    print("chain_a → chain_b → chain_c")
-    print("=" * 60)
-    
     sim = FrontendSimulator()
     
-    # 用户编辑 chain_a
-    sim.set_value("chain_a", 5, "user")
-    
-    print("\n触发日志:")
-    for log in sim.trigger_log:
-        print(f"  {log}")
-    
-    print(f"\n总触发次数: {sim.trigger_count}")
-    print(f"最终值: chain_a={sim.values.get('chain_a')}, chain_b={sim.values.get('chain_b')}, chain_c={sim.values.get('chain_c')}")
+    # 用户编辑 ft_chain_a
+    sim.set_value("ft_chain_a", 5, "user")
     
     # 验证
-    assert sim.values.get("chain_b") == 10, "chain_b 应该是 10"
-    assert sim.values.get("chain_c") == 20, "chain_c 应该是 20"
-    print("✅ 测试通过")
+    assert sim.values.get("ft_chain_b") == 10, "ft_chain_b 应该是 10"
+    assert sim.values.get("ft_chain_c") == 20, "ft_chain_c 应该是 20"
 
 
 def test_diamond_trigger():
     """测试菱形依赖的触发"""
-    print("\n" + "=" * 60)
-    print("测试 2: 菱形依赖触发")
-    print("diamond_a → diamond_b ─┐")
-    print("diamond_a → diamond_c ─┼→ diamond_d")
-    print("=" * 60)
-    
     sim = FrontendSimulator()
     
-    # 用户编辑 diamond_a
-    sim.set_value("diamond_a", 10, "user")
-    
-    print("\n触发日志:")
-    for log in sim.trigger_log:
-        print(f"  {log}")
-    
-    print(f"\n总触发次数: {sim.trigger_count}")
-    print(f"最终值: a={sim.values.get('diamond_a')}, b={sim.values.get('diamond_b')}, c={sim.values.get('diamond_c')}, d={sim.values.get('diamond_d')}")
+    # 用户编辑 ft_diamond_a
+    sim.set_value("ft_diamond_a", 10, "user")
     
     # 验证
-    assert sim.values.get("diamond_b") == 20, "diamond_b 应该是 20"
-    assert sim.values.get("diamond_c") == 30, "diamond_c 应该是 30"
-    assert sim.values.get("diamond_d") == 50, "diamond_d 应该是 50"
-    print("✅ 测试通过")
+    assert sim.values.get("ft_diamond_b") == 20, "ft_diamond_b 应该是 20"
+    assert sim.values.get("ft_diamond_c") == 30, "ft_diamond_c 应该是 30"
+    assert sim.values.get("ft_diamond_d") == 50, "ft_diamond_d 应该是 50"
 
 
 def test_value_unchanged():
     """测试值不变时不应该触发"""
-    print("\n" + "=" * 60)
-    print("测试 3: 值不变时不触发")
-    print("=" * 60)
-    
     sim = FrontendSimulator()
     
     # 初始设置
-    sim.set_value("chain_a", 5, "user")
+    sim.set_value("ft_chain_a", 5, "user")
     initial_count = sim.trigger_count
     
     # 再次设置相同的值
-    sim.set_value("chain_a", 5, "user")
+    sim.set_value("ft_chain_a", 5, "user")
     
-    print(f"\n初始触发次数: {initial_count}")
-    print(f"重复设置后触发次数: {sim.trigger_count}")
-    
-    if sim.trigger_count == initial_count:
-        print("✅ 值不变时没有额外触发")
-    else:
-        print("⚠️ 值不变时产生了额外触发")
+    # 值不变时不应该有额外触发
+    assert sim.trigger_count == initial_count, "值不变时不应该有额外触发"
 
 
 def test_potential_loop():
     """测试潜在的循环触发场景"""
-    print("\n" + "=" * 60)
-    print("测试 4: 潜在循环触发检测")
-    print("=" * 60)
-    
-    # 清空并重新注册一个可能产生"伪循环"的场景
-    # 注意：这不是真正的循环依赖，但可能在前端触发时产生问题
-    
     sim = FrontendSimulator()
     sim.max_triggers = 20  # 降低阈值以便观察
     
-    sim.set_value("chain_a", 5, "user")
+    sim.set_value("ft_chain_a", 5, "user")
     
-    print(f"\n总触发次数: {sim.trigger_count}")
-    
-    if sim.trigger_count < sim.max_triggers:
-        print("✅ 没有产生无限循环")
-    else:
-        print("❌ 可能存在循环触发问题")
+    # 没有产生无限循环
+    assert sim.trigger_count < sim.max_triggers, "可能存在循环触发问题"
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("🔄 前端触发机制模拟测试")
-    print("=" * 60)
-    
-    test_chain_trigger()
-    test_diamond_trigger()
-    test_value_unchanged()
-    test_potential_loop()
-    
-    print("\n" + "=" * 60)
-    print("📋 结论")
-    print("=" * 60)
-    print("""
-前端触发机制的关键点：
-
-1. 计算锁 (is_computing)
-   - 在计算过程中，不应该再次触发
-   - 防止 A→B→C 计算时，B 的变化又触发 A→B
-
-2. 值变化检测
-   - 只有值真正变化时才触发下游
-   - 避免 set(5) → set(5) 产生无意义的触发
-
-3. 批量更新
-   - 一次 assign 可能更新多个字段
-   - 应该等所有字段更新完再触发下游
-
-4. 拓扑顺序
-   - 后端已经保证了正确的计算顺序
-   - 前端只需要触发一次，后端会处理所有依赖
-""")
+    pytest.main([__file__, "-v"])

@@ -7,12 +7,8 @@
 3. 使用"脏标记"批量处理
 """
 
+import pytest
 from airalogy.assigner import DefaultAssigner, assigner, AssignerResult
-
-
-# 清空注册
-DefaultAssigner.assigned_info = {}
-DefaultAssigner.dependent_info = {}
 
 
 class OptimizedFrontendSimulator:
@@ -160,126 +156,93 @@ class BatchFrontendSimulator:
 
 
 # ============================================================
-# 注册 assigner
+# Module-level registration with unique prefixes
 # ============================================================
 
-@assigner(assigned_fields=["b"], dependent_fields=["a"], mode="auto")
-def calc_b(dep):
-    return AssignerResult(assigned_fields={"b": dep["a"] * 2})
+# a → b ─┐
+# a → c ─┼→ d → e
+@assigner(assigned_fields=["ftv2_b"], dependent_fields=["ftv2_a"], mode="auto")
+def calc_ftv2_b(dep):
+    return AssignerResult(assigned_fields={"ftv2_b": dep["ftv2_a"] * 2})
 
-@assigner(assigned_fields=["c"], dependent_fields=["a"], mode="auto")
-def calc_c(dep):
-    return AssignerResult(assigned_fields={"c": dep["a"] * 3})
+@assigner(assigned_fields=["ftv2_c"], dependent_fields=["ftv2_a"], mode="auto")
+def calc_ftv2_c(dep):
+    return AssignerResult(assigned_fields={"ftv2_c": dep["ftv2_a"] * 3})
 
-@assigner(assigned_fields=["d"], dependent_fields=["b", "c"], mode="auto")
-def calc_d(dep):
-    return AssignerResult(assigned_fields={"d": dep["b"] + dep["c"]})
+@assigner(assigned_fields=["ftv2_d"], dependent_fields=["ftv2_b", "ftv2_c"], mode="auto")
+def calc_ftv2_d(dep):
+    return AssignerResult(assigned_fields={"ftv2_d": dep["ftv2_b"] + dep["ftv2_c"]})
 
-@assigner(assigned_fields=["e"], dependent_fields=["d"], mode="auto")
-def calc_e(dep):
-    return AssignerResult(assigned_fields={"e": dep["d"] * 2})
+@assigner(assigned_fields=["ftv2_e"], dependent_fields=["ftv2_d"], mode="auto")
+def calc_ftv2_e(dep):
+    return AssignerResult(assigned_fields={"ftv2_e": dep["ftv2_d"] * 2})
 
+
+# ============================================================
+# 测试用例
+# ============================================================
 
 def test_optimized():
-    """测试优化版前端"""
-    print("\n" + "=" * 60)
-    print("测试 1: 优化版前端模拟器")
-    print("a → b ─┐")
-    print("a → c ─┼→ d → e")
-    print("=" * 60)
+    """测试优化版前端
     
+    注意：OptimizedFrontendSimulator 只计算直接依赖，不递归触发下游。
+    这是一种简化的实现，实际前端可能需要多次触发或使用批量处理。
+    """
     sim = OptimizedFrontendSimulator()
-    sim.user_edit("a", 10)
+    sim.user_edit("ftv2_a", 10)
     
-    print("\n日志:")
-    for log in sim.log:
-        print(f"  {log}")
+    # 验证直接依赖的计算结果
+    assert sim.values.get("ftv2_a") == 10
+    assert sim.values.get("ftv2_b") == 20  # 10 * 2
+    assert sim.values.get("ftv2_c") == 30  # 10 * 3
     
-    print(f"\n计算调用次数: {sim.compute_count}")
-    print(f"最终值: a={sim.values.get('a')}, b={sim.values.get('b')}, c={sim.values.get('c')}, d={sim.values.get('d')}, e={sim.values.get('e')}")
+    # 继续触发下游依赖（模拟前端的多次触发）
+    # ftv2_b 和 ftv2_c 变化后，需要重新计算 ftv2_d
+    sim._recompute_affected("ftv2_b")
+    assert sim.values.get("ftv2_d") == 50  # 20 + 30
+    
+    # ftv2_d 变化后，需要重新计算 ftv2_e
+    sim._recompute_affected("ftv2_d")
+    assert sim.values.get("ftv2_e") == 100  # 50 * 2
 
 
 def test_batch():
     """测试批量处理版前端"""
-    print("\n" + "=" * 60)
-    print("测试 2: 批量处理版前端模拟器（推荐）")
-    print("=" * 60)
-    
     sim = BatchFrontendSimulator()
     
-    # 用户可能快速编辑多个字段
-    sim.user_edit("a", 10)
+    # 用户编辑
+    sim.user_edit("ftv2_a", 10)
     
     # 统一计算
     sim.flush()
     
-    print("\n日志:")
-    for log in sim.log:
-        print(f"  {log}")
-    
-    print(f"\n计算调用次数: {sim.compute_count}")
-    print(f"最终值: a={sim.values.get('a')}, b={sim.values.get('b')}, c={sim.values.get('c')}, d={sim.values.get('d')}, e={sim.values.get('e')}")
+    # 验证计算结果
+    assert sim.values.get("ftv2_a") == 10
+    assert sim.values.get("ftv2_b") == 20
+    assert sim.values.get("ftv2_c") == 30
+    assert sim.values.get("ftv2_d") == 50
+    assert sim.values.get("ftv2_e") == 100
 
 
 def test_multiple_edits():
     """测试多次编辑"""
-    print("\n" + "=" * 60)
-    print("测试 3: 多次编辑后批量计算")
-    print("=" * 60)
-    
     sim = BatchFrontendSimulator()
     
     # 用户快速编辑多个字段（比如粘贴数据）
-    sim.user_edit("a", 10)
-    sim.user_edit("a", 20)  # 又改了
-    sim.user_edit("a", 15)  # 最终值
-    
-    print("\n编辑后（未计算）:")
-    for log in sim.log:
-        print(f"  {log}")
+    sim.user_edit("ftv2_a", 10)
+    sim.user_edit("ftv2_a", 20)  # 又改了
+    sim.user_edit("ftv2_a", 15)  # 最终值
     
     # 统一计算（比如 debounce 后）
     sim.flush()
     
-    print("\n计算后:")
-    for log in sim.log[-5:]:
-        print(f"  {log}")
-    
-    print(f"\n计算调用次数: {sim.compute_count}")
-    print(f"最终值: a={sim.values.get('a')}, b={sim.values.get('b')}, c={sim.values.get('c')}, d={sim.values.get('d')}, e={sim.values.get('e')}")
+    # 验证最终值
+    assert sim.values.get("ftv2_a") == 15
+    assert sim.values.get("ftv2_b") == 30  # 15 * 2
+    assert sim.values.get("ftv2_c") == 45  # 15 * 3
+    assert sim.values.get("ftv2_d") == 75  # 30 + 45
+    assert sim.values.get("ftv2_e") == 150  # 75 * 2
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("🎯 前端触发机制最佳实践")
-    print("=" * 60)
-    
-    test_optimized()
-    test_batch()
-    test_multiple_edits()
-    
-    print("\n" + "=" * 60)
-    print("📋 最佳实践总结")
-    print("=" * 60)
-    print("""
-1. 不要在前端递归触发
-   - 后端 assign() 已经处理了整个依赖链
-   - 前端只需要调用一次
-
-2. 使用脏标记 + 批量计算
-   - 用户编辑 → 标记脏
-   - debounce 后 → 批量计算
-   - 避免频繁触发
-
-3. 值变化检测
-   - old == new 时不触发
-   - 避免无意义的计算
-
-4. 计算锁
-   - 计算过程中不接受新的触发
-   - 防止循环
-
-5. 信任后端的拓扑排序
-   - 后端保证正确的计算顺序
-   - 前端不需要关心依赖关系
-""")
+    pytest.main([__file__, "-v"])
