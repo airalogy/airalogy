@@ -3,6 +3,7 @@ import threading
 from typing import Callable, Literal
 
 from airalogy.assigner.assigner_result import AssignerResult
+from airalogy.assigner.dependency_graph import DependencyGraph, CyclicDependencyError
 
 
 def flatten_list(lst):
@@ -45,13 +46,23 @@ class AssignerBase:
     _lock = threading.Lock()
     assigned_info: dict[str, tuple[list[str], Callable, AssignerMode]] = {}
     dependent_info: dict[str, list[tuple[str, Callable, AssignerMode]]] = {}
+    _dependency_graph: DependencyGraph | None = None
 
     def __init_subclass__(cls, **kwargs):
         with AssignerBase._lock:
             cls.assigned_info = AssignerBase.assigned_info
             cls.dependent_info = AssignerBase.dependent_info
+            cls._dependency_graph = AssignerBase._dependency_graph
             AssignerBase.assigned_info = {}
             AssignerBase.dependent_info = {}
+            AssignerBase._dependency_graph = None
+
+    @classmethod
+    def _get_or_create_graph(cls) -> DependencyGraph:
+        """获取或创建依赖图"""
+        if cls._dependency_graph is None:
+            cls._dependency_graph = DependencyGraph()
+        return cls._dependency_graph
 
     @classmethod
     def assigner(
@@ -80,6 +91,24 @@ class AssignerBase:
                     cls.dependent_info[key] = []
                 for assigned_key in assigned_fields:
                     cls.dependent_info[key].append((assigned_key, assign_func, mode))
+
+            # 注册到依赖图
+            graph = cls._get_or_create_graph()
+            try:
+                graph.register(assigned_fields, dependent_fields, assign_func, mode)
+                # 验证是否有循环依赖
+                graph.validate()
+            except CyclicDependencyError as e:
+                # 回滚注册
+                for key in assigned_fields:
+                    cls.assigned_info.pop(key, None)
+                for key in dependent_fields:
+                    if key in cls.dependent_info:
+                        cls.dependent_info[key] = [
+                            item for item in cls.dependent_info[key]
+                            if item[0] not in assigned_fields
+                        ]
+                raise e
 
             @functools.wraps(assign_func)
             def wrapper(dependent_data: dict) -> AssignerResult:
@@ -188,14 +217,22 @@ class AssignerBase:
         }
 
     @classmethod
+    def get_dependency_graph(cls) -> DependencyGraph | None:
+        """获取依赖图（用于高级操作如可视化）"""
+        return cls._dependency_graph
+
+    @classmethod
     def assign(cls, rf_name: str, dependent_data: dict) -> AssignerResult:
         """
         计算指定字段的值
         
         使用拓扑排序确保正确的计算顺序，并防止重复计算
         """
-        # 获取需要计算的字段（按拓扑顺序）
-        execution_order = cls._get_execution_order(rf_name)
+        # 优先使用依赖图的执行顺序
+        if cls._dependency_graph is not None:
+            execution_order = cls._dependency_graph.get_execution_order(rf_name)
+        else:
+            execution_order = cls._get_execution_order(rf_name)
         
         # 记录已计算的字段，防止重复计算
         computed: set[str] = set()
