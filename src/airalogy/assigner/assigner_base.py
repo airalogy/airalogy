@@ -208,9 +208,21 @@ class AssignerBase:
 
     @classmethod
     def all_assigned_fields(cls) -> dict[str, dict[str, object]]:
+        """
+        获取所有 assigned fields 的信息
+        
+        Returns:
+            dict: 每个 assigned field 的信息，包含：
+                - direct_dependent_fields: 直接依赖的字段列表
+                - all_dependent_fields: 全部依赖的字段列表（包括间接依赖）
+                - dependent_fields: 同 all_dependent_fields（向后兼容）
+                - mode: assigner 模式
+        """
         return {
             k: {
-                "dependent_fields": cls.get_dependent_fields_of_assigned_key(k),
+                "direct_dependent_fields": list(v[0]),  # 直接依赖
+                "all_dependent_fields": cls.get_dependent_fields_of_assigned_key(k),  # 全部依赖
+                "dependent_fields": cls.get_dependent_fields_of_assigned_key(k),  # 向后兼容
                 "mode": v[2],
             }
             for k, v in cls.assigned_info.items()
