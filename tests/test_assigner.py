@@ -127,17 +127,32 @@ class RvAssigner2(AssignerBase):
 
 
 def test_get_dependent_fields_of_assigned_key():
+    # Test for DIRECT dependencies only
     assert RvAssigner.get_dependent_fields_of_assigned_key("rv_01") == []
-    assert RvAssigner.get_dependent_fields_of_assigned_key("rv_02") == []
-    assert sorted(RvAssigner.get_dependent_fields_of_assigned_key("rv_03")) == [
+    assert RvAssigner.get_dependent_fields_of_assigned_key("rv_03") == [
         "rv_01",
         "rv_02",
     ]
-    assert sorted(RvAssigner.get_dependent_fields_of_assigned_key("rv_04")) == [
+    assert RvAssigner.get_dependent_fields_of_assigned_key("rv_07") == [
+        "rv_04",
+        "rv_06",
+    ]
+
+    assert RvAssigner2.get_dependent_fields_of_assigned_key("rv_03") == [
+        "rv_01",
+        "rv_02",
+        "rv_09",
+    ]
+
+
+def test_get_all_dependent_fields_recursive():
+    # Test for TRANSITIVE dependencies (what get_dependent_fields_of_assigned_key used to do)
+    assert RvAssigner.get_all_dependent_fields_recursive("rv_01") == []
+    assert sorted(RvAssigner.get_all_dependent_fields_recursive("rv_03")) == [
         "rv_01",
         "rv_02",
     ]
-    assert sorted(RvAssigner.get_dependent_fields_of_assigned_key("rv_07")) == [
+    assert sorted(RvAssigner.get_all_dependent_fields_recursive("rv_07")) == [
         "rv_01",
         "rv_02",
         "rv_03",
@@ -146,16 +161,76 @@ def test_get_dependent_fields_of_assigned_key():
         "rv_06",
     ]
 
-    assert RvAssigner2.get_dependent_fields_of_assigned_key("rv_01") == []
-    assert RvAssigner2.get_dependent_fields_of_assigned_key("rv_02") == []
-    assert sorted(RvAssigner2.get_dependent_fields_of_assigned_key("rv_03")) == [
-        "rv_01",
-        "rv_02",
-        "rv_09",
-    ]
-    assert sorted(RvAssigner2.get_dependent_fields_of_assigned_key("rv_03")) == sorted(
-        RvAssigner2.get_dependent_fields_of_assigned_key("rc_04")
-    )
+
+def test_build_dependency_graph():
+    RvAssigner.build_dependency_graph()
+    graph = RvAssigner.dependency_graph
+
+    # Check assigner nodes exist
+    assert "assign_rv03_and_04" in graph
+    assert "assign_rv06" in graph
+
+    # Check dependencies
+    # assigner depends on inputs
+    assert "rv_01" in graph["assign_rv03_and_04"]
+    assert "rv_02" in graph["assign_rv03_and_04"]
+
+    # assigned field depends on assigner
+    assert "assign_rv03_and_04" in graph["rv_03"]
+    assert "assign_rv03_and_04" in graph["rv_04"]
+
+
+def test_validate_dependency_graph_no_cycle():
+    # RvAssigner has no cycles, should pass
+    RvAssigner.validate_dependency_graph()
+
+
+def test_validate_dependency_graph_with_cycle():
+    with pytest.raises(ValueError, match="Circular dependency detected"):
+
+        class CycleAssigner(AssignerBase):
+            @assigner(assigned_fields=["a"], dependent_fields=["b"])
+            def assign_a(dep): ...
+
+            @assigner(assigned_fields=["b"], dependent_fields=["a"])
+            def assign_b(dep): ...
+
+
+def test_export_dependency_graph_to_dict():
+    data = RvAssigner.export_dependency_graph_to_dict()
+    assert "nodes" in data
+    assert "edges" in data
+
+    nodes = data["nodes"]
+    node_names = [n["name"] for n in nodes]
+    assert "rv_01" in node_names
+    assert "assign_rv03_and_04" in node_names
+    assert "rv_03" in node_names
+
+    node_dict = {n["name"]: n["type"] for n in nodes}
+    assert node_dict["rv_01"] == "dependent_field"
+    assert node_dict["assign_rv03_and_04"] == "assigner"
+    assert node_dict["rv_03"] == "assigned_field"
+
+    edges = data["edges"]
+    # Check edge directions: dependent -> assigner -> assigned
+    assert ("rv_01", "assign_rv03_and_04") in edges
+    assert ("assign_rv03_and_04", "rv_03") in edges
+
+
+def test_export_dependency_graph_to_mermaid():
+    mermaid = RvAssigner.export_dependency_graph_to_mermaid()
+
+    assert "flowchart LR" in mermaid
+
+    # Check node shapes
+    assert "rv_01([rv_01])" in mermaid  # input
+    assert "assign_rv03_and_04{{assign_rv03_and_04}}" in mermaid  # assigner
+    assert "rv_03[[rv_03]]" in mermaid  # assigned
+
+    # Check edges
+    assert "rv_01 --> assign_rv03_and_04" in mermaid
+    assert "assign_rv03_and_04 --> rv_03" in mermaid
 
 
 def test_get_assign_func_of_assigned_key():
@@ -185,20 +260,28 @@ def test_all_assigned_fields():
     assert sorted(rfs["rv_04"]["dependent_fields"]) == ["rv_01", "rv_02"]
     assert rfs["rv_04"]["mode"] == "auto"
 
-    assert sorted(rfs["rv_06"]["dependent_fields"]) == [
+    assert sorted(rfs["rv_06"]["all_dependent_fields"]) == [
         "rv_01",
         "rv_02",
         "rv_03",
         "rv_05",
     ]
+    assert sorted(rfs["rv_06"]["dependent_fields"]) == [
+        "rv_03",
+        "rv_05",
+    ]
     assert rfs["rv_06"]["mode"] == "manual"
 
-    assert sorted(rfs["rv_07"]["dependent_fields"]) == [
+    assert sorted(rfs["rv_07"]["all_dependent_fields"]) == [
         "rv_01",
         "rv_02",
         "rv_03",
         "rv_04",
         "rv_05",
+        "rv_06",
+    ]
+    assert sorted(rfs["rv_07"]["dependent_fields"]) == [
+        "rv_04",
         "rv_06",
     ]
     assert rfs["rv_07"]["mode"] == "auto"
@@ -229,8 +312,9 @@ def test_rv_assigner():
     assert result.assigned_fields == {"rv_03": 30, "rv_04": 10}
 
     result = RvAssigner.assign("rv_06", dependent_data)
-    assert result.success
-    assert result.assigned_fields == {"rv_06": 15}
+    assert not result.success
+    assert result.assigned_fields is None
+    assert "Missing dependent field: rv_03" in result.error_message
 
     result = RvAssigner2.assign("rv_03", dependent_data)
     assert result.success
@@ -313,10 +397,10 @@ def test_standalone_assigner_registration_and_execution():
 
 
 def test_standalone_manual_assigner():
-    depent_files = DefaultAssigner.get_dependent_fields_of_assigned_key(
+    depent_fields = DefaultAssigner.get_all_dependent_fields_recursive(
         "standalone_rv_net"
     )
-    assert sorted(depent_files) == sorted(
+    assert sorted(depent_fields) == sorted(
         [
             "standalone_rv_a",
             "standalone_rv_b",
@@ -328,8 +412,7 @@ def test_standalone_manual_assigner():
     result = DefaultAssigner.assign(
         "standalone_rv_net",
         {
-            "standalone_rv_a": 10,
-            "standalone_rv_b": 10,
+            "standalone_rv_total": 20,
             "standalone_rv_discount": 3,
         },
     )
