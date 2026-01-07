@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.0.14 (20260107)
+
+### Features
+
+- Add inline assigner support with `{{assigner}}` syntax in AIMD files
+- Add CLI command `airalogy extract-assigners` for extracting inline assigners to Python files
+- Add dependency graph validation and cycle detection for assigners
+- Add Mermaid visualization for assigner dependency graphs via `generate_mermaid_graph()`
+- Add caching for AIMD parse results in `AimdParser`
+
 ## 0.0.13 (20251224)
 
 ### Features
