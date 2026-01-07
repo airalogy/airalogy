@@ -54,6 +54,7 @@ class AimdParser:
         self.current_index = 0
         self.strict = strict
         self.error_collector = ErrorCollector() if not strict else None
+        self.parse_result: Optional[Dict[str, List]] = None
 
     def _handle_error(self, error: AimdParseError):
         """
@@ -895,6 +896,9 @@ class AimdParser:
         Raises:
             AimdParseError: If parsing fails
         """
+        if self.parse_result is not None:
+            return self.parse_result
+
         vars_list = []
         steps = []
         checks = []
@@ -930,7 +934,7 @@ class AimdParser:
         if vars_list or steps or checks:
             self._validate_uniqueness(vars_list, steps, checks)
 
-        return {
+        self.parse_result = {
             "vars": vars_list,
             "steps": steps,
             "checks": checks,
@@ -940,6 +944,7 @@ class AimdParser:
             "cites": cites,
             "assigners": assigners,
         }
+        return self.parse_result
 
     def _validate_uniqueness(
         self, vars_list: List, steps: List[StepNode], checks: List[CheckNode]
