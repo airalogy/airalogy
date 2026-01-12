@@ -5,6 +5,7 @@ export default [
       { text: '概览', link: '/zh/data-structure/' },
       { text: '记录', link: '/zh/data-structure/record' },
       { text: 'ID', link: '/zh/data-structure/id' },
+      { text: '工作流', link: '/zh/data-structure/workflow' },
     ]
   }
 ]

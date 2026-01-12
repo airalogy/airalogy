@@ -15,6 +15,7 @@ export default [
       { text: '环境', link: '/zh/syntax/env' },
       { text: '类型', link: '/zh/syntax/types' },
       { text: '赋值器类型约束', link: '/zh/syntax/assigner_type' },
+      { text: '工作流', link: '/zh/syntax/workflow' },
     ]
   }
 ]

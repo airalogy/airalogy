@@ -15,6 +15,7 @@ export default [
       { text: 'Environment', link: '/en/syntax/env' },
       { text: 'Types', link: '/en/syntax/types' },
       { text: 'Assigner Type Constraints', link: '/en/syntax/assigner_type' },
+      { text: 'Workflow', link: '/en/syntax/workflow' },
     ]
   }
 ]
