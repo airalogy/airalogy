@@ -125,6 +125,7 @@ export default withMermaid(defineConfig({
     让行内代码中的 `{{ ... }}`、以及类似模板符号都能按原样文本正确显示。
   */
   markdown: {
+    lineNumbers: false,
     config(md) {
       const defaultRender =
         md.renderer.rules.code_inline ||
