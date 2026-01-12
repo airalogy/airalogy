@@ -8,8 +8,8 @@ An Airalogy Record is a JSON object that contains the metadata and data of a res
 
 ```json
 {
-    "airalogy_record_id": "airalogy.id.record.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.v.2",
-    "record_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", // 该Record在record命名空间下唯一标识一个Record的ID
+    "airalogy_record_id": "airalogy.id.record.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.v.2", // 如果为本地Protocol记录的Record，由于不存在全局唯一的Airalogy Record ID概念，因此该字段可以留空（null），当本地数据同步到Airalogy平台时，如果UUID发生碰撞，则会自动生成一个新的UUID来替换原有的UUID（下面的`record_id`字段也会相应地更新）。如果是基于一个Airalogy Protocol记录的Record，则该字段为该Record在Airalogy平台中的全局唯一ID
+    "record_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", // 一个UUID
     "record_version": 2, // 该Record的版本号，即第几次更新。首次提交时，此值为1；当用户更新Record时，此值递增
     "metadata": {
         // metadata of the Record
@@ -28,15 +28,14 @@ An Airalogy Record is a JSON object that contains the metadata and data of a res
 
 ```json
 {
-    // 下面字段用于标识该Record所基于的Airalogy Protocol
-    "airalogy_protocol_id": "airalogy.id.lab.lab_demo.project.project_demo.protocol.protocol_demo.v.0.0.1",
-
-    // 下面几个字段用于帮助用户快速定位Record在Airalogy Platform中的来源
-    "lab_id": "lab_demo",
-    "project_id": "project_demo",
+    "airalogy_protocol_id": "airalogy.id.lab.lab_demo.project.project_demo.protocol.protocol_demo.v.0.0.1", // 若为本地Protocol记录的Record，由于不存在全局唯一的Airalogy Protocol ID概念，因此该字段可以留空（null）
     "protocol_id": "protocol_demo",
     "protocol_version": "0.0.1",
     "record_num": 1,
+
+    // 下面字段用于标识该Record所基于的Airalogy Platform中的Airalogy Protocol来源
+    "lab_id": "lab_demo", // 如果是基于一个本地Protocol记录的Record，由于没有Lab的概念，因此该字段可以留空
+    "project_id": "project_demo", // 如果是基于一个本地Protocol记录的Record，由于没有Project的概念，因此该字段可以留空
 
     // 下面4个字段用于标识该Record的版本信息
     "record_current_version_submission_time": "2024-01-02T00:00:00+08:00", // 该Record当前版本的提交时间
