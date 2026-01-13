@@ -1,10 +1,11 @@
-/* Wrapped code blocks with CSS line numbers (workaround for VitePress lineNumbers). */
+/* Auto-wrap for fenced code blocks. */
 .vp-doc div[class*='language-'] pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
+/* CSS line numbers (workaround for VitePress lineNumbers + wrap; issue #2567). */
 .vp-doc div[class*='language-'] pre code {
   white-space: inherit;
   counter-reset: step;
@@ -20,6 +21,17 @@
   margin-right: 36px;
   margin-left: calc(-36px - 2ch);
   display: inline-block;
+  vertical-align: top;
   text-align: right;
   color: var(--vp-code-line-number-color);
+}
+
+/* Auto-wrap indent: align wrapped visual lines with each line's own indent. */
+.vp-doc div[class*='language-'] pre code .line .code-line {
+  display: inline-block;
+  max-width: 100%;
+  padding-left: var(--vp-code-wrap-indent, 0);
+  text-indent: calc(var(--vp-code-wrap-indent, 0) * -1);
+  vertical-align: top;
+  white-space: inherit;
 }
