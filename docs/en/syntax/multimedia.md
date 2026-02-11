@@ -1,6 +1,6 @@
 # Adding Multimedia Files to an Airalogy Protocol
 
-You can embed images, PDFs, video, and audio directly in `protocol.aimd`.
+You can embed images, PDFs, Markdown files, video, and audio directly in `protocol.aimd`.
 All media files **must** live under the `/files/` directory so the platform can resolve their paths.
 
 ```txt
@@ -10,7 +10,8 @@ protocol/
 │   ├── images/
 │   ├── videos/
 │   ├── audios/
-│   └── pdfs/
+│   ├── pdf/
+│   └── md/
 └── ...
 ```
 
@@ -53,11 +54,17 @@ Keeping assets in type-specific sub-folders is optional but highly recommended f
 ### PDF
 
 ```aimd
-[Download PDF](files/pdfs/example.pdf)
+[Download PDF](files/pdf/example.pdf)
 ```
 
 > PDFs often span multiple pages, so they are exposed as a link.
 > Users can open the document in a new tab or download it.
+
+### Markdown File
+
+```aimd
+[Markdown](files/md/example.md)
+```
 
 ## Best Practices
 

@@ -1,6 +1,6 @@
 # 在Airalogy Protocol添加Multimedia Files
 
-在Airalogy Protocol中，允许用户在`protocol.aimd`中引用Protocol随附的图片、PDF、视频、音频等。
+在Airalogy Protocol中，允许用户在`protocol.aimd`中引用Protocol随附的图片、PDF、视频、音频、Markdown 文件等。
 
 这些多模数据可在储存在`/files/`目录下（储存在其他文件夹下可能读取失败），并在`protocol.aimd`中通过`/files/`路径引用。
 
@@ -18,7 +18,8 @@ protocol/
 - 图片：`/files/images/`
 - 视频：`/files/videos/`
 - 音频：`/files/audios/`
-- PDF：`/files/pdfs/`
+- PDF：`/files/pdf/`
+- Markdown 文件：`/files/md/`
 - ...
 
 在`protocol.aimd`中引用方式如下：
@@ -53,6 +54,10 @@ protocol/
 
 PDF：
 
-[PDF](files/pdfs/xxx.pdf) 
+[PDF](files/pdf/xxx.pdf) 
 <!-- 因为PDF通常有多页，这里设计为链接形式。用户点击之后可以跳转到新的页面浏览或者下载后浏览。 -->
+
+Markdown 文件：
+
+[Markdown](files/md/xxx.md)
 ```
