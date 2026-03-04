@@ -50,10 +50,60 @@ class VarNode(ASTNode):
 
 
 @dataclass
-class QuizNode(VarNode):
+class QuizNode(ASTNode):
     """
     Quiz node parsed from ```quiz code blocks.
     """
+
+    id: str
+    quiz_type: str
+    stem: str
+    default: Optional[Any] = None
+    mode: Optional[str] = None
+    options: List[Dict[str, str]] = field(default_factory=list)
+    answer: Optional[Any] = None
+    blanks: List[Dict[str, str]] = field(default_factory=list)
+    rubric: Optional[str] = None
+    score: Optional[float] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        """
+        Convert quiz node to dictionary format.
+        """
+        result = {
+            "start_line": self.position.start_line,
+            "end_line": self.position.end_line,
+            "start_col": self.position.start_col,
+            "end_col": self.position.end_col,
+            "id": self.id,
+        }
+
+        if self.quiz_type:
+            result["type"] = self.quiz_type
+        if self.mode:
+            result["mode"] = self.mode
+        if self.stem:
+            result["stem"] = self.stem
+        if self.options:
+            result["options"] = self.options
+        if self.answer is not None:
+            result["answer"] = self.answer
+        if self.blanks:
+            result["blanks"] = self.blanks
+        if self.rubric is not None:
+            result["rubric"] = self.rubric
+        if self.score is not None:
+            result["score"] = self.score
+        if self.default is not None:
+            result["default"] = self.default
+        if self.title:
+            result["title"] = self.title
+        if self.description:
+            result["description"] = self.description
+
+        return result
 
 
 @dataclass

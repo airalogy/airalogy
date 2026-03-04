@@ -17,6 +17,8 @@
 - 使用 `- ...` 表达列表项（如 `options`、`blanks`）
 - 多行文本可使用 `|`，并在后续行保持缩进
 - 含特殊字符的字符串建议显式加引号
+- 顶层未知字段会被解析器判定为语法错误
+- 当前 `quiz` 语法不支持自定义扩展字段
 
 多段题干示例：
 
@@ -36,7 +38,7 @@ rubric: 至少提到两个影响因素
 
 ## 用户作答后的保存数据结构
 
-`quiz` 用户作答会以题目 `id` 作为键，存入 `data.quiz` 对象，并由 `generate_model` 生成的 `QuizModel` 进行校验。
+`quiz` 用户作答会以题目 `id` 作为键，存入 `data.quiz` 对象，并基于题目定义规则进行校验。
 
 示例（只示意 `quiz` 部分）：
 
@@ -94,11 +96,6 @@ answer: A
 - `answer`：标准答案（选项键）
 - `default`：记录界面的初始选项键
 
-解析后类型：
-
-- `single` -> `Literal[...]`
-- `multiple` -> `list[Literal[...]]`
-
 ## 填空题（`type: blank`）
 
 ````aimd
@@ -126,10 +123,6 @@ blanks:
 - `stem` 中每个占位符都必须在 `blanks` 中定义
 - 每个 `key` 在 `stem` 中仅出现一次
 
-解析后类型：
-
-- `dict[str, str]`
-
 ## 问答题（`type: open`）
 
 ````aimd
@@ -152,7 +145,3 @@ rubric: 至少提到两个影响因素
 
 - `score`
 - `rubric`
-
-解析后类型：
-
-- `str`

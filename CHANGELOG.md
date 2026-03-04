@@ -7,13 +7,14 @@
 - Add `quiz` code block syntax for `choice` / `blank` / `open` item types.
 - Add quiz parsing, validation, and metadata extraction (including YAML-based quiz block parsing).
 - Add `QuizNode` and include quiz templates in parser outputs.
-- Add `QuizModel` generation in `generate_model` and update CLI generate output accordingly.
+- Keep quiz parsing/validation in parser layer; `generate_model` now only emits `VarModel`.
 - Add quiz syntax docs and record data structure docs in both Chinese and English.
 
 ### Breaking
 
 - Replace exported helper `extract_vars` with `parse_aimd`.
 - Change parse result shape from legacy top-level keys to `templates`-scoped keys.
+- Stop generating standalone `QuizModel` in `generate_model`.
 
 ### Dependencies
 

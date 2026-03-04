@@ -16,7 +16,7 @@ class TestVarModelGenerator:
         code = generate_model(content)
 
         assert "class VarModel(BaseModel):" in code
-        assert "class QuizModel(BaseModel):" in code
+        assert "class QuizModel(BaseModel):" not in code
         assert "name: str" in code
         assert "age: str" in code
 
@@ -69,20 +69,9 @@ options:
 """
         code = generate_model(content)
 
-        assert "from typing import Literal" in code
-        assert "class QuizModel(BaseModel):" in code
-        assert "quiz_q1: Literal['A', 'B']" in code
-        assert "Field(" in code
-        assert "'airalogy_quiz': {'type': 'choice', 'stem': 'Pick one'" in code
-        assert "'mode': 'single'" in code
-        assert "'stem': 'Pick one'" in code
-        assert "{'key': 'A', 'text': 'Option A'}" in code
-        assert "{'key': 'B', 'text': 'Option B'}" in code
-        assert "'score': 3" in code
-        var_section = code.split("class VarModel(BaseModel):", 1)[1].split(
-            "class QuizModel(BaseModel):", 1
-        )[0]
-        assert "quiz_q1:" not in var_section
+        assert "from typing import Literal" not in code
+        assert "quiz_q1:" not in code
+        assert "airalogy_quiz" not in code
 
     def test_generate_model_with_multiple_choice_quiz(self):
         content = """
@@ -103,14 +92,9 @@ options:
 """
         code = generate_model(content)
 
-        assert "from typing import Literal" in code
-        assert "class QuizModel(BaseModel):" in code
-        assert "quiz_q2: list[Literal['A', 'B', 'C']]" in code
-        assert "Field(default=['A']" in code
-        assert "'airalogy_quiz': {'type': 'choice', 'stem': 'Pick all'" in code
-        assert "'mode': 'multiple'" in code
-        assert "'stem': 'Pick all'" in code
-        assert "{'key': 'A', 'text': 'Option A'}" in code
+        assert "from typing import Literal" not in code
+        assert "quiz_q2:" not in code
+        assert "airalogy_quiz" not in code
 
     def test_generate_model_with_blank_quiz(self):
         content = """
@@ -125,10 +109,8 @@ blanks:
 """
         code = generate_model(content)
 
-        assert "class QuizModel(BaseModel):" in code
-        assert "quiz_blank_1: dict[str, str]" in code
-        assert "'airalogy_quiz': {'type': 'blank'" in code
-        assert "{'key': 'b1', 'answer': '21%'}" in code
+        assert "quiz_blank_1:" not in code
+        assert "airalogy_quiz" not in code
 
     def test_generate_model_with_open_quiz(self):
         content = """
@@ -141,13 +123,11 @@ rubric: Mention two points
 """
         code = generate_model(content)
 
-        assert "class QuizModel(BaseModel):" in code
-        assert "quiz_open_1: str" in code
-        assert "'airalogy_quiz': {'type': 'open'" in code
-        assert "'rubric': 'Mention two points'" in code
+        assert "quiz_open_1:" not in code
+        assert "airalogy_quiz" not in code
 
-    def test_generate_quiz_model_schema(self):
-        """Test generated QuizModel schema."""
+    def test_generate_model_schema_ignores_quiz(self):
+        """Quiz templates are ignored by generate_model and do not appear in VarModel schema."""
         content = """
 ```quiz
 id: quiz_q1
@@ -165,9 +145,9 @@ options:
 
         namespace = {}
         exec(code, namespace)
-        quiz_model = namespace["QuizModel"]
-        schema = quiz_model.model_json_schema()
-        assert "quiz_q1" in schema["properties"]
+        var_model = namespace["VarModel"]
+        schema = var_model.model_json_schema()
+        assert "quiz_q1" not in schema["properties"]
 
     def test_generate_model_with_airalogy_types(self):
         content = """
@@ -598,13 +578,11 @@ Regular: {{var|regular_var: str}}
         # Empty content
         code = generate_model("")
         assert "class VarModel(BaseModel):" in code
-        assert "class QuizModel(BaseModel):" in code
         assert "pass" in code  # Should have pass when no fields
 
         # Only comments/whitespace
         code = generate_model("   \n  # Just a comment  \n   ")
         assert "class VarModel(BaseModel):" in code
-        assert "class QuizModel(BaseModel):" in code
 
     def test_standard_library_datetime_types(self):
         """Test that datetime types are properly imported."""

@@ -17,6 +17,8 @@ Recommended conventions:
 - Use `- ...` for list items (for example, `options` and `blanks`)
 - Use `|` for multiline text and keep indentation on following lines
 - Quote strings explicitly when they contain special characters
+- Unknown top-level fields are rejected by parser validation
+- Quiz syntax does not currently support custom extension fields
 
 Multi-paragraph stem example:
 
@@ -36,7 +38,7 @@ If you need the `parse_aimd` output shape, see API docs: [AIMD Utilities](../api
 
 ## Saved Answer Data Structure
 
-Quiz answers are saved into `data.quiz`, keyed by quiz `id`, and validated by `QuizModel` generated via `generate_model`.
+Quiz answers are saved into `data.quiz`, keyed by quiz `id`, and validated by quiz-definition rules.
 
 Example (`quiz` part only):
 
@@ -94,11 +96,6 @@ Optional fields:
 - `answer`: correct option key(s)
 - `default`: initial option key(s) for record form
 
-Parsed type:
-
-- `single` -> `Literal[...]`
-- `multiple` -> `list[Literal[...]]`
-
 ## Blank Item (`type: blank`)
 
 ````aimd
@@ -126,10 +123,6 @@ Placeholder consistency rules:
 - each placeholder in `stem` must be defined in `blanks`
 - each key appears once in `stem`
 
-Parsed type:
-
-- `dict[str, str]`
-
 ## Open Item (`type: open`)
 
 ````aimd
@@ -152,7 +145,3 @@ Optional fields:
 
 - `score`
 - `rubric`
-
-Parsed type:
-
-- `str`

@@ -46,7 +46,7 @@ def check_command(args):
 
 
 def generate_command(args):
-    """Generate VarModel and QuizModel from AIMD file."""
+    """Generate VarModel from AIMD file."""
     input_file = Path(args.file)
     output_file = Path(args.output)
 
@@ -159,7 +159,7 @@ def main():
         "generate_model",
         aliases=["gm"],
         help="Generate models",
-        description="Generate Pydantic VarModel and QuizModel from an AIMD file",
+        description="Generate Pydantic VarModel from an AIMD file",
     )
     generate_parser.add_argument(
         "file",

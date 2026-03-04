@@ -1,5 +1,5 @@
 """
-Model generator - generates Pydantic models from parsed AIMD.
+Model generator - generates Pydantic variable models from parsed AIMD.
 """
 
 import re
@@ -52,7 +52,7 @@ def _type_matches(type_name: str, annotation: str) -> bool:
 
 class ModelGenerator:
     """
-    Generates Pydantic VarModel/QuizModel code from parsed AIMD templates.
+    Generates Pydantic VarModel code from parsed AIMD templates.
 
     This generator creates Python code for Pydantic BaseModel classes based on
     template definitions found in an AIMD document.
@@ -82,9 +82,7 @@ class ModelGenerator:
         airalogy_types_used = set()
         standard_library_types_used: Dict[str, Set[str]] = {}  # module -> set of types
         typing_types_used: Set[str] = set()
-        model_vars = (
-            self.parsed["templates"]["var"] + self.parsed["templates"]["quiz"]
-        )
+        model_vars = self.parsed["templates"]["var"]
 
         for var in model_vars:
             # Check if Field is needed (for any kwargs or special parameters)
@@ -286,7 +284,7 @@ class ModelGenerator:
 
     def generate_model(self) -> str:
         """
-        Generate complete VarModel and QuizModel Python code.
+        Generate complete VarModel Python code.
 
         Returns:
             Python code for model classes
@@ -294,7 +292,6 @@ class ModelGenerator:
         imports = self._get_imports()
         nested_models = []
         var_fields = []
-        quiz_fields = []
 
         for var in self.parsed["templates"]["var"]:
             if isinstance(var, VarTableNode):
@@ -303,14 +300,10 @@ class ModelGenerator:
             elif isinstance(var, VarNode):
                 var_fields.append(self._generate_field_definition(var))
 
-        for quiz in self.parsed["templates"]["quiz"]:
-            if isinstance(quiz, VarNode):
-                quiz_fields.append(self._generate_field_definition(quiz))
-
         # Build the complete code
         code_lines = [
             '"""',
-            "Generated VarModel and QuizModel from AIMD.",
+            "Generated VarModel from AIMD.",
             '"""',
             "",
         ]
@@ -330,17 +323,6 @@ class ModelGenerator:
         code_lines.append('    """Main variable model."""')
         if var_fields:
             for field in var_fields:
-                code_lines.append(field)
-        else:
-            code_lines.append("    pass")
-
-        code_lines.append("")
-
-        # Add QuizModel
-        code_lines.append("class QuizModel(BaseModel):")
-        code_lines.append('    """Main quiz answer model."""')
-        if quiz_fields:
-            for field in quiz_fields:
                 code_lines.append(field)
         else:
             code_lines.append("    pass")
@@ -367,7 +349,7 @@ def generate_model(aimd_content: str) -> str:
         aimd_content: AIMD document content
 
     Returns:
-        Python code for VarModel and QuizModel
+        Python code for VarModel
 
     Example:
         >>> code = generate_model(aimd_content)

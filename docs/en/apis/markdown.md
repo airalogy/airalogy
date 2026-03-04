@@ -95,22 +95,15 @@ Example `parse_aimd` output:
     ],
     "quiz": [
       {
-        "name": "quiz_choice_single_1",
-        "type_annotation": "Literal['A', 'B']",
-        "kwargs": {
-          "json_schema_extra": {
-            "airalogy_quiz": {
-              "type": "choice",
-              "mode": "single",
-              "stem": "Which option is correct?",
-              "options": [
-                { "key": "A", "text": "Option A" },
-                { "key": "B", "text": "Option B" }
-              ],
-              "answer": "A"
-            }
-          }
-        }
+        "id": "quiz_choice_single_1",
+        "type": "choice",
+        "mode": "single",
+        "stem": "Which option is correct?",
+        "options": [
+          { "key": "A", "text": "Option A" },
+          { "key": "B", "text": "Option B" }
+        ],
+        "answer": "A"
       }
     ]
   }
@@ -134,87 +127,12 @@ Difference between `AimdParser.parse()` and `parse_aimd()`:
 - `AimdParser.parse()` returns node objects (richer semantic/position info)
 - `parse_aimd()` returns dictionaries (easy to serialize)
 
-## Generate Model Code (`VarModel` + `QuizModel`)
+## Generate Model Code (`VarModel`)
 
 Use `aimd.generate_model(content: str) -> str` to generate Python model code directly from AIMD.
 
-`QuizModel` is a data model class that inherits from `pydantic.BaseModel`.
-
-Input example:
-
-````python
-from airalogy import markdown as aimd
-
-content = """
-```quiz
-id: quiz_choice_single_1
-type: choice
-mode: single
-stem: Pick one
-options:
-  - key: A
-    text: Option A
-  - key: B
-    text: Option B
-```
-
-```quiz
-id: quiz_blank_1
-type: blank
-stem: Fill [[b1]]
-blanks:
-  - key: b1
-    answer: 21%
-```
-"""
-
-code = aimd.generate_model(content)
-print(code)
-````
-
-Generated code example (excerpt):
-
-```python
-from pydantic import BaseModel, Field
-from typing import Literal
-
-class VarModel(BaseModel):
-    """Main variable model."""
-    pass
-
-class QuizModel(BaseModel):
-    """Main quiz answer model."""
-    quiz_choice_single_1: Literal['A', 'B'] = Field(
-        json_schema_extra={
-            "airalogy_quiz": {
-                "type": "choice",
-                "mode": "single",
-                "stem": "Pick one",
-                "options": [{"key": "A", "text": "Option A"}, {"key": "B", "text": "Option B"}],
-            }
-        }
-    )
-    quiz_blank_1: dict[str, str] = Field(
-        json_schema_extra={
-            "airalogy_quiz": {
-                "type": "blank",
-                "stem": "Fill [[b1]]",
-                "blanks": [{"key": "b1", "answer": "21%"}],
-            }
-        }
-    )
-```
-
-Common type mapping:
-
-- single-choice -> `Literal[...]`
-- multiple-choice -> `list[Literal[...]]`
-- blank -> `dict[str, str]`
-- open-ended -> `str`
-
-## Mixed Example: One AIMD With Both `var` and `quiz`
-
-By default, `generate_model` outputs code that can be used directly as `model.py`.
+`generate_model` only generates `VarModel`.  
+`quiz` templates are parsed and validated by syntax/quiz rules, but they are not emitted as a standalone Pydantic model.
 
 Input:
 
@@ -233,43 +151,20 @@ options:
   - key: B
     text: Catalyst B
 ```
-
-```quiz
-id: quiz_open_1
-type: open
-stem: Explain why this catalyst was selected.
-```
 ````
 
 Generated `model.py` (example):
 
 ```python
-from pydantic import BaseModel, Field
-from typing import Literal
+from pydantic import BaseModel
 
 class VarModel(BaseModel):
     """Main variable model."""
     experiment_id: str
     temperature: float
-
-class QuizModel(BaseModel):
-    """Main quiz answer model."""
-    quiz_choice_single_1: Literal['A', 'B'] = Field(
-        json_schema_extra={
-            "airalogy_quiz": {
-                "type": "choice",
-                "mode": "single",
-                "stem": "Which catalyst is used?",
-                "options": [{"key": "A", "text": "Catalyst A"}, {"key": "B", "text": "Catalyst B"}],
-            }
-        }
-    )
-    quiz_open_1: str = Field(
-        json_schema_extra={
-            "airalogy_quiz": {
-                "type": "open",
-                "stem": "Explain why this catalyst was selected.",
-            }
-        }
-    )
 ```
+
+For quiz answer storage/shape, see:
+
+- [Quiz Syntax](../syntax/quiz.md)
+- [Record Data Structure](../data-structure/record.md)

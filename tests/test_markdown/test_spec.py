@@ -81,50 +81,37 @@ class TestSpecFile:
 
     def test_quizs(self, parsed_result):
         """Test quiz syntax parsing."""
-        quiz_dict = {v.name: v for v in parsed_result["templates"]["quiz"]}
+        quiz_dict = {v.id: v for v in parsed_result["templates"]["quiz"]}
 
         q1 = quiz_dict["quiz_q1"]
         assert isinstance(q1, QuizNode)
-        assert q1.type_annotation == "Literal['A', 'B', 'C']"
-        assert (
-            q1.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"]
-            == "Which option is correct?"
-        )
-        assert q1.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "choice"
-        assert q1.kwargs["json_schema_extra"]["airalogy_quiz"]["options"] == [
+        assert q1.stem == "Which option is correct?"
+        assert q1.quiz_type == "choice"
+        assert q1.options == [
             {"key": "A", "text": "Option A"},
             {"key": "B", "text": "Option B"},
             {"key": "C", "text": "Option C"},
         ]
-        assert q1.kwargs["json_schema_extra"]["airalogy_quiz"]["mode"] == "single"
-        assert q1.kwargs["json_schema_extra"]["airalogy_quiz"]["score"] == 5
+        assert q1.mode == "single"
+        assert q1.score == 5
 
         q2 = quiz_dict["quiz_q2"]
         assert isinstance(q2, QuizNode)
-        assert q2.type_annotation == "list[Literal['A', 'B', 'C']]"
-        assert q2.default_value == ["A", "C"]
-        assert (
-            q2.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"]
-            == "Select all correct options"
-        )
-        assert q2.kwargs["json_schema_extra"]["airalogy_quiz"]["mode"] == "multiple"
+        assert q2.default == ["A", "C"]
+        assert q2.stem == "Select all correct options"
+        assert q2.mode == "multiple"
 
         blank = quiz_dict["quiz_blank_1"]
         assert isinstance(blank, QuizNode)
-        assert blank.type_annotation == "dict[str, str]"
-        assert blank.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "blank"
-        assert blank.kwargs["json_schema_extra"]["airalogy_quiz"]["blanks"] == [
+        assert blank.quiz_type == "blank"
+        assert blank.blanks == [
             {"key": "b1", "answer": "21%"}
         ]
 
         open_q = quiz_dict["quiz_open_1"]
         assert isinstance(open_q, QuizNode)
-        assert open_q.type_annotation == "str"
-        assert open_q.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "open"
-        assert (
-            open_q.kwargs["json_schema_extra"]["airalogy_quiz"]["rubric"]
-            == "Mention at least two factors"
-        )
+        assert open_q.quiz_type == "open"
+        assert open_q.rubric == "Mention at least two factors"
 
     def test_custom_types(self, parsed_result):
         """Test Airalogy custom types."""
@@ -411,7 +398,7 @@ class TestSpecFile:
             assert "end_col" in var
 
         for quiz in extracted_result["templates"]["quiz"]:
-            assert "name" in quiz
+            assert "id" in quiz
             assert "start_line" in quiz
             assert "start_col" in quiz
             assert "end_col" in quiz
@@ -455,7 +442,7 @@ class TestSpecFile:
         assert "quiz_blank_1" not in var_names
         assert "quiz_open_1" not in var_names
 
-        quiz_names = {q["name"] for q in extracted_result["templates"]["quiz"]}
+        quiz_names = {q["id"] for q in extracted_result["templates"]["quiz"]}
         assert "quiz_q1" in quiz_names
         assert "quiz_q2" in quiz_names
         assert "quiz_blank_1" in quiz_names

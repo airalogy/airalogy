@@ -110,7 +110,7 @@ Data structures of different templates:
     "quiz": { // template_name = "quiz"
 
         // Quiz values are keyed by quiz id.
-        // This object is validated against QuizModel.
+        // This object is validated by quiz-definition rules (choice/blank/open).
 
         "quiz_choice_single_1": "A", // single choice: option key
         "quiz_choice_multiple_1": ["A", "C"], // multiple choice: list of option keys

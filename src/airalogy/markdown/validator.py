@@ -89,7 +89,7 @@ class AimdValidator:
         # Additional semantic validations
         # Check that referenced variables exist
         var_names = {var.name for var in result["templates"]["var"] if var}
-        var_names.update(quiz.name for quiz in result["templates"]["quiz"] if quiz)
+        var_names.update(quiz.id for quiz in result["templates"]["quiz"] if quiz)
         step_names = {step.name for step in result["templates"]["step"]}
 
         for ref_var in result["templates"]["ref_var"]:

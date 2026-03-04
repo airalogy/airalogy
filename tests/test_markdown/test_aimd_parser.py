@@ -277,21 +277,17 @@ options:
         assert len(result["templates"]["quiz"]) == 1
         quiz = result["templates"]["quiz"][0]
         assert isinstance(quiz, QuizNode)
-        assert quiz.name == "quiz_q1"
-        assert quiz.type_annotation == "Literal['A', 'B', 'C']"
-        assert quiz.default_value is None
-        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "choice"
-        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["mode"] == "single"
-        assert (
-            quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"]
-            == "Which option is correct?"
-        )
-        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["options"] == [
+        assert quiz.id == "quiz_q1"
+        assert quiz.default is None
+        assert quiz.quiz_type == "choice"
+        assert quiz.mode == "single"
+        assert quiz.stem == "Which option is correct?"
+        assert quiz.options == [
             {"key": "A", "text": "Option A"},
             {"key": "B", "text": "Option B"},
             {"key": "C", "text": "Option C"},
         ]
-        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["score"] == 5
+        assert quiz.score == 5
 
     def test_parse_multiple_choice_quiz_block(self):
         content = """
@@ -315,10 +311,9 @@ options:
         assert len(result["templates"]["quiz"]) == 1
         quiz = result["templates"]["quiz"][0]
         assert isinstance(quiz, QuizNode)
-        assert quiz.name == "quiz_q2"
-        assert quiz.type_annotation == "list[Literal['A', 'B']]"
-        assert quiz.default_value == ["A"]
-        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["mode"] == "multiple"
+        assert quiz.id == "quiz_q2"
+        assert quiz.default == ["A"]
+        assert quiz.mode == "multiple"
 
     def test_parse_choice_quiz_block_with_multiline_stem(self):
         content = """
@@ -341,10 +336,7 @@ options:
 
         assert len(result["templates"]["quiz"]) == 1
         quiz = result["templates"]["quiz"][0]
-        assert (
-            quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"]
-            == "Line 1\nLine 2"
-        )
+        assert quiz.stem == "Line 1\nLine 2"
 
     def test_parse_open_quiz_block_with_multi_paragraph_stem(self):
         content = """
@@ -363,10 +355,7 @@ rubric: Mention at least two factors
 
         assert len(result["templates"]["quiz"]) == 1
         quiz = result["templates"]["quiz"][0]
-        assert (
-            quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"]
-            == "Paragraph 1.\n\nParagraph 2."
-        )
+        assert quiz.stem == "Paragraph 1.\n\nParagraph 2."
 
     def test_parse_quiz_block_rejects_invalid_yaml(self):
         content = """
@@ -406,13 +395,10 @@ blanks:
         assert len(result["templates"]["quiz"]) == 1
         quiz = result["templates"]["quiz"][0]
         assert isinstance(quiz, QuizNode)
-        assert quiz.name == "quiz_blank_1"
-        assert quiz.type_annotation == "dict[str, str]"
-        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "blank"
-        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"] == "Fill [[b1]]"
-        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["blanks"] == [
-            {"key": "b1", "answer": "21%"}
-        ]
+        assert quiz.id == "quiz_blank_1"
+        assert quiz.quiz_type == "blank"
+        assert quiz.stem == "Fill [[b1]]"
+        assert quiz.blanks == [{"key": "b1", "answer": "21%"}]
 
     def test_parse_blank_quiz_block_requires_placeholder(self):
         content = """
@@ -430,6 +416,21 @@ blanks:
         with pytest.raises(InvalidSyntaxError) as exc_info:
             parser.parse()
         assert "blank stem must include placeholders like [[b1]]" in str(exc_info.value)
+
+    def test_parse_blank_quiz_block_requires_non_empty_blanks(self):
+        content = """
+```quiz
+id: quiz_blank_1
+type: blank
+stem: Fill [[b1]]
+blanks: []
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "blanks must be a non-empty list" in str(exc_info.value)
 
     def test_parse_blank_quiz_block_rejects_unknown_placeholder(self):
         content = """
@@ -482,13 +483,9 @@ rubric: Mention at least two reasons
         assert len(result["templates"]["quiz"]) == 1
         quiz = result["templates"]["quiz"][0]
         assert isinstance(quiz, QuizNode)
-        assert quiz.name == "quiz_open_1"
-        assert quiz.type_annotation == "str"
-        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "open"
-        assert (
-            quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["rubric"]
-            == "Mention at least two reasons"
-        )
+        assert quiz.id == "quiz_open_1"
+        assert quiz.quiz_type == "open"
+        assert quiz.rubric == "Mention at least two reasons"
 
     def test_parse_quiz_block_requires_options(self):
         content = """
@@ -567,6 +564,58 @@ options:
         assert "Invalid quiz type, expected one of: choice, blank, open" in str(
             exc_info.value
         )
+
+    def test_parse_quiz_block_rejects_unsupported_field(self):
+        content = """
+```quiz
+id: quiz_q1
+type: choice
+mode: single
+stem: Pick one
+options:
+  - key: A
+    text: Option A
+unsupported_key: true
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "Unsupported quiz fields: unsupported_key" in str(exc_info.value)
+
+    def test_parse_quiz_block_rejects_explicit_extra_object(self):
+        content = """
+```quiz
+id: quiz_q_extra
+type: open
+stem: Explain the reason
+extra:
+  render: card
+  difficulty: medium
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "Unsupported quiz fields: extra" in str(exc_info.value)
+
+    def test_parse_quiz_block_rejects_json_schema_extra_field(self):
+        content = """
+```quiz
+id: quiz_q_extra
+type: open
+stem: Explain the reason
+json_schema_extra:
+  widget: rich-text
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "Unsupported quiz fields: json_schema_extra" in str(exc_info.value)
 
     def test_parse_var_table(self):
         content = "{{var_table|students, subvars=[name, age, grade]}}"
@@ -983,3 +1032,36 @@ class TestParseAimd:
         assert var["name"] == "name"
         assert var["type_annotation"] == "str"
         assert var["default_value"] == "Test"
+
+    def test_parse_aimd_quiz_is_yaml_shaped_json(self):
+        """Quiz items in parse_aimd should match quiz YAML semantics directly."""
+        content = """
+```quiz
+id: quiz_choice_single_1
+type: choice
+mode: single
+stem: Which option is correct?
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+answer: A
+```
+"""
+        result = parse_aimd(content)
+        assert len(result["templates"]["quiz"]) == 1
+        quiz = result["templates"]["quiz"][0]
+
+        assert quiz["id"] == "quiz_choice_single_1"
+        assert quiz["type"] == "choice"
+        assert quiz["mode"] == "single"
+        assert quiz["stem"] == "Which option is correct?"
+        assert quiz["options"] == [
+            {"key": "A", "text": "Option A"},
+            {"key": "B", "text": "Option B"},
+        ]
+        assert quiz["answer"] == "A"
+        assert "name" not in quiz
+        assert "kwargs" not in quiz
+        assert "type_annotation" not in quiz

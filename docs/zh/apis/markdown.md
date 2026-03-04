@@ -95,22 +95,15 @@ answer: A
     ],
     "quiz": [
       {
-        "name": "quiz_choice_single_1",
-        "type_annotation": "Literal['A', 'B']",
-        "kwargs": {
-          "json_schema_extra": {
-            "airalogy_quiz": {
-              "type": "choice",
-              "mode": "single",
-              "stem": "Which option is correct?",
-              "options": [
-                { "key": "A", "text": "Option A" },
-                { "key": "B", "text": "Option B" }
-              ],
-              "answer": "A"
-            }
-          }
-        }
+        "id": "quiz_choice_single_1",
+        "type": "choice",
+        "mode": "single",
+        "stem": "Which option is correct?",
+        "options": [
+          { "key": "A", "text": "Option A" },
+          { "key": "B", "text": "Option B" }
+        ],
+        "answer": "A"
       }
     ]
   }
@@ -134,87 +127,12 @@ quiz_nodes = result["templates"]["quiz"]  # list[QuizNode]
 - `AimdParser.parse()` 返回节点对象（保留更完整的语义与位置信息）
 - `parse_aimd()` 返回字典（更容易序列化）
 
-## 生成模型代码（`VarModel` + `QuizModel`）
+## 生成模型代码（`VarModel`）
 
 使用 `aimd.generate_model(content: str) -> str` 可以从 AIMD 直接生成 Python 模型代码。
 
-`QuizModel` 是一个继承自 `pydantic.BaseModel` 的数据模型类。
-
-输入示例：
-
-````python
-from airalogy import markdown as aimd
-
-content = """
-```quiz
-id: quiz_choice_single_1
-type: choice
-mode: single
-stem: Pick one
-options:
-  - key: A
-    text: Option A
-  - key: B
-    text: Option B
-```
-
-```quiz
-id: quiz_blank_1
-type: blank
-stem: Fill [[b1]]
-blanks:
-  - key: b1
-    answer: 21%
-```
-"""
-
-code = aimd.generate_model(content)
-print(code)
-````
-
-生成代码示例（节选）：
-
-```python
-from pydantic import BaseModel, Field
-from typing import Literal
-
-class VarModel(BaseModel):
-    """Main variable model."""
-    pass
-
-class QuizModel(BaseModel):
-    """Main quiz answer model."""
-    quiz_choice_single_1: Literal['A', 'B'] = Field(
-        json_schema_extra={
-            "airalogy_quiz": {
-                "type": "choice",
-                "mode": "single",
-                "stem": "Pick one",
-                "options": [{"key": "A", "text": "Option A"}, {"key": "B", "text": "Option B"}],
-            }
-        }
-    )
-    quiz_blank_1: dict[str, str] = Field(
-        json_schema_extra={
-            "airalogy_quiz": {
-                "type": "blank",
-                "stem": "Fill [[b1]]",
-                "blanks": [{"key": "b1", "answer": "21%"}],
-            }
-        }
-    )
-```
-
-常见映射关系：
-
-- 单选题 -> `Literal[...]`
-- 多选题 -> `list[Literal[...]]`
-- 填空题 -> `dict[str, str]`
-- 问答题 -> `str`
-
-## 混合示例：同一 AIMD 同时包含 `var` 与 `quiz`
-
-`generate_model` 的默认输出即为可直接作为 `model.py` 使用的代码内容。
+`generate_model` 仅生成 `VarModel`。  
+`quiz` 模板会被解析并做语法/题目规则校验，但不会生成为独立的 Pydantic 模型。
 
 输入：
 
@@ -233,43 +151,20 @@ options:
   - key: B
     text: Catalyst B
 ```
-
-```quiz
-id: quiz_open_1
-type: open
-stem: Explain why this catalyst was selected.
-```
 ````
 
 生成的 `model.py`（示意）：
 
 ```python
-from pydantic import BaseModel, Field
-from typing import Literal
+from pydantic import BaseModel
 
 class VarModel(BaseModel):
     """Main variable model."""
     experiment_id: str
     temperature: float
-
-class QuizModel(BaseModel):
-    """Main quiz answer model."""
-    quiz_choice_single_1: Literal['A', 'B'] = Field(
-        json_schema_extra={
-            "airalogy_quiz": {
-                "type": "choice",
-                "mode": "single",
-                "stem": "Which catalyst is used?",
-                "options": [{"key": "A", "text": "Catalyst A"}, {"key": "B", "text": "Catalyst B"}],
-            }
-        }
-    )
-    quiz_open_1: str = Field(
-        json_schema_extra={
-            "airalogy_quiz": {
-                "type": "open",
-                "stem": "Explain why this catalyst was selected.",
-            }
-        }
-    )
 ```
+
+关于 quiz 作答的存储结构与字段类型，请参考：
+
+- [题目语法](../syntax/quiz.md)
+- [Record 数据结构](../data-structure/record.md)

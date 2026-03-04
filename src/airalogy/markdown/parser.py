@@ -666,16 +666,6 @@ class AimdParser:
         self._handle_error(error)
         return None
 
-    def _build_choice_type_annotation(self, mode: str, option_keys: List[str]) -> str:
-        """
-        Build Python type annotation for a choice item.
-        """
-        literal_values = ", ".join(repr(option_key) for option_key in option_keys)
-        literal_type = f"Literal[{literal_values}]"
-        if mode == "single":
-            return literal_type
-        return f"list[{literal_type}]"
-
     def _parse_quiz_yaml_mapping(
         self, code: str, position: Position
     ) -> Optional[Dict[str, Any]]:
@@ -912,31 +902,30 @@ class AimdParser:
                 self._handle_error(error)
                 return None
 
-        kwargs: Dict[str, Any] = {}
-        if "title" in data and isinstance(data["title"], str):
-            kwargs["title"] = data["title"]
-        if "description" in data and isinstance(data["description"], str):
-            kwargs["description"] = data["description"]
-
-        json_schema_extra = data.get("json_schema_extra", {})
-        if json_schema_extra is None:
-            json_schema_extra = {}
-        if not isinstance(json_schema_extra, dict):
+        title = data.get("title")
+        if title is not None and not isinstance(title, str):
             error = InvalidSyntaxError(
-                "json_schema_extra must be a dictionary when used in quiz",
+                "quiz title must be a string",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        description = data.get("description")
+        if description is not None and not isinstance(description, str):
+            error = InvalidSyntaxError(
+                "quiz description must be a string",
                 position=position,
             )
             self._handle_error(error)
             return None
 
         default_value = data.get("default")
-        type_annotation = "str"
-        quiz_meta: Dict[str, Any] = {
-            "type": item_type,
-            "stem": stem,
-        }
-        if score is not None:
-            quiz_meta["score"] = score
+        quiz_mode: Optional[str] = None
+        quiz_options: List[Dict[str, str]] = []
+        quiz_answer: Optional[Any] = None
+        quiz_blanks: List[Dict[str, str]] = []
+        quiz_rubric: Optional[str] = None
 
         if item_type == "choice":
             mode_value = data.get("mode")
@@ -980,7 +969,9 @@ class AimdParser:
                         self._handle_error(error)
                         return None
                     invalid_answers = [
-                        item for item in answer_value if item not in option_keys
+                        item
+                        for item in answer_value
+                        if not isinstance(item, str) or item not in option_keys
                     ]
                     if invalid_answers:
                         error = InvalidSyntaxError(
@@ -1008,7 +999,9 @@ class AimdParser:
                         self._handle_error(error)
                         return None
                     invalid_defaults = [
-                        item for item in default_value if item not in option_keys
+                        item
+                        for item in default_value
+                        if not isinstance(item, str) or item not in option_keys
                     ]
                     if invalid_defaults:
                         error = InvalidSyntaxError(
@@ -1018,11 +1011,10 @@ class AimdParser:
                         self._handle_error(error)
                         return None
 
-            type_annotation = self._build_choice_type_annotation(mode, option_keys)
-            quiz_meta["mode"] = mode
-            quiz_meta["options"] = options
+            quiz_mode = mode
+            quiz_options = options
             if answer_value is not None:
-                quiz_meta["answer"] = answer_value
+                quiz_answer = answer_value
 
             reserved_keys = {
                 "id",
@@ -1035,7 +1027,6 @@ class AimdParser:
                 "default",
                 "title",
                 "description",
-                "json_schema_extra",
             }
         elif item_type == "blank":
             blanks = self._normalize_keyed_items(
@@ -1079,8 +1070,7 @@ class AimdParser:
                     self._handle_error(error)
                     return None
 
-            type_annotation = "dict[str, str]"
-            quiz_meta["blanks"] = blanks
+            quiz_blanks = blanks
 
             reserved_keys = {
                 "id",
@@ -1091,7 +1081,6 @@ class AimdParser:
                 "default",
                 "title",
                 "description",
-                "json_schema_extra",
             }
         else:
             rubric = data.get("rubric")
@@ -1111,9 +1100,8 @@ class AimdParser:
                 self._handle_error(error)
                 return None
 
-            type_annotation = "str"
-            if rubric:
-                quiz_meta["rubric"] = rubric
+            if rubric is not None:
+                quiz_rubric = rubric
 
             reserved_keys = {
                 "id",
@@ -1124,25 +1112,31 @@ class AimdParser:
                 "default",
                 "title",
                 "description",
-                "json_schema_extra",
             }
 
-        extra_meta = {
-            key: value for key, value in data.items() if key not in reserved_keys
-        }
-        if extra_meta:
-            quiz_meta["extra"] = extra_meta
-
-        json_schema_extra = dict(json_schema_extra)
-        json_schema_extra["airalogy_quiz"] = quiz_meta
-        kwargs["json_schema_extra"] = json_schema_extra
+        unknown_fields = sorted(key for key in data.keys() if key not in reserved_keys)
+        if unknown_fields:
+            error = InvalidSyntaxError(
+                "Unsupported quiz fields: " + ", ".join(unknown_fields),
+                position=position,
+            )
+            self._handle_error(error)
+            return None
 
         return QuizNode(
             position=position,
-            name=item_name,
-            type_annotation=type_annotation,
-            default_value=default_value,
-            kwargs=kwargs,
+            id=item_name,
+            quiz_type=item_type,
+            stem=stem,
+            default=default_value,
+            mode=quiz_mode,
+            options=quiz_options,
+            answer=quiz_answer,
+            blanks=quiz_blanks,
+            rubric=quiz_rubric,
+            score=score,
+            title=title if isinstance(title, str) else None,
+            description=description if isinstance(description, str) else None,
         )
 
     def _parse_quiz_blocks(self) -> List[QuizNode]:
@@ -1523,12 +1517,18 @@ class AimdParser:
             else:
                 seen_names[normalized] = (step.position.start_line, step.name, "step")
 
-        # Check vars
+        # Check vars and quizzes
         for var in vars_list:
-            normalized = self._normalize_name(var.name)
+            item_name = getattr(var, "name", None)
+            if item_name is None:
+                item_name = getattr(var, "id", None)
+            if not item_name:
+                continue
+
+            normalized = self._normalize_name(item_name)
             if normalized in seen_names:
                 error = DuplicateNameError(
-                    f"Duplicate var name '{var.name}' (conflicts with '{seen_names[normalized][1]}' at line {seen_names[normalized][0]})",
+                    f"Duplicate var name '{item_name}' (conflicts with '{seen_names[normalized][1]}' at line {seen_names[normalized][0]})",
                     position=var.position,
                 )
                 if self.strict:
@@ -1536,7 +1536,7 @@ class AimdParser:
                 else:
                     self.error_collector.add_error(error)
             else:
-                seen_names[normalized] = (var.position.start_line, var.name, "var")
+                seen_names[normalized] = (var.position.start_line, item_name, "var")
 
         # Check checks
         for check in checks:
