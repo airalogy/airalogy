@@ -12,6 +12,7 @@ from .ast_nodes import (
     RefFigNode,
     RefStepNode,
     RefVarNode,
+    QuizNode,
     StepNode,
     VarNode,
     VarTableNode,
@@ -25,7 +26,7 @@ from .errors import (
 )
 from .lexer import Lexer
 from .model_generator import generate_model
-from .parser import AimdParser, extract_assigner_blocks, extract_vars
+from .parser import AimdParser, extract_assigner_blocks, parse_aimd
 from .tokens import Position, Token, TokenType
 from .get import get_airalogy_image_ids
 from .validator import AimdValidator, ValidationError, validate_aimd
@@ -37,10 +38,11 @@ __all__ = [
     "Token",
     "TokenType",
     "Position",
-    "extract_vars",
+    "parse_aimd",
     "extract_assigner_blocks",
     # AST nodes
     "VarNode",
+    "QuizNode",
     "VarTableNode",
     "StepNode",
     "CheckNode",

@@ -12,12 +12,13 @@ from airalogy.markdown import (
     InvalidNameError,
     InvalidSyntaxError,
     Lexer,
+    QuizNode,
     StepNode,
     TokenType,
     VarNode,
     VarTableNode,
     extract_assigner_blocks,
-    extract_vars,
+    parse_aimd,
 )
 
 
@@ -37,6 +38,27 @@ class TestLexer:
         assert tokens[0].position.start_col == 7
         assert tokens[0].position.end_col == len(content)
         assert tokens[1].type == TokenType.EOF
+
+    def test_tokenize_quiz_code_block_is_skipped(self):
+        content = """
+```quiz
+id: quiz_q1
+type: choice
+mode: single
+stem: Sample question
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+```
+"""
+        lexer = Lexer(content)
+        tokens = list(lexer.tokenize())
+
+        # quiz block is code block, should not be tokenized as template
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.EOF
 
     def test_tokenize_multiple_types(self):
         content = """
@@ -159,8 +181,8 @@ class TestLexer:
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        assert result["vars"][0].name == "real_var"
+        assert len(result["templates"]["var"]) == 1
+        assert result["templates"]["var"][0].name == "real_var"
 
     def test_parser_skips_multiline_code_block_vars(self):
         """Test that parser correctly skips variables in multi-line code blocks."""
@@ -177,10 +199,10 @@ class TestLexer:
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        assert result["vars"][0].name == "real_var"
-        assert len(result["steps"]) == 1
-        assert result["steps"][0].name == "real_step"
+        assert len(result["templates"]["var"]) == 1
+        assert result["templates"]["var"][0].name == "real_var"
+        assert len(result["templates"]["step"]) == 1
+        assert result["templates"]["step"][0].name == "real_step"
 
 
 class TestParser:
@@ -191,8 +213,8 @@ class TestParser:
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var = result["templates"]["var"][0]
         assert isinstance(var, VarNode)
         assert var.name == "test_var"
         assert var.type_annotation is None
@@ -202,8 +224,8 @@ class TestParser:
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var = result["templates"]["var"][0]
         assert var.name == "age"
         assert var.type_annotation == "int"
 
@@ -212,8 +234,8 @@ class TestParser:
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var = result["templates"]["var"][0]
         assert var.name == "name"
         assert var.type_annotation == "str"
         assert var.default_value == "Unknown"
@@ -223,21 +245,336 @@ class TestParser:
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var = result["templates"]["var"][0]
         assert var.name == "name"
         assert var.type_annotation == "str"
         assert var.default_value == "Unknown"
         assert var.kwargs["title"] == "User Name"
         assert var.kwargs["max_length"] == 50
 
+    def test_parse_single_choice_quiz_block(self):
+        content = """
+```quiz
+id: quiz_q1
+type: choice
+mode: single
+score: 5
+stem: Which option is correct?
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+  - key: C
+    text: Option C
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["var"]) == 0
+        assert len(result["templates"]["quiz"]) == 1
+        quiz = result["templates"]["quiz"][0]
+        assert isinstance(quiz, QuizNode)
+        assert quiz.name == "quiz_q1"
+        assert quiz.type_annotation == "Literal['A', 'B', 'C']"
+        assert quiz.default_value is None
+        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "choice"
+        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["mode"] == "single"
+        assert (
+            quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"]
+            == "Which option is correct?"
+        )
+        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["options"] == [
+            {"key": "A", "text": "Option A"},
+            {"key": "B", "text": "Option B"},
+            {"key": "C", "text": "Option C"},
+        ]
+        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["score"] == 5
+
+    def test_parse_multiple_choice_quiz_block(self):
+        content = """
+```quiz
+id: quiz_q2
+type: choice
+mode: multiple
+default: ["A"]
+stem: Select all correct options
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["var"]) == 0
+        assert len(result["templates"]["quiz"]) == 1
+        quiz = result["templates"]["quiz"][0]
+        assert isinstance(quiz, QuizNode)
+        assert quiz.name == "quiz_q2"
+        assert quiz.type_annotation == "list[Literal['A', 'B']]"
+        assert quiz.default_value == ["A"]
+        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["mode"] == "multiple"
+
+    def test_parse_choice_quiz_block_with_multiline_stem(self):
+        content = """
+```quiz
+id: quiz_q_multiline
+type: choice
+mode: single
+stem: |
+  Line 1
+  Line 2
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["quiz"]) == 1
+        quiz = result["templates"]["quiz"][0]
+        assert (
+            quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"]
+            == "Line 1\nLine 2"
+        )
+
+    def test_parse_open_quiz_block_with_multi_paragraph_stem(self):
+        content = """
+```quiz
+id: quiz_open_multi_paragraph
+type: open
+stem: |
+  Paragraph 1.
+
+  Paragraph 2.
+rubric: Mention at least two factors
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["quiz"]) == 1
+        quiz = result["templates"]["quiz"][0]
+        assert (
+            quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"]
+            == "Paragraph 1.\n\nParagraph 2."
+        )
+
+    def test_parse_quiz_block_rejects_invalid_yaml(self):
+        content = """
+```quiz
+id: quiz_q_yaml_error
+type: choice
+mode: single
+default: [A
+stem: Pick one
+options:
+  - key: A
+    text: Option A
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "Invalid quiz YAML syntax" in str(exc_info.value)
+
+    def test_parse_blank_quiz_block(self):
+        content = """
+```quiz
+id: quiz_blank_1
+type: blank
+score: 3
+stem: Fill [[b1]]
+blanks:
+  - key: b1
+    answer: 21%
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["var"]) == 0
+        assert len(result["templates"]["quiz"]) == 1
+        quiz = result["templates"]["quiz"][0]
+        assert isinstance(quiz, QuizNode)
+        assert quiz.name == "quiz_blank_1"
+        assert quiz.type_annotation == "dict[str, str]"
+        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "blank"
+        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"] == "Fill [[b1]]"
+        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["blanks"] == [
+            {"key": "b1", "answer": "21%"}
+        ]
+
+    def test_parse_blank_quiz_block_requires_placeholder(self):
+        content = """
+```quiz
+id: quiz_blank_1
+type: blank
+stem: Fill the blank
+blanks:
+  - key: b1
+    answer: 21%
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "blank stem must include placeholders like [[b1]]" in str(exc_info.value)
+
+    def test_parse_blank_quiz_block_rejects_unknown_placeholder(self):
+        content = """
+```quiz
+id: quiz_blank_1
+type: blank
+stem: Fill [[b2]]
+blanks:
+  - key: b1
+    answer: 21%
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "blank stem contains undefined placeholders: b2" in str(exc_info.value)
+
+    def test_parse_blank_quiz_block_rejects_duplicate_placeholder(self):
+        content = """
+```quiz
+id: quiz_blank_1
+type: blank
+stem: Fill [[b1]] and [[b1]]
+blanks:
+  - key: b1
+    answer: 21%
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "blank stem contains duplicate placeholders: b1" in str(exc_info.value)
+
+    def test_parse_open_quiz_block(self):
+        content = """
+```quiz
+id: quiz_open_1
+type: open
+score: 10
+stem: Explain why this happens
+rubric: Mention at least two reasons
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["var"]) == 0
+        assert len(result["templates"]["quiz"]) == 1
+        quiz = result["templates"]["quiz"][0]
+        assert isinstance(quiz, QuizNode)
+        assert quiz.name == "quiz_open_1"
+        assert quiz.type_annotation == "str"
+        assert quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "open"
+        assert (
+            quiz.kwargs["json_schema_extra"]["airalogy_quiz"]["rubric"]
+            == "Mention at least two reasons"
+        )
+
+    def test_parse_quiz_block_requires_options(self):
+        content = """
+```quiz
+id: quiz_q1
+type: choice
+mode: single
+stem: Missing options
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "options must be a non-empty list" in str(exc_info.value)
+
+    def test_parse_quiz_block_validates_score(self):
+        content = """
+```quiz
+id: quiz_q1
+type: choice
+mode: single
+score: -1
+stem: Score should be valid
+options:
+  - key: A
+    text: Option A
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "quiz score must be a non-negative number" in str(exc_info.value)
+
+    def test_parse_quiz_block_rejects_mode_alias(self):
+        content = """
+```quiz
+id: quiz_q1
+type: choice
+mode: radio
+stem: Pick one
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "Invalid choice mode, expected one of: single, multiple" in str(
+            exc_info.value
+        )
+
+    def test_parse_quiz_block_rejects_type_alias(self):
+        content = """
+```quiz
+id: quiz_q1
+type: single_choice
+mode: single
+stem: Pick one
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "Invalid quiz type, expected one of: choice, blank, open" in str(
+            exc_info.value
+        )
+
     def test_parse_var_table(self):
         content = "{{var_table|students, subvars=[name, age, grade]}}"
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var_table = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var_table = result["templates"]["var"][0]
         assert isinstance(var_table, VarTableNode)
         assert var_table.name == "students"
         assert len(var_table.subvars) == 3
@@ -258,8 +595,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var_table = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var_table = result["templates"]["var"][0]
         assert var_table.name == "students"
         assert len(var_table.subvars) == 3
         assert var_table.subvars[0].name == "name"
@@ -272,8 +609,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var_table = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var_table = result["templates"]["var"][0]
         assert isinstance(var_table, VarTableNode)
         assert var_table.name == "students"
         assert len(var_table.subvars) == 3
@@ -287,8 +624,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var_table = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var_table = result["templates"]["var"][0]
         assert isinstance(var_table, VarTableNode)
         assert var_table.name == "students"
         assert len(var_table.subvars) == 3
@@ -307,8 +644,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var_table = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var_table = result["templates"]["var"][0]
         assert isinstance(var_table, VarTableNode)
         assert var_table.name == "students"
         assert len(var_table.subvars) == 3
@@ -327,8 +664,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var_table = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var_table = result["templates"]["var"][0]
         assert isinstance(var_table, VarTableNode)
         assert var_table.name == "students"
         assert var_table.type_annotation == "list[Student]"
@@ -346,8 +683,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var_table = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var_table = result["templates"]["var"][0]
         assert isinstance(var_table, VarTableNode)
         assert var_table.name == "students"
         assert len(var_table.subvars) == 2
@@ -371,8 +708,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var_table = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var_table = result["templates"]["var"][0]
         assert isinstance(var_table, VarTableNode)
         assert var_table.name == "user_ids"
         assert var_table.type_annotation == "list"
@@ -384,8 +721,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var_table = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var_table = result["templates"]["var"][0]
         assert isinstance(var_table, VarTableNode)
         assert var_table.name == "user_names"
         assert var_table.type_annotation == "list[str]"
@@ -414,8 +751,8 @@ subvars=[
             parser = AimdParser(content)
             result = parser.parse()
 
-            assert len(result["vars"]) == 1
-            var_table = result["vars"][0]
+            assert len(result["templates"]["var"]) == 1
+            var_table = result["templates"]["var"][0]
             assert isinstance(var_table, VarTableNode)
             assert var_table.name == "items"
             assert var_table.type_annotation == f"list[{basic_type}]"
@@ -428,8 +765,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["vars"]) == 1
-        var_table = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var_table = result["templates"]["var"][0]
         assert isinstance(var_table, VarTableNode)
         assert var_table.name == "students"
         assert var_table.type_annotation == "list[Student]"
@@ -441,8 +778,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["steps"]) == 1
-        step = result["steps"][0]
+        assert len(result["templates"]["step"]) == 1
+        step = result["templates"]["step"][0]
         assert isinstance(step, StepNode)
         assert step.name == "prepare_sample"
         assert step.level == 1
@@ -453,8 +790,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["steps"]) == 1
-        step = result["steps"][0]
+        assert len(result["templates"]["step"]) == 1
+        step = result["templates"]["step"][0]
         assert step.name == "add_buffer"
         assert step.level == 2
 
@@ -463,8 +800,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["steps"]) == 1
-        step = result["steps"][0]
+        assert len(result["templates"]["step"]) == 1
+        step = result["templates"]["step"][0]
         assert step.name == "incubate"
         assert step.level == 2
         assert step.check is True
@@ -476,8 +813,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["steps"]) == 1
-        step = result["steps"][0]
+        assert len(result["templates"]["step"]) == 1
+        step = result["templates"]["step"][0]
         assert step.name == "cleanup"
         assert step.check is True
         assert step.checked_message == "Workspace cleaned."
@@ -487,8 +824,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["checks"]) == 1
-        check = result["checks"][0]
+        assert len(result["templates"]["check"]) == 1
+        check = result["templates"]["check"][0]
         assert isinstance(check, CheckNode)
         assert check.name == "quality_check"
 
@@ -497,8 +834,8 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["checks"]) == 1
-        check = result["checks"][0]
+        assert len(result["templates"]["check"]) == 1
+        check = result["templates"]["check"][0]
         assert check.name == "pcr_on_ice"
         assert check.checked_message == "Avoid condensation dripping."
 
@@ -507,24 +844,24 @@ subvars=[
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["ref_vars"]) == 1
-        assert result["ref_vars"][0].ref_id == "user"
+        assert len(result["templates"]["ref_var"]) == 1
+        assert result["templates"]["ref_var"][0].ref_id == "user"
 
     def test_parse_ref_step(self):
         content = "{{step|step_1}}\nAccording to {{ref_step|step_1}}"
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["ref_steps"]) == 1
-        assert result["ref_steps"][0].ref_id == "step_1"
+        assert len(result["templates"]["ref_step"]) == 1
+        assert result["templates"]["ref_step"][0].ref_id == "step_1"
 
     def test_parse_cite(self):
         content = "{{cite|ref1,ref2,ref3}}"
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert len(result["cites"]) == 1
-        cite = result["cites"][0]
+        assert len(result["templates"]["cite"]) == 1
+        cite = result["templates"]["cite"][0]
         assert cite.ref_ids == ["ref1", "ref2", "ref3"]
 
     def test_invalid_name_starting_with_underscore(self):
@@ -595,9 +932,9 @@ def assign_y(dep: dict) -> AssignerResult:
         parser = AimdParser(content)
         result = parser.parse()
 
-        assert "assigners" in result
-        assert len(result["assigners"]) == 1
-        block = result["assigners"][0]
+        assert "templates" in result
+        assert len(result["templates"]["assigner"]) == 1
+        block = result["templates"]["assigner"][0]
         assert isinstance(block, AssignerBlockNode)
         assert "def assign_y" in block.code
 
@@ -612,39 +949,37 @@ pass
         assert blocks[0]["code"] == "pass"
 
 
-class TestExtractVars:
-    """Tests for backwards compatible extract_vars function."""
+class TestParseAimd:
+    """Tests for parse_aimd function."""
 
-    def test_extract_vars_backwards_compatible(self):
-        """Test that extract_vars returns data in old format."""
+    def test_parse_aimd_structure(self):
+        """Test that parse_aimd returns template-based data structure."""
         content = """
 {{var|user}}
 {{step|step_1}}
 {{check|check_1}}
 """
-        result = extract_vars(content)
+        result = parse_aimd(content)
 
-        assert "vars" in result
-        assert "steps" in result
-        assert "checks" in result
+        assert "templates" in result
 
-        # Check old format structure
-        assert result["vars"][0]["name"] == "user"
-        assert result["vars"][0]["start_line"] == 2
+        # Check template structure
+        assert result["templates"]["var"][0]["name"] == "user"
+        assert result["templates"]["var"][0]["start_line"] == 2
 
-        assert result["steps"][0]["name"] == "step_1"
-        assert result["steps"][0]["start_line"] == 3
+        assert result["templates"]["step"][0]["name"] == "step_1"
+        assert result["templates"]["step"][0]["start_line"] == 3
 
-        assert result["checks"][0]["name"] == "check_1"
-        assert result["checks"][0]["start_line"] == 4
+        assert result["templates"]["check"][0]["name"] == "check_1"
+        assert result["templates"]["check"][0]["start_line"] == 4
 
-    def test_extract_vars_with_typed_syntax(self):
-        """Test extract_vars with typed syntax."""
+    def test_parse_aimd_with_typed_syntax(self):
+        """Test parse_aimd with typed syntax."""
         content = '{{var|name: str = "Test"}}'
-        result = extract_vars(content)
+        result = parse_aimd(content)
 
-        assert len(result["vars"]) == 1
-        var = result["vars"][0]
+        assert len(result["templates"]["var"]) == 1
+        var = result["templates"]["var"][0]
         assert var["name"] == "name"
         assert var["type_annotation"] == "str"
         assert var["default_value"] == "Test"

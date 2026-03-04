@@ -6,11 +6,10 @@ import pytest
 
 from airalogy.markdown import (
     AimdParser,
-    CheckNode,
-    StepNode,
+    QuizNode,
     VarNode,
     VarTableNode,
-    extract_vars,
+    parse_aimd,
 )
 
 
@@ -30,8 +29,8 @@ def parsed_result(spec_content):
 
 @pytest.fixture
 def extracted_result(spec_content):
-    """Extract vars using extract_vars function."""
-    return extract_vars(spec_content)
+    """Extract vars using parse_aimd function."""
+    return parse_aimd(spec_content)
 
 
 class TestSpecFile:
@@ -40,29 +39,16 @@ class TestSpecFile:
     def test_file_parses_without_errors(self, parsed_result):
         """Test that the entire spec file parses without errors."""
         assert parsed_result is not None
-        assert "vars" in parsed_result
-        assert "steps" in parsed_result
-        assert "checks" in parsed_result
-        assert "ref_vars" in parsed_result
-        assert "ref_steps" in parsed_result
-        assert "ref_figs" in parsed_result
-        assert "cites" in parsed_result
-        assert "assigners" in parsed_result
+        assert "templates" in parsed_result
 
-    def test_extract_vars_parses_without_errors(self, extracted_result):
-        """Test that extract_vars can parse the spec file."""
+    def test_parse_aimd_parses_without_errors(self, extracted_result):
+        """Test that parse_aimd can parse the spec file."""
         assert extracted_result is not None
-        assert "vars" in extracted_result
-        assert "steps" in extracted_result
-        assert "checks" in extracted_result
-        assert "ref_vars" in extracted_result
-        assert "ref_steps" in extracted_result
-        assert "ref_figs" in extracted_result
-        assert "cites" in extracted_result
+        assert "templates" in extracted_result
 
     def test_simple_vars(self, parsed_result):
         """Test simple variable parsing."""
-        var_names = {v.name for v in parsed_result["vars"]}
+        var_names = {v.name for v in parsed_result["templates"]["var"]}
         assert "simple_var" in var_names
         assert "typed_var" in var_names
         assert "int_var" in var_names
@@ -71,7 +57,7 @@ class TestSpecFile:
 
     def test_vars_with_types(self, parsed_result):
         """Test variables with type annotations."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         assert var_dict["typed_var"].type_annotation == "str"
         assert var_dict["int_var"].type_annotation == "int"
@@ -86,16 +72,63 @@ class TestSpecFile:
 
     def test_vars_with_defaults(self, parsed_result):
         """Test variables with default values."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         assert var_dict["var_with_default"].default_value == "default_value"
         assert var_dict["int_with_default"].default_value == 42
         assert var_dict["float_with_default"].default_value == 3.14
         assert var_dict["bool_with_default"].default_value is True
 
+    def test_quizs(self, parsed_result):
+        """Test quiz syntax parsing."""
+        quiz_dict = {v.name: v for v in parsed_result["templates"]["quiz"]}
+
+        q1 = quiz_dict["quiz_q1"]
+        assert isinstance(q1, QuizNode)
+        assert q1.type_annotation == "Literal['A', 'B', 'C']"
+        assert (
+            q1.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"]
+            == "Which option is correct?"
+        )
+        assert q1.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "choice"
+        assert q1.kwargs["json_schema_extra"]["airalogy_quiz"]["options"] == [
+            {"key": "A", "text": "Option A"},
+            {"key": "B", "text": "Option B"},
+            {"key": "C", "text": "Option C"},
+        ]
+        assert q1.kwargs["json_schema_extra"]["airalogy_quiz"]["mode"] == "single"
+        assert q1.kwargs["json_schema_extra"]["airalogy_quiz"]["score"] == 5
+
+        q2 = quiz_dict["quiz_q2"]
+        assert isinstance(q2, QuizNode)
+        assert q2.type_annotation == "list[Literal['A', 'B', 'C']]"
+        assert q2.default_value == ["A", "C"]
+        assert (
+            q2.kwargs["json_schema_extra"]["airalogy_quiz"]["stem"]
+            == "Select all correct options"
+        )
+        assert q2.kwargs["json_schema_extra"]["airalogy_quiz"]["mode"] == "multiple"
+
+        blank = quiz_dict["quiz_blank_1"]
+        assert isinstance(blank, QuizNode)
+        assert blank.type_annotation == "dict[str, str]"
+        assert blank.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "blank"
+        assert blank.kwargs["json_schema_extra"]["airalogy_quiz"]["blanks"] == [
+            {"key": "b1", "answer": "21%"}
+        ]
+
+        open_q = quiz_dict["quiz_open_1"]
+        assert isinstance(open_q, QuizNode)
+        assert open_q.type_annotation == "str"
+        assert open_q.kwargs["json_schema_extra"]["airalogy_quiz"]["type"] == "open"
+        assert (
+            open_q.kwargs["json_schema_extra"]["airalogy_quiz"]["rubric"]
+            == "Mention at least two factors"
+        )
+
     def test_custom_types(self, parsed_result):
         """Test Airalogy custom types."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         # Test all custom types are present
         custom_types = [
@@ -129,7 +162,7 @@ class TestSpecFile:
 
     def test_vars_with_keword_args(self, parsed_result):
         """Test variables with keyword arguments (Field parameters)."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         # Test metadata
         var_meta = var_dict["var_with_metadata"]
@@ -154,7 +187,7 @@ class TestSpecFile:
 
     def test_legacy_var_tables(self, parsed_result):
         """Test legacy var_table syntax."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         # Legacy var_table should be VarTableNode
         legacy_simple = var_dict["legacy_table_simple"]
@@ -168,7 +201,7 @@ class TestSpecFile:
 
     def test_new_var_tables(self, parsed_result):
         """Test new var syntax with subvars."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         # Simple var table
         simple_table = var_dict["simple_table"]
@@ -196,7 +229,7 @@ class TestSpecFile:
 
     def test_auto_detect_list_tables(self, parsed_result):
         """Test auto-detection of list types as var tables."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         # list without subvars
         auto_list = var_dict["auto_list_table"]
@@ -224,7 +257,7 @@ class TestSpecFile:
 
     def test_var_syntax_table(self, parsed_result):
         """Test var() syntax in subvars."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         var_syntax = var_dict["var_syntax_table"]
         assert isinstance(var_syntax, VarTableNode)
@@ -240,7 +273,7 @@ class TestSpecFile:
 
     def test_mixed_table(self, parsed_result):
         """Test table with mixed parameters."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         mixed = var_dict["mixed_table"]
         assert isinstance(mixed, VarTableNode)
@@ -252,7 +285,7 @@ class TestSpecFile:
 
     def test_empty_tables(self, parsed_result):
         """Test empty var tables."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         empty_table = var_dict["empty_table"]
         assert isinstance(empty_table, VarTableNode)
@@ -264,7 +297,7 @@ class TestSpecFile:
 
     def test_steps(self, parsed_result):
         """Test step parsing."""
-        step_dict = {s.name: s for s in parsed_result["steps"]}
+        step_dict = {s.name: s for s in parsed_result["templates"]["step"]}
 
         # Simple step
         simple = step_dict["simple_step"]
@@ -292,7 +325,7 @@ class TestSpecFile:
 
     def test_checks(self, parsed_result):
         """Test checkpoint parsing."""
-        check_dict = {c.name: c for c in parsed_result["checks"]}
+        check_dict = {c.name: c for c in parsed_result["templates"]["check"]}
 
         # Simple checkpoint
         simple = check_dict["simple_check"]
@@ -305,23 +338,23 @@ class TestSpecFile:
     def test_references(self, parsed_result):
         """Test reference parsing."""
         # Check ref_vars
-        ref_var_ids = {r.ref_id for r in parsed_result["ref_vars"]}
+        ref_var_ids = {r.ref_id for r in parsed_result["templates"]["ref_var"]}
         assert "simple_var" in ref_var_ids
         assert "typed_var" in ref_var_ids
 
         # Check ref_steps
-        ref_step_ids = {r.ref_id for r in parsed_result["ref_steps"]}
+        ref_step_ids = {r.ref_id for r in parsed_result["templates"]["ref_step"]}
         assert "simple_step" in ref_step_ids
         assert "step_with_check" in ref_step_ids
 
         # Check ref_figs
-        ref_fig_ids = {r.ref_id for r in parsed_result["ref_figs"]}
+        ref_fig_ids = {r.ref_id for r in parsed_result["templates"]["ref_fig"]}
         assert "figure_1" in ref_fig_ids
         assert "figure_2" in ref_fig_ids
 
     def test_citations(self, parsed_result):
         """Test citation parsing."""
-        cites = parsed_result["cites"]
+        cites = parsed_result["templates"]["cite"]
 
         # Find the citation with ref1
         simple_cite = next(c for c in cites if "ref1" in c.ref_ids)
@@ -335,7 +368,7 @@ class TestSpecFile:
 
     def test_multiple_tables(self, parsed_result):
         """Test multiple var tables in one document."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         assert "students" in var_dict
         assert "teachers" in var_dict
@@ -351,7 +384,7 @@ class TestSpecFile:
 
     def test_mixed_vars_and_tables(self, parsed_result):
         """Test mixing regular vars and tables."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         # Should have both regular vars and tables
         assert "regular_var" in var_dict
@@ -365,37 +398,51 @@ class TestSpecFile:
         assert isinstance(var_dict["another_regular"], VarNode)
         assert var_dict["another_regular"].default_value == 42
 
-    def test_extract_vars_format(self, extracted_result):
-        """Test that extract_vars returns correct format."""
+    def test_parse_aimd_format(self, extracted_result):
+        """Test that parse_aimd returns correct format."""
         # Check structure
-        assert "vars" in extracted_result
-        assert "steps" in extracted_result
-        assert "checks" in extracted_result
-        assert "ref_vars" in extracted_result
-        assert "ref_steps" in extracted_result
-        assert "ref_figs" in extracted_result
-        assert "cites" in extracted_result
+        assert "templates" in extracted_result
 
         # Check that all items have required fields
-        for var in extracted_result["vars"]:
+        for var in extracted_result["templates"]["var"]:
             assert "name" in var
             assert "start_line" in var
             assert "start_col" in var
             assert "end_col" in var
 
-        for step in extracted_result["steps"]:
+        for quiz in extracted_result["templates"]["quiz"]:
+            assert "name" in quiz
+            assert "start_line" in quiz
+            assert "start_col" in quiz
+            assert "end_col" in quiz
+
+        for step in extracted_result["templates"]["step"]:
             assert "name" in step
             assert "level" in step
             assert "start_line" in step
 
-        for check in extracted_result["checks"]:
+        for check in extracted_result["templates"]["check"]:
             assert "name" in check
             assert "start_line" in check
 
-    def test_extract_vars_content_correctness(self, extracted_result):
-        """Test that extract_vars extracts correct content."""
+        templates = extracted_result["templates"]
+        assert isinstance(templates, dict)
+        assert "var" in templates
+        assert "quiz" in templates
+        assert "step" in templates
+        assert "check" in templates
+        assert "ref_var" in templates
+        assert "ref_step" in templates
+        assert "ref_fig" in templates
+        assert "cite" in templates
+        assert "assigner" in templates
+        for value in templates.values():
+            assert isinstance(value, list)
+
+    def test_parse_aimd_content_correctness(self, extracted_result):
+        """Test that parse_aimd extracts correct content."""
         # Get var names
-        var_names = {v["name"] for v in extracted_result["vars"]}
+        var_names = {v["name"] for v in extracted_result["templates"]["var"]}
 
         # Check some key variables are present
         assert "simple_var" in var_names
@@ -403,29 +450,39 @@ class TestSpecFile:
         assert "simple_table" in var_names
         assert "legacy_table_simple" in var_names
         assert "auto_list_table" in var_names
+        assert "quiz_q1" not in var_names
+        assert "quiz_q2" not in var_names
+        assert "quiz_blank_1" not in var_names
+        assert "quiz_open_1" not in var_names
+
+        quiz_names = {q["name"] for q in extracted_result["templates"]["quiz"]}
+        assert "quiz_q1" in quiz_names
+        assert "quiz_q2" in quiz_names
+        assert "quiz_blank_1" in quiz_names
+        assert "quiz_open_1" in quiz_names
 
         # Check a var table has subvars
         simple_table = next(
-            v for v in extracted_result["vars"] if v["name"] == "simple_table"
+            v for v in extracted_result["templates"]["var"] if v["name"] == "simple_table"
         )
         assert "subvars" in simple_table
         assert len(simple_table["subvars"]) == 3
 
         # Check a typed var has type_annotation
         typed_var = next(
-            v for v in extracted_result["vars"] if v["name"] == "typed_var"
+            v for v in extracted_result["templates"]["var"] if v["name"] == "typed_var"
         )
         assert typed_var["type_annotation"] == "str"
 
         # Check vars with defaults
         var_default = next(
-            v for v in extracted_result["vars"] if v["name"] == "var_with_default"
+            v for v in extracted_result["templates"]["var"] if v["name"] == "var_with_default"
         )
         assert var_default["default_value"] == "default_value"
 
-    def test_extract_vars_step_correctness(self, extracted_result):
-        """Test that extract_vars correctly extracts steps."""
-        step_names = {s["name"] for s in extracted_result["steps"]}
+    def test_parse_aimd_step_correctness(self, extracted_result):
+        """Test that parse_aimd correctly extracts steps."""
+        step_names = {s["name"] for s in extracted_result["templates"]["step"]}
 
         assert "simple_step" in step_names
         assert "step_level_2" in step_names
@@ -434,50 +491,50 @@ class TestSpecFile:
 
         # Check step with check
         step_check = next(
-            s for s in extracted_result["steps"] if s["name"] == "step_with_check"
+            s for s in extracted_result["templates"]["step"] if s["name"] == "step_with_check"
         )
         assert step_check["check"] is True
 
         # Check step with message
         step_msg = next(
-            s for s in extracted_result["steps"] if s["name"] == "step_with_message"
+            s for s in extracted_result["templates"]["step"] if s["name"] == "step_with_message"
         )
         assert step_msg["check"] is True
         assert step_msg["checked_message"] == "This is a checked message"
 
-    def test_extract_vars_check_correctness(self, extracted_result):
-        """Test that extract_vars correctly extracts checkpoints."""
-        check_names = {c["name"] for c in extracted_result["checks"]}
+    def test_parse_aimd_check_correctness(self, extracted_result):
+        """Test that parse_aimd correctly extracts checkpoints."""
+        check_names = {c["name"] for c in extracted_result["templates"]["check"]}
 
         assert "simple_check" in check_names
         assert "check_with_message" in check_names
 
         # Check with message
         check_msg = next(
-            c for c in extracted_result["checks"] if c["name"] == "check_with_message"
+            c for c in extracted_result["templates"]["check"] if c["name"] == "check_with_message"
         )
         assert check_msg["checked_message"] == "Please verify this carefully"
 
-    def test_extract_vars_ref_correctness(self, extracted_result):
-        """Test that extract_vars correctly extracts references."""
+    def test_parse_aimd_ref_correctness(self, extracted_result):
+        """Test that parse_aimd correctly extracts references."""
         # Check ref_vars
-        ref_var_ids = {r["ref_id"] for r in extracted_result["ref_vars"]}
+        ref_var_ids = {r["ref_id"] for r in extracted_result["templates"]["ref_var"]}
         assert "simple_var" in ref_var_ids
         assert "typed_var" in ref_var_ids
 
         # Check ref_steps
-        ref_step_ids = {r["ref_id"] for r in extracted_result["ref_steps"]}
+        ref_step_ids = {r["ref_id"] for r in extracted_result["templates"]["ref_step"]}
         assert "simple_step" in ref_step_ids
         assert "step_with_check" in ref_step_ids
 
         # Check ref_figs
-        ref_fig_ids = {r["ref_id"] for r in extracted_result["ref_figs"]}
+        ref_fig_ids = {r["ref_id"] for r in extracted_result["templates"]["ref_fig"]}
         assert "figure_1" in ref_fig_ids
         assert "figure_2" in ref_fig_ids
 
-    def test_extract_vars_cite_correctness(self, extracted_result):
-        """Test that extract_vars correctly extracts citations."""
-        cites = extracted_result["cites"]
+    def test_parse_aimd_cite_correctness(self, extracted_result):
+        """Test that parse_aimd correctly extracts citations."""
+        cites = extracted_result["templates"]["cite"]
 
         # Should have citations
         assert len(cites) > 0
@@ -489,7 +546,7 @@ class TestSpecFile:
 
     def test_real_world_example(self, parsed_result):
         """Test the real-world example section."""
-        var_dict = {v.name: v for v in parsed_result["vars"]}
+        var_dict = {v.name: v for v in parsed_result["templates"]["var"]}
 
         # Check experimenter
         assert "experimenter" in var_dict
@@ -513,50 +570,45 @@ class TestSpecFile:
         assert samples.subvars[2].name == "volume"
 
         # Check sample_quality checkpoint
-        check_dict = {c.name: c for c in parsed_result["checks"]}
+        check_dict = {c.name: c for c in parsed_result["templates"]["check"]}
         assert "sample_quality" in check_dict
         assert check_dict["sample_quality"].checked_message == "All samples passed QC"
 
 
-class TestExtractVarsBackwardCompatibility:
-    """Test that extract_vars maintains backward compatibility."""
+class TestParseAimdStructure:
+    """Tests for parse_aimd output structure."""
 
-    def test_extract_vars_old_format_fields(self):
-        """Test that extract_vars output has backward compatible field names."""
+    def test_parse_aimd_var_item_fields(self):
+        """Test that parse_aimd output includes expected var item fields."""
         with open("tests/test_markdown/spec.aimd") as f:
             content = f.read()
 
-        result = extract_vars(content)
-        var = result["vars"][0]
+        result = parse_aimd(content)
+        var = result["templates"]["var"][0]
 
-        # Should have both new and old field names for compatibility
+        # Should expose expected fields for serialized var items
         assert "name" in var
         assert "start_line" in var
         assert "start_col" in var
         assert "end_col" in var
 
-    def test_extract_vars_structure(self):
-        """Test extract_vars returns correct structure."""
+    def test_parse_aimd_structure(self):
+        """Test parse_aimd returns correct structure."""
         with open("tests/test_markdown/spec.aimd") as f:
             content = f.read()
 
-        result = extract_vars(content)
+        result = parse_aimd(content)
 
-        # Should have exactly these keys
-        expected_keys = {
-            "vars",
-            "steps",
-            "checks",
-            "ref_vars",
-            "ref_steps",
-            "ref_figs",
-            "cites",
-        }
+        # Should have exactly this key
+        expected_keys = {"templates"}
         assert set(result.keys()) == expected_keys
 
-        # All values should be lists
+        # Top-level value is templates (dict of lists)
         for key, value in result.items():
-            assert isinstance(value, list), f"{key} should be a list"
+            if key == "templates":
+                assert isinstance(value, dict), "templates should be a dict"
+                for template_values in value.values():
+                    assert isinstance(template_values, list), "template value should be a list"
 
 
 class TestPerformance:
@@ -573,16 +625,16 @@ class TestPerformance:
 
         # Should parse in reasonable time (< 1 second for this file)
         assert parse_time < 1.0
-        assert len(result["vars"]) > 50  # Should have many variables
+        assert len(result["templates"]["var"]) > 50  # Should have many variables
 
-    def test_extract_vars_performance(self, spec_content):
-        """Test extract_vars performance."""
+    def test_parse_aimd_performance(self, spec_content):
+        """Test parse_aimd performance."""
         import time
 
         start_time = time.time()
-        result = extract_vars(spec_content)
+        result = parse_aimd(spec_content)
         extract_time = time.time() - start_time
 
         # Should extract in reasonable time (< 1 second)
         assert extract_time < 1.0
-        assert len(result["vars"]) > 50
+        assert len(result["templates"]["var"]) > 50

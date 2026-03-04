@@ -63,6 +63,188 @@ According to {{ref_var|user}} and {{ref_step|step_1}}
         assert is_valid
         assert len(errors) == 0
 
+    def test_validate_valid_quizs(self):
+        content = """
+```quiz
+id: quiz_q1
+type: choice
+mode: single
+score: 2
+stem: Pick one
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+```
+```quiz
+id: quiz_q2
+type: choice
+mode: multiple
+stem: Pick all
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+  - key: C
+    text: Option C
+```
+```quiz
+id: quiz_blank_1
+type: blank
+stem: Fill [[b1]]
+blanks:
+  - key: b1
+    answer: test
+```
+```quiz
+id: quiz_open_1
+type: open
+stem: Explain
+rubric: Include 2 points
+```
+Reference {{ref_var|quiz_q1}}
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert is_valid
+        assert len(errors) == 0
+
+    def test_validate_quiz_with_multiline_stem(self):
+        content = """
+```quiz
+id: quiz_q_multiline
+type: choice
+mode: single
+stem: |
+  Line 1
+  Line 2
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert is_valid
+        assert len(errors) == 0
+
+    def test_validate_quiz_with_multi_paragraph_stem(self):
+        content = """
+```quiz
+id: quiz_open_multi_paragraph
+type: open
+stem: |
+  Paragraph 1.
+
+  Paragraph 2.
+rubric: Mention at least two factors
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert is_valid
+        assert len(errors) == 0
+
+    def test_validate_quiz_with_invalid_yaml(self):
+        content = """
+```quiz
+id: quiz_q_yaml_error
+type: choice
+mode: single
+default: [A
+stem: Pick one
+options:
+  - key: A
+    text: Option A
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert "Invalid quiz YAML syntax" in errors[0].message
+
+    def test_validate_invalid_quiz(self):
+        content = """
+```quiz
+id: quiz_q1
+type: choice
+mode: single
+stem: Missing options
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert "options must be a non-empty list" in errors[0].message
+
+    def test_validate_invalid_blank_placeholder(self):
+        content = """
+```quiz
+id: quiz_blank_1
+type: blank
+stem: Fill [[b2]]
+blanks:
+  - key: b1
+    answer: test
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert "blank stem contains undefined placeholders: b2" in errors[0].message
+
+    def test_validate_invalid_choice_mode_alias(self):
+        content = """
+```quiz
+id: quiz_q1
+type: choice
+mode: radio
+stem: Pick one
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert (
+            "Invalid choice mode, expected one of: single, multiple"
+            in errors[0].message
+        )
+
+    def test_validate_invalid_quiz_type_alias(self):
+        content = """
+```quiz
+id: quiz_q1
+type: single_choice
+mode: single
+stem: Pick one
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert "Invalid quiz type, expected one of: choice, blank, open" in errors[
+            0
+        ].message
+
 
 class TestValidatorMultipleErrors:
     """Tests for collecting multiple errors at once."""

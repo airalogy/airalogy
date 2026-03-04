@@ -12,6 +12,7 @@ export default [
       { text: '图', link: '/zh/syntax/fig' },
       { text: '引用', link: '/zh/syntax/ref' },
       { text: '引用文献', link: '/zh/syntax/cite-in-aimd' },
+      { text: '题目', link: '/zh/syntax/quiz' },
       { text: '环境', link: '/zh/syntax/env' },
       { text: '类型', link: '/zh/syntax/types' },
       { text: '赋值器类型约束', link: '/zh/syntax/assigner_type' },

@@ -103,6 +103,25 @@ An Airalogy Record is a JSON object that contains the metadata and data of a res
 }
 ```
 
+### Quiz (`quiz`)
+
+```jsonc
+{
+    "quiz": { // template_name = "quiz"
+
+        // quiz的值以题目id为键。
+        // 该object将根据QuizModel的定义进行校验约束。
+
+        "quiz_choice_single_1": "A", // 单选题：选项key
+        "quiz_choice_multiple_1": ["A", "C"], // 多选题：选项key列表
+        "quiz_blank_1": { // 填空题：blank_key -> 用户填写内容
+            "b1": "21%"
+        },
+        "quiz_open_1": "Because both temperature and pressure affect this phenomenon." // 问答题：字符串
+    }
+}
+```
+
 ### Step (`step`)
 
 ```jsonc
@@ -190,6 +209,12 @@ An Airalogy Record is a JSON object that contains the metadata and data of a res
         "var": {
             "solvent_name": "H2O",
             "solvent_volume": 1.0
+        },
+        "quiz": {
+            "quiz_choice_single_1": "A",
+            "quiz_blank_1": {
+                "b1": "21%"
+            }
         },
         "step": {
             "select_solvent": {

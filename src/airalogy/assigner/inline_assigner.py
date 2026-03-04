@@ -50,7 +50,7 @@ def load_inline_assigners(
         )
 
     parser = AimdParser(aimd_content)
-    blocks = parser.parse().get("assigners", [])
+    blocks = parser.parse()["templates"]["assigner"]
 
     exec_globals = {} if namespace is None else namespace
     if "__builtins__" not in exec_globals:
@@ -79,7 +79,7 @@ def extract_inline_assigner_code_blocks(aimd_content: str) -> list[str]:
         List of dedented code strings.
     """
     parser = AimdParser(aimd_content)
-    blocks = parser.parse().get("assigners", [])
+    blocks = parser.parse()["templates"]["assigner"]
     return [block.code for block in blocks if block.code.strip()]
 
 

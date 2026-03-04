@@ -128,6 +128,7 @@ def test_generate_command():
 
         content = output_file.read_text()
         assert "class VarModel(BaseModel):" in content
+        assert "class QuizModel(BaseModel):" in content
         assert "name: str" in content
         assert "age: int" in content
         assert "user_id: UserName" in content
@@ -190,6 +191,7 @@ def test_generate_command_force_overwrite():
         content = output_file.read_text()
         assert "# existing file" not in content
         assert "class VarModel" in content
+        assert "class QuizModel" in content
 
 
 def test_generate_command_alias():

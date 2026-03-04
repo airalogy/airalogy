@@ -50,6 +50,13 @@ class VarNode(ASTNode):
 
 
 @dataclass
+class QuizNode(VarNode):
+    """
+    Quiz node parsed from ```quiz code blocks.
+    """
+
+
+@dataclass
 class VarTableNode(VarNode):
     """
     Variable table node (a specialized var with list type and subvars).

@@ -103,6 +103,25 @@ Data structures of different templates:
 }
 ```
 
+### Quiz (`quiz`)
+
+```jsonc
+{
+    "quiz": { // template_name = "quiz"
+
+        // Quiz values are keyed by quiz id.
+        // This object is validated against QuizModel.
+
+        "quiz_choice_single_1": "A", // single choice: option key
+        "quiz_choice_multiple_1": ["A", "C"], // multiple choice: list of option keys
+        "quiz_blank_1": { // blank: blank_key -> user input
+            "b1": "21%"
+        },
+        "quiz_open_1": "Because both temperature and pressure affect this phenomenon." // open: string
+    }
+}
+```
+
 ### Step (`step`)
 
 ```jsonc
@@ -190,6 +209,12 @@ When a user tries to download a record, the Airalogy platform returns a JSON obj
         "var": {
             "solvent_name": "H2O",
             "solvent_volume": 1.0
+        },
+        "quiz": {
+            "quiz_choice_single_1": "A",
+            "quiz_blank_1": {
+                "b1": "21%"
+            }
         },
         "step": {
             "select_solvent": {

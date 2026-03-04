@@ -1,5 +1,5 @@
 """
-VarModel generator - generates Pydantic models from parsed AIMD.
+Model generator - generates Pydantic models from parsed AIMD.
 """
 
 import re
@@ -52,10 +52,10 @@ def _type_matches(type_name: str, annotation: str) -> bool:
 
 class ModelGenerator:
     """
-    Generates Pydantic VarModel code from parsed AIMD variables.
+    Generates Pydantic VarModel/QuizModel code from parsed AIMD templates.
 
-    This generator creates Python code for a Pydantic BaseModel based on
-    the variable definitions found in an AIMD document.
+    This generator creates Python code for Pydantic BaseModel classes based on
+    template definitions found in an AIMD document.
     """
 
     def __init__(self, aimd_content: str):
@@ -81,8 +81,12 @@ class ModelGenerator:
         has_field_usage = False
         airalogy_types_used = set()
         standard_library_types_used: Dict[str, Set[str]] = {}  # module -> set of types
+        typing_types_used: Set[str] = set()
+        model_vars = (
+            self.parsed["templates"]["var"] + self.parsed["templates"]["quiz"]
+        )
 
-        for var in self.parsed["vars"]:
+        for var in model_vars:
             # Check if Field is needed (for any kwargs or special parameters)
             if isinstance(var, VarNode):
                 if var.kwargs or var.default_value is not None:
@@ -90,6 +94,9 @@ class ModelGenerator:
 
                 # Check if any Airalogy types are used
                 if var.type_annotation:
+                    if _type_matches("Literal", var.type_annotation):
+                        typing_types_used.add("Literal")
+
                     for airalogy_type in self.airalogy_type_names:
                         if _type_matches(airalogy_type, var.type_annotation):
                             airalogy_types_used.add(airalogy_type)
@@ -108,6 +115,9 @@ class ModelGenerator:
                         if subvar.kwargs or subvar.default_value is not None:
                             has_field_usage = True
                         if subvar.type_annotation:
+                            if _type_matches("Literal", subvar.type_annotation):
+                                typing_types_used.add("Literal")
+
                             for airalogy_type in self.airalogy_type_names:
                                 if _type_matches(airalogy_type, subvar.type_annotation):
                                     airalogy_types_used.add(airalogy_type)
@@ -134,6 +144,10 @@ class ModelGenerator:
             types_list = ", ".join(sorted(type_names))
             imports.add(f"from {module} import {types_list}")
 
+        if typing_types_used:
+            types_list = ", ".join(sorted(typing_types_used))
+            imports.add(f"from typing import {types_list}")
+
         return imports
 
     def _format_default_value(self, value: Any) -> str:
@@ -155,7 +169,7 @@ class ModelGenerator:
 
     def _generate_field_definition(self, var: VarNode) -> str:
         """
-        Generate a single field definition for VarModel.
+        Generate a single field definition for a Pydantic model class.
 
         Args:
             var: VarNode to generate field for
@@ -272,26 +286,31 @@ class ModelGenerator:
 
     def generate_model(self) -> str:
         """
-        Generate complete VarModel Python code.
+        Generate complete VarModel and QuizModel Python code.
 
         Returns:
-            Python code for VarModel class
+            Python code for model classes
         """
         imports = self._get_imports()
         nested_models = []
-        fields = []
+        var_fields = []
+        quiz_fields = []
 
-        for var in self.parsed["vars"]:
+        for var in self.parsed["templates"]["var"]:
             if isinstance(var, VarTableNode):
                 # Check VarTableNode first since it inherits from VarNode
-                fields.append(self._generate_table_model(var, nested_models))
+                var_fields.append(self._generate_table_model(var, nested_models))
             elif isinstance(var, VarNode):
-                fields.append(self._generate_field_definition(var))
+                var_fields.append(self._generate_field_definition(var))
+
+        for quiz in self.parsed["templates"]["quiz"]:
+            if isinstance(quiz, VarNode):
+                quiz_fields.append(self._generate_field_definition(quiz))
 
         # Build the complete code
         code_lines = [
             '"""',
-            "Generated VarModel from AIMD.",
+            "Generated VarModel and QuizModel from AIMD.",
             '"""',
             "",
         ]
@@ -306,11 +325,22 @@ class ModelGenerator:
             code_lines.extend(nested_models)
             code_lines.append("")
 
-        # Add main VarModel
+        # Add VarModel
         code_lines.append("class VarModel(BaseModel):")
         code_lines.append('    """Main variable model."""')
-        if fields:
-            for field in fields:
+        if var_fields:
+            for field in var_fields:
+                code_lines.append(field)
+        else:
+            code_lines.append("    pass")
+
+        code_lines.append("")
+
+        # Add QuizModel
+        code_lines.append("class QuizModel(BaseModel):")
+        code_lines.append('    """Main quiz answer model."""')
+        if quiz_fields:
+            for field in quiz_fields:
                 code_lines.append(field)
         else:
             code_lines.append("    pass")
@@ -331,13 +361,13 @@ class ModelGenerator:
 
 def generate_model(aimd_content: str) -> str:
     """
-    Generate VarModel code from AIMD content.
+    Generate model code from AIMD content.
 
     Args:
         aimd_content: AIMD document content
 
     Returns:
-        Python code for VarModel
+        Python code for VarModel and QuizModel
 
     Example:
         >>> code = generate_model(aimd_content)

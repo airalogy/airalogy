@@ -46,7 +46,7 @@ def check_command(args):
 
 
 def generate_command(args):
-    """Generate VarModel from AIMD file."""
+    """Generate VarModel and QuizModel from AIMD file."""
     input_file = Path(args.file)
     output_file = Path(args.output)
 
@@ -73,7 +73,7 @@ def generate_command(args):
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(model_code)
 
-        print(f"✓ Generated VarModel: {output_file}")
+        print(f"✓ Generated models: {output_file}")
         return 0
 
     except Exception as e:
@@ -158,8 +158,8 @@ def main():
     generate_parser = subparsers.add_parser(
         "generate_model",
         aliases=["gm"],
-        help="Generate VarModel",
-        description="Generate a Pydantic VarModel from an AIMD file",
+        help="Generate models",
+        description="Generate Pydantic VarModel and QuizModel from an AIMD file",
     )
     generate_parser.add_argument(
         "file",

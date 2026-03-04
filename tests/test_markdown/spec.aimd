@@ -1,5 +1,6 @@
 # AIMD Syntax Specification Test File
-# This file tests ALL possible AIMD syntax variations
+
+This file tests ALL possible AIMD syntax variations
 
 ## 1. Simple Variables (Basic Syntax)
 
@@ -22,6 +23,56 @@ Variable with default value:
 {{var|int_with_default: int = 42}}
 {{var|float_with_default: float = 3.14}}
 {{var|bool_with_default: bool = True}}
+
+Quiz items (choice, blank, open):
+
+```quiz
+id: quiz_q1
+type: choice
+mode: single
+score: 5
+stem: Which option is correct?
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+  - key: C
+    text: Option C
+```
+
+```quiz
+id: quiz_q2
+type: choice
+mode: multiple
+default: ["A", "C"]
+stem: Select all correct options
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+  - key: C
+    text: Option C
+```
+
+```quiz
+id: quiz_blank_1
+type: blank
+score: 3
+stem: Fill [[b1]]
+blanks:
+  - key: b1
+    answer: 21%
+```
+
+```quiz
+id: quiz_open_1
+type: open
+score: 10
+stem: Explain the phenomenon
+rubric: Mention at least two factors
+```
 
 Variable with Airalogy custom types:
 {{var|user_name: UserName}}
@@ -187,8 +238,6 @@ Then a table: {{var|mixed_table2, subvars=[field1: str, field2: int]}}
 Another regular: {{var|another_regular: int = 42}}
 
 ## 11. Real-world Example
-
-# Research Protocol Example
 
 Experiment Information:
 Experimenter: {{var|experimenter: UserName}}

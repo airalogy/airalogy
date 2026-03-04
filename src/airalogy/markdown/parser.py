@@ -7,10 +7,13 @@ import re
 import textwrap
 from typing import Any, Dict, List, Optional, Tuple
 
+import yaml
+
 from .ast_nodes import (
     AssignerBlockNode,
     CheckNode,
     CiteNode,
+    QuizNode,
     RefFigNode,
     RefStepNode,
     RefVarNode,
@@ -39,6 +42,7 @@ class AimdParser:
 
     # Name validation pattern: must not start with _, no spaces, valid Python identifier
     NAME_PATTERN = re.compile(r"^[a-zA-Z][a-zA-Z0-9_]*$")
+    BLANK_PLACEHOLDER_PATTERN = re.compile(r"\[\[([^\[\]\s]+)\]\]")
 
     def __init__(self, content: str, strict: bool = True):
         """
@@ -54,7 +58,7 @@ class AimdParser:
         self.current_index = 0
         self.strict = strict
         self.error_collector = ErrorCollector() if not strict else None
-        self.parse_result: Optional[Dict[str, List]] = None
+        self.parse_result: Optional[Dict[str, Any]] = None
 
     def _handle_error(self, error: AimdParseError):
         """
@@ -630,6 +634,537 @@ class AimdParser:
             kwargs=kwargs,
         )
 
+    def _normalize_choice_mode(self, mode: str, position: Position) -> Optional[str]:
+        """
+        Normalize choice mode to either "single" or "multiple".
+        """
+        normalized = mode.strip().lower()
+        if normalized in {"single", "multiple"}:
+            return normalized
+
+        error = InvalidSyntaxError(
+            "Invalid choice mode, expected one of: single, multiple",
+            position=position,
+        )
+        self._handle_error(error)
+        return None
+
+    def _normalize_quiz_type(
+        self, quiz_type: str, position: Position
+    ) -> Optional[str]:
+        """
+        Normalize quiz type.
+        """
+        normalized = quiz_type.strip().lower()
+        if normalized in {"choice", "blank", "open"}:
+            return normalized
+
+        error = InvalidSyntaxError(
+            "Invalid quiz type, expected one of: choice, blank, open",
+            position=position,
+        )
+        self._handle_error(error)
+        return None
+
+    def _build_choice_type_annotation(self, mode: str, option_keys: List[str]) -> str:
+        """
+        Build Python type annotation for a choice item.
+        """
+        literal_values = ", ".join(repr(option_key) for option_key in option_keys)
+        literal_type = f"Literal[{literal_values}]"
+        if mode == "single":
+            return literal_type
+        return f"list[{literal_type}]"
+
+    def _parse_quiz_yaml_mapping(
+        self, code: str, position: Position
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Parse one `quiz` code block payload as a YAML mapping.
+        """
+        try:
+            parsed = yaml.safe_load(code) if code.strip() else {}
+        except yaml.YAMLError as exc:
+            error_message = "Invalid quiz YAML syntax"
+            if getattr(exc, "problem", None):
+                error_message = f"{error_message}: {exc.problem}"
+
+            error_position = position
+            mark = getattr(exc, "problem_mark", None)
+            if mark is not None:
+                line = position.start_line + 1 + mark.line
+                col = mark.column + 1
+                error_position = Position(
+                    start_line=line,
+                    end_line=line,
+                    start_col=col,
+                    end_col=col + 1,
+                )
+
+            error = InvalidSyntaxError(error_message, position=error_position)
+            self._handle_error(error)
+            return None
+
+        if parsed is None:
+            return {}
+
+        if not isinstance(parsed, dict):
+            error = InvalidSyntaxError(
+                "quiz block must be a YAML mapping/object",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        normalized: Dict[str, Any] = {}
+        for key, value in parsed.items():
+            if not isinstance(key, str):
+                error = InvalidSyntaxError(
+                    "quiz field names must be strings",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            normalized[key] = value
+
+        return normalized
+
+    def _normalize_keyed_items(
+        self,
+        items: Any,
+        section_name: str,
+        required_fields: List[str],
+        position: Position,
+    ) -> Optional[List[Dict[str, str]]]:
+        """
+        Normalize list items with a required `key` and other required fields.
+        """
+        if not isinstance(items, list) or not items:
+            error = InvalidSyntaxError(
+                f"{section_name} must be a non-empty list",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        normalized_items: List[Dict[str, str]] = []
+        seen_keys = set()
+        for item in items:
+            if not isinstance(item, dict):
+                error = InvalidSyntaxError(
+                    f"{section_name} must be a list of objects",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            normalized_item: Dict[str, str] = {}
+            for key, value in item.items():
+                normalized_item[str(key)] = str(value).strip()
+
+            missing_fields = [
+                field
+                for field in required_fields
+                if field not in normalized_item or not normalized_item[field]
+            ]
+            if missing_fields:
+                error = InvalidSyntaxError(
+                    f"Each {section_name} item must include non-empty fields: {', '.join(required_fields)}",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            item_key = normalized_item["key"]
+            if item_key in seen_keys:
+                error = InvalidSyntaxError(
+                    f"Duplicate key in {section_name}: {item_key}",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            seen_keys.add(item_key)
+            normalized_items.append(normalized_item)
+
+        return normalized_items
+
+    def _validate_blank_placeholders(
+        self, stem: str, blank_keys: List[str], position: Position
+    ) -> bool:
+        """
+        Validate that blank placeholders in stem match `blanks` definitions.
+        """
+        placeholder_keys = self.BLANK_PLACEHOLDER_PATTERN.findall(stem)
+        if not placeholder_keys:
+            error = InvalidSyntaxError(
+                "blank stem must include placeholders like [[b1]]",
+                position=position,
+            )
+            self._handle_error(error)
+            return False
+
+        duplicate_placeholder_keys: List[str] = []
+        seen_placeholder_keys = set()
+        for key in placeholder_keys:
+            if key in seen_placeholder_keys and key not in duplicate_placeholder_keys:
+                duplicate_placeholder_keys.append(key)
+            seen_placeholder_keys.add(key)
+        if duplicate_placeholder_keys:
+            error = InvalidSyntaxError(
+                "blank stem contains duplicate placeholders: "
+                + ", ".join(duplicate_placeholder_keys),
+                position=position,
+            )
+            self._handle_error(error)
+            return False
+
+        unknown_placeholder_keys: List[str] = []
+        for key in placeholder_keys:
+            if key not in blank_keys and key not in unknown_placeholder_keys:
+                unknown_placeholder_keys.append(key)
+        if unknown_placeholder_keys:
+            error = InvalidSyntaxError(
+                "blank stem contains undefined placeholders: "
+                + ", ".join(unknown_placeholder_keys),
+                position=position,
+            )
+            self._handle_error(error)
+            return False
+
+        missing_placeholder_keys = [
+            key for key in blank_keys if key not in seen_placeholder_keys
+        ]
+        if missing_placeholder_keys:
+            error = InvalidSyntaxError(
+                "blank stem is missing placeholders for blank keys: "
+                + ", ".join(missing_placeholder_keys),
+                position=position,
+            )
+            self._handle_error(error)
+            return False
+
+        return True
+
+    def _parse_quiz_block(self, code: str, position: Position) -> Optional[QuizNode]:
+        """
+        Parse one `quiz` code block into a QuizNode.
+        """
+        data = self._parse_quiz_yaml_mapping(code, position)
+        if data is None:
+            return None
+
+        item_name = data.get("id")
+        if not isinstance(item_name, str) or not item_name.strip():
+            error = InvalidSyntaxError(
+                "quiz id is required",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+        item_name = item_name.strip()
+
+        name_token = Token(
+            type=TokenType.VAR,
+            value=item_name,
+            position=position,
+            raw=item_name,
+        )
+        is_valid_name = self._validate_name(item_name, "quiz", name_token)
+        if not self.strict and not is_valid_name:
+            return None
+
+        item_type_value = data.get("type")
+        if item_type_value is None:
+            error = InvalidSyntaxError(
+                "quiz type is required (choice, blank, open)",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+        item_type = self._normalize_quiz_type(str(item_type_value), position)
+        if item_type is None:
+            return None
+
+        stem = data.get("stem")
+        if not isinstance(stem, str) or not stem.strip():
+            error = InvalidSyntaxError(
+                "quiz stem is required",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+        stem = stem.strip()
+
+        score = data.get("score")
+        if score is not None:
+            if isinstance(score, bool) or not isinstance(score, (int, float)):
+                error = InvalidSyntaxError(
+                    "quiz score must be a non-negative number",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            if score < 0:
+                error = InvalidSyntaxError(
+                    "quiz score must be a non-negative number",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+        kwargs: Dict[str, Any] = {}
+        if "title" in data and isinstance(data["title"], str):
+            kwargs["title"] = data["title"]
+        if "description" in data and isinstance(data["description"], str):
+            kwargs["description"] = data["description"]
+
+        json_schema_extra = data.get("json_schema_extra", {})
+        if json_schema_extra is None:
+            json_schema_extra = {}
+        if not isinstance(json_schema_extra, dict):
+            error = InvalidSyntaxError(
+                "json_schema_extra must be a dictionary when used in quiz",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        default_value = data.get("default")
+        type_annotation = "str"
+        quiz_meta: Dict[str, Any] = {
+            "type": item_type,
+            "stem": stem,
+        }
+        if score is not None:
+            quiz_meta["score"] = score
+
+        if item_type == "choice":
+            mode_value = data.get("mode")
+            if mode_value is None:
+                error = InvalidSyntaxError(
+                    "choice quiz requires mode (single or multiple)",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            mode = self._normalize_choice_mode(str(mode_value), position)
+            if mode is None:
+                return None
+
+            options = self._normalize_keyed_items(
+                data.get("options"),
+                section_name="options",
+                required_fields=["key", "text"],
+                position=position,
+            )
+            if options is None:
+                return None
+
+            option_keys = [option["key"] for option in options]
+            answer_value = data.get("answer")
+            if answer_value is not None:
+                if mode == "single":
+                    if not isinstance(answer_value, str) or answer_value not in option_keys:
+                        error = InvalidSyntaxError(
+                            "choice answer must be one option key",
+                            position=position,
+                        )
+                        self._handle_error(error)
+                        return None
+                else:
+                    if not isinstance(answer_value, list):
+                        error = InvalidSyntaxError(
+                            "multiple choice answer must be a list of option keys",
+                            position=position,
+                        )
+                        self._handle_error(error)
+                        return None
+                    invalid_answers = [
+                        item for item in answer_value if item not in option_keys
+                    ]
+                    if invalid_answers:
+                        error = InvalidSyntaxError(
+                            "multiple choice answer must contain only option keys",
+                            position=position,
+                        )
+                        self._handle_error(error)
+                        return None
+
+            if default_value is not None:
+                if mode == "single":
+                    if not isinstance(default_value, str) or default_value not in option_keys:
+                        error = InvalidSyntaxError(
+                            "single choice default must be one option key",
+                            position=position,
+                        )
+                        self._handle_error(error)
+                        return None
+                else:
+                    if not isinstance(default_value, list):
+                        error = InvalidSyntaxError(
+                            "multiple choice default must be a list of option keys",
+                            position=position,
+                        )
+                        self._handle_error(error)
+                        return None
+                    invalid_defaults = [
+                        item for item in default_value if item not in option_keys
+                    ]
+                    if invalid_defaults:
+                        error = InvalidSyntaxError(
+                            "multiple choice default must contain only option keys",
+                            position=position,
+                        )
+                        self._handle_error(error)
+                        return None
+
+            type_annotation = self._build_choice_type_annotation(mode, option_keys)
+            quiz_meta["mode"] = mode
+            quiz_meta["options"] = options
+            if answer_value is not None:
+                quiz_meta["answer"] = answer_value
+
+            reserved_keys = {
+                "id",
+                "type",
+                "mode",
+                "stem",
+                "options",
+                "score",
+                "answer",
+                "default",
+                "title",
+                "description",
+                "json_schema_extra",
+            }
+        elif item_type == "blank":
+            blanks = self._normalize_keyed_items(
+                data.get("blanks"),
+                section_name="blanks",
+                required_fields=["key", "answer"],
+                position=position,
+            )
+            if blanks is None:
+                return None
+
+            blank_keys = [blank["key"] for blank in blanks]
+            if not self._validate_blank_placeholders(stem, blank_keys, position):
+                return None
+
+            if default_value is not None:
+                if isinstance(default_value, str) and len(blank_keys) == 1:
+                    default_value = {blank_keys[0]: default_value}
+                if not isinstance(default_value, dict):
+                    error = InvalidSyntaxError(
+                        "blank default must be a dict keyed by blank key",
+                        position=position,
+                    )
+                    self._handle_error(error)
+                    return None
+                invalid_default_keys = [
+                    key for key in default_value.keys() if key not in blank_keys
+                ]
+                if invalid_default_keys:
+                    error = InvalidSyntaxError(
+                        "blank default contains unknown blank keys",
+                        position=position,
+                    )
+                    self._handle_error(error)
+                    return None
+                if any(not isinstance(value, str) for value in default_value.values()):
+                    error = InvalidSyntaxError(
+                        "blank default values must be strings",
+                        position=position,
+                    )
+                    self._handle_error(error)
+                    return None
+
+            type_annotation = "dict[str, str]"
+            quiz_meta["blanks"] = blanks
+
+            reserved_keys = {
+                "id",
+                "type",
+                "stem",
+                "blanks",
+                "score",
+                "default",
+                "title",
+                "description",
+                "json_schema_extra",
+            }
+        else:
+            rubric = data.get("rubric")
+            if rubric is not None and not isinstance(rubric, str):
+                error = InvalidSyntaxError(
+                    "open rubric must be a string",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            if default_value is not None and not isinstance(default_value, str):
+                error = InvalidSyntaxError(
+                    "open default must be a string",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            type_annotation = "str"
+            if rubric:
+                quiz_meta["rubric"] = rubric
+
+            reserved_keys = {
+                "id",
+                "type",
+                "stem",
+                "rubric",
+                "score",
+                "default",
+                "title",
+                "description",
+                "json_schema_extra",
+            }
+
+        extra_meta = {
+            key: value for key, value in data.items() if key not in reserved_keys
+        }
+        if extra_meta:
+            quiz_meta["extra"] = extra_meta
+
+        json_schema_extra = dict(json_schema_extra)
+        json_schema_extra["airalogy_quiz"] = quiz_meta
+        kwargs["json_schema_extra"] = json_schema_extra
+
+        return QuizNode(
+            position=position,
+            name=item_name,
+            type_annotation=type_annotation,
+            default_value=default_value,
+            kwargs=kwargs,
+        )
+
+    def _parse_quiz_blocks(self) -> List[QuizNode]:
+        """
+        Extract and parse `quiz` code blocks into QuizNode objects.
+        """
+        quiz_vars: List[QuizNode] = []
+        for match in self.lexer.CODE_BLOCK_PATTERN.finditer(self.content):
+            lang = (match.group("lang") or "").strip()
+            if lang != "quiz":
+                continue
+
+            raw = match.group(0)
+            code = match.group("code").rstrip("\n\r")
+            code = textwrap.dedent(code)
+            position = self._get_position_from_offset(match.start(), len(raw))
+            quiz_var = self._parse_quiz_block(code, position)
+            if quiz_var is not None:
+                quiz_vars.append(quiz_var)
+
+        return quiz_vars
+
     def _parse_var_table(self, token: Token) -> VarTableNode:
         """
         Parse a variable table token (legacy syntax).
@@ -876,21 +1411,25 @@ class AimdParser:
 
         return blocks
 
-    def parse(self) -> Dict[str, List]:
+    def parse(self) -> Dict[str, Any]:
         """
         Parse all tokens into AST nodes.
 
         Returns:
-            Dictionary containing lists of parsed nodes:
+            Dictionary containing parsed templates:
             {
-                "vars": [VarNode, ...],
-                "steps": [StepNode, ...],
-                "checks": [CheckNode, ...],
-                "ref_vars": [RefVarNode, ...],
-                "ref_steps": [RefStepNode, ...],
-                "ref_figs": [RefFigNode, ...],
-                "cites": [CiteNode, ...],
-                "assigners": [AssignerBlockNode, ...]
+                "assigners": [AssignerBlockNode, ...],
+                "templates": {
+                    "var": [VarNode, ...],
+                    "quiz": [QuizNode, ...],
+                    "step": [StepNode, ...],
+                    "check": [CheckNode, ...],
+                    "ref_var": [RefVarNode, ...],
+                    "ref_step": [RefStepNode, ...],
+                    "ref_fig": [RefFigNode, ...],
+                    "cite": [CiteNode, ...],
+                    "assigner": [AssignerBlockNode, ...],
+                }
             }
 
         Raises:
@@ -899,7 +1438,8 @@ class AimdParser:
         if self.parse_result is not None:
             return self.parse_result
 
-        vars_list = []
+        vars_list: List[VarNode] = []
+        quizzes = self._parse_quiz_blocks()
         steps = []
         checks = []
         ref_vars = []
@@ -931,18 +1471,24 @@ class AimdParser:
                 break
 
         # Validate uniqueness (only if we have valid items)
-        if vars_list or steps or checks:
-            self._validate_uniqueness(vars_list, steps, checks)
+        unique_name_items = vars_list + quizzes
+        if unique_name_items or steps or checks:
+            self._validate_uniqueness(unique_name_items, steps, checks)
+
+        templates = {
+            "var": vars_list,
+            "quiz": quizzes,
+            "step": steps,
+            "check": checks,
+            "ref_var": ref_vars,
+            "ref_step": ref_steps,
+            "ref_fig": ref_figs,
+            "cite": cites,
+            "assigner": assigners,
+        }
 
         self.parse_result = {
-            "vars": vars_list,
-            "steps": steps,
-            "checks": checks,
-            "ref_vars": ref_vars,
-            "ref_steps": ref_steps,
-            "ref_figs": ref_figs,
-            "cites": cites,
-            "assigners": assigners,
+            "templates": templates,
         }
         return self.parse_result
 
@@ -1034,15 +1580,15 @@ class AimdParser:
         return False
 
 
-def extract_vars(aimd_content: str) -> dict:
+def parse_aimd(aimd_content: str) -> dict:
     """
-    Extract variables from AIMD content (backwards compatible API).
+    Parse AIMD content into a dictionary structure.
 
     Args:
         aimd_content: AIMD document content
 
     Returns:
-        Dictionary with 'steps', 'vars', and 'checks' lists in old format
+        Dictionary containing parsed templates in dictionary format.
 
     Raises:
         AimdParseError: If parsing fails
@@ -1050,15 +1596,20 @@ def extract_vars(aimd_content: str) -> dict:
     parser = AimdParser(aimd_content)
     result = parser.parse()
 
-    # Convert to old format for backwards compatibility
     return {
-        "steps": [step.to_dict() for step in result["steps"]],
-        "vars": [var.to_dict() for var in result["vars"]],
-        "checks": [check.to_dict() for check in result["checks"]],
-        "ref_vars": [ref_var.to_dict() for ref_var in result["ref_vars"]],
-        "ref_steps": [ref_step.to_dict() for ref_step in result["ref_steps"]],
-        "ref_figs": [ref_fig.to_dict() for ref_fig in result["ref_figs"]],
-        "cites": [cite.to_dict() for cite in result["cites"]],
+        "templates": {
+            "var": [var.to_dict() for var in result["templates"]["var"]],
+            "quiz": [quiz.to_dict() for quiz in result["templates"]["quiz"]],
+            "step": [step.to_dict() for step in result["templates"]["step"]],
+            "check": [check.to_dict() for check in result["templates"]["check"]],
+            "ref_var": [ref_var.to_dict() for ref_var in result["templates"]["ref_var"]],
+            "ref_step": [ref_step.to_dict() for ref_step in result["templates"]["ref_step"]],
+            "ref_fig": [ref_fig.to_dict() for ref_fig in result["templates"]["ref_fig"]],
+            "cite": [cite.to_dict() for cite in result["templates"]["cite"]],
+            "assigner": [
+                assigner.to_dict() for assigner in result["templates"]["assigner"]
+            ],
+        },
     }
 
 
@@ -1074,4 +1625,4 @@ def extract_assigner_blocks(aimd_content: str) -> list[dict]:
     """
     parser = AimdParser(aimd_content)
     result = parser.parse()
-    return [block.to_dict() for block in result["assigners"]]
+    return [block.to_dict() for block in result["templates"]["assigner"]]

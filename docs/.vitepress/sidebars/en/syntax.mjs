@@ -12,6 +12,7 @@ export default [
       { text: 'Figures', link: '/en/syntax/fig' },
       { text: 'References', link: '/en/syntax/ref' },
       { text: 'Citations', link: '/en/syntax/cite-in-aimd' },
+      { text: 'Quiz', link: '/en/syntax/quiz' },
       { text: 'Environment', link: '/en/syntax/env' },
       { text: 'Types', link: '/en/syntax/types' },
       { text: 'Assigner Type Constraints', link: '/en/syntax/assigner_type' },
