@@ -997,6 +997,84 @@ pass
         assert len(blocks) == 1
         assert blocks[0]["code"] == "pass"
 
+    def test_parse_assigner_block_does_not_validate_duplicate_assigned_field_across_runtimes(self):
+        content = """
+{{var|source_value: int}}
+{{var|total_value: int}}
+
+```assigner
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=["total_value"],
+    dependent_fields=["source_value"],
+    mode="auto",
+)
+def assign_total_value(dep: dict) -> AssignerResult:
+    return AssignerResult(assigned_fields={"total_value": dep["source_value"]})
+```
+
+```assigner runtime=client
+assigner(
+    {
+        mode: "auto",
+        dependent_fields: ["source_value"],
+        assigned_fields: ["total_value"],
+    },
+    function assign_total_value_client({ source_value }) {
+        return {
+            total_value: source_value,
+        };
+    }
+);
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["assigner"]) == 1
+        assert result["templates"]["assigner"][0].code.startswith(
+            "from airalogy.assigner import AssignerResult, assigner"
+        )
+
+    def test_parse_assigner_block_does_not_validate_cross_runtime_cycle(self):
+        content = """
+{{var|field_a: int}}
+{{var|field_b: int}}
+
+```assigner
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=["field_a"],
+    dependent_fields=["field_b"],
+    mode="auto",
+)
+def assign_field_a(dep: dict) -> AssignerResult:
+    return AssignerResult(assigned_fields={"field_a": dep["field_b"]})
+```
+
+```assigner runtime=client
+assigner(
+    {
+        mode: "auto",
+        dependent_fields: ["field_a"],
+        assigned_fields: ["field_b"],
+    },
+    function assign_field_b({ field_a }) {
+        return {
+            field_b: field_a,
+        };
+    }
+);
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["assigner"]) == 1
+        assert "def assign_field_a" in result["templates"]["assigner"][0].code
+
 
 class TestParseAimd:
     """Tests for parse_aimd function."""

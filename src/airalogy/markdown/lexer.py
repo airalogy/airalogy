@@ -31,9 +31,9 @@ class Lexer:
         re.MULTILINE | re.DOTALL,
     )
 
-    # Multi-line code block pattern: ```lang ... ``` or ``` ... ```
+    # Multi-line code block pattern: ```lang ... ``` or ```lang meta ... ``` or ``` ... ```
     CODE_BLOCK_PATTERN = re.compile(
-        r"```(?P<lang>[a-zA-Z0-9_]*)\n(?P<code>[\s\S]*?)```",
+        r"```(?P<lang>[a-zA-Z0-9_]*)(?:[ \t]+(?P<meta>[^\n]*))?\n(?P<code>[\s\S]*?)```",
         re.MULTILINE | re.DOTALL,
     )
 

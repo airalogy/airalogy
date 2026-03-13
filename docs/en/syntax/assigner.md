@@ -128,6 +128,50 @@ Recommendations:
 - The `assigner` block is **Python** code and can be treated like a regular `.py` snippet.
 - Prefer **one** `assigner` block placed at the end of the AIMD file for readability and extraction.
 
+#### Style D: Client Runtime Assigner (`assigner runtime=client`)
+
+For simple, deterministic, frontend-only calculations, you can still use the same fenced block name `assigner`, but declare a different runtime in the block header:
+
+````aimd
+Input A: {{var|var_1: float}}
+Input B: {{var|var_2: float}}
+Output: {{var|var_3: float}}
+
+```assigner runtime=client
+assigner(
+  {
+    mode: "auto",
+    dependent_fields: ["var_1", "var_2"],
+    assigned_fields: ["var_3"],
+  },
+  function calculate_var_3({ var_1, var_2 }) {
+    return {
+      var_3: Math.round((var_1 + var_2) * 100) / 100,
+    };
+  }
+);
+```
+````
+
+Notes:
+
+- The block name is still `assigner`; `runtime=client` is a **runtime selector**, not a different syntax family.
+- The body uses a **restricted JavaScript subset**, not Python.
+- The current client runtime is intended for **pure local computations** in the AIMD recorder.
+- `assigner(...)` is not a JavaScript built-in. It is a **special registration entry point** provided by the AIMD / Airalogy runtime, conceptually similar to Python's `@assigner(...)`.
+- At the protocol-semantics level, the client runtime should also support `manual`. So the recommended mode set for this runtime is `auto`, `auto_first`, and `manual`.
+- `manual` has the same meaning as in Python/server assigners: it does not run automatically and must be triggered explicitly by the UI, for example through a button or another explicit action.
+- Because `manual` depends on an explicit frontend trigger entry point, whether a specific AIMD runtime package has already implemented it should be judged from that implementation package's own documentation.
+- For the client runtime, the recommended and intended rule is: **one assigner per `assigner runtime=client` block**. If one AIMD document contains multiple client assigners, write them as multiple blocks rather than multiple `assigner(...)` calls inside one block.
+- `dependent_fields` and `assigned_fields` currently operate on recorder `var` values. This also includes whole `var_table` values, because they live in the `var` scope as JSON-like data.
+- Client expressions should be deterministic and side-effect free. Do not rely on network access, environment variables, DOM APIs, timers, randomness, or file I/O.
+- Inside the function body, prefer standard JavaScript capabilities such as `Math.round(...)`. If extra helpers are introduced later, they should be treated as runtime-provided built-ins rather than language built-ins.
+- On the Python side, inline loading/extraction treats `runtime=client` blocks as **frontend metadata** and does not execute or extract them into `assigner.py`.
+
+If you want a fuller explanation of why this syntax is shaped as `assigner(config, fn)`, and what each part of `config` and `fn` means, continue here:
+
+- [Client Runtime Assigner Design Notes](./assigner-client-runtime.md)
+
 ### 1.2 Real-world Example: Solution Preparation
 
 In real-world research data recording, many values are derived from other fields. A typical example is preparing a solution with a target concentration: given the target volume, target molar concentration, and the solute molar mass, the required solute mass can be computed automatically.

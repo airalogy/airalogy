@@ -496,3 +496,71 @@ def inline_only(dep: dict) -> AssignerResult:
 
     with pytest.raises(ValueError):
         load_inline_assigners(content, aimd_path=aimd_path)
+
+
+def test_load_inline_assigners_rejects_cross_runtime_duplicate_assigned_field():
+    content = """
+```assigner
+@assigner(
+    assigned_fields=["inline_total"],
+    dependent_fields=["inline_a"],
+    mode="auto",
+)
+def inline_total(dep: dict) -> AssignerResult:
+    return AssignerResult(assigned_fields={"inline_total": dep["inline_a"]})
+```
+
+```assigner runtime=client
+assigner(
+    {
+        mode: "auto",
+        dependent_fields: ["inline_a"],
+        assigned_fields: ["inline_total"],
+    },
+    function inline_total_client({ inline_a }) {
+        return {
+            inline_total: inline_a,
+        };
+    }
+);
+```
+"""
+    with pytest.raises(
+        ValueError,
+        match='assigned field "inline_total" is already handled by server assigner "inline_total"',
+    ):
+        load_inline_assigners(content)
+
+
+def test_load_inline_assigners_rejects_cross_runtime_cycle():
+    content = """
+```assigner
+@assigner(
+    assigned_fields=["inline_a"],
+    dependent_fields=["inline_b"],
+    mode="auto",
+)
+def inline_assign_a(dep: dict) -> AssignerResult:
+    return AssignerResult(assigned_fields={"inline_a": dep["inline_b"]})
+```
+
+```assigner runtime=client
+assigner(
+    {
+        mode: "auto",
+        dependent_fields: ["inline_a"],
+        assigned_fields: ["inline_b"],
+    },
+    function inline_assign_b({ inline_a }) {
+        return {
+            inline_b: inline_a,
+        };
+    }
+);
+```
+"""
+    with pytest.raises(
+        ValueError,
+        match="Circular dependency detected: server:inline_assign_a -> client:inline_assign_b -> server:inline_assign_a",
+    ):
+        load_inline_assigners(content)

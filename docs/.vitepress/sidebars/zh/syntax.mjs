@@ -6,6 +6,7 @@ export default [
       { text: '基础', link: '/zh/syntax/basic' },
       { text: '带类型的 AIMD', link: '/zh/syntax/aimd-with-type' },
       { text: '赋值器', link: '/zh/syntax/assigner' },
+      { text: '前端赋值器设计', link: '/zh/syntax/assigner-client-runtime' },
       { text: '协议 TOML', link: '/zh/syntax/protocol_toml' },
       { text: '变量表', link: '/zh/syntax/var_table' },
       { text: '多媒体', link: '/zh/syntax/multimedia' },

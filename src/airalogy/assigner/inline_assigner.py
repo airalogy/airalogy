@@ -3,10 +3,27 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from airalogy.markdown import AimdParser, AssignerBlockNode, Lexer
+from airalogy.markdown.ast_nodes import AssignerBlockNode
+from airalogy.markdown.lexer import Lexer
+from airalogy.markdown.parser import AimdParser
 
 from .assigner_base import assigner
+from .graph import extract_assigner_graph_nodes_from_aimd, validate_assigner_graph
 from .assigner_result import AssignerResult
+
+
+def _is_client_runtime_assigner(meta: str) -> bool:
+    normalized = meta.strip().lower()
+    if not normalized:
+        return False
+    return any(
+        candidate in normalized
+        for candidate in (
+            "runtime=client",
+            'runtime="client"',
+            "runtime='client'",
+        )
+    )
 
 
 def _resolve_protocol_dir(
@@ -48,6 +65,8 @@ def load_inline_assigners(
         raise ValueError(
             "Inline assigner blocks are not allowed when assigner.py exists."
         )
+
+    validate_assigner_graph(extract_assigner_graph_nodes_from_aimd(aimd_content))
 
     parser = AimdParser(aimd_content)
     blocks = parser.parse()["templates"]["assigner"]
@@ -98,7 +117,8 @@ def strip_inline_assigner_blocks(aimd_content: str) -> tuple[str, int]:
     def replacer(match) -> str:
         nonlocal removed
         lang = match.group("lang") or ""
-        if lang == "assigner":
+        meta = match.group("meta") or ""
+        if lang == "assigner" and not _is_client_runtime_assigner(meta):
             removed += 1
             return ""
         return match.group(0)

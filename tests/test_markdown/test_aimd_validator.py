@@ -484,3 +484,159 @@ class TestValidatorMultipleErrors:
         # First error should be _error1 (appears first)
         assert "_error1" in errors[0].message
         assert "_error2" in errors[1].message
+
+    def test_validate_duplicate_assigned_field_across_runtimes(self):
+        content = """
+{{var|source_value: int}}
+{{var|total_value: int}}
+
+```assigner
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=["total_value"],
+    dependent_fields=["source_value"],
+    mode="auto",
+)
+def assign_total_value(dep: dict) -> AssignerResult:
+    return AssignerResult(assigned_fields={"total_value": dep["source_value"]})
+```
+
+```assigner runtime=client
+assigner(
+    {
+        mode: "auto",
+        dependent_fields: ["source_value"],
+        assigned_fields: ["total_value"],
+    },
+    function assign_total_value_client({ source_value }) {
+        return {
+            total_value: source_value,
+        };
+    }
+);
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert (
+            'assigned field "total_value" is already handled by server assigner "assign_total_value"'
+            in errors[0].message
+        )
+
+    def test_validate_cross_runtime_assigner_cycle(self):
+        content = """
+{{var|field_a: int}}
+{{var|field_b: int}}
+
+```assigner
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=["field_a"],
+    dependent_fields=["field_b"],
+    mode="auto",
+)
+def assign_field_a(dep: dict) -> AssignerResult:
+    return AssignerResult(assigned_fields={"field_a": dep["field_b"]})
+```
+
+```assigner runtime=client
+assigner(
+    {
+        mode: "auto",
+        dependent_fields: ["field_a"],
+        assigned_fields: ["field_b"],
+    },
+    function assign_field_b({ field_a }) {
+        return {
+            field_b: field_a,
+        };
+    }
+);
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert (
+            "Circular dependency detected: server:assign_field_a -> client:assign_field_b -> server:assign_field_a"
+            in errors[0].message
+        )
+
+    def test_validate_client_assigner_against_external_assigner_file(self, tmp_path):
+        content = """
+{{var|source_value: int}}
+{{var|total_value: int}}
+
+```assigner runtime=client
+assigner(
+    {
+        mode: "auto",
+        dependent_fields: ["source_value"],
+        assigned_fields: ["total_value"],
+    },
+    function assign_total_value_client({ source_value }) {
+        return {
+            total_value: source_value,
+        };
+    }
+);
+```
+"""
+        protocol_dir = tmp_path / "protocol"
+        protocol_dir.mkdir()
+        (protocol_dir / "assigner.py").write_text(
+            """
+from airalogy.assigner import AssignerResult, assigner
+
+@assigner(
+    assigned_fields=["total_value"],
+    dependent_fields=["source_value"],
+    mode="auto",
+)
+def assign_total_value(dep: dict) -> AssignerResult:
+    return AssignerResult(assigned_fields={"total_value": dep["source_value"]})
+""",
+            encoding="utf-8",
+        )
+
+        is_valid, errors = validate_aimd(content, protocol_dir=protocol_dir)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert (
+            'assigner.py: assigned field "total_value" is already handled by client assigner "assign_total_value_client"'
+            in errors[0].message
+        )
+
+    def test_validate_client_assigner_requires_single_input_parameter(self):
+        content = """
+{{var|refresh_token: str}}
+
+```assigner runtime=client
+assigner(
+    {
+        mode: "manual",
+        dependent_fields: [],
+        assigned_fields: ["refresh_token"],
+    },
+    function issue_refresh_token(a, b) {
+        return {
+            refresh_token: a,
+        };
+    }
+);
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert (
+            'client assigner "issue_refresh_token" function must accept exactly one dependent_fields parameter'
+            in errors[0].message
+        )

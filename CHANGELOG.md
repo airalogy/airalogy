@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.2.0 (20260313)
+
+### Features
+
+- Add `assigner runtime=client` syntax in AIMD and treat client assigners as first-class protocol metadata.
+- Define client assigners as restricted JavaScript `assigner(config, function ...)` blocks, with the function name becoming the assigner id.
+- Add cross-runtime assigner graph validation for duplicate assigned fields and circular dependencies.
+- Validate combined assigner graphs from AIMD plus sibling `assigner.py` during `validate_aimd` / `airalogy check`.
+- Validate AIMD inline assigner graphs before `load_inline_assigners()` executes Python blocks.
+
+### Documentation
+
+- Add Chinese and English docs for client-runtime assigners and clarify that AIMD frontend docs are implementation-facing while Airalogy docs remain normative.
+
 ## 0.1.0 (20260304)
 
 ### Features

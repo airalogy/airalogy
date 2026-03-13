@@ -146,6 +146,50 @@ with open("protocol.aimd", "r", encoding="utf-8") as f:
 - `assigner` 代码块按 **Python** 语法编写，可被视为一个普通的 `.py` 文件片段。
 - 建议只写 **一个** `assigner` 代码块，并放在 AIMD 末尾，方便阅读与抽取。
 
+### 写法D：前端 Client Runtime Assigner（`assigner runtime=client`）
+
+对于简单、确定、纯前端的本地计算，仍然使用同一个 `assigner` 代码块名，只是在 fenced block 头部声明不同的 runtime：
+
+````aimd
+输入 A：{{var|var_1: float}}
+输入 B：{{var|var_2: float}}
+输出：{{var|var_3: float}}
+
+```assigner runtime=client
+assigner(
+  {
+    mode: "auto",
+    dependent_fields: ["var_1", "var_2"],
+    assigned_fields: ["var_3"],
+  },
+  function calculate_var_3({ var_1, var_2 }) {
+    return {
+      var_3: Math.round((var_1 + var_2) * 100) / 100,
+    };
+  }
+);
+```
+````
+
+说明：
+
+- 代码块名字仍然是 `assigner`；`runtime=client` 是**运行时选择器**，不是另一种独立语法家族。
+- 代码块正文采用 **受限 JavaScript 子集**，不是 Python。
+- 当前 client runtime 的目标是让 AIMD recorder 在前端直接完成**纯本地计算**。
+- `assigner(...)` 不是 JavaScript 内置函数，而是 AIMD / Airalogy runtime 提供的**特殊注册入口**；可以把它理解成 JS 侧对应于 Python `@assigner(...)` 的写法。
+- 在协议语义上，client runtime 也应支持 `manual`。因此这一 runtime 的推荐 mode 集合为 `auto`、`auto_first`、`manual`。
+- 其中 `manual` 的含义与 Python/server assigner 保持一致：前端不自动运行，需要用户点击按钮或由界面显式触发后才执行。
+- 由于 `manual` 依赖前端提供显式触发入口，因此某个具体 AIMD runtime 包是否已经完整实现该模式，应以该实现包自身文档为准。
+- 对于 client runtime，推荐并约定：**一个 assigner 对应一个 `assigner runtime=client` 代码块**。如果同一 AIMD 里有多个 client assigner，应写成多个 block，而不是在同一个 block 中并列书写多个 `assigner(...)`。
+- `dependent_fields` / `assigned_fields` 当前面向 recorder 中的 `var` 值；由于整个 `var_table` 也存放在 `var` scope 中，因此也可以把整个 `var_table` 作为一个 JSON 风格的值参与计算。
+- client 表达式应保持确定且无副作用；不要依赖网络访问、环境变量、DOM API、定时器、随机数或文件 I/O。
+- 在函数体中，优先使用标准 JavaScript 能力，例如 `Math.round(...)`；如果后续提供额外 helper，也应视为 runtime 明确提供的内建能力，而不是语言自带能力。
+- 在 Python 侧，内联加载/抽取会把 `runtime=client` 的 block 视为**前端元数据**，不会执行，也不会被抽取进 `assigner.py`。
+
+如果你希望更系统地理解这套语法为什么设计成 `assigner(config, fn)`，以及 `config` / `fn` 的每一部分分别承担什么职责，请继续阅读：
+
+- [前端 Client Runtime Assigner 设计说明](./assigner-client-runtime.md)
+
 注：内联 Assigner 仍是完整的 Python 代码，适合轻量、确定性计算；复杂依赖或外部服务调用建议继续使用 `assigner.py`。
 
 ### 真实示例：配液计算（自动计算所需溶质质量）

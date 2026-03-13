@@ -1397,6 +1397,13 @@ class AimdParser:
             if lang != "assigner":
                 continue
 
+            meta = (match.group("meta") or "").strip()
+            if re.search(
+                r"""(?:^|\s)runtime\s*=\s*(?:"client"|'client'|client)(?:\s|$)""",
+                meta,
+            ):
+                continue
+
             raw = match.group(0)
             code = match.group("code").rstrip("\n\r")
             code = textwrap.dedent(code)

@@ -2,8 +2,15 @@
 Syntax validator for AIMD.
 """
 
-from typing import List, Tuple
+from pathlib import Path
+from typing import List, Optional, Tuple
 
+from airalogy.assigner.graph import (
+    AssignerGraphValidationError,
+    extract_assigner_graph_nodes_from_aimd,
+    extract_server_assigner_graph_nodes_from_file,
+    validate_assigner_graph,
+)
 from .parser import AimdParser
 
 
@@ -45,7 +52,7 @@ class AimdValidator:
     information including line and column positions.
     """
 
-    def __init__(self, content: str):
+    def __init__(self, content: str, protocol_dir: Optional[str | Path] = None):
         """
         Initialize validator with AIMD content.
 
@@ -53,6 +60,7 @@ class AimdValidator:
             content: AIMD document content
         """
         self.content = content
+        self.protocol_dir = Path(protocol_dir) if protocol_dir is not None else None
         # Use non-strict mode parser to collect all errors
         self.parser = AimdParser(content, strict=False)
 
@@ -116,13 +124,55 @@ class AimdValidator:
                     )
                 )
 
+        assigner_file = (
+            self.protocol_dir / "assigner.py" if self.protocol_dir is not None else None
+        )
+        try:
+            graph_nodes = extract_assigner_graph_nodes_from_aimd(self.content)
+
+            if assigner_file is not None and assigner_file.exists():
+                inline_server_nodes = [
+                    node for node in graph_nodes if node.runtime == "server"
+                ]
+                if inline_server_nodes:
+                    raise AssignerGraphValidationError(
+                        "Inline assigner blocks are not allowed when assigner.py exists.",
+                        inline_server_nodes[0],
+                    )
+
+                graph_nodes.extend(
+                    extract_server_assigner_graph_nodes_from_file(assigner_file)
+                )
+
+            validate_assigner_graph(graph_nodes)
+        except (AssignerGraphValidationError, ValueError) as exc:
+            node = exc.node if isinstance(exc, AssignerGraphValidationError) else None
+            if node is not None:
+                message = str(exc)
+                if node.source != "protocol.aimd":
+                    message = f"{node.source}: {message}"
+                errors.append(
+                    ValidationError(
+                        message,
+                        node.position.start_line,
+                        node.position.end_line,
+                        node.position.start_col,
+                        node.position.end_col,
+                    )
+                )
+            else:
+                errors.append(ValidationError(str(exc), 0, 0, 0, 0))
+
         # Sort errors by position (line first, then column)
         errors.sort(key=lambda error: (error.start_line, error.start_col))
 
         return (len(errors) == 0, errors)
 
 
-def validate_aimd(aimd_content: str) -> Tuple[bool, List[ValidationError]]:
+def validate_aimd(
+    aimd_content: str,
+    protocol_dir: Optional[str | Path] = None,
+) -> Tuple[bool, List[ValidationError]]:
     """
     Validate AIMD content.
 
@@ -138,5 +188,5 @@ def validate_aimd(aimd_content: str) -> Tuple[bool, List[ValidationError]]:
         ...     for error in errors:
         ...         print(error)
     """
-    validator = AimdValidator(aimd_content)
+    validator = AimdValidator(aimd_content, protocol_dir=protocol_dir)
     return validator.validate()

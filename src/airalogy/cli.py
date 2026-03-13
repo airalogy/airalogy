@@ -26,7 +26,7 @@ def check_command(args):
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        is_valid, errors = validate_aimd(content)
+        is_valid, errors = validate_aimd(content, protocol_dir=file_path.parent)
 
         if is_valid:
             print(f"✓ {file_path}: Syntax check passed")
