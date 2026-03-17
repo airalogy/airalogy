@@ -155,6 +155,7 @@ options:
 {{var|current_time: CurrentTime}}
 {{var|avatar: FileIdJPG}}
 {{var|gender: ChineseGender}}
+{{var|plasmid: DNASequence}}
 """
         code = generate_model(content)
 
@@ -163,12 +164,14 @@ options:
         assert "UserName" in code
         assert "CurrentTime" in code
         assert "FileIdJPG" in code
+        assert "DNASequence" in code
         # Should not use import *
         assert "from airalogy.types import *" not in code
         assert "user_name: UserName" in code
         assert "current_time: CurrentTime" in code
         assert "avatar: FileIdJPG" in code
         assert "gender: ChineseGender" in code
+        assert "plasmid: DNASequence" in code
 
     def test_generate_simple_var_table(self):
         """Test generating model from simple var table."""

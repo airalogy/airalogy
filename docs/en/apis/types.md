@@ -243,6 +243,66 @@ The JSON-Schema for a model using `ATCG` will include:
 }
 ```
 
+## `DNASequence`
+
+`DNASequence` is Airalogy's structured built-in type for editable DNA records. Unlike `ATCG`, which stores only a raw sequence string, `DNASequence` stores:
+
+- an optional human-readable sequence name
+- the canonical sequence text
+- topology (`linear` / `circular`)
+- GenBank-aligned subset annotations
+
+```python
+from airalogy.types import DNASequence
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
+    plasmid: DNASequence
+```
+
+The stored value is a JSON object shaped like:
+
+```json
+{
+  "format": "airalogy_dna_v1",
+  "name": "pUC19",
+  "sequence": "ATGCGTNNNATGC",
+  "topology": "circular",
+  "annotations": [
+    {
+      "id": "feat_lacz",
+      "name": "lacZ CDS",
+      "type": "CDS",
+      "strand": 1,
+      "color": "#2563eb",
+      "segments": [
+        {
+          "start": 121,
+          "end": 980,
+          "partial_start": false,
+          "partial_end": false
+        }
+      ],
+      "qualifiers": [
+        { "key": "gene", "value": "lacZ" },
+        { "key": "product", "value": "beta-galactosidase" },
+        { "key": "note", "value": "Reporter CDS" }
+      ]
+    }
+  ]
+}
+```
+
+This is not a full GenBank flatfile mirror. It is Airalogy's internal canonical edit model that stays close enough for practical import/export:
+
+- feature locations are stored as `segments[]`
+- fuzzy or partial edges are tracked with `partial_start` / `partial_end`
+- GenBank qualifiers are stored as editable `key` / `value` rows
+
+Use `DNASequence` when the sequence itself should be editable in the UI. Use `FileIdDNA` when you only need to upload or reference a raw SnapGene `.dna` file.
+
+`DNASequence` is the only supported public type name. Use `DNASequence` consistently in AIMD, Python models, and UI-facing documentation.
+
 ## Chinese Enum Types
 
 `airalogy.types.chinese` bundles several enumerations that match common demographic fields in mainland China scenarios.

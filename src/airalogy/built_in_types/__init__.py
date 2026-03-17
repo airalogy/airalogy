@@ -1,19 +1,27 @@
 """
-This module contains the built-in types for Airalogy. These types could be used to define the Airalogy Protocol Model.
+Deprecated compatibility entrypoint for Airalogy built-in types.
 
 .. deprecated::
    `airalogy.built_in_types` is deprecated. Use `airalogy.types` instead.
+
+This package exists only for backward-compatible re-exports of legacy names.
+Do not add new built-in type definitions here.
+New built-in types must be implemented and exported only from `airalogy.types`.
+Do not expose newly introduced types from this deprecated namespace.
 """
 
 import warnings
 
-# Re-export everything from the original modules for backward compatibility
+# Deprecated compatibility layer only.
+# Keep re-exports here for existing imports, but do not treat this package as
+# the canonical place to add new built-in types.
 from ..models.record import RecordId
 from .recommended import Recommended
 from .current_time import CurrentTime
 from .file import (
     FileIdCSV,
     FileIdDOCX,
+    FileIdDNA,
     FileIdJPG,
     FileIdJSON,
     FileIdMD,
@@ -63,6 +71,7 @@ __all__ = [
     "FileIdXLSX",
     "FileIdPPTX",
     "FileIdPDF",
+    "FileIdDNA",
     "Recommended",
     "IgnoreStr",
 ]

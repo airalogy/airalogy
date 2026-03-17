@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.3.0 (20260317)
+
+### Features
+
+- Upgrade `DNASequence` to Airalogy's GenBank-aligned editable canonical model with multi-segment feature locations, per-segment partial boundary flags, qualifier rows, and backward-compatible migration from the earlier single-range annotation payload.
+- Keep `DNASequence` as the single top-level public DNA built-in type, while the nested helper classes remain available from `airalogy.types.dna` for lower-level construction and tests.
+- Add an optional top-level `name` field to `DNASequence` so structured DNA records can store a human-readable plasmid or sequence name alongside sequence text, topology, and annotations.
+
+### Documentation
+
+- Clarify that `DNASequence` is Airalogy's editable canonical DNA model rather than a verbatim GenBank flatfile mirror, and document the `segments` / `qualifiers` payload shape in both English and Chinese docs.
+- Update the English and Chinese DNA type docs to show the optional `DNASequence.name` field in the canonical JSON payload.
+
 ## 0.2.0 (20260313)
 
 ### Features
@@ -9,6 +22,7 @@
 - Add cross-runtime assigner graph validation for duplicate assigned fields and circular dependencies.
 - Validate combined assigner graphs from AIMD plus sibling `assigner.py` during `validate_aimd` / `airalogy check`.
 - Validate AIMD inline assigner graphs before `load_inline_assigners()` executes Python blocks.
+- Add structured built-in DNA type `DNASequence` for editable sequence payloads with topology and annotations, alongside the existing raw `ATCG` and `FileIdDNA` types.
 
 ### Documentation
 

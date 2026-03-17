@@ -17,6 +17,13 @@
 - When adding/removing/updating dependencies, use `uv add` / `uv remove` instead of editing `pyproject.toml` manually.
 - Keep `pyproject.toml` and `uv.lock` in sync in the same change.
 
+## Built-in Type Entrypoints
+
+- `airalogy.types` is the canonical public entrypoint for built-in types.
+- `airalogy.built_in_types` is deprecated and should be treated as a compatibility-only re-export layer.
+- When adding a new built-in type, implement and export it from `airalogy.types` first.
+- Only touch `airalogy.built_in_types` to preserve historically exported legacy names; do not add or re-export newly introduced built-in types from that deprecated namespace.
+
 ## Release Hygiene
 
 - If a change adds user-visible features, behavior changes, or public API surface in the `airalogy` package, update the package version in both `pyproject.toml` and `src/airalogy/__init__.py` in the same change.

@@ -40,6 +40,7 @@ __all__ = [
     "TomlStr",
     "YamlStr",
     "ATCG",
+    "DNASequence",
     "SnakeStr",
     "VersionStr",
     "ProtocolId",
@@ -72,6 +73,7 @@ from .user_name import UserName
 from .ignore import IgnoreStr
 from .code_str import PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
 from .atcg import ATCG
+from .dna import DNASequence
 from .aimd import AiralogyMarkdown
 from .protocol import SnakeStr, VersionStr, ProtocolId, RecordId
 from .chinese import (

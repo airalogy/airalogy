@@ -246,6 +246,66 @@ print(seq.complement())  # 输出: TAGC
 }
 ```
 
+## `DNASequence`
+
+`DNASequence` 是 Airalogy 提供的结构化 DNA 内置类型，用于可编辑的 DNA 序列数据。与只保存原始字符串的 `ATCG` 不同，`DNASequence` 会保存：
+
+- 可选的人类可读序列名称
+- 标准化后的序列文本
+- 拓扑结构（`linear` / `circular`）
+- 与 GenBank 对齐子集兼容的 annotation 列表
+
+```python
+from airalogy.types import DNASequence
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
+    plasmid: DNASequence
+```
+
+其保存值是如下结构的 JSON 对象：
+
+```json
+{
+  "format": "airalogy_dna_v1",
+  "name": "pUC19",
+  "sequence": "ATGCGTNNNATGC",
+  "topology": "circular",
+  "annotations": [
+    {
+      "id": "feat_lacz",
+      "name": "lacZ CDS",
+      "type": "CDS",
+      "strand": 1,
+      "color": "#2563eb",
+      "segments": [
+        {
+          "start": 121,
+          "end": 980,
+          "partial_start": false,
+          "partial_end": false
+        }
+      ],
+      "qualifiers": [
+        { "key": "gene", "value": "lacZ" },
+        { "key": "product", "value": "beta-galactosidase" },
+        { "key": "note", "value": "Reporter CDS" }
+      ]
+    }
+  ]
+}
+```
+
+它不是对 GenBank flatfile 的一比一镜像，而是 Airalogy 内部更适合编辑的 canonical model，同时保留了足够的 GenBank 对齐能力，便于后续导入导出：
+
+- 特征位置使用 `segments[]` 表达
+- 模糊或不完整边界通过 `partial_start` / `partial_end` 保存
+- GenBank 限定词使用可编辑的 `key` / `value` 行保存
+
+当你希望前端直接编辑序列和 annotation 时，使用 `DNASequence`。如果你只是想上传或引用原始 SnapGene `.dna` 文件，则使用 `FileIdDNA`。
+
+`DNASequence` 是唯一支持的公开类型名。在 AIMD、Python 模型和面向用户的文档中都应统一使用 `DNASequence`。
+
 ## 中国常用枚举类
 
 `airalogy.types.chinese` 中内置了若干个在中国业务场景中常用的枚举字段，可用于快速构建人口统计信息相关的数据模型。
