@@ -5,7 +5,7 @@ Model generator - generates Pydantic variable models from parsed AIMD.
 import re
 from typing import Any, Dict, List, Set, Tuple
 
-from airalogy import types
+from airalogy.types.registry import get_airalogy_type_registry
 
 from .ast_nodes import VarNode, VarTableNode
 from .parser import AimdParser
@@ -67,7 +67,7 @@ class ModelGenerator:
         """
         self.parser = AimdParser(aimd_content)
         self.parsed = self.parser.parse()
-        self.airalogy_type_names = set(types.__all__)
+        self.airalogy_type_registry = get_airalogy_type_registry()
         self.standard_library_types = set(STANDARD_LIBRARY_TYPES.keys())
 
     def _get_imports(self) -> Set[str]:
@@ -79,7 +79,7 @@ class ModelGenerator:
         """
         imports = {"from pydantic import BaseModel"}
         has_field_usage = False
-        airalogy_types_used = set()
+        airalogy_type_imports: Dict[str, Set[str]] = {}
         standard_library_types_used: Dict[str, Set[str]] = {}  # module -> set of types
         typing_types_used: Set[str] = set()
         model_vars = self.parsed["templates"]["var"]
@@ -95,9 +95,13 @@ class ModelGenerator:
                     if _type_matches("Literal", var.type_annotation):
                         typing_types_used.add("Literal")
 
-                    for airalogy_type in self.airalogy_type_names:
-                        if _type_matches(airalogy_type, var.type_annotation):
-                            airalogy_types_used.add(airalogy_type)
+                    annotation_imports = (
+                        self.airalogy_type_registry.collect_imports_from_annotation(
+                            var.type_annotation
+                        )
+                    )
+                    for module, symbols in annotation_imports.items():
+                        airalogy_type_imports.setdefault(module, set()).update(symbols)
 
                     # Check for standard library types
                     for std_type in self.standard_library_types:
@@ -116,9 +120,15 @@ class ModelGenerator:
                             if _type_matches("Literal", subvar.type_annotation):
                                 typing_types_used.add("Literal")
 
-                            for airalogy_type in self.airalogy_type_names:
-                                if _type_matches(airalogy_type, subvar.type_annotation):
-                                    airalogy_types_used.add(airalogy_type)
+                            annotation_imports = (
+                                self.airalogy_type_registry.collect_imports_from_annotation(
+                                    subvar.type_annotation
+                                )
+                            )
+                            for module, symbols in annotation_imports.items():
+                                airalogy_type_imports.setdefault(module, set()).update(
+                                    symbols
+                                )
 
                             # Check for standard library types
                             for std_type in self.standard_library_types:
@@ -132,10 +142,8 @@ class ModelGenerator:
             imports.add("from pydantic import BaseModel, Field")
             imports.discard("from pydantic import BaseModel")
 
-        if airalogy_types_used:
-            # Create specific imports
-            types_list = ", ".join(sorted(airalogy_types_used))
-            imports.add(f"from airalogy.types import {types_list}")
+        for module, type_names in sorted(airalogy_type_imports.items()):
+            imports.add(f"from {module} import {', '.join(sorted(type_names))}")
 
         # Add standard library imports
         for module, type_names in sorted(standard_library_types_used.items()):

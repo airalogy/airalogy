@@ -4,6 +4,7 @@ export default [
     items: [
       { text: '概览', link: '/zh/apis/' },
       { text: 'Types', link: '/zh/apis/types' },
+      { text: '类型插件', link: '/zh/apis/type-plugins' },
       { text: 'Models', link: '/zh/apis/models' },
       { text: '下载/上传', link: '/zh/apis/download-upload' },
       { text: 'AIMD 工具', link: '/zh/apis/markdown' },

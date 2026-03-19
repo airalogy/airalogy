@@ -2,6 +2,12 @@
 
 `airalogy` offers a set of built-in data types that the platform understands natively. When you define data fields in an **Airalogy Protocol Model** with these types, the platform can automatically parse them and provide extra features—such as auto-filling values from a user’s profile or rendering specialised UI controls.
 
+Airalogy's official built-ins are now also the first-party entries in a pluggable type registry. That means official types remain stable, while third-party packages can register additional public type tokens without patching Airalogy itself.
+
+See also:
+
+- [`Type Plugins`](/en/apis/type-plugins)
+
 ## `UserName`
 
 ```python

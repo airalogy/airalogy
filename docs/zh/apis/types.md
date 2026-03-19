@@ -2,6 +2,12 @@
 
 `airalogy`中提供了多种内置类型。Airalogy平台原生支持这些内置类型，以方便用户在定义Airalogy Protocol Model中data fields的类型。这些内置类型通常在Airalogy平台上能够被自动解析，以提供一些额外的功能，例如基于用户的基本信息进行赋值，或自动生成独特的界面交互。
 
+现在这些官方内置类型也被纳入了一套可插拔的类型注册表。也就是说，官方类型仍然保持稳定，但第三方包也可以在不修改 Airalogy 源码的情况下注册新的公共类型。
+
+另见：
+
+- [`Type Plugins`](/zh/apis/type-plugins)
+
 ## UserName
 
 ```py

@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 0.4.0 (20260319)
+
+### Features
+
+- Add an explicit `airalogy.types.registry` API so official and third-party AIMD types can be registered through stable descriptors instead of patching `airalogy.types.__all__`.
+- Teach `generate_model()` to resolve imports from the type registry, allowing registered external types to generate imports from their own Python modules.
+
+### Documentation
+
+- Add dedicated English and Chinese docs for the new pluggable type architecture and clarify that official built-ins are first-party entries in the same registry.
+
 ## 0.3.0 (20260317)
 
 ### Features
