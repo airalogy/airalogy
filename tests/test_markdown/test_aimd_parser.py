@@ -868,6 +868,47 @@ subvars=[
         assert step.check is True
         assert step.checked_message == "Workspace cleaned."
 
+    def test_parse_step_with_duration(self):
+        content = "{{step|incubate, duration='1h30m'}}"
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["step"]) == 1
+        step = result["templates"]["step"][0]
+        assert step.name == "incubate"
+        assert step.duration == "1h30m"
+        assert step.estimated_duration_ms == 5_400_000
+
+    def test_parse_step_with_timer_mode(self):
+        content = "{{step|wash, duration='30s', timer='countdown'}}"
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["step"]) == 1
+        step = result["templates"]["step"][0]
+        assert step.name == "wash"
+        assert step.duration == "30s"
+        assert step.estimated_duration_ms == 30_000
+        assert step.timer == "countdown"
+
+    def test_parse_step_with_invalid_duration(self):
+        content = "{{step|incubate, duration='soon'}}"
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+
+        assert "Invalid duration value: soon" in str(exc_info.value)
+
+    def test_parse_step_with_invalid_timer_mode(self):
+        content = "{{step|wash, duration='30s', timer='rush'}}"
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+
+        assert "Invalid timer mode: rush" in str(exc_info.value)
+
     def test_parse_check(self):
         content = "{{check|quality_check}}"
         parser = AimdParser(content)
@@ -1110,6 +1151,25 @@ class TestParseAimd:
         assert var["name"] == "name"
         assert var["type_annotation"] == "str"
         assert var["default_value"] == "Test"
+
+    def test_parse_aimd_step_duration_is_serialized(self):
+        content = "{{step|incubate, duration='45m'}}"
+        result = parse_aimd(content)
+
+        step = result["templates"]["step"][0]
+        assert step["name"] == "incubate"
+        assert step["duration"] == "45m"
+        assert step["estimated_duration_ms"] == 2_700_000
+
+    def test_parse_aimd_step_timer_is_serialized(self):
+        content = "{{step|wash, duration='30s', timer='both'}}"
+        result = parse_aimd(content)
+
+        step = result["templates"]["step"][0]
+        assert step["name"] == "wash"
+        assert step["duration"] == "30s"
+        assert step["estimated_duration_ms"] == 30_000
+        assert step["timer"] == "both"
 
     def test_parse_aimd_quiz_is_yaml_shaped_json(self):
         """Quiz items in parse_aimd should match quiz YAML semantics directly."""

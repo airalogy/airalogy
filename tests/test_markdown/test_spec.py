@@ -310,6 +310,15 @@ class TestSpecFile:
         assert with_message.check is True
         assert with_message.checked_message == "This is a checked message"
 
+        with_duration = step_dict["step_with_duration"]
+        assert with_duration.duration == "1h30m"
+        assert with_duration.estimated_duration_ms == 5_400_000
+
+        with_timer = step_dict["step_with_timer"]
+        assert with_timer.duration == "30s"
+        assert with_timer.estimated_duration_ms == 30_000
+        assert with_timer.timer == "both"
+
     def test_checks(self, parsed_result):
         """Test checkpoint parsing."""
         check_dict = {c.name: c for c in parsed_result["templates"]["check"]}
@@ -475,6 +484,7 @@ class TestSpecFile:
         assert "step_level_2" in step_names
         assert "step_with_check" in step_names
         assert "step_with_message" in step_names
+        assert "step_with_duration" in step_names
 
         # Check step with check
         step_check = next(
@@ -488,6 +498,19 @@ class TestSpecFile:
         )
         assert step_msg["check"] is True
         assert step_msg["checked_message"] == "This is a checked message"
+
+        step_duration = next(
+            s for s in extracted_result["templates"]["step"] if s["name"] == "step_with_duration"
+        )
+        assert step_duration["duration"] == "1h30m"
+        assert step_duration["estimated_duration_ms"] == 5_400_000
+
+        step_timer = next(
+            s for s in extracted_result["templates"]["step"] if s["name"] == "step_with_timer"
+        )
+        assert step_timer["duration"] == "30s"
+        assert step_timer["estimated_duration_ms"] == 30_000
+        assert step_timer["timer"] == "both"
 
     def test_parse_aimd_check_correctness(self, extracted_result):
         """Test that parse_aimd correctly extracts checkpoints."""

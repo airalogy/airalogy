@@ -46,7 +46,7 @@ Sample photo: {{var|sample_photo: FileIdPNG, description="Upload collection phot
 
 {{step|collect}} Collect serum sample as per standard procedure.
 {{step|verify_labels, 2}} Verify labels and IDs.
-{{step|ice_hold, 2}} Immediately place sample on ice.
+{{step|ice_hold, 2, duration="10m", timer="countdown"}} Immediately place sample on ice.
 
 {{check|info_confirmed}} Confirm details and metadata.
 ```

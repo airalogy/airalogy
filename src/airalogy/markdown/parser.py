@@ -31,6 +31,74 @@ from .errors import (
 from .lexer import Lexer
 from .tokens import Position, Token, TokenType
 
+_DURATION_PART_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)", re.IGNORECASE)
+_STEP_TIMER_MODES = {"elapsed", "countdown", "both"}
+
+
+def _extract_quoted_param_value(value: str, name: str) -> tuple[Optional[str], str]:
+    pattern = re.compile(
+        rf"{name}\s*=\s*(?:\"((?:[^\"\\]|\\.)*)\"|'((?:[^'\\]|\\.)*)')",
+        re.DOTALL,
+    )
+    match = pattern.search(value)
+    if not match:
+        return None, value
+
+    extracted_value = match.group(1) if match.group(1) is not None else match.group(2)
+    return extracted_value, pattern.sub("", value, count=1)
+
+
+def _strip_optional_quotes(value: str) -> str:
+    stripped = value.strip()
+    if len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {"'", '"'}:
+        return stripped[1:-1]
+    return stripped
+
+
+def _parse_duration_to_ms(value: str) -> Optional[int]:
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+
+    total_ms = 0.0
+    last_index = 0
+    matched = False
+
+    for match in _DURATION_PART_PATTERN.finditer(trimmed):
+        if trimmed[last_index : match.start()].strip():
+            return None
+
+        matched = True
+        amount = float(match.group(1))
+        unit = match.group(2).lower()
+        multiplier = (
+            24 * 60 * 60 * 1000
+            if unit == "d"
+            else 60 * 60 * 1000
+            if unit == "h"
+            else 60 * 1000
+            if unit == "m"
+            else 1000
+            if unit == "s"
+            else 1
+        )
+        total_ms += amount * multiplier
+        last_index = match.end()
+
+    if not matched or trimmed[last_index:].strip():
+        return None
+
+    return round(total_ms)
+
+
+def _parse_step_timer_mode(value: str) -> Optional[str]:
+    normalized = value.strip().lower()
+    if not normalized:
+        return None
+    if normalized in _STEP_TIMER_MODES:
+        return normalized
+    return None
+
 
 class AimdParser:
     """
@@ -1215,7 +1283,7 @@ class AimdParser:
         """
         Parse a step token.
 
-        Syntax: {{step|step_id, level, check=True, checked_message="..."}}
+        Syntax: {{step|step_id, level, duration="10m", timer="countdown", check=True, checked_message="..."}}
 
         Args:
             token: STEP token
@@ -1228,16 +1296,22 @@ class AimdParser:
         """
         value = token.value.strip()
 
-        # Extract checked_message first (it may contain commas)
-        checked_message = None
-        checked_message_pattern = re.compile(
-            r'checked_message\s*=\s*"([^"]*)"', re.DOTALL
+        # Extract quoted params first so commas inside checked_message do not break splitting.
+        checked_message, value = _extract_quoted_param_value(value, "checked_message")
+        duration, value = _extract_quoted_param_value(value, "duration")
+        timer, value = _extract_quoted_param_value(value, "timer")
+        estimated_duration_ms = (
+            _parse_duration_to_ms(duration) if duration is not None else None
         )
-        msg_match = checked_message_pattern.search(value)
-        if msg_match:
-            checked_message = msg_match.group(1)
-            # Remove the checked_message part for easier parsing
-            value = checked_message_pattern.sub("", value)
+        if duration is not None and estimated_duration_ms is None:
+            raise InvalidSyntaxError(
+                f"Invalid duration value: {duration}", position=token.position
+            )
+        timer_mode = _parse_step_timer_mode(timer) if timer is not None else None
+        if timer is not None and timer_mode is None:
+            raise InvalidSyntaxError(
+                f"Invalid timer mode: {timer}", position=token.position
+            )
 
         # Split by comma
         parts = [p.strip() for p in value.split(",") if p.strip()]
@@ -1263,7 +1337,7 @@ class AimdParser:
                         position=token.position,
                     )
             # Check if it's check=True/False
-            elif part.startswith("check="):
+            elif re.fullmatch(r"check\s*=\s*(True|False)", part):
                 check_value = part.split("=", 1)[1].strip()
                 if check_value == "True":
                     check = True
@@ -1272,6 +1346,22 @@ class AimdParser:
                 else:
                     raise InvalidSyntaxError(
                         f"Invalid check value: {check_value}",
+                        position=token.position,
+                    )
+            elif re.fullmatch(r"duration\s*=\s*.+", part, flags=re.DOTALL):
+                duration = _strip_optional_quotes(part.split("=", 1)[1])
+                estimated_duration_ms = _parse_duration_to_ms(duration)
+                if estimated_duration_ms is None:
+                    raise InvalidSyntaxError(
+                        f"Invalid duration value: {duration}",
+                        position=token.position,
+                    )
+            elif re.fullmatch(r"timer\s*=\s*.+", part, flags=re.DOTALL):
+                timer = _strip_optional_quotes(part.split("=", 1)[1])
+                timer_mode = _parse_step_timer_mode(timer)
+                if timer_mode is None:
+                    raise InvalidSyntaxError(
+                        f"Invalid timer mode: {timer}",
                         position=token.position,
                     )
             # Ignore checked_message here (already extracted)
@@ -1285,6 +1375,9 @@ class AimdParser:
             name=step_name,
             level=level,
             check=check,
+            duration=duration,
+            estimated_duration_ms=estimated_duration_ms,
+            timer=timer_mode,
             checked_message=checked_message,
         )
 
@@ -1305,16 +1398,7 @@ class AimdParser:
         """
         value = token.value.strip()
 
-        # Extract checked_message
-        checked_message = None
-        checked_message_pattern = re.compile(
-            r'checked_message\s*=\s*"([^"]*)"', re.DOTALL
-        )
-        msg_match = checked_message_pattern.search(value)
-        if msg_match:
-            checked_message = msg_match.group(1)
-            # Remove the checked_message part
-            value = checked_message_pattern.sub("", value)
+        checked_message, value = _extract_quoted_param_value(value, "checked_message")
 
         # Clean up remaining value
         check_name = value.split(",")[0].strip()

@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 0.5.0 (20260319)
+
+### Features
+
+- Add `step.duration` parsing to Airalogy AIMD step syntax, preserving the authored duration string while normalizing it to `estimated_duration_ms` for downstream estimation and UI use.
+- Add optional `step.timer` parsing with `elapsed`, `countdown`, and `both` modes so AIMD protocols can declare countdown-oriented step timing behavior without introducing a second time field.
+
+### Documentation
+
+- Update English and Chinese AIMD step syntax docs and README examples to document `duration` plus `timer`-based countdown semantics.
+
+### Changed
+
+- Keep Airalogy's Python-side AIMD step metadata in canonical snake_case and align the companion JS/TS AIMD packages to the same public field names such as `step_hierarchy`, `estimated_duration_ms`, and `timer_mode`.
+
 ## 0.4.0 (20260319)
 
 ### Features

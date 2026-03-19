@@ -173,12 +173,15 @@ class VarTableNode(VarNode):
 @dataclass
 class StepNode(ASTNode):
     """
-    Step node: {{step|step_id, level, check=True, checked_message="..."}}
+    Step node: {{step|step_id, level, duration="...", timer="...", check=True, checked_message="..."}}
     """
 
     name: str
     level: int = 1
     check: bool = False
+    duration: Optional[str] = None
+    estimated_duration_ms: Optional[int] = None
+    timer: Optional[str] = None
     checked_message: Optional[str] = None
 
     def to_dict(self) -> dict:
@@ -193,6 +196,12 @@ class StepNode(ASTNode):
         }
         if self.check:
             result["check"] = self.check
+        if self.duration:
+            result["duration"] = self.duration
+        if self.estimated_duration_ms is not None:
+            result["estimated_duration_ms"] = self.estimated_duration_ms
+        if self.timer:
+            result["timer"] = self.timer
         if self.checked_message:
             result["checked_message"] = self.checked_message
         return result

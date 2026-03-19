@@ -192,6 +192,12 @@ Step with check and message:
 Step with only message (no level specified, check=True required):
 {{step|step_check_only, check=True, checked_message="Another message"}}
 
+Step with duration:
+{{step|step_with_duration, duration='1h30m'}}
+
+Step with timer mode:
+{{step|step_with_timer, duration='30s', timer='both'}}
+
 ## 7. Checkpoints
 
 Simple checkpoint:

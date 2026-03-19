@@ -1,5 +1,5 @@
 # Keep in sync with `pyproject.toml` and record changes in `CHANGELOG.md`.
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 from airalogy.airalogy import Airalogy
 

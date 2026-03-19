@@ -106,12 +106,14 @@ class VarModel(BaseModel):
 ### 1.2 Step (`{{step}}`)
 
 ```aimd
-{{step|<step_id>, <level>[, check=True][, checked_message="..."]}}
+{{step|<step_id>, <level>[, duration="<duration>"][, timer="elapsed|countdown|both"][, check=True][, checked_message="..."]}}
 ```
 
 | Parameter         | Meaning                                                          |
 | ----------------- | ---------------------------------------------------------------- |
 | `<level>`         | 1, 2, or 3 (default = 1)                                         |
+| `duration`        | Expected step duration, using compact units like `30s`, `10m`, `1h30m`, or `2d4h` |
+| `timer`           | Recorder timer display mode: `elapsed` (default), `countdown`, or `both` |
 | `check=True`      | Render a checkbox so the user can tick completion                |
 | `checked_message` | Banner text shown once the box is ticked (requires `check=True`) |
 
@@ -122,10 +124,13 @@ Example:
 ```aimd
 {{step|prepare_sample}} A
 {{step|add_buffer, 2}} A.a
-{{step|incubate, 2, check=True}} Incubate the sample for 30 minutes.
+{{step|incubate, 2, duration="30m", timer="countdown", check=True}} Incubate the sample for 30 minutes.
 {{step|finish_experiment, 1}} B
 {{step|cleanup, 1, check=True, checked_message="Workspace cleaned."}} After finishing the experiment, clean up the workspace.
 ```
+
+When `duration` is provided, Airalogy preserves the original string and also normalizes it internally to milliseconds for downstream estimation and UI use.
+When `timer="countdown"` or `timer="both"` is provided, the recorder can use `duration` as the countdown target and switch to overtime once the remaining time reaches zero.
 
 ### 1.3 Checkpoint (`{{check}}`)
 
