@@ -7,6 +7,12 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from .archive import (
+    ArchiveError,
+    pack_protocol_archive,
+    pack_records_archive,
+    unpack_archive,
+)
 from .assigner.inline_assigner import (
     extract_inline_assigner_code_blocks,
     strip_inline_assigner_blocks,
@@ -126,6 +132,59 @@ def generate_assigner_command(args):
         sys.exit(1)
 
 
+def pack_command(args):
+    """Pack a protocol directory or record JSON files into an archive."""
+    input_paths = [Path(item) for item in args.inputs]
+    if not input_paths:
+        print("Error: At least one input path is required.", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        if len(input_paths) == 1 and input_paths[0].is_dir():
+            output_path = pack_protocol_archive(
+                input_paths[0],
+                output_path=args.output,
+                force=args.force,
+            )
+            print(f"✓ Packed protocol archive: {output_path}")
+            return 0
+
+        if any(path.is_dir() for path in input_paths):
+            print(
+                "Error: When packing records, all inputs must be JSON files. "
+                "To pack a protocol, pass exactly one protocol directory.",
+                file=sys.stderr,
+            )
+            return 1
+
+        output_path = pack_records_archive(
+            input_paths,
+            output_path=args.output,
+            protocol_dirs=args.protocol_dir,
+            force=args.force,
+        )
+        print(f"✓ Packed records archive: {output_path}")
+        return 0
+    except ArchiveError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+
+def unpack_command(args):
+    """Unpack an Airalogy archive."""
+    try:
+        output_dir, manifest = unpack_archive(
+            args.archive,
+            output_dir=args.output,
+            force=args.force,
+        )
+        print(f"✓ Unpacked {manifest['kind']} archive: {output_dir}")
+        return 0
+    except ArchiveError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -208,6 +267,68 @@ def main():
         help="Output file name (default: assigner.py)",
     )
     assigner_parser.set_defaults(func=generate_assigner_command)
+
+    # Pack command
+    pack_parser = subparsers.add_parser(
+        "pack",
+        help="Pack a protocol directory or record JSON files into a single-file archive",
+        description=(
+            "Pack a protocol directory or one/more record JSON files into a "
+            ".aira archive."
+        ),
+    )
+    pack_parser.add_argument(
+        "inputs",
+        nargs="+",
+        help=(
+            "Either one protocol directory, or one/more record JSON files "
+            "(each file may contain a single record object or a list of records)."
+        ),
+    )
+    pack_parser.add_argument(
+        "-o",
+        "--output",
+        help="Output archive path. Defaults to <protocol>.aira or <record>.aira.",
+    )
+    pack_parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Overwrite the output archive if it already exists.",
+    )
+    pack_parser.add_argument(
+        "--protocol-dir",
+        action="append",
+        default=[],
+        help=(
+            "Embed a related protocol directory when packing records. "
+            "Can be passed multiple times."
+        ),
+    )
+    pack_parser.set_defaults(func=pack_command)
+
+    # Unpack command
+    unpack_parser = subparsers.add_parser(
+        "unpack",
+        help="Unpack an Airalogy archive",
+        description="Extract a .aira archive into a directory.",
+    )
+    unpack_parser.add_argument(
+        "archive",
+        help="Archive file to unpack.",
+    )
+    unpack_parser.add_argument(
+        "-o",
+        "--output",
+        help="Output directory. Defaults to the archive name without its suffix.",
+    )
+    unpack_parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Allow extraction into an existing directory.",
+    )
+    unpack_parser.set_defaults(func=unpack_command)
 
     # Parse arguments
     args = parser.parse_args()

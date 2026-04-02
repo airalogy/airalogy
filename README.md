@@ -126,18 +126,20 @@ Airalogy provides a CLI tool for common operations. After installation, you can 
 
 ```bash
 $ airalogy --help
-usage: airalogy [-h] [-v] {check,c,generate_model,gm,generate_assigner,ga} ...
+usage: airalogy [-h] [-v] {check,c,generate_model,gm,generate_assigner,ga,pack,unpack} ...
 
 Airalogy CLI - Tools for Airalogy
 
 positional arguments:
-  {check,c,generate_model,gm,generate_assigner,ga}
+  {check,c,generate_model,gm,generate_assigner,ga,pack,unpack}
                         Available commands
     check (c)           Check AIMD syntax
     generate_model (gm)
                         Generate VarModel
     generate_assigner (ga)
                         Generate Assigner
+    pack                Pack a protocol directory or record JSON files into a single-file archive
+    unpack              Unpack an Airalogy archive
 
 options:
   -h, --help            show this help message and exit
@@ -185,6 +187,43 @@ airalogy generate_assigner
 # Using alias
 airalogy ga my_protocol.aimd -o assigner.py
 ```
+
+### Single-file Archives
+
+Airalogy uses one unified archive suffix, `.aira`. The concrete payload type is stored in the internal manifest as `kind`, for example `protocol` or `records`.
+
+Pack a protocol directory into a shareable `.aira` file:
+
+```bash
+airalogy pack ./my_protocol -o my_protocol.aira
+```
+
+Pack one or more record JSON files into a `.aira` file:
+
+```bash
+airalogy pack ./record.json ./record-history.json -o records.aira
+```
+
+If you want the record bundle to carry the related protocol definition as well, embed the protocol directory:
+
+```bash
+airalogy pack ./record.json -o record_bundle.aira --protocol-dir ./my_protocol
+```
+
+Unpack either archive type:
+
+```bash
+airalogy unpack ./my_protocol.aira -o ./extracted_protocol
+airalogy unpack ./record_bundle.aira -o ./extracted_bundle
+```
+
+Notes:
+
+- Protocol archives preserve the original protocol directory layout, including `files/`.
+- Record archives accept JSON files containing either one record object or a list of record objects.
+- Both archive kinds use the same `.aira` suffix; inspect `_airalogy_archive/manifest.json` to determine whether the payload is a protocol archive or a record bundle.
+- Protocol packing excludes `.env` and common cache artifacts by default so local secrets are not bundled accidentally.
+- Record archives currently bundle JSON records and optional embedded protocol directories. They do not automatically dereference remote Airalogy file IDs into raw file bytes.
 
 ## Document Conversion (MarkItDown)
 

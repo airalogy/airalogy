@@ -1,7 +1,7 @@
 [project]
 name = "airalogy"
 # Release checklist: bump version here, update `src/airalogy/__init__.py`, and add an entry to `CHANGELOG.md`.
-version = "0.5.0"
+version = "0.6.0"
 description = "The world's first universal framework for standardized data digitization"
 readme = "README.md"
 authors = [{ name = "Airalogy Team" }]

@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.6.0 (20260401)
+
+### Features
+
+- Add zip-based single-file Airalogy archives under the unified `.aira` suffix, with the concrete payload type stored in `_airalogy_archive/manifest.json` via `kind` such as `protocol` or `records`.
+- Add `airalogy pack` and `airalogy unpack` CLI commands, including optional protocol embedding for record bundles and safe extraction checks that reject path traversal entries.
+- Exclude `.env` plus common cache artifacts from packed protocol archives by default so protocol sharing does not accidentally leak local secrets.
+
+### Documentation
+
+- Document the new archive packaging workflow in the README and add dedicated English and Chinese API docs for the unified `.aira` format.
+
 ## 0.5.0 (20260319)
 
 ### Features

@@ -3,6 +3,7 @@ export default [
     text: 'API 文档',
     items: [
       { text: '概览', link: '/zh/apis/' },
+      { text: '单文件归档打包', link: '/zh/apis/archive' },
       { text: 'Types', link: '/zh/apis/types' },
       { text: '类型插件', link: '/zh/apis/type-plugins' },
       { text: 'Models', link: '/zh/apis/models' },

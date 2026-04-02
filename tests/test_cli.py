@@ -22,6 +22,8 @@ def test_cli_help():
     assert "check" in result.stdout
     assert "generate_model" in result.stdout
     assert "generate_assigner" in result.stdout
+    assert "pack" in result.stdout
+    assert "unpack" in result.stdout
 
 
 def test_cli_version():
@@ -242,6 +244,64 @@ def test_generate_command_default_output():
             assert (Path(tmpdir) / "model.py").exists()
         finally:
             os.chdir(original_cwd)
+
+
+def test_pack_and_unpack_protocol_commands():
+    """Test pack/unpack commands with a protocol directory."""
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        protocol_dir = tmp_path / "protocol_demo"
+        protocol_dir.mkdir()
+        (protocol_dir / "protocol.aimd").write_text("# Protocol Demo\n\n{{var|sample_name}}\n")
+        (protocol_dir / "protocol.toml").write_text(
+            "\n".join(
+                [
+                    "[airalogy_protocol]",
+                    'id = "protocol_demo"',
+                    'version = "0.0.1"',
+                    'name = "Protocol Demo"',
+                    "",
+                ]
+            )
+        )
+        (protocol_dir / ".env").write_text("API_KEY=secret\n")
+
+        archive_path = tmp_path / "protocol_demo.aira"
+        pack_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "pack",
+                str(protocol_dir),
+                "-o",
+                str(archive_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        assert pack_result.returncode == 0
+        assert archive_path.exists()
+
+        unpack_dir = tmp_path / "unpacked"
+        unpack_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "unpack",
+                str(archive_path),
+                "-o",
+                str(unpack_dir),
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        assert unpack_result.returncode == 0
+        assert (unpack_dir / "protocol.aimd").exists()
+        assert not (unpack_dir / ".env").exists()
 
 
 def test_generate_assigner_command():
