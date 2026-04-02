@@ -122,6 +122,38 @@ Data structures of different templates:
 }
 ```
 
+Notes:
+
+- `data.quiz` stores raw user answers only
+- when auto-grading is enabled, keep `earned_score`, `status`, `feedback`, and similar output in a separate grade report instead of writing them back into `data.quiz`
+- this grade report is usually an independent JSON structure, not necessarily a separate file; it may also appear as a `grade_report` field in the same API response or as a related grading document/table in storage
+
+Example:
+
+```jsonc
+{
+    "data": {
+        "quiz": {
+            "quiz_choice_single_1": "A"
+        }
+    },
+    "grade_report": {
+        "quiz": {
+            "quiz_choice_single_1": {
+                "earned_score": 5,
+                "max_score": 5,
+                "status": "correct"
+            }
+        },
+        "summary": {
+            "total_earned_score": 5,
+            "total_max_score": 5,
+            "review_required_count": 0
+        }
+    }
+}
+```
+
 ### Step (`step`)
 
 ```jsonc

@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## Unreleased
+
+## 0.7.0 (20260402)
+
+### Features
+
+- Add first-class `quiz.grading` syntax for AIMD quiz blocks, covering partial-credit choice grading, normalized/numeric blank grading, rubric-based open-question grading, and provider-oriented LLM grading metadata.
+- Add `choice.grading.option_points` so choice questions can score directly from selected options, including partial-credit single-choice and multi-select penalty schemes.
+- Add optional `choice.options[].explanation` syntax so individual choice options can carry learner-facing explanations without affecting grading.
+- Add `airalogy.record` grading helpers for single quiz items and full quiz submissions, returning structured grade reports with total score, per-question status, and review-required flags.
+
+### Documentation
+
+- Document quiz auto-grading workflows, recommended provider usage, and the separation between raw answers in `data.quiz` and external grade reports.
+
 ## 0.6.0 (20260401)
 
 ### Features

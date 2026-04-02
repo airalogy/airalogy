@@ -400,6 +400,73 @@ blanks:
         assert quiz.stem == "Fill [[b1]]"
         assert quiz.blanks == [{"key": "b1", "answer": "21%"}]
 
+    def test_parse_blank_quiz_block_with_grading(self):
+        content = """
+```quiz
+id: quiz_blank_grading
+type: blank
+stem: Fill [[b1]]
+blanks:
+  - key: b1
+    answer: 21%
+grading:
+  strategy: normalized_match
+  blanks:
+    - key: b1
+      accepted_answers: ["21%", "21 %"]
+      normalize: ["trim", "remove_spaces"]
+      numeric:
+        target: 21
+        tolerance: 0.5
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        quiz = result["templates"]["quiz"][0]
+        assert quiz.grading == {
+            "strategy": "normalized_match",
+            "blanks": [
+                {
+                    "key": "b1",
+                    "accepted_answers": ["21%", "21 %"],
+                    "normalize": ["trim", "remove_spaces"],
+                    "numeric": {"target": 21.0, "tolerance": 0.5},
+                }
+            ],
+        }
+
+    def test_parse_choice_quiz_block_with_option_points(self):
+        content = """
+```quiz
+id: quiz_choice_option_points
+type: choice
+mode: single
+stem: Choose the best answer
+options:
+  - key: A
+    text: Option A
+  - key: B
+    text: Option B
+grading:
+  strategy: option_points
+  option_points:
+    A: 1
+    B: 3
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        quiz = result["templates"]["quiz"][0]
+        assert quiz.grading == {
+            "strategy": "option_points",
+            "option_points": {
+                "A": 1.0,
+                "B": 3.0,
+            },
+        }
+
     def test_parse_blank_quiz_block_requires_placeholder(self):
         content = """
 ```quiz
@@ -486,6 +553,84 @@ rubric: Mention at least two reasons
         assert quiz.id == "quiz_open_1"
         assert quiz.quiz_type == "open"
         assert quiz.rubric == "Mention at least two reasons"
+
+    def test_parse_open_quiz_block_with_grading(self):
+        content = """
+```quiz
+id: quiz_open_grading
+type: open
+stem: Explain why this happens
+grading:
+  strategy: llm_rubric
+  provider: teacher_default
+  require_review_below: 0.8
+  rubric_items:
+    - id: rate
+      points: 2
+      desc: Mention reaction rate
+      keywords: [rate, speed]
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        quiz = result["templates"]["quiz"][0]
+        assert quiz.grading == {
+            "strategy": "llm_rubric",
+            "provider": "teacher_default",
+            "require_review_below": 0.8,
+            "rubric_items": [
+                {
+                    "id": "rate",
+                    "points": 2.0,
+                    "desc": "Mention reaction rate",
+                    "keywords": ["rate", "speed"],
+                }
+            ],
+        }
+
+    def test_parse_quiz_block_validates_grading(self):
+        content = """
+```quiz
+id: quiz_open_grading_bad
+type: open
+stem: Explain why this happens
+grading:
+  strategy: llm_rubric
+  require_review_below: 2
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "grading.require_review_below must be a number between 0 and 1" in str(
+            exc_info.value
+        )
+
+    def test_parse_choice_quiz_block_rejects_unknown_option_points_key(self):
+        content = """
+```quiz
+id: quiz_choice_option_points_bad
+type: choice
+mode: single
+stem: Choose the best answer
+options:
+  - key: A
+    text: Option A
+grading:
+  strategy: option_points
+  option_points:
+    B: 3
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "grading.option_points contains unknown option key: B" in str(
+            exc_info.value
+        )
 
     def test_parse_quiz_block_requires_options(self):
         content = """
@@ -1203,3 +1348,36 @@ answer: A
         assert "name" not in quiz
         assert "kwargs" not in quiz
         assert "type_annotation" not in quiz
+
+    def test_parse_aimd_choice_option_explanations(self):
+        content = """
+```quiz
+id: quiz_choice_single_explained
+type: choice
+mode: single
+stem: Which option is correct?
+options:
+  - key: A
+    text: Option A
+    explanation: Not the best answer.
+  - key: B
+    text: Option B
+    explanation: Correct because it matches the storage requirement.
+answer: B
+```
+"""
+        result = parse_aimd(content)
+        quiz = result["templates"]["quiz"][0]
+
+        assert quiz["options"] == [
+            {
+                "key": "A",
+                "text": "Option A",
+                "explanation": "Not the best answer.",
+            },
+            {
+                "key": "B",
+                "text": "Option B",
+                "explanation": "Correct because it matches the storage requirement.",
+            },
+        ]

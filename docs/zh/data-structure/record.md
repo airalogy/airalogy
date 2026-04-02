@@ -122,6 +122,38 @@ An Airalogy Record is a JSON object that contains the metadata and data of a res
 }
 ```
 
+说明：
+
+- `data.quiz` 只保存原始作答
+- 如果启用了自动评分，建议把 `earned_score`、`status`、`feedback` 等结果保存在独立的 grade report 中，而不是写回 `data.quiz`
+- 这里的 grade report 通常是独立的 JSON 结构，不一定必须是单独文件；它也可以作为同一次 API 返回中的 `grade_report` 字段，或数据库中的关联评分记录
+
+示例：
+
+```jsonc
+{
+    "data": {
+        "quiz": {
+            "quiz_choice_single_1": "A"
+        }
+    },
+    "grade_report": {
+        "quiz": {
+            "quiz_choice_single_1": {
+                "earned_score": 5,
+                "max_score": 5,
+                "status": "correct"
+            }
+        },
+        "summary": {
+            "total_earned_score": 5,
+            "total_max_score": 5,
+            "review_required_count": 0
+        }
+    }
+}
+```
+
 ### Step (`step`)
 
 ```jsonc

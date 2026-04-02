@@ -64,6 +64,7 @@ class QuizNode(ASTNode):
     answer: Optional[Any] = None
     blanks: List[Dict[str, str]] = field(default_factory=list)
     rubric: Optional[str] = None
+    grading: Optional[Dict[str, Any]] = None
     score: Optional[float] = None
     title: Optional[str] = None
     description: Optional[str] = None
@@ -94,6 +95,8 @@ class QuizNode(ASTNode):
             result["blanks"] = self.blanks
         if self.rubric is not None:
             result["rubric"] = self.rubric
+        if self.grading is not None:
+            result["grading"] = self.grading
         if self.score is not None:
             result["score"] = self.score
         if self.default is not None:

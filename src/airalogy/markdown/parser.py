@@ -846,6 +846,444 @@ class AimdParser:
 
         return normalized_items
 
+    def _normalize_string_list(
+        self, value: Any, field_name: str, position: Position
+    ) -> Optional[List[str]]:
+        if not isinstance(value, list) or not value:
+            error = InvalidSyntaxError(
+                f"{field_name} must be a non-empty list of strings",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        normalized: List[str] = []
+        for item in value:
+            if not isinstance(item, str) or not item.strip():
+                error = InvalidSyntaxError(
+                    f"{field_name} must contain only non-empty strings",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            normalized.append(item.strip())
+        return normalized
+
+    def _normalize_numeric_rule(
+        self, value: Any, field_name: str, position: Position
+    ) -> Optional[Dict[str, Any]]:
+        if not isinstance(value, dict):
+            error = InvalidSyntaxError(
+                f"{field_name} must be an object",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        target = value.get("target")
+        if isinstance(target, bool) or not isinstance(target, (int, float)):
+            error = InvalidSyntaxError(
+                f"{field_name}.target must be a number",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        normalized: Dict[str, Any] = {"target": float(target)}
+        tolerance = value.get("tolerance")
+        if tolerance is not None:
+            if isinstance(tolerance, bool) or not isinstance(tolerance, (int, float)) or tolerance < 0:
+                error = InvalidSyntaxError(
+                    f"{field_name}.tolerance must be a non-negative number",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            normalized["tolerance"] = float(tolerance)
+
+        unit = value.get("unit")
+        if unit is not None:
+            if not isinstance(unit, str) or not unit.strip():
+                error = InvalidSyntaxError(
+                    f"{field_name}.unit must be a non-empty string",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            normalized["unit"] = unit.strip()
+
+        return normalized
+
+    def _normalize_blank_grading_rules(
+        self, value: Any, blank_keys: List[str], position: Position
+    ) -> Optional[List[Dict[str, Any]]]:
+        if not isinstance(value, list) or not value:
+            error = InvalidSyntaxError(
+                "grading.blanks must be a non-empty list",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        normalized_rules: List[Dict[str, Any]] = []
+        seen_keys = set()
+        for item in value:
+            if not isinstance(item, dict):
+                error = InvalidSyntaxError(
+                    "grading.blanks must be a list of objects",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            key = item.get("key")
+            if not isinstance(key, str) or not key.strip():
+                error = InvalidSyntaxError(
+                    "Each grading.blanks item must include a non-empty key",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            key = key.strip()
+            if key not in blank_keys:
+                error = InvalidSyntaxError(
+                    f"grading.blanks contains unknown blank key: {key}",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            if key in seen_keys:
+                error = InvalidSyntaxError(
+                    f"Duplicate key in grading.blanks: {key}",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            seen_keys.add(key)
+
+            normalized_rule: Dict[str, Any] = {"key": key}
+            accepted_answers = item.get("accepted_answers")
+            if accepted_answers is not None:
+                normalized_list = self._normalize_string_list(
+                    accepted_answers,
+                    f"grading.blanks.{key}.accepted_answers",
+                    position,
+                )
+                if normalized_list is None:
+                    return None
+                normalized_rule["accepted_answers"] = normalized_list
+
+            normalize_rules = item.get("normalize")
+            if normalize_rules is not None:
+                normalized_list = self._normalize_string_list(
+                    normalize_rules,
+                    f"grading.blanks.{key}.normalize",
+                    position,
+                )
+                if normalized_list is None:
+                    return None
+                valid_rules = {
+                    "trim",
+                    "lowercase",
+                    "collapse_whitespace",
+                    "remove_spaces",
+                    "fullwidth_to_halfwidth",
+                }
+                invalid_rules = [rule for rule in normalized_list if rule not in valid_rules]
+                if invalid_rules:
+                    error = InvalidSyntaxError(
+                        "Invalid grading.blanks."
+                        + key
+                        + ".normalize item(s): "
+                        + ", ".join(invalid_rules),
+                        position=position,
+                    )
+                    self._handle_error(error)
+                    return None
+                normalized_rule["normalize"] = normalized_list
+
+            numeric = item.get("numeric")
+            if numeric is not None:
+                normalized_numeric = self._normalize_numeric_rule(
+                    numeric,
+                    f"grading.blanks.{key}.numeric",
+                    position,
+                )
+                if normalized_numeric is None:
+                    return None
+                normalized_rule["numeric"] = normalized_numeric
+
+            normalized_rules.append(normalized_rule)
+
+        return normalized_rules
+
+    def _normalize_rubric_items(
+        self, value: Any, position: Position
+    ) -> Optional[List[Dict[str, Any]]]:
+        if not isinstance(value, list) or not value:
+            error = InvalidSyntaxError(
+                "grading.rubric_items must be a non-empty list",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        normalized_items: List[Dict[str, Any]] = []
+        seen_ids = set()
+        for item in value:
+            if not isinstance(item, dict):
+                error = InvalidSyntaxError(
+                    "grading.rubric_items must be a list of objects",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            rubric_id = item.get("id")
+            if not isinstance(rubric_id, str) or not rubric_id.strip():
+                error = InvalidSyntaxError(
+                    "Each grading.rubric_items item must include a non-empty id",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            rubric_id = rubric_id.strip()
+            if rubric_id in seen_ids:
+                error = InvalidSyntaxError(
+                    f"Duplicate id in grading.rubric_items: {rubric_id}",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            seen_ids.add(rubric_id)
+
+            desc = item.get("desc")
+            if not isinstance(desc, str) or not desc.strip():
+                error = InvalidSyntaxError(
+                    f"grading.rubric_items.{rubric_id}.desc must be a non-empty string",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            points = item.get("points")
+            if isinstance(points, bool) or not isinstance(points, (int, float)) or points < 0:
+                error = InvalidSyntaxError(
+                    f"grading.rubric_items.{rubric_id}.points must be a non-negative number",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            normalized_item: Dict[str, Any] = {
+                "id": rubric_id,
+                "desc": desc.strip(),
+                "points": float(points),
+            }
+
+            keywords = item.get("keywords")
+            if keywords is not None:
+                normalized_keywords = self._normalize_string_list(
+                    keywords,
+                    f"grading.rubric_items.{rubric_id}.keywords",
+                    position,
+                )
+                if normalized_keywords is None:
+                    return None
+                normalized_item["keywords"] = normalized_keywords
+
+            normalized_items.append(normalized_item)
+
+        return normalized_items
+
+    def _normalize_grading_config(
+        self,
+        value: Any,
+        quiz_type: str,
+        position: Position,
+        *,
+        blank_keys: Optional[List[str]] = None,
+        option_keys: Optional[List[str]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        if not isinstance(value, dict):
+            error = InvalidSyntaxError(
+                "grading must be a YAML mapping/object",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        strategy = value.get("strategy")
+        if strategy is not None and (not isinstance(strategy, str) or not strategy.strip()):
+            error = InvalidSyntaxError(
+                "grading.strategy must be a non-empty string",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+        strategy = strategy.strip() if isinstance(strategy, str) else None
+
+        config: Dict[str, Any] = {}
+
+        if quiz_type == "choice":
+            valid_strategies = {"auto", "exact_match", "partial_credit", "option_points"}
+            if strategy is not None and strategy not in valid_strategies:
+                error = InvalidSyntaxError(
+                    "choice grading.strategy must be one of: auto, exact_match, partial_credit, option_points",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            if strategy is not None:
+                config["strategy"] = strategy
+            option_points = value.get("option_points")
+            if option_points is not None:
+                if strategy is not None and strategy not in {"auto", "option_points"}:
+                    error = InvalidSyntaxError(
+                        "grading.option_points can only be used with choice grading strategy auto or option_points",
+                        position=position,
+                    )
+                    self._handle_error(error)
+                    return None
+                if not isinstance(option_points, dict) or not option_points:
+                    error = InvalidSyntaxError(
+                        "grading.option_points must be a non-empty mapping from option key to score",
+                        position=position,
+                    )
+                    self._handle_error(error)
+                    return None
+
+                normalized_option_points: Dict[str, float] = {}
+                valid_option_keys = set(option_keys or [])
+                for option_key, option_score in option_points.items():
+                    if option_key not in valid_option_keys:
+                        error = InvalidSyntaxError(
+                            f"grading.option_points contains unknown option key: {option_key}",
+                            position=position,
+                        )
+                        self._handle_error(error)
+                        return None
+                    if not isinstance(option_score, (int, float)) or isinstance(option_score, bool):
+                        error = InvalidSyntaxError(
+                            f"grading.option_points.{option_key} must be a finite number",
+                            position=position,
+                        )
+                        self._handle_error(error)
+                        return None
+                    normalized_option_points[option_key] = float(option_score)
+
+                config["option_points"] = normalized_option_points
+
+            if strategy == "option_points" and "option_points" not in config:
+                error = InvalidSyntaxError(
+                    "grading.option_points is required when choice grading.strategy is option_points",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            return config
+
+        if quiz_type == "blank":
+            valid_strategies = {"auto", "normalized_match", "llm"}
+            if strategy is not None and strategy not in valid_strategies:
+                error = InvalidSyntaxError(
+                    "blank grading.strategy must be one of: auto, normalized_match, llm",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            if strategy is not None:
+                config["strategy"] = strategy
+            provider = value.get("provider")
+            if provider is not None:
+                if not isinstance(provider, str) or not provider.strip():
+                    error = InvalidSyntaxError(
+                        "grading.provider must be a non-empty string",
+                        position=position,
+                    )
+                    self._handle_error(error)
+                    return None
+                config["provider"] = provider.strip()
+            prompt = value.get("prompt")
+            if prompt is not None:
+                if not isinstance(prompt, str) or not prompt.strip():
+                    error = InvalidSyntaxError(
+                        "grading.prompt must be a non-empty string",
+                        position=position,
+                    )
+                    self._handle_error(error)
+                    return None
+                config["prompt"] = prompt.strip()
+            blank_rules = value.get("blanks")
+            if blank_rules is not None:
+                normalized_rules = self._normalize_blank_grading_rules(
+                    blank_rules,
+                    blank_keys or [],
+                    position,
+                )
+                if normalized_rules is None:
+                    return None
+                config["blanks"] = normalized_rules
+            return config
+
+        valid_strategies = {"manual", "keyword_rubric", "llm_rubric", "llm"}
+        if strategy is not None and strategy not in valid_strategies:
+            error = InvalidSyntaxError(
+                "open grading.strategy must be one of: manual, keyword_rubric, llm_rubric, llm",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+        if strategy is not None:
+            config["strategy"] = strategy
+
+        provider = value.get("provider")
+        if provider is not None:
+            if not isinstance(provider, str) or not provider.strip():
+                error = InvalidSyntaxError(
+                    "grading.provider must be a non-empty string",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            config["provider"] = provider.strip()
+
+        prompt = value.get("prompt")
+        if prompt is not None:
+            if not isinstance(prompt, str) or not prompt.strip():
+                error = InvalidSyntaxError(
+                    "grading.prompt must be a non-empty string",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            config["prompt"] = prompt.strip()
+
+        rubric_items = value.get("rubric_items")
+        if rubric_items is not None:
+            normalized_items = self._normalize_rubric_items(rubric_items, position)
+            if normalized_items is None:
+                return None
+            config["rubric_items"] = normalized_items
+
+        require_review_below = value.get("require_review_below")
+        if require_review_below is not None:
+            if (
+                isinstance(require_review_below, bool)
+                or not isinstance(require_review_below, (int, float))
+                or require_review_below < 0
+                or require_review_below > 1
+            ):
+                error = InvalidSyntaxError(
+                    "grading.require_review_below must be a number between 0 and 1",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            config["require_review_below"] = float(require_review_below)
+
+        return config
+
     def _validate_blank_placeholders(
         self, stem: str, blank_keys: List[str], position: Position
     ) -> bool:
@@ -994,6 +1432,7 @@ class AimdParser:
         quiz_answer: Optional[Any] = None
         quiz_blanks: List[Dict[str, str]] = []
         quiz_rubric: Optional[str] = None
+        quiz_grading: Optional[Dict[str, Any]] = None
 
         if item_type == "choice":
             mode_value = data.get("mode")
@@ -1083,6 +1522,16 @@ class AimdParser:
             quiz_options = options
             if answer_value is not None:
                 quiz_answer = answer_value
+            grading_value = data.get("grading")
+            if grading_value is not None:
+                quiz_grading = self._normalize_grading_config(
+                    grading_value,
+                    item_type,
+                    position,
+                    option_keys=option_keys,
+                )
+                if quiz_grading is None:
+                    return None
 
             reserved_keys = {
                 "id",
@@ -1093,6 +1542,7 @@ class AimdParser:
                 "score",
                 "answer",
                 "default",
+                "grading",
                 "title",
                 "description",
             }
@@ -1139,6 +1589,16 @@ class AimdParser:
                     return None
 
             quiz_blanks = blanks
+            grading_value = data.get("grading")
+            if grading_value is not None:
+                quiz_grading = self._normalize_grading_config(
+                    grading_value,
+                    item_type,
+                    position,
+                    blank_keys=blank_keys,
+                )
+                if quiz_grading is None:
+                    return None
 
             reserved_keys = {
                 "id",
@@ -1147,6 +1607,7 @@ class AimdParser:
                 "blanks",
                 "score",
                 "default",
+                "grading",
                 "title",
                 "description",
             }
@@ -1170,6 +1631,15 @@ class AimdParser:
 
             if rubric is not None:
                 quiz_rubric = rubric
+            grading_value = data.get("grading")
+            if grading_value is not None:
+                quiz_grading = self._normalize_grading_config(
+                    grading_value,
+                    item_type,
+                    position,
+                )
+                if quiz_grading is None:
+                    return None
 
             reserved_keys = {
                 "id",
@@ -1178,6 +1648,7 @@ class AimdParser:
                 "rubric",
                 "score",
                 "default",
+                "grading",
                 "title",
                 "description",
             }
@@ -1202,6 +1673,7 @@ class AimdParser:
             answer=quiz_answer,
             blanks=quiz_blanks,
             rubric=quiz_rubric,
+            grading=quiz_grading,
             score=score,
             title=title if isinstance(title, str) else None,
             description=description if isinstance(description, str) else None,
