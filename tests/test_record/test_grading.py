@@ -1,8 +1,10 @@
 from airalogy.markdown import parse_aimd
 from airalogy.record import (
     grade_quiz_answer,
+    grade_scale_quiz_locally,
     grade_record_quiz_answers,
     grade_record_quiz_answers_with_aimd,
+    is_scale_quiz_answer_complete,
 )
 
 
@@ -70,6 +72,37 @@ grading:
   strategy: llm_rubric
   provider: teacher_default
 ```
+
+```quiz
+id: quiz_scale_1
+type: scale
+stem: 在过去两周里，你有多少天出现以下症状？
+items:
+  - key: s1
+    stem: 感到不安
+  - key: s2
+    stem: 无法放松
+options:
+  - key: not_at_all
+    text: 没有
+    points: 0
+  - key: several_days
+    text: 有几天
+    points: 1
+  - key: more_than_half_the_days
+    text: 一半以上时间
+    points: 2
+grading:
+  strategy: sum
+  bands:
+    - min: 0
+      max: 1
+      label: 低
+    - min: 2
+      max: 4
+      label: 中
+      interpretation: 需要进一步关注
+```
 """
 
 
@@ -81,6 +114,7 @@ def build_record() -> dict:
                 "quiz_blank_1": {"b1": " 21 % ", "b2": "42.3"},
                 "quiz_open_1": "Temperature changes the reaction rate and sample stability.",
                 "quiz_llm_1": "Detailed answer",
+                "quiz_scale_1": {"s1": "several_days", "s2": "more_than_half_the_days"},
             }
         }
     }
@@ -185,6 +219,60 @@ def test_grade_quiz_answer_choice_option_points_multiple():
     assert result["method"] == "option_points"
 
 
+def test_grade_scale_quiz_locally():
+    result = grade_scale_quiz_locally(
+        {
+            "id": "quiz_scale_1",
+            "type": "scale",
+            "stem": "Scale",
+            "items": [
+                {"key": "s1", "stem": "Item 1"},
+                {"key": "s2", "stem": "Item 2"},
+            ],
+            "options": [
+                {"key": "never", "text": "Never", "points": 0},
+                {"key": "sometimes", "text": "Sometimes", "points": 1},
+                {"key": "often", "text": "Often", "points": 2},
+            ],
+            "grading": {
+                "strategy": "sum",
+                "bands": [
+                    {"min": 0, "max": 1, "label": "Low"},
+                    {"min": 2, "max": 4, "label": "Medium", "interpretation": "Monitor"},
+                ],
+            },
+        },
+        {"s1": "sometimes", "s2": "often"},
+    )
+
+    assert result["status"] == "scored"
+    assert result["earned_score"] == 3.0
+    assert result["max_score"] == 4.0
+    assert result["method"] == "scale_sum"
+    assert result["band"]["label"] == "Medium"
+    assert result["band"]["interpretation"] == "Monitor"
+    assert result.get("feedback") is None
+
+
+def test_is_scale_quiz_answer_complete():
+    quiz = {
+        "id": "quiz_scale_1",
+        "type": "scale",
+        "stem": "Scale",
+        "items": [
+            {"key": "s1", "stem": "Item 1"},
+            {"key": "s2", "stem": "Item 2"},
+        ],
+        "options": [
+            {"key": "never", "text": "Never", "points": 0},
+            {"key": "sometimes", "text": "Sometimes", "points": 1},
+        ],
+    }
+
+    assert is_scale_quiz_answer_complete(quiz, {"s1": "never", "s2": "sometimes"}) is True
+    assert is_scale_quiz_answer_complete(quiz, {"s1": "never"}) is False
+
+
 def test_grade_record_quiz_answers_aggregates_report():
     quiz_templates = parse_aimd(AIMD_WITH_GRADING)["templates"]["quiz"]
     report = grade_record_quiz_answers(build_record(), quiz_templates)
@@ -193,9 +281,10 @@ def test_grade_record_quiz_answers_aggregates_report():
     assert report["quiz"]["quiz_blank_1"]["status"] == "correct"
     assert report["quiz"]["quiz_open_1"]["status"] == "correct"
     assert report["quiz"]["quiz_llm_1"]["status"] == "needs_review"
+    assert report["quiz"]["quiz_scale_1"]["status"] == "scored"
     assert report["summary"]["review_required_count"] == 1
-    assert report["summary"]["total_earned_score"] == 11.0
-    assert report["summary"]["total_max_score"] == 14.0
+    assert report["summary"]["total_earned_score"] == 14.0
+    assert report["summary"]["total_max_score"] == 18.0
 
 
 def test_grade_record_quiz_answers_with_provider():
@@ -220,7 +309,7 @@ def test_grade_record_quiz_answers_with_provider():
 
     assert report["quiz"]["quiz_llm_1"]["status"] == "partial"
     assert report["quiz"]["quiz_llm_1"]["provider"] == "teacher_default"
-    assert report["summary"]["total_earned_score"] == 13.0
+    assert report["summary"]["total_earned_score"] == 16.0
 
 
 def test_grade_record_quiz_answers_with_malformed_provider_result():
@@ -246,3 +335,4 @@ def test_grade_record_quiz_answers_with_aimd_entrypoint():
 
     assert report["quiz"]["quiz_choice_single_1"]["earned_score"] == 2.0
     assert report["quiz"]["quiz_blank_1"]["earned_score"] == 4.0
+    assert report["quiz"]["quiz_scale_1"]["earned_score"] == 3.0

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.8.0 (20260414)
+
+### Features
+
+- Add `quiz.type: scale` to AIMD syntax, including shared `items`, per-option numeric `points`, `display` hints, deterministic `sum` grading, and optional score `bands` for questionnaire-style instruments.
+- Add record validation and grading support for scale answers stored as `item_key -> option_key` mappings, including local score calculation and band/classification results.
+
+### Documentation
+
+- Document scale-style quiz syntax, the corresponding `data.quiz` answer shape, and the separation between raw questionnaire answers and derived grade reports.
+
 ## 0.7.0 (20260402)
 
 ### Features

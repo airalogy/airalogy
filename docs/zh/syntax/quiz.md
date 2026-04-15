@@ -3,6 +3,7 @@
 使用统一的 `quiz` 代码块定义常见题型：
 
 - `choice`：单选题 / 多选题
+- `scale`：矩阵式 / Likert 风格量表
 - `blank`：填空题
 - `open`：问答题
 
@@ -50,6 +51,10 @@ rubric: 至少提到两个影响因素
     "quiz_blank_1": {
       "b1": "21%"
     },
+    "quiz_scale_1": {
+      "s1": "not_at_all",
+      "s2": "more_than_half_the_days"
+    },
     "quiz_open_1": "因为温度和压强共同影响该现象。"
   }
 }
@@ -59,6 +64,7 @@ rubric: 至少提到两个影响因素
 
 - `choice + single` -> `str`（选项 key）
 - `choice + multiple` -> `list[str]`（选项 key 列表）
+- `scale` -> `dict[str, str]`（`item_key -> 选中的 option key`）
 - `blank` -> `dict[str, str]`（`blank_key -> 用户填写内容`）
 - `open` -> `str`
 
@@ -79,6 +85,7 @@ Record 的整体结构请参考：[Record 数据结构](../data-structure/record
 推荐做法：
 
 - `choice` 默认使用精确匹配
+- `scale` 使用每题 `option.points` 的确定性求和，并可附加总分区间分组 / 分类
 - `blank` 使用规范化匹配、别名集合、数值容差等确定性规则
 - `open` 使用 rubric 评分，必要时再接入大模型 provider
 
@@ -237,6 +244,77 @@ grading:
 - 只选 `D`：`(0 - 1) / 3 * 6 = -2`，最终按 `0` 分计算
 
 这个策略适合教学、练习和作业场景，用来区分“部分掌握”和“完全掌握”。如果你希望多选题只有全对才得分，请不要设置它，保留默认的精确匹配即可。
+
+## 量表题（`type: scale`）
+
+`scale` 用于矩阵式量表，例如 Likert 量表、症状频率问卷、标准化筛查工具等。这类题目通常共享一组选项，但包含多个 item，并根据总分给出区间解释。
+
+````aimd
+```quiz
+id: quiz_scale_1
+type: scale
+title: GAD-2 风格量表
+stem: 在过去两周里，你有多少天出现以下症状？
+display: matrix
+items:
+  - key: s1
+    stem: 感到紧张、焦虑或坐立不安
+  - key: s2
+    stem: 不能停止或控制担心
+options:
+  - key: not_at_all
+    text: 完全没有
+    points: 0
+  - key: several_days
+    text: 有几天
+    points: 1
+  - key: more_than_half_the_days
+    text: 一半以上时间
+    points: 2
+  - key: nearly_every_day
+    text: 几乎天天
+    points: 3
+grading:
+  strategy: sum
+  bands:
+    - min: 0
+      max: 1
+      label: 极轻
+      interpretation: 该分组范围通常表示症状水平较低。
+    - min: 2
+      max: 3
+      label: 轻度
+    - min: 4
+      max: 6
+      label: 中重度
+```
+````
+
+必填字段：
+
+- `id`
+- `type: scale`
+- `stem`
+- `items`：非空列表，每个 item 必须有 `key` 和 `stem`
+- `options`：非空列表，每个 option 必须有 `key`、`text`、数值型 `points`
+
+可选字段：
+
+- `title`
+- `description`
+- `display`：`matrix` 或 `list`，默认 `matrix`
+- `default`：`item_key -> option key` 的默认映射
+- `grading.strategy`：当前支持 `sum`
+- `grading.bands`：总分区间，用于分组 / 分类解释
+- `grading.bands[].interpretation`：该分组的人类可读解释，用于说明这个分组通常代表什么
+- `items[].key`、`options[].key`：必须是标识符形式，首字符为字母，后续只能包含字母、数字、下划线
+
+行为说明：
+
+- 量表题的作答数据保存为 `dict[str, str]`，键为 `item.key`
+- 解析器会校验 `default` 里引用的 `item` 和 `option` 是否存在
+- 本地自动评分会把每个 item 选中的 `option.points` 相加得到总分
+- `grading.bands` 不改变数值总分，只是在总分基础上附加分类语义
 
 按选项给分示例：
 

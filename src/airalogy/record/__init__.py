@@ -1,7 +1,9 @@
 from .grading import (
     grade_quiz_answer,
+    grade_scale_quiz_locally,
     grade_record_quiz_answers,
     grade_record_quiz_answers_with_aimd,
+    is_scale_quiz_answer_complete,
     resolve_quiz_max_score,
 )
 from .validator import (
@@ -13,8 +15,10 @@ from .validator import (
 __all__ = [
     "all_var_ids_in_records",
     "grade_quiz_answer",
+    "grade_scale_quiz_locally",
     "grade_record_quiz_answers",
     "grade_record_quiz_answers_with_aimd",
+    "is_scale_quiz_answer_complete",
     "resolve_quiz_max_score",
     "validate_record_quiz_answers",
     "validate_record_quiz_answers_with_aimd",

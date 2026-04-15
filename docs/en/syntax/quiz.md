@@ -3,6 +3,7 @@
 Use `quiz` for common assessment types in one unified syntax.
 
 - `choice`: single-choice / multiple-choice
+- `scale`: matrix / Likert-style questionnaire
 - `blank`: fill-in-the-blank
 - `open`: open-ended question
 
@@ -50,6 +51,10 @@ Example (`quiz` part only):
     "quiz_blank_1": {
       "b1": "21%"
     },
+    "quiz_scale_1": {
+      "s1": "not_at_all",
+      "s2": "more_than_half_the_days"
+    },
     "quiz_open_1": "Because both temperature and pressure affect this phenomenon."
   }
 }
@@ -59,6 +64,7 @@ Mapping:
 
 - `choice + single` -> `str` (option key)
 - `choice + multiple` -> `list[str]` (option key list)
+- `scale` -> `dict[str, str]` (`item_key -> selected option key`)
 - `blank` -> `dict[str, str]` (`blank_key -> user input`)
 - `open` -> `str`
 
@@ -79,6 +85,7 @@ The key rule is simple: keep the raw answers in `data.quiz` and do not write gra
 Recommended defaults:
 
 - `choice`: exact answer matching
+- `scale`: deterministic sum of per-item option `points`, with optional score bands / classifications
 - `blank`: deterministic matching with normalization, aliases, and numeric tolerance
 - `open`: rubric-based grading, with an optional LLM provider when needed
 
@@ -237,6 +244,77 @@ Using the example above with 4 options, 3 correct answers, and a maximum score o
 - select only `D`: `(0 - 1) / 3 * 6 = -2`, so the final score is clamped to `0`
 
 This strategy is useful for teaching, practice, and homework, where you want to distinguish partial understanding from full mastery. If you want multiple-choice questions to score only when every correct option is selected and no wrong option is chosen, keep the default exact matching instead.
+
+## Scale Item (`type: scale`)
+
+`scale` is intended for matrix-style questionnaires such as Likert scales, symptom checklists, and standardized instruments that share one option set across multiple items.
+
+````aimd
+```quiz
+id: quiz_scale_1
+type: scale
+title: GAD-2 style check
+stem: Over the last two weeks, how often have you been bothered by the following problems?
+display: matrix
+items:
+  - key: s1
+    stem: Feeling nervous, anxious, or on edge
+  - key: s2
+    stem: Not being able to stop or control worrying
+options:
+  - key: not_at_all
+    text: Not at all
+    points: 0
+  - key: several_days
+    text: Several days
+    points: 1
+  - key: more_than_half_the_days
+    text: More than half the days
+    points: 2
+  - key: nearly_every_day
+    text: Nearly every day
+    points: 3
+grading:
+  strategy: sum
+  bands:
+    - min: 0
+      max: 1
+      label: Minimal
+      interpretation: Symptoms are not elevated in this range.
+    - min: 2
+      max: 3
+      label: Mild
+    - min: 4
+      max: 6
+      label: Moderate to severe
+```
+````
+
+Required fields:
+
+- `id`
+- `type: scale`
+- `stem`
+- `items`: non-empty list, each item includes `key` and `stem`
+- `options`: non-empty list, each option includes `key`, `text`, and numeric `points`
+
+Optional fields:
+
+- `title`
+- `description`
+- `display`: `matrix` or `list` (`matrix` is the default)
+- `default`: mapping from `item_key` to selected option key
+- `grading.strategy`: currently `sum`
+- `grading.bands`: optional score ranges for classification / interpretation
+- `grading.bands[].interpretation`: optional human-readable explanation of what that band means
+- `items[].key` and `options[].key`: identifier-style keys only; they must start with a letter and then use only letters, digits, or underscores
+
+Behavior notes:
+
+- scale answers are stored as `dict[str, str]`, keyed by `item.key`
+- the parser validates that `default` only references known `item` keys and known option keys
+- local scoring sums the selected option `points` across all items
+- `grading.bands` does not change the numeric score; it only adds a classification layer on top of the total
 
 Per-option scoring example:
 

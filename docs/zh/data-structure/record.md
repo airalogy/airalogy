@@ -110,10 +110,14 @@ An Airalogy Record is a JSON object that contains the metadata and data of a res
     "quiz": { // template_name = "quiz"
 
         // quiz 的值以题目 id 为键。
-        // 该 object 根据 quiz 题目定义规则（choice/blank/open）校验。
+        // 该 object 根据 quiz 题目定义规则（choice/scale/blank/open）校验。
 
         "quiz_choice_single_1": "A", // 单选题：选项key
         "quiz_choice_multiple_1": ["A", "C"], // 多选题：选项key列表
+        "quiz_scale_1": { // 量表题：item_key -> 选中的 option key
+            "s1": "not_at_all",
+            "s2": "more_than_half_the_days"
+        },
         "quiz_blank_1": { // 填空题：blank_key -> 用户填写内容
             "b1": "21%"
         },

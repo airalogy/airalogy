@@ -60,9 +60,11 @@ class QuizNode(ASTNode):
     stem: str
     default: Optional[Any] = None
     mode: Optional[str] = None
-    options: List[Dict[str, str]] = field(default_factory=list)
+    display: Optional[str] = None
+    options: List[Dict[str, Any]] = field(default_factory=list)
     answer: Optional[Any] = None
     blanks: List[Dict[str, str]] = field(default_factory=list)
+    items: List[Dict[str, str]] = field(default_factory=list)
     rubric: Optional[str] = None
     grading: Optional[Dict[str, Any]] = None
     score: Optional[float] = None
@@ -85,6 +87,8 @@ class QuizNode(ASTNode):
             result["type"] = self.quiz_type
         if self.mode:
             result["mode"] = self.mode
+        if self.display:
+            result["display"] = self.display
         if self.stem:
             result["stem"] = self.stem
         if self.options:
@@ -93,6 +97,8 @@ class QuizNode(ASTNode):
             result["answer"] = self.answer
         if self.blanks:
             result["blanks"] = self.blanks
+        if self.items:
+            result["items"] = self.items
         if self.rubric is not None:
             result["rubric"] = self.rubric
         if self.grading is not None:

@@ -34,6 +34,27 @@ id: quiz_open_1
 type: open
 stem: Explain the reason
 ```
+
+```quiz
+id: quiz_scale_1
+type: scale
+stem: 在过去两周里，你有多少天出现以下症状？
+items:
+  - key: s1
+    stem: 感到不安
+  - key: s2
+    stem: 无法放松
+options:
+  - key: not_at_all
+    text: 没有
+    points: 0
+  - key: several_days
+    text: 有几天
+    points: 1
+  - key: more_than_half_the_days
+    text: 一半以上时间
+    points: 2
+```
 """
 
 
@@ -44,6 +65,7 @@ def build_valid_record() -> dict:
                 "quiz_choice_single_1": "A",
                 "quiz_blank_1": {"b1": "21%"},
                 "quiz_open_1": "Because of temperature and pressure.",
+                "quiz_scale_1": {"s1": "not_at_all", "s2": "more_than_half_the_days"},
             }
         }
     }
@@ -97,6 +119,33 @@ def test_validate_record_quiz_answers_with_aimd_entrypoint():
 
     assert is_valid is True
     assert errors == []
+
+
+def test_validate_record_quiz_answers_invalid_scale_option():
+    quiz_templates = parse_aimd(AIMD_WITH_QUIZ)["templates"]["quiz"]
+    record = build_valid_record()
+    record["data"]["quiz"]["quiz_scale_1"]["s2"] = "9"
+
+    is_valid, errors = validate_record_quiz_answers(record, quiz_templates)
+
+    assert is_valid is False
+    assert any(
+        "Scale answer value for quiz_scale_1.s2 must be one of: not_at_all, several_days, more_than_half_the_days." in msg
+        for msg in errors
+    )
+
+
+def test_validate_record_quiz_answers_missing_scale_key():
+    quiz_templates = parse_aimd(AIMD_WITH_QUIZ)["templates"]["quiz"]
+    record = build_valid_record()
+    record["data"]["quiz"]["quiz_scale_1"] = {"s1": "not_at_all"}
+
+    is_valid, errors = validate_record_quiz_answers(record, quiz_templates)
+
+    assert is_valid is False
+    assert any(
+        "Scale answer for quiz_scale_1 is missing keys: s2." in msg for msg in errors
+    )
 
 
 def test_validate_record_quiz_answers_requires_record_structure():

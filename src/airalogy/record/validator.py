@@ -157,6 +157,63 @@ def validate_record_quiz_answers(
                         f"Blank answer value for {quiz_id}.{key} must be a string."
                     )
 
+        elif quiz_type == "scale":
+            items = template.get("items")
+            options = template.get("options")
+            item_keys: list[str] = []
+            option_keys: list[str] = []
+
+            if isinstance(items, list):
+                for item in items:
+                    if isinstance(item, dict) and isinstance(item.get("key"), str):
+                        item_keys.append(item["key"])
+            if isinstance(options, list):
+                for option in options:
+                    if isinstance(option, dict) and isinstance(option.get("key"), str):
+                        option_keys.append(option["key"])
+
+            if not item_keys:
+                errors.append(
+                    f"Invalid scale quiz template {quiz_id}: items must contain at least one key."
+                )
+                continue
+            if not option_keys:
+                errors.append(
+                    f"Invalid scale quiz template {quiz_id}: options must contain at least one key."
+                )
+                continue
+
+            if not isinstance(answer, dict):
+                errors.append(
+                    f"Scale answer for {quiz_id} must be a dict keyed by item key."
+                )
+                continue
+
+            unknown_item_keys = sorted(k for k in answer.keys() if k not in item_keys)
+            if unknown_item_keys:
+                errors.append(
+                    f"Scale answer for {quiz_id} contains unknown keys: {', '.join(unknown_item_keys)}."
+                )
+
+            if require_complete:
+                missing_item_keys = sorted(k for k in item_keys if k not in answer)
+                if missing_item_keys:
+                    errors.append(
+                        f"Scale answer for {quiz_id} is missing keys: {', '.join(missing_item_keys)}."
+                    )
+
+            for key, value in answer.items():
+                if key not in item_keys:
+                    continue
+                if not isinstance(value, str):
+                    errors.append(
+                        f"Scale answer value for {quiz_id}.{key} must be a string option key."
+                    )
+                elif value not in option_keys:
+                    errors.append(
+                        f"Scale answer value for {quiz_id}.{key} must be one of: {', '.join(option_keys)}."
+                    )
+
         elif quiz_type == "open":
             if not isinstance(answer, str):
                 errors.append(f"Open answer for {quiz_id} must be a string.")

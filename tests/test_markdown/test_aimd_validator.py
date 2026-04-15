@@ -241,7 +241,7 @@ options:
 
         assert not is_valid
         assert len(errors) == 1
-        assert "Invalid quiz type, expected one of: choice, blank, open" in errors[
+        assert "Invalid quiz type, expected one of: choice, blank, open, scale" in errors[
             0
         ].message
 

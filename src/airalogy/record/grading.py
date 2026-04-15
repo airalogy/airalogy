@@ -136,6 +136,13 @@ def _get_choice_scoring_strategy(config: dict[str, Any] | None) -> str:
     return "option_points" if _get_choice_option_points(config) else "exact_match"
 
 
+def _get_scale_scoring_strategy(config: dict[str, Any] | None) -> str:
+    strategy = config.get("strategy") if isinstance(config, dict) else None
+    if isinstance(strategy, str) and strategy and strategy != "auto":
+        return strategy
+    return "sum"
+
+
 def _request_provider_grade(
     quiz: dict[str, Any],
     answer: Any,
@@ -201,6 +208,22 @@ def resolve_quiz_max_score(quiz_template: dict[str, Any]) -> float:
         if isinstance(blanks, list) and blanks:
             return float(len(blanks))
 
+    if quiz_template.get("type") == "scale":
+        items = quiz_template.get("items")
+        options = quiz_template.get("options")
+        if isinstance(items, list) and items and isinstance(options, list) and options:
+            max_per_item = max(
+                [
+                    0.0,
+                    *[
+                        float(option.get("points", 0.0))
+                        for option in options
+                        if isinstance(option, dict) and _is_number(option.get("points"))
+                    ],
+                ]
+            )
+            return _round_score(max_per_item * len(items))
+
     if quiz_template.get("type") == "open":
         grading = quiz_template.get("grading")
         rubric_items = grading.get("rubric_items") if isinstance(grading, dict) else None
@@ -235,10 +258,176 @@ def _is_unanswered_quiz_answer(quiz_template: dict[str, Any], answer: Any) -> bo
             return False
         return all(not isinstance(value, str) or not value.strip() for value in answer.values())
 
+    if quiz_type == "scale":
+        if not isinstance(answer, dict):
+            return False
+        string_values = [
+            value for value in answer.values() if isinstance(value, str)
+        ]
+        return not string_values or all(not value.strip() for value in string_values)
+
     if quiz_type == "open":
         return isinstance(answer, str) and not answer.strip()
 
     return False
+
+
+def _as_scale_answer_map(answer: Any) -> dict[str, str] | None:
+    if not isinstance(answer, dict):
+        return None
+
+    normalized: dict[str, str] = {}
+    for key, value in answer.items():
+        if isinstance(key, str) and isinstance(value, str):
+            normalized[key] = value
+    return normalized
+
+
+def is_scale_quiz_answer_complete(quiz_template: dict[str, Any], answer: Any) -> bool:
+    items = quiz_template.get("items")
+    if quiz_template.get("type") != "scale" or not isinstance(items, list) or not items:
+        return False
+
+    answer_map = _as_scale_answer_map(answer)
+    if answer_map is None:
+        return False
+
+    for item in items:
+        if not isinstance(item, dict):
+            return False
+        item_key = item.get("key")
+        if not isinstance(item_key, str) or not answer_map.get(item_key, "").strip():
+            return False
+    return True
+
+
+def _resolve_scale_band(
+    score: float, config: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    bands = config.get("bands") if isinstance(config, dict) else None
+    if not isinstance(bands, list):
+        return None
+
+    for band in bands:
+        if not isinstance(band, dict):
+            continue
+        min_value = band.get("min")
+        max_value = band.get("max")
+        if _is_number(min_value) and _is_number(max_value) and float(min_value) <= score <= float(max_value):
+            return dict(band)
+    return None
+
+
+def grade_scale_quiz_locally(quiz_template: dict[str, Any], answer: Any) -> dict[str, Any]:
+    max_score = resolve_quiz_max_score(quiz_template)
+
+    if quiz_template.get("type") != "scale":
+        return {
+            "quiz_id": quiz_template["id"],
+            "earned_score": 0.0,
+            "max_score": max_score,
+            "status": "error",
+            "method": "invalid_answer",
+            "feedback": "Local scale grading expects a scale quiz definition.",
+        }
+
+    items = quiz_template.get("items")
+    if not isinstance(items, list) or not items:
+        return {
+            "quiz_id": quiz_template["id"],
+            "earned_score": 0.0,
+            "max_score": max_score,
+            "status": "ungraded",
+            "method": "manual",
+            "feedback": "This scale does not define any items.",
+        }
+
+    options = quiz_template.get("options")
+    if not isinstance(options, list) or not options:
+        return {
+            "quiz_id": quiz_template["id"],
+            "earned_score": 0.0,
+            "max_score": max_score,
+            "status": "ungraded",
+            "method": "manual",
+            "feedback": "This scale does not define any answer options.",
+        }
+
+    answer_map = _as_scale_answer_map(answer)
+    if answer_map is None:
+        return {
+            "quiz_id": quiz_template["id"],
+            "earned_score": 0.0,
+            "max_score": max_score,
+            "status": "error",
+            "method": "invalid_answer",
+            "feedback": "Scale grading expects a dict keyed by item key.",
+        }
+
+    option_points = {
+        option["key"]: float(option.get("points", 0.0))
+        for option in options
+        if isinstance(option, dict) and isinstance(option.get("key"), str)
+    }
+    missing_items = []
+    for item in items:
+        if not isinstance(item, dict) or not isinstance(item.get("key"), str):
+            continue
+        if not answer_map.get(item["key"], "").strip():
+            missing_items.append(item["key"])
+
+    if missing_items:
+        return {
+            "quiz_id": quiz_template["id"],
+            "earned_score": 0.0,
+            "max_score": max_score,
+            "status": "ungraded",
+            "method": "scale_sum",
+            "feedback": f"This scale is incomplete ({len(items) - len(missing_items)} / {len(items)} item(s) answered).",
+        }
+
+    for item in items:
+        if not isinstance(item, dict) or not isinstance(item.get("key"), str):
+            continue
+        selected_key = answer_map[item["key"]]
+        if selected_key not in option_points:
+            return {
+                "quiz_id": quiz_template["id"],
+                "earned_score": 0.0,
+                "max_score": max_score,
+                "status": "error",
+                "method": "invalid_answer",
+                "feedback": f"Scale answer for {quiz_template['id']}.{item['key']} must be one option key.",
+            }
+
+    grading = quiz_template.get("grading") if isinstance(quiz_template.get("grading"), dict) else {}
+    strategy = _get_scale_scoring_strategy(grading)
+    if strategy != "sum":
+        return {
+            "quiz_id": quiz_template["id"],
+            "earned_score": 0.0,
+            "max_score": max_score,
+            "status": "error",
+            "method": "invalid_answer",
+            "feedback": f"Unsupported scale grading strategy: {strategy}.",
+        }
+
+    earned_score = _round_score(
+        sum(
+            option_points.get(answer_map[item["key"]], 0.0)
+            for item in items
+            if isinstance(item, dict) and isinstance(item.get("key"), str)
+        )
+    )
+    band = _resolve_scale_band(earned_score, grading)
+    return {
+        "quiz_id": quiz_template["id"],
+        "earned_score": earned_score,
+        "max_score": max_score,
+        "status": "scored",
+        "method": "scale_sum",
+        "band": band,
+    }
 
 
 def _grade_choice_quiz(quiz_template: dict[str, Any], answer: Any, max_score: float) -> dict[str, Any]:
@@ -589,6 +778,9 @@ def grade_quiz_answer(
                 grading_provider,
             )
         return _grade_blank_quiz_deterministic(quiz_template, answer, max_score)
+
+    if quiz_type == "scale":
+        return grade_scale_quiz_locally(quiz_template, answer)
 
     grading = quiz_template.get("grading") if isinstance(quiz_template.get("grading"), dict) else {}
     strategy = grading.get("strategy", "manual")

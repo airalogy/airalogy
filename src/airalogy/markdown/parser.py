@@ -717,6 +717,23 @@ class AimdParser:
         self._handle_error(error)
         return None
 
+    def _normalize_scale_display(
+        self, display: str, position: Position
+    ) -> Optional[str]:
+        """
+        Normalize scale display to either "matrix" or "list".
+        """
+        normalized = display.strip().lower()
+        if normalized in {"matrix", "list"}:
+            return normalized
+
+        error = InvalidSyntaxError(
+            "scale display must be one of: matrix, list",
+            position=position,
+        )
+        self._handle_error(error)
+        return None
+
     def _normalize_quiz_type(
         self, quiz_type: str, position: Position
     ) -> Optional[str]:
@@ -724,11 +741,11 @@ class AimdParser:
         Normalize quiz type.
         """
         normalized = quiz_type.strip().lower()
-        if normalized in {"choice", "blank", "open"}:
+        if normalized in {"choice", "blank", "open", "scale"}:
             return normalized
 
         error = InvalidSyntaxError(
-            "Invalid quiz type, expected one of: choice, blank, open",
+            "Invalid quiz type, expected one of: choice, blank, open, scale",
             position=position,
         )
         self._handle_error(error)
@@ -793,6 +810,7 @@ class AimdParser:
         section_name: str,
         required_fields: List[str],
         position: Position,
+        optional_fields: Optional[List[str]] = None,
     ) -> Optional[List[Dict[str, str]]]:
         """
         Normalize list items with a required `key` and other required fields.
@@ -834,6 +852,15 @@ class AimdParser:
                 return None
 
             item_key = normalized_item["key"]
+            if not self.NAME_PATTERN.match(item_key):
+                error = InvalidSyntaxError(
+                    "Invalid key in "
+                    + section_name
+                    + f": {item_key}. Keys must start with a letter and contain only letters, digits, and underscores",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
             if item_key in seen_keys:
                 error = InvalidSyntaxError(
                     f"Duplicate key in {section_name}: {item_key}",
@@ -842,6 +869,13 @@ class AimdParser:
                 self._handle_error(error)
                 return None
             seen_keys.add(item_key)
+            for field in optional_fields or []:
+                raw_value = item.get(field)
+                if raw_value is None:
+                    continue
+                normalized_value = str(raw_value).strip()
+                if normalized_value:
+                    normalized_item[field] = normalized_value
             normalized_items.append(normalized_item)
 
         return normalized_items
@@ -1096,6 +1130,146 @@ class AimdParser:
 
         return normalized_items
 
+    def _normalize_scale_options(
+        self, value: Any, position: Position
+    ) -> Optional[List[Dict[str, Any]]]:
+        if not isinstance(value, list) or not value:
+            error = InvalidSyntaxError(
+                "options must be a non-empty list",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        normalized_options: List[Dict[str, Any]] = []
+        seen_keys = set()
+        for item in value:
+            if not isinstance(item, dict):
+                error = InvalidSyntaxError(
+                    "options must be a list of objects",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            key = item.get("key")
+            text = item.get("text")
+            points = item.get("points")
+
+            key = key.strip() if isinstance(key, str) else ""
+            text = text.strip() if isinstance(text, str) else ""
+
+            if not key or not text:
+                error = InvalidSyntaxError(
+                    "Each options item must include non-empty fields: key, text, points",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            if not self.NAME_PATTERN.match(key):
+                error = InvalidSyntaxError(
+                    f"Invalid key in options: {key}. Keys must start with a letter and contain only letters, digits, and underscores",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            if key in seen_keys:
+                error = InvalidSyntaxError(
+                    f"Duplicate key in options: {key}",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            seen_keys.add(key)
+
+            if isinstance(points, bool) or not isinstance(points, (int, float)):
+                error = InvalidSyntaxError(
+                    f"options.{key}.points must be a finite number",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            normalized_option: Dict[str, Any] = {
+                "key": key,
+                "text": text,
+                "points": float(points),
+            }
+            explanation = item.get("explanation")
+            if isinstance(explanation, str) and explanation.strip():
+                normalized_option["explanation"] = explanation.strip()
+
+            normalized_options.append(normalized_option)
+
+        return normalized_options
+
+    def _normalize_scale_bands(
+        self, value: Any, position: Position
+    ) -> Optional[List[Dict[str, Any]]]:
+        if not isinstance(value, list) or not value:
+            error = InvalidSyntaxError(
+                "grading.bands must be a non-empty list",
+                position=position,
+            )
+            self._handle_error(error)
+            return None
+
+        normalized_bands: List[Dict[str, Any]] = []
+        for index, item in enumerate(value):
+            if not isinstance(item, dict):
+                error = InvalidSyntaxError(
+                    "grading.bands must be a list of objects",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            min_value = item.get("min")
+            max_value = item.get("max")
+            label = item.get("label")
+
+            if isinstance(min_value, bool) or not isinstance(min_value, (int, float)):
+                error = InvalidSyntaxError(
+                    f"grading.bands[{index}].min must be a finite number",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            if isinstance(max_value, bool) or not isinstance(max_value, (int, float)):
+                error = InvalidSyntaxError(
+                    f"grading.bands[{index}].max must be a finite number",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            if float(max_value) < float(min_value):
+                error = InvalidSyntaxError(
+                    f"grading.bands[{index}].max must be greater than or equal to min",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            if not isinstance(label, str) or not label.strip():
+                error = InvalidSyntaxError(
+                    f"grading.bands[{index}].label must be a non-empty string",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+
+            normalized_band: Dict[str, Any] = {
+                "min": float(min_value),
+                "max": float(max_value),
+                "label": label.strip(),
+            }
+            interpretation = item.get("interpretation")
+            if isinstance(interpretation, str) and interpretation.strip():
+                normalized_band["interpretation"] = interpretation.strip()
+
+            normalized_bands.append(normalized_band)
+
+        return normalized_bands
+
     def _normalize_grading_config(
         self,
         value: Any,
@@ -1181,6 +1355,27 @@ class AimdParser:
                 )
                 self._handle_error(error)
                 return None
+            return config
+
+        if quiz_type == "scale":
+            valid_strategies = {"auto", "sum"}
+            if strategy is not None and strategy not in valid_strategies:
+                error = InvalidSyntaxError(
+                    "scale grading.strategy must be one of: auto, sum",
+                    position=position,
+                )
+                self._handle_error(error)
+                return None
+            if strategy is not None:
+                config["strategy"] = strategy
+
+            bands = value.get("bands")
+            if bands is not None:
+                normalized_bands = self._normalize_scale_bands(bands, position)
+                if normalized_bands is None:
+                    return None
+                config["bands"] = normalized_bands
+
             return config
 
         if quiz_type == "blank":
@@ -1372,7 +1567,7 @@ class AimdParser:
         item_type_value = data.get("type")
         if item_type_value is None:
             error = InvalidSyntaxError(
-                "quiz type is required (choice, blank, open)",
+                "quiz type is required (choice, blank, open, scale)",
                 position=position,
             )
             self._handle_error(error)
@@ -1428,9 +1623,11 @@ class AimdParser:
 
         default_value = data.get("default")
         quiz_mode: Optional[str] = None
-        quiz_options: List[Dict[str, str]] = []
+        quiz_display: Optional[str] = None
+        quiz_options: List[Dict[str, Any]] = []
         quiz_answer: Optional[Any] = None
         quiz_blanks: List[Dict[str, str]] = []
+        quiz_items: List[Dict[str, str]] = []
         quiz_rubric: Optional[str] = None
         quiz_grading: Optional[Dict[str, Any]] = None
 
@@ -1541,6 +1738,99 @@ class AimdParser:
                 "options",
                 "score",
                 "answer",
+                "default",
+                "grading",
+                "title",
+                "description",
+            }
+        elif item_type == "scale":
+            items = self._normalize_keyed_items(
+                data.get("items"),
+                section_name="items",
+                required_fields=["key", "stem"],
+                position=position,
+                optional_fields=["description"],
+            )
+            if items is None:
+                return None
+
+            options = self._normalize_scale_options(
+                data.get("options"),
+                position=position,
+            )
+            if options is None:
+                return None
+
+            display_value = data.get("display")
+            display = "matrix"
+            if display_value is not None:
+                if not isinstance(display_value, str):
+                    error = InvalidSyntaxError(
+                        "scale display must be one of: matrix, list",
+                        position=position,
+                    )
+                    self._handle_error(error)
+                    return None
+                normalized_display = self._normalize_scale_display(
+                    display_value,
+                    position,
+                )
+                if normalized_display is None:
+                    return None
+                display = normalized_display
+
+            item_keys = [item["key"] for item in items]
+            option_keys = [option["key"] for option in options]
+            if default_value is not None:
+                if not isinstance(default_value, dict):
+                    error = InvalidSyntaxError(
+                        "scale default must be a dict keyed by item key",
+                        position=position,
+                    )
+                    self._handle_error(error)
+                    return None
+
+                normalized_default: Dict[str, str] = {}
+                for item_key, selected_key in default_value.items():
+                    if item_key not in item_keys:
+                        error = InvalidSyntaxError(
+                            f"scale default contains unknown item key: {item_key}",
+                            position=position,
+                        )
+                        self._handle_error(error)
+                        return None
+                    if not isinstance(selected_key, str) or selected_key not in option_keys:
+                        error = InvalidSyntaxError(
+                            f"scale default value for {item_key} must be one option key",
+                            position=position,
+                        )
+                        self._handle_error(error)
+                        return None
+                    normalized_default[item_key] = selected_key
+                default_value = normalized_default
+
+            quiz_display = display
+            quiz_items = items
+            quiz_options = options
+            grading_value = data.get("grading")
+            if grading_value is not None:
+                quiz_grading = self._normalize_grading_config(
+                    grading_value,
+                    item_type,
+                    position,
+                    option_keys=option_keys,
+                )
+                if quiz_grading is None:
+                    return None
+
+            reserved_keys = {
+                "id",
+                "type",
+                "stem",
+                "score",
+                "display",
+                "items",
+                "options",
                 "default",
                 "grading",
                 "title",
@@ -1669,9 +1959,11 @@ class AimdParser:
             stem=stem,
             default=default_value,
             mode=quiz_mode,
+            display=quiz_display,
             options=quiz_options,
             answer=quiz_answer,
             blanks=quiz_blanks,
+            items=quiz_items,
             rubric=quiz_rubric,
             grading=quiz_grading,
             score=score,

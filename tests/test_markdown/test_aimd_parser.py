@@ -467,6 +467,126 @@ grading:
             },
         }
 
+    def test_parse_scale_quiz_block(self):
+        content = """
+```quiz
+id: quiz_scale_gad7
+type: scale
+title: GAD-7
+description: 过去两周的频率量表
+stem: 在过去两周里，你有多少天出现以下症状？
+display: matrix
+items:
+  - key: gad7_1
+    stem: 感到不安、担心及烦躁
+    description: 过去两周内
+  - key: gad7_2
+    stem: 不能停止担心或控制不了担心
+options:
+  - key: not_at_all
+    text: 没有
+    points: 0
+  - key: several_days
+    text: 有几天
+    points: 1
+    explanation: 过去几天偶尔出现
+grading:
+  strategy: sum
+  bands:
+    - min: 0
+      max: 4
+      label: 没有焦虑症
+      interpretation: 注意自我保重
+default:
+  gad7_1: not_at_all
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        quiz = result["templates"]["quiz"][0]
+        assert quiz.id == "quiz_scale_gad7"
+        assert quiz.quiz_type == "scale"
+        assert quiz.title == "GAD-7"
+        assert quiz.description == "过去两周的频率量表"
+        assert quiz.display == "matrix"
+        assert quiz.items == [
+            {
+                "key": "gad7_1",
+                "stem": "感到不安、担心及烦躁",
+                "description": "过去两周内",
+            },
+            {
+                "key": "gad7_2",
+                "stem": "不能停止担心或控制不了担心",
+            },
+        ]
+        assert quiz.options == [
+            {"key": "not_at_all", "text": "没有", "points": 0.0},
+            {
+                "key": "several_days",
+                "text": "有几天",
+                "points": 1.0,
+                "explanation": "过去几天偶尔出现",
+            },
+        ]
+        assert quiz.grading == {
+            "strategy": "sum",
+            "bands": [
+                {
+                    "min": 0.0,
+                    "max": 4.0,
+                    "label": "没有焦虑症",
+                    "interpretation": "注意自我保重",
+                }
+            ],
+        }
+        assert quiz.default == {"gad7_1": "not_at_all"}
+
+    def test_parse_scale_quiz_block_rejects_invalid_default_item_key(self):
+        content = """
+```quiz
+id: quiz_scale_bad_default
+type: scale
+stem: 量表题
+items:
+  - key: s1
+    stem: 第一题
+options:
+  - key: not_at_all
+    text: 没有
+    points: 0
+default:
+  s2: not_at_all
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "scale default contains unknown item key: s2" in str(exc_info.value)
+
+    def test_parse_scale_quiz_block_rejects_numeric_option_key(self):
+        content = """
+```quiz
+id: quiz_scale_numeric_key
+type: scale
+stem: 量表题
+items:
+  - key: s1
+    stem: 第一题
+options:
+  - key: "0"
+    text: 没有
+    points: 0
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "Invalid key in options: 0" in str(exc_info.value)
+
     def test_parse_blank_quiz_block_requires_placeholder(self):
         content = """
 ```quiz
@@ -632,6 +752,24 @@ grading:
             exc_info.value
         )
 
+    def test_parse_choice_quiz_block_rejects_numeric_option_key(self):
+        content = """
+```quiz
+id: quiz_choice_numeric_key
+type: choice
+mode: single
+stem: Pick one
+options:
+  - key: "0"
+    text: Option A
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "Invalid key in options: 0" in str(exc_info.value)
+
     def test_parse_quiz_block_requires_options(self):
         content = """
 ```quiz
@@ -706,7 +844,7 @@ options:
 
         with pytest.raises(InvalidSyntaxError) as exc_info:
             parser.parse()
-        assert "Invalid quiz type, expected one of: choice, blank, open" in str(
+        assert "Invalid quiz type, expected one of: choice, blank, open, scale" in str(
             exc_info.value
         )
 
