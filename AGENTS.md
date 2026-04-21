@@ -10,6 +10,8 @@
 ### Sync Requirement
 
 - Every time you add or update a documentation file, update both Chinese and English versions in the same change.
+- Keep the root `README.md` and `README.zh-CN.md` aligned when either one changes.
+- Keep the maintainer release guides `RELEASING.md` and `RELEASING.zh-CN.md` aligned when either one changes.
 - Do not leave one language side outdated.
 
 ## Dependency Management
@@ -28,7 +30,9 @@
 
 ## Release Hygiene
 
-- If a change adds user-visible features, behavior changes, or public API surface in the `airalogy` package, update the package version in both `pyproject.toml` and `src/airalogy/__init__.py` in the same change.
-- When bumping the package version, add a matching entry at the top of `CHANGELOG.md` on the same date.
+- Normal feature and bug-fix work should not bump package versions or edit `CHANGELOG.md` unless the user explicitly asks for release preparation.
+- `pyproject.toml` is the single source of truth for the package version; do not hardcode `__version__` elsewhere.
+- Release preparation must update `pyproject.toml`, add the matching top entry in `CHANGELOG.md`, and keep the intended Git tag aligned with that version.
 - When bumping the package version in `pyproject.toml`, also refresh `uv.lock` so `uv sync --locked` continues to pass.
-- Do not finish a release-relevant change with code/docs updates only; version and changelog updates are part of the required change set.
+- GitHub Actions publishes to PyPI from version tags like `v0.8.1`; prepare the release commit first, merge it, then tag the matching version on `main`.
+- Do not finish an explicit release-prep change with partial metadata updates; version, changelog, and tag intent must stay aligned.

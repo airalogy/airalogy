@@ -1,5 +1,10 @@
-# Keep in sync with `pyproject.toml` and record changes in `CHANGELOG.md`.
-__version__ = "0.8.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("airalogy")
+except PackageNotFoundError:
+    # Keep imports working in an unchecked-out source tree before installation.
+    __version__ = "0.0.0"
 
 from airalogy.airalogy import Airalogy
 

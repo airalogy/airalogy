@@ -1,6 +1,6 @@
 [project]
 name = "airalogy"
-# Release checklist: bump version here, update `src/airalogy/__init__.py`, and add an entry to `CHANGELOG.md`.
+# Release checklist: bump version here, add an entry to `CHANGELOG.md`, then tag the merged release commit as `vX.Y.Z`.
 version = "0.8.0"
 description = "The world's first universal framework for standardized data digitization"
 readme = "README.md"

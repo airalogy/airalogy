@@ -1,42 +1,42 @@
 # `airalogy`
 
-[中文 README](README.zh-CN.md)
+[English README](README.md)
 
 [![PyPI version](https://img.shields.io/pypi/v/airalogy.svg)](https://pypi.org/project/airalogy/)
 [![Checks](https://img.shields.io/github/actions/workflow/status/airalogy/airalogy/ci.yml)](https://github.com/airalogy/airalogy/actions)
 
-**The world's first universal framework for data digitization and automation**
+**全球首个面向数据数字化与自动化的通用框架**
 
-- [Airalogy Platform](https://airalogy.com)
-- [Docs (English)](https://airalogy.github.io/airalogy/en/)
-- [Docs (Chinese)](https://airalogy.github.io/airalogy/zh/)
-- [Good practices for documentation](docs/index.md)
+- [Airalogy 平台](https://airalogy.com)
+- [英文文档](https://airalogy.github.io/airalogy/en/)
+- [中文文档](https://airalogy.github.io/airalogy/zh/)
+- [文档编写规范](docs/index.md)
 
-## Key Features
+## 核心特性
 
-Airalogy lets you create fully custom protocols (**Airalogy Protocols**) for defining how data is collected, validated, and processed.
+Airalogy 让你能够定义完全自定义的协议（**Airalogy Protocols**），用于描述数据如何被采集、校验和处理。
 
-| Area | Highlights |
+| 领域 | 说明 |
 | - | - |
-| **Airalogy Markdown (AIMD)** | Define rich, custom data fields directly in Markdown—variables (`{{var}}`), procedural steps (`{{step}}`), checkpoints (`{{check}}`), and more. |
-| **Model-based Data Validation** | Attach a model to every protocol for strict type checking—supports  datetime, enums, nested models, lists, etc.; and Airalogy-specific *built-in types* (`UserName`, `CurrentTime`, `AiralogyMarkdown`, file IDs, ...). |
-| **Assigner for Auto-Computation** | Use the declarative `@assigner` decorator to compute field values automatically. |
+| **Airalogy Markdown (AIMD)** | 直接用 Markdown 定义丰富的数据字段，包括变量（`{{var}}`）、流程步骤（`{{step}}`）、检查点（`{{check}}`）等。 |
+| **基于模型的数据校验** | 为每个协议绑定模型进行严格类型检查，支持 `datetime`、枚举、嵌套模型、列表等，也支持 Airalogy 内置类型，如 `UserName`、`CurrentTime`、`AiralogyMarkdown`、文件 ID 等。 |
+| **Assigner 自动计算** | 通过声明式 `@assigner` 装饰器自动计算字段值。 |
 
-## Requirements
+## 环境要求
 
-Python ≥ 3.13
+Python `>=3.13`
 
-## Installation
+## 安装
 
 ```bash
 pip install airalogy
 ```
 
-Release and PyPI publishing steps for maintainers are documented in [RELEASING.md](RELEASING.md).
+维护者发布与 PyPI 自动发布流程见 [RELEASING.zh-CN.md](RELEASING.zh-CN.md)。
 
-## Quick Start
+## 快速开始
 
-### Use one typed AIMD
+### 使用一个带类型的 AIMD
 
 **`protocol.aimd`**
 
@@ -55,16 +55,16 @@ Sample photo: {{var|sample_photo: FileIdPNG, description="Upload collection phot
 {{check|info_confirmed}} Confirm details and metadata.
 ```
 
-- Run `airalogy check` to validate the AIMD and use it directly.
-- Need an explicit model file? `airalogy generate_model protocol.aimd -o model.py` auto-generates the Pydantic model that matches these types.
+- 使用 `airalogy check` 校验 AIMD，并直接投入使用。
+- 如果需要显式模型文件，可以运行 `airalogy generate_model protocol.aimd -o model.py` 自动生成匹配这些类型的 Pydantic 模型。
 
-### Extended: add model and assigner
+### 扩展示例：增加 model 和 assigner
 
 ```text
 protocol/
 ├─ protocol.aimd  # Airalogy Markdown
-├─ model.py       # Optional: Define data validation model
-└─ assigner.py    # Optional: Define auto-computation logic
+├─ model.py       # 可选：定义数据校验模型
+└─ assigner.py    # 可选：定义自动计算逻辑
 ```
 
 **`protocol.aimd`**
@@ -124,9 +124,9 @@ def calculate_required_solute_mass(dependent_fields: dict) -> AssignerResult:
     )
 ```
 
-## Command Line Interface
+## 命令行接口
 
-Airalogy provides a CLI tool for common operations. After installation, you can use the `airalogy` command:
+安装后可以直接使用 `airalogy` 命令：
 
 ```bash
 $ airalogy --help
@@ -150,92 +150,86 @@ options:
   -v, --version         show program's version number and exit
 ```
 
-### Syntax Checking
-
-Check AIMD syntax:
+### 语法检查
 
 ```bash
-# Check default protocol.aimd file
+# 检查默认 protocol.aimd
 airalogy check
 
-# Check specific AIMD file
+# 检查指定 AIMD 文件
 airalogy check my_protocol.aimd
 
-# Using alias
+# 使用别名
 airalogy c my_protocol.aimd
 ```
 
-### Model Generation
-
-Generate VarModel from AIMD file:
+### 模型生成
 
 ```bash
-# Generate model.py from protocol.aimd
+# 从 protocol.aimd 生成 model.py
 airalogy generate_model
 
-# Generate with custom output file
+# 自定义输出文件
 airalogy generate_model my_protocol.aimd -o my_model.py
 
-# Using alias
+# 使用别名
 airalogy gm my_protocol.aimd -o custom_model.py
 ```
 
-### Assigner Extraction
-
-Extract inline `assigner` code blocks into `assigner.py`:
+### 提取 Assigner
 
 ```bash
-# Generate assigner.py from protocol.aimd (and strip inline blocks)
+# 从 protocol.aimd 生成 assigner.py，并移除内联 assigner 代码块
 airalogy generate_assigner
 
-# Using alias
+# 使用别名
 airalogy ga my_protocol.aimd -o assigner.py
 ```
 
-### Single-file Archives
+### 单文件归档
 
-Airalogy uses one unified archive suffix, `.aira`. The concrete payload type is stored in the internal manifest as `kind`, for example `protocol` or `records`.
+Airalogy 使用统一的归档后缀 `.aira`。实际载荷类型存放在内部清单中的 `kind` 字段里，例如 `protocol` 或 `records`。
 
-Pack a protocol directory into a shareable `.aira` file:
+将协议目录打包成可分享的 `.aira` 文件：
 
 ```bash
 airalogy pack ./my_protocol -o my_protocol.aira
 ```
 
-Pack one or more record JSON files into a `.aira` file:
+将一个或多个记录 JSON 文件打包成 `.aira` 文件：
 
 ```bash
 airalogy pack ./record.json ./record-history.json -o records.aira
 ```
 
-If you want the record bundle to carry the related protocol definition as well, embed the protocol directory:
+如果希望记录包同时携带对应协议定义，也可以嵌入协议目录：
 
 ```bash
 airalogy pack ./record.json -o record_bundle.aira --protocol-dir ./my_protocol
 ```
 
-Unpack either archive type:
+解包任意归档类型：
 
 ```bash
 airalogy unpack ./my_protocol.aira -o ./extracted_protocol
 airalogy unpack ./record_bundle.aira -o ./extracted_bundle
 ```
 
-Notes:
+说明：
 
-- Protocol archives preserve the original protocol directory layout, including `files/`.
-- Record archives accept JSON files containing either one record object or a list of record objects.
-- Both archive kinds use the same `.aira` suffix; inspect `_airalogy_archive/manifest.json` to determine whether the payload is a protocol archive or a record bundle.
-- Protocol packing excludes `.env` and common cache artifacts by default so local secrets are not bundled accidentally.
-- Record archives currently bundle JSON records and optional embedded protocol directories. They do not automatically dereference remote Airalogy file IDs into raw file bytes.
+- 协议归档会保留原始协议目录结构，包括 `files/`。
+- 记录归档接受包含单条记录对象或记录对象列表的 JSON 文件。
+- 两种归档都使用 `.aira` 后缀；可以通过 `_airalogy_archive/manifest.json` 判断载荷是协议归档还是记录包。
+- 协议打包默认排除 `.env` 和常见缓存产物，避免本地敏感信息被误打包。
+- 记录归档目前只会打包 JSON 记录和可选嵌入协议目录，不会自动将远程 Airalogy 文件 ID 解析成原始文件字节。
 
-## Document Conversion (MarkItDown)
+## 文档转换（MarkItDown）
 
-Airalogy provides a unified API to convert documents into Markdown.
+Airalogy 提供统一 API 将文档转换为 Markdown。
 
 ```bash
 pip install "airalogy[markitdown]"
-# or (uv)
+# 或（uv）
 uv add "airalogy[markitdown]"
 ```
 
@@ -244,31 +238,31 @@ from airalogy.convert import to_markdown
 print(to_markdown("report.pdf", backend="markitdown").text)
 ```
 
-See docs: `docs/en/apis/convert.md` / `docs/zh/apis/convert.md`.
+参见文档：`docs/en/apis/convert.md` / `docs/zh/apis/convert.md`。
 
-## Development Setup
+## 开发环境
 
-We use [uv](https://docs.astral.sh/uv/) for environment management and build, [ruff](https://docs.astral.sh/ruff/) for lint/format.
+我们使用 [uv](https://docs.astral.sh/uv/) 管理环境与构建，使用 [ruff](https://docs.astral.sh/ruff/) 进行 lint/format。
 
-setup project environment:
+初始化项目环境：
 
 ```bash
 uv sync
 ```
 
-Install all optional backends (extras) as well:
+安装所有可选后端（extras）：
 
 ```bash
 uv sync --all-extras
 ```
 
-Or install a specific extra (example: `markitdown`):
+只安装指定 extra（例如 `markitdown`）：
 
 ```bash
 uv sync --extra markitdown
 ```
 
-## Testing
+## 测试
 
 ```bash
 uv run pytest
@@ -278,7 +272,7 @@ uv run pytest
 
 Apache 2.0
 
-## Cite This Framework
+## 引用
 
 ```bibtex
 @misc{yang2025airalogyaiempowereduniversaldata,
