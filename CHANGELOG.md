@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Unreleased
+## 0.9.0 (20260423)
 
 ### Features
 
