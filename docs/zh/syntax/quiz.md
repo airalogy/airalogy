@@ -3,6 +3,7 @@
 使用统一的 `quiz` 代码块定义常见题型：
 
 - `choice`：单选题 / 多选题
+- `true_false`：判断题
 - `scale`：矩阵式 / Likert 风格量表
 - `blank`：填空题
 - `open`：问答题
@@ -18,6 +19,7 @@
 - 使用 `- ...` 表达列表项（如 `options`、`blanks`）
 - 多行文本可使用 `|`，并在后续行保持缩进
 - 含特殊字符的字符串建议显式加引号
+- `yes`、`no`、`on`、`off` 等容易被 YAML 解析为布尔值的选项 key 建议显式加引号
 - 顶层未知字段会被解析器判定为语法错误
 - 如需自动评分，请使用文档中定义的 `grading` 字段
 
@@ -48,6 +50,16 @@ rubric: 至少提到两个影响因素
   "quiz": {
     "quiz_choice_single_1": "A",
     "quiz_choice_multiple_1": ["A", "C"],
+    "quiz_choice_with_followups_1": {
+      "selected": "yes",
+      "followups": {
+        "yes": {
+          "years": 8,
+          "cigarettes_per_day": 10
+        }
+      }
+    },
+    "quiz_true_false_1": false,
     "quiz_blank_1": {
       "b1": "21%"
     },
@@ -64,6 +76,8 @@ rubric: 至少提到两个影响因素
 
 - `choice + single` -> `str`（选项 key）
 - `choice + multiple` -> `list[str]`（选项 key 列表）
+- 含 `options[].followups` 的 `choice` -> `dict`（`selected` 为选中的选项 key / key 列表，`followups` 为 `option_key -> 补充字段值`）
+- `true_false` -> `bool`
 - `scale` -> `dict[str, str]`（`item_key -> 选中的 option key`）
 - `blank` -> `dict[str, str]`（`blank_key -> 用户填写内容`）
 - `open` -> `str`
@@ -85,6 +99,7 @@ Record 的整体结构请参考：[Record 数据结构](../data-structure/record
 推荐做法：
 
 - `choice` 默认使用精确匹配
+- `true_false` 默认使用布尔精确匹配；如果“对/错”需要不同分值，可使用 `option_points`
 - `scale` 使用每题 `option.points` 的确定性求和，并可附加总分区间分组 / 分类
 - `blank` 使用规范化匹配、别名集合、数值容差等确定性规则
 - `open` 使用 rubric 评分，必要时再接入大模型 provider
@@ -197,10 +212,132 @@ answer: A
 - `answer`：标准答案（选项键）。如果使用 `grading.strategy: option_points`，可以不写 `answer`
 - `default`：记录界面的初始选项键
 - `grading`：评分策略。选择题常见用法是开启多选题部分得分，或直接按选项给分
+- `options[].followups`：选中某个选项后才需要填写的结构化补充字段
 
 `options` 中还可以额外写：
 
 - `explanation`：该选项的讲解文本。它不参与评分，但宿主或 recorder 可以在练习场景中按需显示，帮助学生理解为什么这个选项对或错
+
+### 选项补充字段（`options[].followups`）
+
+当某个选项后面还跟着“具体说明”“多少年”“每天多少支”等结构化补充信息时，可以把这些字段写在该选项的 `followups` 里：
+
+````aimd
+```quiz
+id: quiz_smoking
+type: choice
+mode: single
+stem: 是否吸烟？
+options:
+  - key: "yes"
+    text: 是
+    followups:
+      - key: years
+        type: int
+        title: 年
+      - key: cigarettes_per_day
+        type: int
+        title: 支/天
+  - key: "no"
+    text: 否
+  - key: "passive"
+    text: 被动吸烟
+    followups:
+      - key: years
+        type: int
+        title: 年
+        required: false
+```
+````
+
+`followups` 中每个字段包含：
+
+- `key`：必填，补充字段 ID，命名规则与 quiz id 一致
+- `type`：必填，当前支持 `str`、`int`、`float`、`bool`
+- `title`：可选，前端展示名
+- `description`：可选，字段说明
+- `unit`：可选，单位
+- `required`：可选，布尔值，默认 `true`
+- `default`：可选，默认值，必须与 `type` 匹配
+
+含 `followups` 的选择题使用结构化作答：
+
+```json
+{
+  "quiz_smoking": {
+    "selected": "yes",
+    "followups": {
+      "yes": {
+        "years": 8,
+        "cigarettes_per_day": 10
+      }
+    }
+  }
+}
+```
+
+规则：
+
+- `selected` 对单选题是字符串，对多选题是字符串列表
+- `followups` 以选项 key 为键，只能填写已选中选项对应的补充字段
+- 当 `require_complete=True` 时，已选中选项的必填补充字段必须存在
+- 补充字段是原始作答的一部分；选择题评分仍只使用 `selected`
+
+## 判断题（`type: true_false`）
+
+`true_false` 用于答案只有“对 / 错”“是 / 否”的判断题。作答值在 record 中保存为 JSON 布尔值。
+
+````aimd
+```quiz
+id: quiz_true_false_1
+type: true_false
+score: 2
+stem: 样本可以常温过夜保存。
+answer: false
+```
+````
+
+必填字段：
+
+- `id`
+- `type: true_false`
+- `stem`
+
+可选字段：
+
+- `score`：非负数
+- `answer`：布尔标准答案。YAML 的 `true`/`false` 和字符串形式的 `"true"`/`"false"` 都会被规范化为布尔值
+- `default`：记录界面的布尔默认值
+- `options`：可选，用于自定义两个选项的展示文案。不写时默认生成 `true` / `false` 两个选项，文案为 `True` / `False`
+- `grading`：支持 `auto`、`exact_match`、`option_points`
+
+自定义文案时，选项 key 仍必须使用标准的 `true` 和 `false`：
+
+````aimd
+```quiz
+id: quiz_true_false_labels
+type: true_false
+stem: 样本可以常温过夜保存。
+options:
+  - key: true
+    text: 对
+  - key: false
+    text: 错
+grading:
+  strategy: option_points
+  option_points:
+    true: 0
+    false: 2
+```
+````
+
+Record 中的作答保存为布尔值：
+
+```json
+{
+  "quiz_true_false_1": false
+}
+```
 
 部分得分示例：
 

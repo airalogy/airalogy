@@ -101,6 +101,11 @@ class TestSpecFile:
         assert q2.stem == "Select all correct options"
         assert q2.mode == "multiple"
 
+        true_false = quiz_dict["quiz_true_false_1"]
+        assert isinstance(true_false, QuizNode)
+        assert true_false.quiz_type == "true_false"
+        assert true_false.answer is False
+
         blank = quiz_dict["quiz_blank_1"]
         assert isinstance(blank, QuizNode)
         assert blank.quiz_type == "blank"
@@ -448,12 +453,14 @@ class TestSpecFile:
         assert "auto_list_table" in var_names
         assert "quiz_q1" not in var_names
         assert "quiz_q2" not in var_names
+        assert "quiz_true_false_1" not in var_names
         assert "quiz_blank_1" not in var_names
         assert "quiz_open_1" not in var_names
 
         quiz_names = {q["id"] for q in extracted_result["templates"]["quiz"]}
         assert "quiz_q1" in quiz_names
         assert "quiz_q2" in quiz_names
+        assert "quiz_true_false_1" in quiz_names
         assert "quiz_blank_1" in quiz_names
         assert "quiz_open_1" in quiz_names
 

@@ -136,6 +136,34 @@ def _get_choice_scoring_strategy(config: dict[str, Any] | None) -> str:
     return "option_points" if _get_choice_option_points(config) else "exact_match"
 
 
+def _normalize_true_false_answer_key(value: Any) -> str | None:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "false"}:
+            return normalized
+    return None
+
+
+def _choice_template_has_followups(quiz_template: dict[str, Any]) -> bool:
+    options = quiz_template.get("options")
+    if not isinstance(options, list):
+        return False
+    return any(
+        isinstance(option, dict)
+        and isinstance(option.get("followups"), list)
+        and bool(option["followups"])
+        for option in options
+    )
+
+
+def _get_choice_selected_answer(quiz_template: dict[str, Any], answer: Any) -> Any:
+    if _choice_template_has_followups(quiz_template) and isinstance(answer, dict):
+        return answer.get("selected")
+    return answer
+
+
 def _get_scale_scoring_strategy(config: dict[str, Any] | None) -> str:
     strategy = config.get("strategy") if isinstance(config, dict) else None
     if isinstance(strategy, str) and strategy and strategy != "auto":
@@ -186,7 +214,7 @@ def resolve_quiz_max_score(quiz_template: dict[str, Any]) -> float:
     if _is_number(score) and score >= 0:
         return _round_score(float(score))
 
-    if quiz_template.get("type") == "choice":
+    if quiz_template.get("type") in {"choice", "true_false"}:
         grading = quiz_template.get("grading")
         option_points = _get_choice_option_points(grading if isinstance(grading, dict) else None)
         options = quiz_template.get("options")
@@ -199,7 +227,7 @@ def resolve_quiz_max_score(quiz_template: dict[str, Any]) -> float:
                         values.append(float(option_points[option_key]))
                     else:
                         values.append(0.0)
-            if quiz_template.get("mode") == "single":
+            if quiz_template.get("type") == "true_false" or quiz_template.get("mode") == "single":
                 return _round_score(max([0.0, *values]))
             return _round_score(max(sum(value for value in values if value > 0), 0.0))
 
@@ -245,6 +273,7 @@ def _is_unanswered_quiz_answer(quiz_template: dict[str, Any], answer: Any) -> bo
 
     quiz_type = quiz_template.get("type")
     if quiz_type == "choice":
+        answer = _get_choice_selected_answer(quiz_template, answer)
         if quiz_template.get("mode") == "single":
             return isinstance(answer, str) and not answer.strip()
         if quiz_template.get("mode") == "multiple":
@@ -252,6 +281,9 @@ def _is_unanswered_quiz_answer(quiz_template: dict[str, Any], answer: Any) -> bo
                 item for item in answer if isinstance(item, str) and item.strip()
             ]
         return False
+
+    if quiz_type == "true_false":
+        return isinstance(answer, str) and not answer.strip()
 
     if quiz_type == "blank":
         if not isinstance(answer, dict):
@@ -434,9 +466,10 @@ def _grade_choice_quiz(quiz_template: dict[str, Any], answer: Any, max_score: fl
     config = quiz_template.get("grading") if isinstance(quiz_template.get("grading"), dict) else {}
     strategy = _get_choice_scoring_strategy(config)
     option_points = _get_choice_option_points(config)
+    selected_answer = _get_choice_selected_answer(quiz_template, answer)
 
     if quiz_template.get("mode") == "single":
-        if not isinstance(answer, str):
+        if not isinstance(selected_answer, str):
             return {
                 "quiz_id": quiz_template["id"],
                 "earned_score": 0.0,
@@ -447,7 +480,11 @@ def _grade_choice_quiz(quiz_template: dict[str, Any], answer: Any, max_score: fl
             }
 
         if strategy == "option_points":
-            raw_score = float(option_points.get(answer, 0.0)) if option_points and _is_number(option_points.get(answer)) else 0.0
+            raw_score = (
+                float(option_points.get(selected_answer, 0.0))
+                if option_points and _is_number(option_points.get(selected_answer))
+                else 0.0
+            )
             earned_score = _round_score(_clamp(raw_score, 0.0, max_score))
             return {
                 "quiz_id": quiz_template["id"],
@@ -467,7 +504,7 @@ def _grade_choice_quiz(quiz_template: dict[str, Any], answer: Any, max_score: fl
                 "method": "manual",
                 "feedback": "This choice quiz does not define an answer key.",
             }
-        correct = isinstance(official_answer, str) and answer == official_answer
+        correct = isinstance(official_answer, str) and selected_answer == official_answer
         return {
             "quiz_id": quiz_template["id"],
             "earned_score": max_score if correct else 0.0,
@@ -476,7 +513,7 @@ def _grade_choice_quiz(quiz_template: dict[str, Any], answer: Any, max_score: fl
             "method": "exact_match",
         }
 
-    if not isinstance(answer, list):
+    if not isinstance(selected_answer, list):
         return {
             "quiz_id": quiz_template["id"],
             "earned_score": 0.0,
@@ -486,7 +523,7 @@ def _grade_choice_quiz(quiz_template: dict[str, Any], answer: Any, max_score: fl
             "feedback": "Choice(multiple) grading expects a list of option keys.",
         }
 
-    selected = {item for item in answer if isinstance(item, str)}
+    selected = {item for item in selected_answer if isinstance(item, str)}
     if strategy == "option_points":
         raw_score = sum(
             float(option_points.get(item, 0.0))
@@ -544,6 +581,80 @@ def _grade_choice_quiz(quiz_template: dict[str, Any], answer: Any, max_score: fl
         "earned_score": max_score if exact_match else 0.0,
         "max_score": max_score,
         "status": "correct" if exact_match else "incorrect",
+        "method": "exact_match",
+    }
+
+
+def _grade_true_false_quiz(
+    quiz_template: dict[str, Any], answer: Any, max_score: float
+) -> dict[str, Any]:
+    config = quiz_template.get("grading") if isinstance(quiz_template.get("grading"), dict) else {}
+    strategy = _get_choice_scoring_strategy(config)
+    if strategy not in {"exact_match", "option_points"}:
+        return {
+            "quiz_id": quiz_template["id"],
+            "earned_score": 0.0,
+            "max_score": max_score,
+            "status": "error",
+            "method": "invalid_answer",
+            "feedback": f"Unsupported true_false grading strategy: {strategy}.",
+        }
+
+    selected_key = _normalize_true_false_answer_key(answer)
+    if selected_key is None:
+        return {
+            "quiz_id": quiz_template["id"],
+            "earned_score": 0.0,
+            "max_score": max_score,
+            "status": "error",
+            "method": "invalid_answer",
+            "feedback": "True/false grading expects a boolean or true/false string.",
+        }
+
+    option_points = _get_choice_option_points(config)
+    if strategy == "option_points":
+        raw_score = (
+            float(option_points.get(selected_key, 0.0))
+            if option_points and _is_number(option_points.get(selected_key))
+            else 0.0
+        )
+        earned_score = _round_score(_clamp(raw_score, 0.0, max_score))
+        return {
+            "quiz_id": quiz_template["id"],
+            "earned_score": earned_score,
+            "max_score": max_score,
+            "status": _infer_status(earned_score, max_score),
+            "method": "option_points",
+        }
+
+    official_answer = quiz_template.get("answer")
+    if official_answer is None:
+        return {
+            "quiz_id": quiz_template["id"],
+            "earned_score": 0.0,
+            "max_score": max_score,
+            "status": "ungraded",
+            "method": "manual",
+            "feedback": "This true_false quiz does not define an answer key.",
+        }
+
+    expected_key = _normalize_true_false_answer_key(official_answer)
+    if expected_key is None:
+        return {
+            "quiz_id": quiz_template["id"],
+            "earned_score": 0.0,
+            "max_score": max_score,
+            "status": "error",
+            "method": "invalid_answer",
+            "feedback": "True/false answer key must be a boolean or true/false string.",
+        }
+
+    correct = selected_key == expected_key
+    return {
+        "quiz_id": quiz_template["id"],
+        "earned_score": max_score if correct else 0.0,
+        "max_score": max_score,
+        "status": "correct" if correct else "incorrect",
         "method": "exact_match",
     }
 
@@ -765,6 +876,9 @@ def grade_quiz_answer(
 
     if quiz_type == "choice":
         return _grade_choice_quiz(quiz_template, answer, max_score)
+
+    if quiz_type == "true_false":
+        return _grade_true_false_quiz(quiz_template, answer, max_score)
 
     if quiz_type == "blank":
         grading = quiz_template.get("grading") if isinstance(quiz_template.get("grading"), dict) else {}

@@ -3,6 +3,7 @@
 Use `quiz` for common assessment types in one unified syntax.
 
 - `choice`: single-choice / multiple-choice
+- `true_false`: judgment / true-false question
 - `scale`: matrix / Likert-style questionnaire
 - `blank`: fill-in-the-blank
 - `open`: open-ended question
@@ -18,6 +19,7 @@ Recommended conventions:
 - Use `- ...` for list items (for example, `options` and `blanks`)
 - Use `|` for multiline text and keep indentation on following lines
 - Quote strings explicitly when they contain special characters
+- Quote option keys such as `yes`, `no`, `on`, and `off`, which YAML may otherwise parse as booleans
 - Unknown top-level fields are rejected by parser validation
 - Use the built-in `grading` field when you want auto-grading rules
 
@@ -48,6 +50,16 @@ Example (`quiz` part only):
   "quiz": {
     "quiz_choice_single_1": "A",
     "quiz_choice_multiple_1": ["A", "C"],
+    "quiz_choice_with_followups_1": {
+      "selected": "yes",
+      "followups": {
+        "yes": {
+          "years": 8,
+          "cigarettes_per_day": 10
+        }
+      }
+    },
+    "quiz_true_false_1": false,
     "quiz_blank_1": {
       "b1": "21%"
     },
@@ -64,6 +76,8 @@ Mapping:
 
 - `choice + single` -> `str` (option key)
 - `choice + multiple` -> `list[str]` (option key list)
+- `choice` with `options[].followups` -> `dict` (`selected` is the selected option key / key list, `followups` is `option_key -> followup field values`)
+- `true_false` -> `bool`
 - `scale` -> `dict[str, str]` (`item_key -> selected option key`)
 - `blank` -> `dict[str, str]` (`blank_key -> user input`)
 - `open` -> `str`
@@ -85,6 +99,7 @@ The key rule is simple: keep the raw answers in `data.quiz` and do not write gra
 Recommended defaults:
 
 - `choice`: exact answer matching
+- `true_false`: exact boolean matching, or `option_points` when true/false needs asymmetric scoring
 - `scale`: deterministic sum of per-item option `points`, with optional score bands / classifications
 - `blank`: deterministic matching with normalization, aliases, and numeric tolerance
 - `open`: rubric-based grading, with an optional LLM provider when needed
@@ -197,10 +212,132 @@ Optional fields:
 - `answer`: correct option key(s). You may omit this when using `grading.strategy: option_points`
 - `default`: initial option key(s) for record form
 - `grading`: grading policy. Common choice cases are multiple-choice partial credit and per-option scoring
+- `options[].followups`: structured fields that are shown and validated only when that option is selected
 
 Each `options` item may also include:
 
 - `explanation`: explanatory text for that option. It is not part of grading, but hosts or recorders may show it in practice-oriented flows to explain why the option is right or wrong
+
+### Option Followups (`options[].followups`)
+
+Use `followups` when a selected option requires extra structured information, such as “details”, “how many years”, or “how many per day”:
+
+````aimd
+```quiz
+id: quiz_smoking
+type: choice
+mode: single
+stem: Do you smoke?
+options:
+  - key: "yes"
+    text: Yes
+    followups:
+      - key: years
+        type: int
+        title: Years
+      - key: cigarettes_per_day
+        type: int
+        title: Cigarettes per day
+  - key: "no"
+    text: No
+  - key: "passive"
+    text: Passive smoking
+    followups:
+      - key: years
+        type: int
+        title: Years
+        required: false
+```
+````
+
+Each followup field contains:
+
+- `key`: required followup field id, using the same naming rules as quiz ids
+- `type`: required, currently one of `str`, `int`, `float`, `bool`
+- `title`: optional display label
+- `description`: optional field description
+- `unit`: optional unit
+- `required`: optional boolean, defaults to `true`
+- `default`: optional default value, which must match `type`
+
+Choice items with `followups` use structured answers:
+
+```json
+{
+  "quiz_smoking": {
+    "selected": "yes",
+    "followups": {
+      "yes": {
+        "years": 8,
+        "cigarettes_per_day": 10
+      }
+    }
+  }
+}
+```
+
+Rules:
+
+- `selected` is a string for single choice, and a string list for multiple choice
+- `followups` is keyed by option key and may contain only selected options
+- when `require_complete=True`, required followup fields for selected options must be present
+- followups are part of the raw answer payload; choice grading still uses only `selected`
+
+## True/False Item (`type: true_false`)
+
+Use `true_false` for judgment questions where the answer is a boolean.
+
+````aimd
+```quiz
+id: quiz_true_false_1
+type: true_false
+score: 2
+stem: The sample can be stored at room temperature overnight.
+answer: false
+```
+````
+
+Required fields:
+
+- `id`
+- `type: true_false`
+- `stem`
+
+Optional fields:
+
+- `score`: non-negative number
+- `answer`: boolean answer. YAML `true`/`false` and string keys `"true"`/`"false"` are accepted and normalized to booleans
+- `default`: boolean default value for record form
+- `options`: optional labels for the two choices. If omitted, Airalogy uses `true` / `false` options with `True` / `False` labels
+- `grading`: supports `auto`, `exact_match`, and `option_points`
+
+Custom labels must still use the canonical option keys `true` and `false`:
+
+````aimd
+```quiz
+id: quiz_true_false_labels
+type: true_false
+stem: 样本可以常温过夜保存。
+options:
+  - key: true
+    text: 对
+  - key: false
+    text: 错
+grading:
+  strategy: option_points
+  option_points:
+    true: 0
+    false: 2
+```
+````
+
+Record answers are stored as JSON booleans:
+
+```json
+{
+  "quiz_true_false_1": false
+}
+```
 
 Partial-credit example:
 

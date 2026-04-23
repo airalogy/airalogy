@@ -165,6 +165,81 @@ def test_grade_quiz_answer_choice_option_points():
     assert result["method"] == "option_points"
 
 
+def test_grade_quiz_answer_true_false_exact_match():
+    result = grade_quiz_answer(
+        {
+            "id": "quiz_true_false",
+            "type": "true_false",
+            "score": 2,
+            "stem": "The sample can be stored at room temperature overnight.",
+            "answer": False,
+        },
+        False,
+    )
+
+    assert result["status"] == "correct"
+    assert result["earned_score"] == 2.0
+    assert result["method"] == "exact_match"
+
+
+def test_grade_quiz_answer_true_false_option_points():
+    result = grade_quiz_answer(
+        {
+            "id": "quiz_true_false_option_points",
+            "type": "true_false",
+            "stem": "Pick true or false",
+            "options": [
+                {"key": "true", "text": "True"},
+                {"key": "false", "text": "False"},
+            ],
+            "grading": {
+                "strategy": "option_points",
+                "option_points": {
+                    "true": 0,
+                    "false": 2,
+                },
+            },
+        },
+        "false",
+    )
+
+    assert result["status"] == "correct"
+    assert result["earned_score"] == 2.0
+    assert result["max_score"] == 2.0
+    assert result["method"] == "option_points"
+
+
+def test_grade_quiz_answer_choice_with_followups_uses_selected_option():
+    result = grade_quiz_answer(
+        {
+            "id": "quiz_smoking",
+            "type": "choice",
+            "mode": "single",
+            "score": 2,
+            "stem": "是否吸烟？",
+            "options": [
+                {
+                    "key": "yes",
+                    "text": "是",
+                    "followups": [
+                        {"key": "years", "type": "int", "required": True},
+                    ],
+                },
+                {"key": "no", "text": "否"},
+            ],
+            "answer": "no",
+        },
+        {
+            "selected": "no",
+            "followups": {},
+        },
+    )
+
+    assert result["status"] == "correct"
+    assert result["earned_score"] == 2.0
+    assert result["method"] == "exact_match"
+
+
 def test_grade_quiz_answer_unanswered_choice_is_ungraded():
     result = grade_quiz_answer(
         {

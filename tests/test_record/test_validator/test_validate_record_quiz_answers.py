@@ -30,6 +30,13 @@ blanks:
 ```
 
 ```quiz
+id: quiz_true_false_1
+type: true_false
+stem: The sample can be stored at room temperature overnight.
+answer: false
+```
+
+```quiz
 id: quiz_open_1
 type: open
 stem: Explain the reason
@@ -57,6 +64,34 @@ options:
 ```
 """
 
+AIMD_WITH_CHOICE_FOLLOWUPS = """
+```quiz
+id: quiz_smoking
+type: choice
+mode: single
+stem: 是否吸烟？
+options:
+  - key: "yes"
+    text: 是
+    followups:
+      - key: years
+        type: int
+        title: 年
+      - key: cigarettes_per_day
+        type: int
+        title: 支/天
+  - key: "no"
+    text: 否
+  - key: "passive"
+    text: 被动吸烟
+    followups:
+      - key: years
+        type: int
+        title: 年
+        required: false
+```
+"""
+
 
 def build_valid_record() -> dict:
     return {
@@ -64,6 +99,7 @@ def build_valid_record() -> dict:
             "quiz": {
                 "quiz_choice_single_1": "A",
                 "quiz_blank_1": {"b1": "21%"},
+                "quiz_true_false_1": False,
                 "quiz_open_1": "Because of temperature and pressure.",
                 "quiz_scale_1": {"s1": "not_at_all", "s2": "more_than_half_the_days"},
             }
@@ -90,6 +126,126 @@ def test_validate_record_quiz_answers_invalid_choice_option():
 
     assert is_valid is False
     assert any("Choice(single) answer for quiz_choice_single_1" in msg for msg in errors)
+
+
+def test_validate_record_quiz_answers_invalid_true_false_answer():
+    quiz_templates = parse_aimd(AIMD_WITH_QUIZ)["templates"]["quiz"]
+    record = build_valid_record()
+    record["data"]["quiz"]["quiz_true_false_1"] = "false"
+
+    is_valid, errors = validate_record_quiz_answers(record, quiz_templates)
+
+    assert is_valid is False
+    assert any(
+        "True/false answer for quiz_true_false_1 must be a boolean." in msg
+        for msg in errors
+    )
+
+
+def test_validate_record_quiz_answers_choice_followups_valid():
+    quiz_templates = parse_aimd(AIMD_WITH_CHOICE_FOLLOWUPS)["templates"]["quiz"]
+    record = {
+        "data": {
+            "quiz": {
+                "quiz_smoking": {
+                    "selected": "yes",
+                    "followups": {
+                        "yes": {
+                            "years": 8,
+                            "cigarettes_per_day": 10,
+                        }
+                    },
+                }
+            }
+        }
+    }
+
+    is_valid, errors = validate_record_quiz_answers(record, quiz_templates)
+
+    assert is_valid is True
+    assert errors == []
+
+
+def test_validate_record_quiz_answers_choice_followups_missing_required_key():
+    quiz_templates = parse_aimd(AIMD_WITH_CHOICE_FOLLOWUPS)["templates"]["quiz"]
+    record = {
+        "data": {
+            "quiz": {
+                "quiz_smoking": {
+                    "selected": "yes",
+                    "followups": {
+                        "yes": {
+                            "years": 8,
+                        }
+                    },
+                }
+            }
+        }
+    }
+
+    is_valid, errors = validate_record_quiz_answers(record, quiz_templates)
+
+    assert is_valid is False
+    assert any(
+        "Choice followups for quiz_smoking.yes are missing required keys: cigarettes_per_day."
+        in msg
+        for msg in errors
+    )
+
+
+def test_validate_record_quiz_answers_choice_followups_reject_unselected_option():
+    quiz_templates = parse_aimd(AIMD_WITH_CHOICE_FOLLOWUPS)["templates"]["quiz"]
+    record = {
+        "data": {
+            "quiz": {
+                "quiz_smoking": {
+                    "selected": "no",
+                    "followups": {
+                        "yes": {
+                            "years": 8,
+                            "cigarettes_per_day": 10,
+                        }
+                    },
+                }
+            }
+        }
+    }
+
+    is_valid, errors = validate_record_quiz_answers(record, quiz_templates)
+
+    assert is_valid is False
+    assert any(
+        "Choice followups for quiz_smoking contain unselected option keys: yes."
+        in msg
+        for msg in errors
+    )
+
+
+def test_validate_record_quiz_answers_choice_followups_reject_wrong_type():
+    quiz_templates = parse_aimd(AIMD_WITH_CHOICE_FOLLOWUPS)["templates"]["quiz"]
+    record = {
+        "data": {
+            "quiz": {
+                "quiz_smoking": {
+                    "selected": "yes",
+                    "followups": {
+                        "yes": {
+                            "years": "8",
+                            "cigarettes_per_day": 10,
+                        }
+                    },
+                }
+            }
+        }
+    }
+
+    is_valid, errors = validate_record_quiz_answers(record, quiz_templates)
+
+    assert is_valid is False
+    assert any(
+        "Choice followup answer for quiz_smoking.yes.years must be an int." in msg
+        for msg in errors
+    )
 
 
 def test_validate_record_quiz_answers_invalid_blank_keys():

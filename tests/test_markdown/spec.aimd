@@ -24,7 +24,7 @@ Variable with default value:
 {{var|float_with_default: float = 3.14}}
 {{var|bool_with_default: bool = True}}
 
-Quiz items (choice, blank, open):
+Quiz items (choice, true_false, blank, open):
 
 ```quiz
 id: quiz_q1
@@ -54,6 +54,13 @@ options:
     text: Option B
   - key: C
     text: Option C
+```
+
+```quiz
+id: quiz_true_false_1
+type: true_false
+stem: The sample can be stored at room temperature overnight.
+answer: false
 ```
 
 ```quiz

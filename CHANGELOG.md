@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Features
+
+- Add `choice.options[].followups` syntax for option-conditioned structured fields, with parsed field metadata, record validation, and grading support that reads the selected option from structured answers.
+- Add `quiz.type: true_false` for judgment questions, including boolean answer/default normalization, default true/false options, record validation, and local grading support.
+
+### Documentation
+
+- Document choice followup syntax and the corresponding structured `data.quiz` answer shape.
+- Document true/false quiz syntax and boolean `data.quiz` answer storage.
+
+### Changed
+
+- Refactor the AIMD parser implementation from a single large module into a `airalogy.markdown.parser` package while preserving public parser imports.
+
 ## 0.8.0 (20260414)
 
 ### Features

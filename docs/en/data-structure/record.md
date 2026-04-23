@@ -110,10 +110,20 @@ Data structures of different templates:
     "quiz": { // template_name = "quiz"
 
         // Quiz values are keyed by quiz id.
-        // This object is validated by quiz-definition rules (choice/scale/blank/open).
+        // This object is validated by quiz-definition rules (choice/true_false/scale/blank/open).
 
         "quiz_choice_single_1": "A", // single choice: option key
         "quiz_choice_multiple_1": ["A", "C"], // multiple choice: list of option keys
+        "quiz_true_false_1": false, // true/false: boolean
+        "quiz_choice_with_followups_1": { // choice with option followup fields
+            "selected": "yes", // single choice uses an option key; multiple choice uses a list of option keys
+            "followups": {
+                "yes": { // only selected options may have followup values
+                    "years": 8,
+                    "cigarettes_per_day": 10
+                }
+            }
+        },
         "quiz_scale_1": { // scale: item_key -> selected option key
             "s1": "not_at_all",
             "s2": "more_than_half_the_days"

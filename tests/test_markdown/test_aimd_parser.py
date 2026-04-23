@@ -467,6 +467,84 @@ grading:
             },
         }
 
+    def test_parse_true_false_quiz_block(self):
+        content = """
+```quiz
+id: quiz_true_false_1
+type: true_false
+score: 2
+stem: The sample can be stored at room temperature overnight.
+answer: false
+default: true
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        quiz = result["templates"]["quiz"][0]
+        assert quiz.id == "quiz_true_false_1"
+        assert quiz.quiz_type == "true_false"
+        assert quiz.mode == "single"
+        assert quiz.answer is False
+        assert quiz.default is True
+        assert quiz.options == [
+            {"key": "true", "text": "True"},
+            {"key": "false", "text": "False"},
+        ]
+
+    def test_parse_true_false_quiz_block_with_custom_options_and_option_points(self):
+        content = """
+```quiz
+id: quiz_true_false_custom
+type: true_false
+stem: 样本可以常温过夜保存。
+options:
+  - key: true
+    text: 对
+    explanation: 常温过夜会增加降解风险。
+  - key: false
+    text: 错
+grading:
+  strategy: option_points
+  option_points:
+    true: 0
+    false: 2
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        quiz = result["templates"]["quiz"][0]
+        assert quiz.options == [
+            {"key": "true", "text": "对", "explanation": "常温过夜会增加降解风险。"},
+            {"key": "false", "text": "错"},
+        ]
+        assert quiz.grading == {
+            "strategy": "option_points",
+            "option_points": {
+                "true": 0.0,
+                "false": 2.0,
+            },
+        }
+
+    def test_parse_true_false_quiz_block_rejects_partial_credit(self):
+        content = """
+```quiz
+id: quiz_true_false_bad_grading
+type: true_false
+stem: This is true.
+grading:
+  strategy: partial_credit
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "true_false grading.strategy must be one of: auto, exact_match, option_points" in str(
+            exc_info.value
+        )
+
     def test_parse_scale_quiz_block(self):
         content = """
 ```quiz
@@ -844,7 +922,7 @@ options:
 
         with pytest.raises(InvalidSyntaxError) as exc_info:
             parser.parse()
-        assert "Invalid quiz type, expected one of: choice, blank, open, scale" in str(
+        assert "Invalid quiz type, expected one of: choice, true_false, blank, open, scale" in str(
             exc_info.value
         )
 
@@ -1519,3 +1597,93 @@ answer: B
                 "explanation": "Correct because it matches the storage requirement.",
             },
         ]
+
+    def test_parse_aimd_choice_option_followups(self):
+        content = """
+```quiz
+id: quiz_smoking
+type: choice
+mode: single
+stem: 是否吸烟？
+options:
+  - key: "yes"
+    text: 是
+    followups:
+      - key: years
+        type: int
+        title: 年
+      - key: cigarettes_per_day
+        type: int
+        title: 支/天
+        required: false
+        default: 0
+  - key: "no"
+    text: 否
+  - key: "passive"
+    text: 被动吸烟
+    followups:
+      - key: years
+        type: int
+        title: 年
+```
+"""
+        result = parse_aimd(content)
+        quiz = result["templates"]["quiz"][0]
+
+        assert quiz["options"] == [
+            {
+                "key": "yes",
+                "text": "是",
+                "followups": [
+                    {
+                        "key": "years",
+                        "type": "int",
+                        "required": True,
+                        "title": "年",
+                    },
+                    {
+                        "key": "cigarettes_per_day",
+                        "type": "int",
+                        "required": False,
+                        "title": "支/天",
+                        "default": 0,
+                    },
+                ],
+            },
+            {"key": "no", "text": "否"},
+            {
+                "key": "passive",
+                "text": "被动吸烟",
+                "followups": [
+                    {
+                        "key": "years",
+                        "type": "int",
+                        "required": True,
+                        "title": "年",
+                    }
+                ],
+            },
+        ]
+
+    def test_parse_aimd_choice_option_followups_reject_invalid_type(self):
+        content = """
+```quiz
+id: quiz_smoking
+type: choice
+mode: single
+stem: 是否吸烟？
+options:
+  - key: "yes"
+    text: 是
+    followups:
+      - key: years
+        type: number
+```
+"""
+        parser = AimdParser(content)
+
+        with pytest.raises(InvalidSyntaxError) as exc_info:
+            parser.parse()
+        assert "options.yes.followups.years.type must be one of" in str(
+            exc_info.value
+        )
