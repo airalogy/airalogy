@@ -527,6 +527,43 @@ grading:
             },
         }
 
+    def test_parse_true_false_quiz_block_with_followups(self):
+        content = """
+```quiz
+id: quiz_true_false_followups
+type: true_false
+stem: 是否出现沉淀？
+options:
+  - key: true
+    text: 是
+    followups:
+      - key: color
+        type: str
+        title: 颜色
+  - key: false
+    text: 否
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        quiz = result["templates"]["quiz"][0]
+        assert quiz.options == [
+            {
+                "key": "true",
+                "text": "是",
+                "followups": [
+                    {
+                        "key": "color",
+                        "type": "str",
+                        "required": True,
+                        "title": "颜色",
+                    }
+                ],
+            },
+            {"key": "false", "text": "否"},
+        ]
+
     def test_parse_true_false_quiz_block_rejects_partial_credit(self):
         content = """
 ```quiz

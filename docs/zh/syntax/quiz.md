@@ -51,15 +51,23 @@ rubric: 至少提到两个影响因素
     "quiz_choice_single_1": "A",
     "quiz_choice_multiple_1": ["A", "C"],
     "quiz_choice_with_followups_1": {
-      "selected": "yes",
+      "selected": "A",
       "followups": {
-        "yes": {
-          "years": 8,
-          "cigarettes_per_day": 10
+        "A": {
+          "temperature_c": 4,
+          "duration_hours": 2.5
         }
       }
     },
     "quiz_true_false_1": false,
+    "quiz_true_false_with_followups_1": {
+      "selected": true,
+      "followups": {
+        "true": {
+          "color": "白色"
+        }
+      }
+    },
     "quiz_blank_1": {
       "b1": "21%"
     },
@@ -78,6 +86,7 @@ rubric: 至少提到两个影响因素
 - `choice + multiple` -> `list[str]`（选项 key 列表）
 - 含 `options[].followups` 的 `choice` -> `dict`（`selected` 为选中的选项 key / key 列表，`followups` 为 `option_key -> 补充字段值`）
 - `true_false` -> `bool`
+- 含 `options[].followups` 的 `true_false` -> `dict`（`selected` 为布尔值，`followups` 为 `"true"` / `"false" -> 补充字段值`）
 - `scale` -> `dict[str, str]`（`item_key -> 选中的 option key`）
 - `blank` -> `dict[str, str]`（`blank_key -> 用户填写内容`）
 - `open` -> `str`
@@ -220,33 +229,40 @@ answer: A
 
 ### 选项补充字段（`options[].followups`）
 
-当某个选项后面还跟着“具体说明”“多少年”“每天多少支”等结构化补充信息时，可以把这些字段写在该选项的 `followups` 里：
+当某个选项后面还跟着“保存温度”“处理时长”“具体说明”等结构化补充信息时，可以把这些字段写在该选项的 `followups` 里：
 
 ````aimd
 ```quiz
-id: quiz_smoking
+id: quiz_sample_storage
 type: choice
 mode: single
-stem: 是否吸烟？
+stem: 样本当前如何保存？
 options:
-  - key: "yes"
-    text: 是
+  - key: A
+    text: 冷藏保存
     followups:
-      - key: years
-        type: int
-        title: 年
-      - key: cigarettes_per_day
-        type: int
-        title: 支/天
-  - key: "no"
-    text: 否
-  - key: "passive"
-    text: 被动吸烟
+      - key: temperature_c
+        type: float
+        title: 温度
+        unit: °C
+      - key: duration_hours
+        type: float
+        title: 时长
+        unit: 小时
+  - key: B
+    text: 冷冻保存
     followups:
-      - key: years
+      - key: freeze_thaw_count
         type: int
-        title: 年
+        title: 冻融次数
         required: false
+  - key: C
+    text: 常温放置
+    followups:
+      - key: duration_hours
+        type: float
+        title: 时长
+        unit: 小时
 ```
 ````
 
@@ -264,12 +280,12 @@ options:
 
 ```json
 {
-  "quiz_smoking": {
-    "selected": "yes",
+  "quiz_sample_storage": {
+    "selected": "A",
     "followups": {
-      "yes": {
-        "years": 8,
-        "cigarettes_per_day": 10
+      "A": {
+        "temperature_c": 4,
+        "duration_hours": 2.5
       }
     }
   }
@@ -309,6 +325,7 @@ answer: false
 - `answer`：布尔标准答案。YAML 的 `true`/`false` 和字符串形式的 `"true"`/`"false"` 都会被规范化为布尔值
 - `default`：记录界面的布尔默认值
 - `options`：可选，用于自定义两个选项的展示文案。不写时默认生成 `true` / `false` 两个选项，文案为 `True` / `False`
+- `options[].followups`：可选，选中 `true` 或 `false` 后才需要填写的结构化补充字段，字段规则同选择题 followups
 - `grading`：支持 `auto`、`exact_match`、`option_points`
 
 自定义文案时，选项 key 仍必须使用标准的 `true` 和 `false`：
@@ -331,13 +348,47 @@ grading:
 ```
 ````
 
-Record 中的作答保存为布尔值：
+默认情况下，Record 中的作答保存为布尔值：
 
 ```json
 {
   "quiz_true_false_1": false
 }
 ```
+
+如果 `true_false.options[].followups` 定义了补充字段，作答会改用结构化形式；`selected` 仍是布尔值，`followups` 中的选项键使用字符串 `"true"` / `"false"`：
+
+````aimd
+```quiz
+id: quiz_precipitate
+type: true_false
+stem: 是否出现沉淀？
+options:
+  - key: true
+    text: 是
+    followups:
+      - key: color
+        type: str
+        title: 颜色
+  - key: false
+    text: 否
+```
+````
+
+```json
+{
+  "quiz_precipitate": {
+    "selected": true,
+    "followups": {
+      "true": {
+        "color": "白色"
+      }
+    }
+  }
+}
+```
+
+没有 `followups` 的判断题继续保存为普通布尔值。评分默认只使用 `selected`，补充字段作为原始作答保留。
 
 部分得分示例：
 

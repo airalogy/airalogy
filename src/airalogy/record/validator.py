@@ -74,6 +74,103 @@ def _followup_value_matches_type(value: Any, field_type: str) -> bool:
     return False
 
 
+def _validate_option_followup_answers(
+    label: str,
+    quiz_id: str,
+    answer: dict[str, Any],
+    option_keys: list[str],
+    selected_keys: list[str],
+    followups_by_option: dict[str, list[dict[str, Any]]],
+    require_complete: bool,
+    errors: list[str],
+) -> None:
+    followup_answers = answer.get("followups", {})
+    if followup_answers is None:
+        followup_answers = {}
+    if not isinstance(followup_answers, dict):
+        errors.append(
+            f"{label} followups for {quiz_id} must be a dict keyed by selected option key."
+        )
+        return
+
+    unknown_option_keys = sorted(
+        str(key) for key in followup_answers.keys() if key not in option_keys
+    )
+    if unknown_option_keys:
+        errors.append(
+            f"{label} followups for {quiz_id} contain unknown option keys: {', '.join(unknown_option_keys)}."
+        )
+
+    unselected_option_keys = sorted(
+        str(key)
+        for key in followup_answers.keys()
+        if key in option_keys and key not in selected_keys
+    )
+    if unselected_option_keys:
+        errors.append(
+            f"{label} followups for {quiz_id} contain unselected option keys: {', '.join(unselected_option_keys)}."
+        )
+
+    for selected_key in selected_keys:
+        followup_defs = followups_by_option.get(selected_key, [])
+        raw_field_answers = followup_answers.get(selected_key, {})
+        if raw_field_answers is None:
+            raw_field_answers = {}
+
+        if not followup_defs:
+            if isinstance(raw_field_answers, dict) and raw_field_answers:
+                errors.append(
+                    f"{label} followups for {quiz_id}.{selected_key} are not defined."
+                )
+            continue
+
+        if not isinstance(raw_field_answers, dict):
+            errors.append(
+                f"{label} followups for {quiz_id}.{selected_key} must be a dict keyed by followup key."
+            )
+            continue
+
+        followup_keys = [
+            followup["key"]
+            for followup in followup_defs
+            if isinstance(followup.get("key"), str)
+        ]
+        unknown_field_keys = sorted(
+            str(key) for key in raw_field_answers.keys() if key not in followup_keys
+        )
+        if unknown_field_keys:
+            errors.append(
+                f"{label} followups for {quiz_id}.{selected_key} contain unknown keys: {', '.join(unknown_field_keys)}."
+            )
+
+        if require_complete:
+            missing_required_keys = sorted(
+                followup["key"]
+                for followup in followup_defs
+                if isinstance(followup.get("key"), str)
+                and followup.get("required", True)
+                and followup["key"] not in raw_field_answers
+            )
+            if missing_required_keys:
+                errors.append(
+                    f"{label} followups for {quiz_id}.{selected_key} are missing required keys: {', '.join(missing_required_keys)}."
+                )
+
+        for followup in followup_defs:
+            followup_key = followup.get("key")
+            field_type = followup.get("type")
+            if not isinstance(followup_key, str) or not isinstance(field_type, str):
+                continue
+            if followup_key not in raw_field_answers:
+                continue
+            value = raw_field_answers[followup_key]
+            if not _followup_value_matches_type(value, field_type):
+                errors.append(
+                    f"{label} followup answer for {quiz_id}.{selected_key}.{followup_key} "
+                    f"must be {_followup_type_label(field_type)}."
+                )
+
+
 def _validate_choice_answer_with_followups(
     quiz_id: str,
     mode: Any,
@@ -130,91 +227,56 @@ def _validate_choice_answer_with_followups(
         errors.append(f"Invalid choice mode in quiz template {quiz_id}: {mode}.")
         return
 
-    followup_answers = answer.get("followups", {})
-    if followup_answers is None:
-        followup_answers = {}
-    if not isinstance(followup_answers, dict):
+    _validate_option_followup_answers(
+        label="Choice",
+        quiz_id=quiz_id,
+        answer=answer,
+        option_keys=option_keys,
+        selected_keys=selected_keys,
+        followups_by_option=followups_by_option,
+        require_complete=require_complete,
+        errors=errors,
+    )
+
+
+def _validate_true_false_answer_with_followups(
+    quiz_id: str,
+    answer: Any,
+    option_keys: list[str],
+    followups_by_option: dict[str, list[dict[str, Any]]],
+    require_complete: bool,
+    errors: list[str],
+) -> None:
+    if not isinstance(answer, dict):
         errors.append(
-            f"Choice followups for {quiz_id} must be a dict keyed by selected option key."
+            f"True/false answer for {quiz_id} with followups must be a dict containing selected."
         )
         return
 
-    unknown_option_keys = sorted(
-        str(key) for key in followup_answers.keys() if key not in option_keys
+    unsupported_keys = sorted(
+        str(key) for key in answer.keys() if key not in {"selected", "followups"}
     )
-    if unknown_option_keys:
+    if unsupported_keys:
         errors.append(
-            f"Choice followups for {quiz_id} contain unknown option keys: {', '.join(unknown_option_keys)}."
+            f"True/false answer for {quiz_id} contains unsupported keys: {', '.join(unsupported_keys)}."
         )
 
-    unselected_option_keys = sorted(
-        str(key)
-        for key in followup_answers.keys()
-        if key in option_keys and key not in selected_keys
+    selected = answer.get("selected")
+    if not isinstance(selected, bool):
+        errors.append(f"True/false selected value for {quiz_id} must be a boolean.")
+        return
+
+    selected_keys = ["true" if selected else "false"]
+    _validate_option_followup_answers(
+        label="True/false",
+        quiz_id=quiz_id,
+        answer=answer,
+        option_keys=option_keys,
+        selected_keys=selected_keys,
+        followups_by_option=followups_by_option,
+        require_complete=require_complete,
+        errors=errors,
     )
-    if unselected_option_keys:
-        errors.append(
-            f"Choice followups for {quiz_id} contain unselected option keys: {', '.join(unselected_option_keys)}."
-        )
-
-    for selected_key in selected_keys:
-        followup_defs = followups_by_option.get(selected_key, [])
-        raw_field_answers = followup_answers.get(selected_key, {})
-        if raw_field_answers is None:
-            raw_field_answers = {}
-
-        if not followup_defs:
-            if isinstance(raw_field_answers, dict) and raw_field_answers:
-                errors.append(
-                    f"Choice followups for {quiz_id}.{selected_key} are not defined."
-                )
-            continue
-
-        if not isinstance(raw_field_answers, dict):
-            errors.append(
-                f"Choice followups for {quiz_id}.{selected_key} must be a dict keyed by followup key."
-            )
-            continue
-
-        followup_keys = [
-            followup["key"]
-            for followup in followup_defs
-            if isinstance(followup.get("key"), str)
-        ]
-        unknown_field_keys = sorted(
-            str(key) for key in raw_field_answers.keys() if key not in followup_keys
-        )
-        if unknown_field_keys:
-            errors.append(
-                f"Choice followups for {quiz_id}.{selected_key} contain unknown keys: {', '.join(unknown_field_keys)}."
-            )
-
-        if require_complete:
-            missing_required_keys = sorted(
-                followup["key"]
-                for followup in followup_defs
-                if isinstance(followup.get("key"), str)
-                and followup.get("required", True)
-                and followup["key"] not in raw_field_answers
-            )
-            if missing_required_keys:
-                errors.append(
-                    f"Choice followups for {quiz_id}.{selected_key} are missing required keys: {', '.join(missing_required_keys)}."
-                )
-
-        for followup in followup_defs:
-            followup_key = followup.get("key")
-            field_type = followup.get("type")
-            if not isinstance(followup_key, str) or not isinstance(field_type, str):
-                continue
-            if followup_key not in raw_field_answers:
-                continue
-            value = raw_field_answers[followup_key]
-            if not _followup_value_matches_type(value, field_type):
-                errors.append(
-                    f"Choice followup answer for {quiz_id}.{selected_key}.{followup_key} "
-                    f"must be {_followup_type_label(field_type)}."
-                )
 
 
 def validate_record_quiz_answers(
@@ -322,7 +384,19 @@ def validate_record_quiz_answers(
                 errors.append(f"Invalid choice mode in quiz template {quiz_id}: {mode}.")
 
         elif quiz_type == "true_false":
-            if not isinstance(answer, bool):
+            option_keys, followups_by_option = _get_choice_option_metadata(
+                template.get("options")
+            )
+            if followups_by_option:
+                _validate_true_false_answer_with_followups(
+                    quiz_id=quiz_id,
+                    answer=answer,
+                    option_keys=option_keys,
+                    followups_by_option=followups_by_option,
+                    require_complete=require_complete,
+                    errors=errors,
+                )
+            elif not isinstance(answer, bool):
                 errors.append(f"True/false answer for {quiz_id} must be a boolean.")
 
         elif quiz_type == "blank":

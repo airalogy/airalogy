@@ -209,6 +209,40 @@ def test_grade_quiz_answer_true_false_option_points():
     assert result["method"] == "option_points"
 
 
+def test_grade_quiz_answer_true_false_with_followups_uses_selected_value():
+    result = grade_quiz_answer(
+        {
+            "id": "quiz_precipitate",
+            "type": "true_false",
+            "score": 2,
+            "stem": "是否出现沉淀？",
+            "options": [
+                {
+                    "key": "true",
+                    "text": "是",
+                    "followups": [
+                        {"key": "color", "type": "str", "required": True},
+                    ],
+                },
+                {"key": "false", "text": "否"},
+            ],
+            "answer": True,
+        },
+        {
+            "selected": True,
+            "followups": {
+                "true": {
+                    "color": "白色",
+                }
+            },
+        },
+    )
+
+    assert result["status"] == "correct"
+    assert result["earned_score"] == 2.0
+    assert result["method"] == "exact_match"
+
+
 def test_grade_quiz_answer_choice_with_followups_uses_selected_option():
     result = grade_quiz_answer(
         {

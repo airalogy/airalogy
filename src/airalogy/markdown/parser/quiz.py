@@ -78,7 +78,7 @@ class QuizParserMixin:
             return isinstance(value, bool)
         return False
 
-    def _normalize_choice_followups(
+    def _normalize_option_followups(
         self, value: Any, option_key: str, position: Position
     ) -> Optional[List[Dict[str, Any]]]:
         if not isinstance(value, list) or not value:
@@ -244,7 +244,7 @@ class QuizParserMixin:
 
             followups = item.get("followups")
             if followups is not None:
-                normalized_followups = self._normalize_choice_followups(
+                normalized_followups = self._normalize_option_followups(
                     followups,
                     key,
                     position,
@@ -334,6 +334,17 @@ class QuizParserMixin:
             explanation = item.get("explanation")
             if isinstance(explanation, str) and explanation.strip():
                 normalized_option["explanation"] = explanation.strip()
+
+            followups = item.get("followups")
+            if followups is not None:
+                normalized_followups = self._normalize_option_followups(
+                    followups,
+                    key,
+                    position,
+                )
+                if normalized_followups is None:
+                    return None
+                normalized_option["followups"] = normalized_followups
             normalized_options.append(normalized_option)
 
         if seen_keys != self.TRUE_FALSE_OPTION_KEYS:

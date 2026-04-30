@@ -115,12 +115,20 @@ An Airalogy Record is a JSON object that contains the metadata and data of a res
         "quiz_choice_single_1": "A", // 单选题：选项key
         "quiz_choice_multiple_1": ["A", "C"], // 多选题：选项key列表
         "quiz_true_false_1": false, // 判断题：布尔值
-        "quiz_choice_with_followups_1": { // 含选项补充字段的选择题
-            "selected": "yes", // 单选题为选项key；多选题为选项key列表
+        "quiz_true_false_with_followups_1": { // 含选项补充字段的判断题
+            "selected": true, // 布尔值
             "followups": {
-                "yes": { // 只保存已选中选项对应的补充字段
-                    "years": 8,
-                    "cigarettes_per_day": 10
+                "true": { // followups 使用字符串选项键 "true" / "false"
+                    "color": "白色"
+                }
+            }
+        },
+        "quiz_choice_with_followups_1": { // 含选项补充字段的选择题
+            "selected": "A", // 单选题为选项key；多选题为选项key列表
+            "followups": {
+                "A": { // 只保存已选中选项对应的补充字段
+                    "temperature_c": 4,
+                    "duration_hours": 2.5
                 }
             }
         },

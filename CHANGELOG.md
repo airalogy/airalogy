@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## Unreleased
+
+### Features
+
+- Add `true_false.options[].followups` syntax, with structured `{ selected, followups }` answers only when followups are present while preserving plain boolean answers for ordinary judgment questions.
+
+### Documentation
+
+- Document true/false followup syntax and recorder answer shape.
+
 ## 0.9.0 (20260423)
 
 ### Features

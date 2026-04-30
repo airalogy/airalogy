@@ -115,12 +115,20 @@ Data structures of different templates:
         "quiz_choice_single_1": "A", // single choice: option key
         "quiz_choice_multiple_1": ["A", "C"], // multiple choice: list of option keys
         "quiz_true_false_1": false, // true/false: boolean
-        "quiz_choice_with_followups_1": { // choice with option followup fields
-            "selected": "yes", // single choice uses an option key; multiple choice uses a list of option keys
+        "quiz_true_false_with_followups_1": { // true/false with option followup fields
+            "selected": true, // boolean
             "followups": {
-                "yes": { // only selected options may have followup values
-                    "years": 8,
-                    "cigarettes_per_day": 10
+                "true": { // followups use string option keys "true" / "false"
+                    "color": "white"
+                }
+            }
+        },
+        "quiz_choice_with_followups_1": { // choice with option followup fields
+            "selected": "A", // single choice uses an option key; multiple choice uses a list of option keys
+            "followups": {
+                "A": { // only selected options may have followup values
+                    "temperature_c": 4,
+                    "duration_hours": 2.5
                 }
             }
         },

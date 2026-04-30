@@ -51,15 +51,23 @@ Example (`quiz` part only):
     "quiz_choice_single_1": "A",
     "quiz_choice_multiple_1": ["A", "C"],
     "quiz_choice_with_followups_1": {
-      "selected": "yes",
+      "selected": "A",
       "followups": {
-        "yes": {
-          "years": 8,
-          "cigarettes_per_day": 10
+        "A": {
+          "temperature_c": 4,
+          "duration_hours": 2.5
         }
       }
     },
     "quiz_true_false_1": false,
+    "quiz_true_false_with_followups_1": {
+      "selected": true,
+      "followups": {
+        "true": {
+          "color": "white"
+        }
+      }
+    },
     "quiz_blank_1": {
       "b1": "21%"
     },
@@ -78,6 +86,7 @@ Mapping:
 - `choice + multiple` -> `list[str]` (option key list)
 - `choice` with `options[].followups` -> `dict` (`selected` is the selected option key / key list, `followups` is `option_key -> followup field values`)
 - `true_false` -> `bool`
+- `true_false` with `options[].followups` -> `dict` (`selected` is a boolean, `followups` is `"true"` / `"false" -> followup field values`)
 - `scale` -> `dict[str, str]` (`item_key -> selected option key`)
 - `blank` -> `dict[str, str]` (`blank_key -> user input`)
 - `open` -> `str`
@@ -220,33 +229,40 @@ Each `options` item may also include:
 
 ### Option Followups (`options[].followups`)
 
-Use `followups` when a selected option requires extra structured information, such as “details”, “how many years”, or “how many per day”:
+Use `followups` when a selected option requires extra structured information, such as storage temperature, processing duration, or details:
 
 ````aimd
 ```quiz
-id: quiz_smoking
+id: quiz_sample_storage
 type: choice
 mode: single
-stem: Do you smoke?
+stem: How is the sample currently stored?
 options:
-  - key: "yes"
-    text: Yes
+  - key: A
+    text: Refrigerated
     followups:
-      - key: years
-        type: int
-        title: Years
-      - key: cigarettes_per_day
-        type: int
-        title: Cigarettes per day
-  - key: "no"
-    text: No
-  - key: "passive"
-    text: Passive smoking
+      - key: temperature_c
+        type: float
+        title: Temperature
+        unit: °C
+      - key: duration_hours
+        type: float
+        title: Duration
+        unit: h
+  - key: B
+    text: Frozen
     followups:
-      - key: years
+      - key: freeze_thaw_count
         type: int
-        title: Years
+        title: Freeze-thaw count
         required: false
+  - key: C
+    text: Room temperature
+    followups:
+      - key: duration_hours
+        type: float
+        title: Duration
+        unit: h
 ```
 ````
 
@@ -264,12 +280,12 @@ Choice items with `followups` use structured answers:
 
 ```json
 {
-  "quiz_smoking": {
-    "selected": "yes",
+  "quiz_sample_storage": {
+    "selected": "A",
     "followups": {
-      "yes": {
-        "years": 8,
-        "cigarettes_per_day": 10
+      "A": {
+        "temperature_c": 4,
+        "duration_hours": 2.5
       }
     }
   }
@@ -309,6 +325,7 @@ Optional fields:
 - `answer`: boolean answer. YAML `true`/`false` and string keys `"true"`/`"false"` are accepted and normalized to booleans
 - `default`: boolean default value for record form
 - `options`: optional labels for the two choices. If omitted, Airalogy uses `true` / `false` options with `True` / `False` labels
+- `options[].followups`: optional structured fields shown only after selecting `true` or `false`; field rules are the same as choice followups
 - `grading`: supports `auto`, `exact_match`, and `option_points`
 
 Custom labels must still use the canonical option keys `true` and `false`:
@@ -331,13 +348,47 @@ grading:
 ```
 ````
 
-Record answers are stored as JSON booleans:
+By default, record answers are stored as JSON booleans:
 
 ```json
 {
   "quiz_true_false_1": false
 }
 ```
+
+If `true_false.options[].followups` defines followup fields, the answer uses the structured shape instead. `selected` remains a boolean, while `followups` uses string option keys `"true"` / `"false"`:
+
+````aimd
+```quiz
+id: quiz_precipitate
+type: true_false
+stem: Was precipitate observed?
+options:
+  - key: true
+    text: Yes
+    followups:
+      - key: color
+        type: str
+        title: Color
+  - key: false
+    text: No
+```
+````
+
+```json
+{
+  "quiz_precipitate": {
+    "selected": true,
+    "followups": {
+      "true": {
+        "color": "white"
+      }
+    }
+  }
+}
+```
+
+True/false items without `followups` continue to use a plain boolean answer. Grading still uses only `selected` by default, while followups remain part of the raw answer.
 
 Partial-credit example:
 

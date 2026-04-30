@@ -92,6 +92,23 @@ options:
 ```
 """
 
+AIMD_WITH_TRUE_FALSE_FOLLOWUPS = """
+```quiz
+id: quiz_precipitate
+type: true_false
+stem: 是否出现沉淀？
+options:
+  - key: true
+    text: 是
+    followups:
+      - key: color
+        type: str
+        title: 颜色
+  - key: false
+    text: 否
+```
+"""
+
 
 def build_valid_record() -> dict:
     return {
@@ -244,6 +261,68 @@ def test_validate_record_quiz_answers_choice_followups_reject_wrong_type():
     assert is_valid is False
     assert any(
         "Choice followup answer for quiz_smoking.yes.years must be an int." in msg
+        for msg in errors
+    )
+
+
+def test_validate_record_quiz_answers_true_false_followups_valid():
+    quiz_templates = parse_aimd(AIMD_WITH_TRUE_FALSE_FOLLOWUPS)["templates"]["quiz"]
+    record = {
+        "data": {
+            "quiz": {
+                "quiz_precipitate": {
+                    "selected": True,
+                    "followups": {
+                        "true": {
+                            "color": "白色",
+                        }
+                    },
+                }
+            }
+        }
+    }
+
+    is_valid, errors = validate_record_quiz_answers(record, quiz_templates)
+
+    assert is_valid is True
+    assert errors == []
+
+
+def test_validate_record_quiz_answers_true_false_followups_missing_required_key():
+    quiz_templates = parse_aimd(AIMD_WITH_TRUE_FALSE_FOLLOWUPS)["templates"]["quiz"]
+    record = {
+        "data": {
+            "quiz": {
+                "quiz_precipitate": {
+                    "selected": True,
+                    "followups": {
+                        "true": {}
+                    },
+                }
+            }
+        }
+    }
+
+    is_valid, errors = validate_record_quiz_answers(record, quiz_templates)
+
+    assert is_valid is False
+    assert any(
+        "True/false followups for quiz_precipitate.true are missing required keys: color."
+        in msg
+        for msg in errors
+    )
+
+
+def test_validate_record_quiz_answers_true_false_followups_reject_legacy_bool():
+    quiz_templates = parse_aimd(AIMD_WITH_TRUE_FALSE_FOLLOWUPS)["templates"]["quiz"]
+    record = {"data": {"quiz": {"quiz_precipitate": True}}}
+
+    is_valid, errors = validate_record_quiz_answers(record, quiz_templates)
+
+    assert is_valid is False
+    assert any(
+        "True/false answer for quiz_precipitate with followups must be a dict containing selected."
+        in msg
         for msg in errors
     )
 

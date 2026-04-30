@@ -146,7 +146,7 @@ def _normalize_true_false_answer_key(value: Any) -> str | None:
     return None
 
 
-def _choice_template_has_followups(quiz_template: dict[str, Any]) -> bool:
+def _option_template_has_followups(quiz_template: dict[str, Any]) -> bool:
     options = quiz_template.get("options")
     if not isinstance(options, list):
         return False
@@ -158,8 +158,8 @@ def _choice_template_has_followups(quiz_template: dict[str, Any]) -> bool:
     )
 
 
-def _get_choice_selected_answer(quiz_template: dict[str, Any], answer: Any) -> Any:
-    if _choice_template_has_followups(quiz_template) and isinstance(answer, dict):
+def _get_option_selected_answer(quiz_template: dict[str, Any], answer: Any) -> Any:
+    if _option_template_has_followups(quiz_template) and isinstance(answer, dict):
         return answer.get("selected")
     return answer
 
@@ -273,7 +273,7 @@ def _is_unanswered_quiz_answer(quiz_template: dict[str, Any], answer: Any) -> bo
 
     quiz_type = quiz_template.get("type")
     if quiz_type == "choice":
-        answer = _get_choice_selected_answer(quiz_template, answer)
+        answer = _get_option_selected_answer(quiz_template, answer)
         if quiz_template.get("mode") == "single":
             return isinstance(answer, str) and not answer.strip()
         if quiz_template.get("mode") == "multiple":
@@ -466,7 +466,7 @@ def _grade_choice_quiz(quiz_template: dict[str, Any], answer: Any, max_score: fl
     config = quiz_template.get("grading") if isinstance(quiz_template.get("grading"), dict) else {}
     strategy = _get_choice_scoring_strategy(config)
     option_points = _get_choice_option_points(config)
-    selected_answer = _get_choice_selected_answer(quiz_template, answer)
+    selected_answer = _get_option_selected_answer(quiz_template, answer)
 
     if quiz_template.get("mode") == "single":
         if not isinstance(selected_answer, str):
@@ -600,7 +600,9 @@ def _grade_true_false_quiz(
             "feedback": f"Unsupported true_false grading strategy: {strategy}.",
         }
 
-    selected_key = _normalize_true_false_answer_key(answer)
+    selected_key = _normalize_true_false_answer_key(
+        _get_option_selected_answer(quiz_template, answer)
+    )
     if selected_key is None:
         return {
             "quiz_id": quiz_template["id"],
@@ -608,7 +610,7 @@ def _grade_true_false_quiz(
             "max_score": max_score,
             "status": "error",
             "method": "invalid_answer",
-            "feedback": "True/false grading expects a boolean or true/false string.",
+            "feedback": "True/false grading expects a boolean, true/false string, or structured answer with selected.",
         }
 
     option_points = _get_choice_option_points(config)
