@@ -80,6 +80,36 @@ sample_id,quiz.quiz_choice_1,step.prepare.checked,check.qc.annotation,metadata.o
 S1,A,true,reviewed,alice
 ```
 
+Because step/check template defaults are enabled by default, the input above produces a core Record fragment like this. The CSV does not provide `step.prepare.annotation` or `check.qc.checked`, so they are filled as `""` and `false`. This example omits the generated `record_id`, `record_version`, `metadata.sha1`, and protocol metadata that may come from `protocol.toml`:
+
+```json
+{
+  "metadata": {
+    "operator": "alice"
+  },
+  "data": {
+    "var": {
+      "sample_id": "S1"
+    },
+    "quiz": {
+      "quiz_choice_1": "A"
+    },
+    "step": {
+      "prepare": {
+        "annotation": "",
+        "checked": true
+      }
+    },
+    "check": {
+      "qc": {
+        "annotation": "reviewed",
+        "checked": false
+      }
+    }
+  }
+}
+```
+
 Supported prefixed paths:
 
 - `var.<field_id>`
@@ -103,12 +133,12 @@ airalogy import-records ./my_protocol -i records.csv -o records.jsonl
 
 Useful options:
 
-- `--input-format csv|tsv|json|jsonl`
-- `--output-format json|jsonl`
-- `--allow-extra-var-fields`
-- `--require-complete-quiz`
-- `--no-template-defaults`
-- `--no-record-ids`
-- `--skip-model-sync-check`
+- `--input-format csv|tsv|json|jsonl`: explicitly set the input format. The default `auto` infers it from the input file suffix.
+- `--output-format json|jsonl`: explicitly set the output format. The default `auto` infers it from the output file suffix.
+- `--allow-extra-var-fields`: allow input fields that are not declared by the Protocol and keep them in `data.var`. By default, these fields are errors. Because extra fields are not validated by `VarModel`, this is not recommended for normal imports.
+- `--require-complete-quiz`: require every quiz defined by the Protocol to have an imported answer. By default, quiz answers may be omitted.
+- `--no-template-defaults`: do not auto-fill step/check template defaults. By default, deterministic `annotation` and `checked` fields are added from the Protocol.
+- `--no-record-ids`: do not generate `record_id` values. If the input data explicitly provides a `record_id` column, that value is still used.
+- `--skip-model-sync-check`: skip compatibility checks between `protocol.aimd` and `model.py::VarModel`. By default, model-only variable fields and same-name explicit type conflicts are rejected; use this only for migration or debugging.
 
 By default, the CLI generates `record_id`, sets `record_version` to `1`, checks compatibility between `protocol.aimd` and `model.py::VarModel`, adds deterministic step/check defaults from the Protocol, computes `metadata.sha1`, and fails the import if any row has validation errors.

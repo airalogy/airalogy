@@ -80,6 +80,36 @@ sample_id,quiz.quiz_choice_1,step.prepare.checked,check.qc.annotation,metadata.o
 S1,A,true,reviewed,alice
 ```
 
+因为默认会补齐 step/check 模板字段，所以上面的输入会产生下面这样的核心 Record 片段。其中 CSV 未提供的 `step.prepare.annotation` 和 `check.qc.checked` 会分别补为 `""` 和 `false`。这里省略了自动生成的 `record_id`、`record_version`、`metadata.sha1`，以及可能来自 `protocol.toml` 的协议元信息：
+
+```json
+{
+  "metadata": {
+    "operator": "alice"
+  },
+  "data": {
+    "var": {
+      "sample_id": "S1"
+    },
+    "quiz": {
+      "quiz_choice_1": "A"
+    },
+    "step": {
+      "prepare": {
+        "annotation": "",
+        "checked": true
+      }
+    },
+    "check": {
+      "qc": {
+        "annotation": "reviewed",
+        "checked": false
+      }
+    }
+  }
+}
+```
+
 支持的前缀路径：
 
 - `var.<field_id>`
@@ -103,12 +133,12 @@ airalogy import-records ./my_protocol -i records.csv -o records.jsonl
 
 常用选项：
 
-- `--input-format csv|tsv|json|jsonl`
-- `--output-format json|jsonl`
-- `--allow-extra-var-fields`
-- `--require-complete-quiz`
-- `--no-template-defaults`
-- `--no-record-ids`
-- `--skip-model-sync-check`
+- `--input-format csv|tsv|json|jsonl`：显式指定输入格式。默认 `auto` 会根据输入文件后缀推断。
+- `--output-format json|jsonl`：显式指定输出格式。默认 `auto` 会根据输出文件后缀推断。
+- `--allow-extra-var-fields`：允许输入中出现 Protocol 未声明的变量字段，并把这些字段保留到 `data.var`。默认会把这类字段视为错误。由于额外字段不会经过 `VarModel` 校验，常规导入不建议开启。
+- `--require-complete-quiz`：要求 Protocol 中定义的每个 quiz 都必须在输入数据中有答案。默认允许 quiz 答案缺失。
+- `--no-template-defaults`：不要自动补齐 step/check 的模板默认值。默认会按 Protocol 给 step/check 补上确定性的 `annotation` 和 `checked` 字段。
+- `--no-record-ids`：不要自动生成 `record_id`。如果输入数据中显式提供了 `record_id` 列，仍会使用该值。
+- `--skip-model-sync-check`：跳过 `protocol.aimd` 和 `model.py::VarModel` 的兼容性检查。默认会拒绝 model-only 变量字段和同名显式类型冲突；只应在迁移或调试时使用。
 
 默认情况下，CLI 会生成 `record_id`，把 `record_version` 设为 `1`，检查 `protocol.aimd` 和 `model.py::VarModel` 是否兼容，按 Protocol 补上确定性的 step/check 默认值，计算 `metadata.sha1`，并且在任意行校验失败时终止导入。
