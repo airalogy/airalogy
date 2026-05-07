@@ -64,6 +64,7 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 
 ## Protocol archive 的行为
 
+- 打包前会校验 `protocol.aimd`；如果旁边存在 `model.py`，也会检查 `model.py::VarModel` 是否只定义 AIMD 中存在的变量字段，以及同名字段是否存在显式类型冲突。
 - 归档会保留原始 Protocol 目录结构。
 - `files/` 以及其他普通协议资源文件会按原样打包。
 - 默认会排除 `.env` 以及 `__pycache__/`、`.pyc` 等常见缓存产物。
@@ -73,7 +74,7 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 
 - 输入 JSON 文件既可以是单条 record 对象，也可以是一个 record 对象列表。
 - manifest 会尽量保留每条 record 的 `record_id`、`record_version`、`protocol_id`、`protocol_version` 等元信息。
-- 当你传入 `--protocol-dir` 时，Airalogy 会尝试把每条 record 和对应的内嵌 Protocol 关联起来。
+- 当你传入 `--protocol-dir` 时，Airalogy 会先校验该 Protocol，再尝试把每条 record 和对应的内嵌 Protocol 关联起来。
 
 ## 安全性与限制
 

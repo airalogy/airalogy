@@ -232,149 +232,81 @@ Thus, in AIMD, a `str`-typed `var` supports all parameters included in `var_str_
 {{var|<var_id>: str, **var_str_kwargs}}
 ```
 
-## Overwrite Principle
+## Aggregation and Override Principle
 
-Because AF type and parameter information can be defined in both AIMD and `model.py`, Airalogy follows these overwrite rules when both are present:
+When `protocol.aimd` and `model.py` coexist, the field set of `data.var` is still defined by AIMD. AIMD typing sugar first generates a base `VarModel`; same-name fields in `model.py` override the generated AIMD fields; fields that exist only in AIMD keep their AIMD-generated types. `model.py` cannot define extra `VarModel` fields that do not appear in AIMD.
 
-1. Definitions in `model.py` take precedence over those in AIMD.
-2. If an AF is not defined in `model.py`, the AIMD definition is used.
-3. If an AF **is** defined in `model.py`, that definition completely overwrites the AIMD definition, including the type and all parameter information.
+The following patterns are allowed:
 
-### Rationale
+1. A field is typed only in AIMD and is not repeated in `model.py`.
+2. A field is positioned and identified in AIMD without a type, and `model.py` defines its final type.
 
-To render the correct Field Input Boxes for each AF in the Airalogy Protocol Recording Interface, we essentially build an **Airalogy Field JSON Schema** from the protocol. When AIMD and `model.py` coexist, Airalogy first constructs an initial JSON Schema from AIMD, then overwrites it with definitions from `model.py`, producing the final JSON Schema.
+Airalogy does not require AIMD and `model.py` to contain exactly the same field set, but every field in `model.py::VarModel` must be a declared AIMD `var`. The default check also rejects explicit type conflicts on the same field: if AIMD explicitly declares `age: int` but `model.py::VarModel` declares `age` as `str`, that is an error.
 
-For example:
+For example, this Protocol is valid:
 
 `protocol.aimd`:
 
 ```aimd
-Name: {{var|name: str = "Unknown", title = "Student Name", description = "The student's full name", max_length = 50}}
-Age: {{var|age:: str}}
-School: {{var|school: str}}
+Sample: {{var|sample_id: str}}
+Age: {{var|age}}
 ```
 
 `model.py`:
 
 ```py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 class VarModel(BaseModel):
-    name: str
-    age: int = Field(default=18, title="Age", description="Age in years", ge=0)
+    age: int
 ```
 
-The initial JSON Schema constructed from `protocol.aimd` would be:
+The final `data.var` validator contains `sample_id: str` and `age: int`. `sample_id` comes from AIMD, and `age` is overridden by `model.py` instead of using AIMD's default string type.
 
-```json
-{
-  "title": "VarModel",
-  "type": "object",
-  "properties": {
-    "name": {
-      "title": "Student Name",
-      "type": "string",
-      "description": "The student's full name",
-      "maxLength": 50,
-      "default": "Unknown"
-    },
-    "age": {
-      "title": "age",
-      "type": "string"
-    },
-    "school": {
-      "title": "school",
-      "type": "string"
-    }
-  }
-}
+This Protocol, however, is invalid:
+
+`protocol.aimd`:
+
+```aimd
+Sample: {{var|sample_id: str}}
 ```
 
-The JSON Schema derived from `model.py` would be:
-
-```json
-{
-  "title": "VarModel",
-  "type": "object",
-  "properties": {
-    "name": {
-      "title": "name",
-      "type": "string"
-    },
-    "age": {
-      "title": "Age",
-      "type": "integer",
-      "description": "Age in years",
-      "minimum": 0,
-      "default": 18
-    }
-  }
-}
-```
-
-Since `name` and `age` are defined again in `model.py`, these two AFs overwrite the corresponding AIMD definitions. The final JSON Schema is:
-
-```json
-{
-  "title": "VarModel",
-  "type": "object",
-  "properties": {
-    "name": {
-      "title": "name",
-      "type": "string"
-    },
-    "age": {
-      "title": "Age",
-      "type": "integer",
-      "description": "Age in years",
-      "minimum": 0,
-      "default": 18
-    },
-    "school": {
-      "title": "school",
-      "type": "string"
-    }
-  }
-}
-```
-
-Note that in the final JSON Schema above, `name` no longer has `description` or `maxLength` because they were overwritten by the definition in `model.py`.
-
-You can also think of this as: Airalogy first generates a preliminary Pydantic model from AIMD and then overwrites it using definitions from `model.py` to produce the final Pydantic model, from which the JSON Schema is generated.
-
-From AIMD, the preliminary Pydantic model would be:
+`model.py`:
 
 ```py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+
 class VarModel(BaseModel):
-    name: str = Field(
-        default="Unknown", title="Student Name", description="The student's full name", max_length=50
-    )
+    sample_id: str
+    operator_id: str
+```
+
+`airalogy check protocol.aimd` reports this incompatibility because `operator_id` is not an AIMD `var`. If this field should be recorded, declare it in AIMD first. If it is only import source data, runtime metadata, or backend state, it usually belongs in `metadata` or another dedicated structure instead of `data.var`.
+
+This same-name explicit type conflict is also invalid:
+
+`protocol.aimd`:
+
+```aimd
+Age: {{var|age: int}}
+```
+
+`model.py`:
+
+```py
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
     age: str
-    school: str
 ```
 
-From `model.py`, the Pydantic model is:
+`airalogy check protocol.aimd` reports the conflict because AIMD explicitly declares `age` as `int` while `VarModel` declares it as `str`. Batch import runs the same compatibility check before importing records, then validates `data.var` with the aggregated model.
+
+For richer Pydantic constraints, keep the base type aligned and add constraints in `model.py`:
 
 ```py
 from pydantic import BaseModel, Field
+
 class VarModel(BaseModel):
-    name: str
-    age: int = Field(default=18, title="Age", description="Age in years", ge=0)
+    age: int = Field(ge=0, title="Age")
 ```
-
-The final Pydantic model becomes:
-
-```py
-from pydantic import BaseModel, Field
-class VarModel(BaseModel):
-    name: str
-    age: int = Field(default=18, title="Age", description="Age in years", ge=0)
-    school: str
-```
-
-You can then call `VarModel.model_json_schema()` to obtain the final JSON Schema.
-
-#### Future Features
-
-For semantic clarity and atomicity, we do **not** recommend redefining the same AF in both `model.py` and `protocol.aimd`. In future versions, we plan to add warnings for this behavior to help users avoid potential misuse.

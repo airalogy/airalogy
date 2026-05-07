@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
+from .markdown import validate_aimd
+
 ARCHIVE_FORMAT = "airalogy.archive"
 ARCHIVE_VERSION = 1
 ARCHIVE_METADATA_DIR = "_airalogy_archive"
@@ -56,6 +58,23 @@ def _ensure_protocol_dir(protocol_dir: str | Path) -> Path:
             f"Protocol directory '{path}' must contain 'protocol.aimd'."
         )
     return path
+
+
+def _validate_protocol_definition(protocol_dir: Path) -> None:
+    protocol_file = protocol_dir / "protocol.aimd"
+    try:
+        content = protocol_file.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ArchiveError(f"Failed to read '{protocol_file}': {exc}") from exc
+
+    is_valid, errors = validate_aimd(content, protocol_dir=protocol_dir)
+    if is_valid:
+        return
+
+    error_messages = "; ".join(str(error) for error in errors)
+    raise ArchiveError(
+        f"Protocol '{protocol_dir}' failed validation: {error_messages}"
+    )
 
 
 def _infer_protocol_name_from_aimd(protocol_dir: Path) -> str | None:
@@ -302,6 +321,7 @@ def pack_protocol_archive(
     force: bool = False,
 ) -> Path:
     protocol_dir_path = _ensure_protocol_dir(protocol_dir)
+    _validate_protocol_definition(protocol_dir_path)
     destination = (
         Path(output_path)
         if output_path is not None
@@ -383,6 +403,7 @@ def pack_records_archive(
     used_protocol_roots: set[str] = set()
     for protocol_dir in protocol_dirs or []:
         protocol_dir_path = _ensure_protocol_dir(protocol_dir)
+        _validate_protocol_definition(protocol_dir_path)
         metadata = _load_protocol_metadata(protocol_dir_path)
         archive_root = _build_protocol_archive_root(
             metadata=metadata,

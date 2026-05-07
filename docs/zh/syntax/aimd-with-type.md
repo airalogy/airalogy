@@ -232,149 +232,81 @@ var_str_kwargs = {
 {{var|<var_id>: str, **var_str_kwargs}}
 ```
 
-## 覆写原则
+## 聚合与覆写原则
 
-由于可以在AIMD和`model.py`中同时定义AF的类型和参数信息，因此当两者均存在时，Airalogy会遵循以下覆写原则：
+当 `protocol.aimd` 和 `model.py` 同时存在时，`data.var` 的字段集合仍然由 AIMD 决定。AIMD 中的类型语法糖会先生成一份基础 `VarModel`；`model.py` 中的同名字段会覆写 AIMD 生成的字段；AIMD 中存在而 `model.py` 没有定义的字段会保留 AIMD 生成的类型。`model.py` 不能额外定义 AIMD 中没有出现的 `VarModel` 字段。
 
-1. `model.py`中的定义优先级高于AIMD中的定义。
-2. 当`model.py`中未定义某个AF时，使用AIMD中的定义。
-3. 当`model.py`中定义了某个AF时，其定义将完全覆写AIMD中的定义，包括类型和所有参数信息。
+这意味着以下写法都是允许的：
 
-### 原理
+1. 字段只在 AIMD 中定义类型，`model.py` 不重复定义。
+2. 字段在 AIMD 中只定义位置和 ID，不写类型，由 `model.py` 定义最终类型。
 
-简单来说，为了实现基于任意一个Airalogy Protocol渲染出正确的Airalogy Protocol Recording Interface中每个AFs的对应的Field Input Boxes，本质上，我们是要根据该Airalogy Protocol构建出Airalogy Field Json Schema。为此，当同时存在AIMD和`model.py`时，Airalogy会先根据AIMD构建出初始的Json Schema，然后再根据`model.py`中的定义对该Json Schema进行覆写，最终得到正确的Json Schema。
+Airalogy 不要求 AIMD 和 `model.py` 拥有完全相同的字段集合，但要求 `model.py::VarModel` 的字段必须是 AIMD `var` 字段的子集。默认检查还会拒绝同一个字段的显式类型冲突：如果 AIMD 显式声明了 `age: int`，而 `model.py::VarModel` 将 `age` 声明为 `str`，则直接报错。
 
-例如，假设如下案例：
+例如，下面的 Protocol 是有效的：
 
 `protocol.aimd`:
 
 ```aimd
-姓名：{{var|name: str = "未知", title = "学生姓名", description = "学生的全名", max_length = 50}}
-年龄：{{var|age:: str}}
-学院: {{var|school: str}}
+样本：{{var|sample_id: str}}
+年龄：{{var|age}}
 ```
 
 `model.py`:
 
 ```py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 class VarModel(BaseModel):
-    name: str
-    age: int = Field(default=18, title="年龄", description="学生的年龄，单位为岁", ge=0)
+    age: int
 ```
 
-则通过`protocol.aimd`构建出的初始Json Schema为：
+最终的 `data.var` 校验模型会包含 `sample_id: str` 和 `age: int`。其中 `sample_id` 来自 AIMD，`age` 由 `model.py` 覆写 AIMD 的默认字符串类型。
 
-```json
-{
-    "title": "VarModel",
-    "type": "object",
-    "properties": {
-        "name": {
-            "title": "学生姓名",
-            "type": "string",
-            "description": "学生的全名",
-            "maxLength": 50,
-            "default": "未知"
-        },
-        "age": {
-            "title": "age",
-            "type": "string"
-        },
-        "school": {
-            "title": "school",
-            "type": "string"
-        }
-    }
-}
+下面的 Protocol 则是无效的：
+
+`protocol.aimd`:
+
+```aimd
+样本：{{var|sample_id: str}}
 ```
 
-而根据`model.py`中的定义获得的Json Schema为：
-
-```json
-{
-    "title": "VarModel",
-    "type": "object",
-    "properties": {
-        "name": {
-            "title": "name",
-            "type": "string"
-        },
-        "age": {
-            "title": "年龄",
-            "type": "integer",
-            "description": "学生的年龄，单位为岁",
-            "minimum": 0,
-            "default": 18
-        }
-    }
-}
-```
-
-注意，在`model.py`中重复定义了`name`和`age`两个AFs，因此这2个AFs会覆写掉AIMD中对应的定义，最终得到的Json Schema为：
-
-```json
-{
-    "title": "VarModel",
-    "type": "object",
-    "properties": {
-        "name": {
-            "title": "name",
-            "type": "string"
-        },
-        "age": {
-            "title": "年龄",
-            "type": "integer",
-            "description": "学生的年龄，单位为岁",
-            "minimum": 0,
-            "default": 18
-        },
-        "school": {
-            "title": "school",
-            "type": "string"
-        }
-    }
-}
-```
-
-注意到在上述最终的Json Schema中，`name`的并没有`description`和`maxLength`等信息，因为这些信息均被`model.py`中的定义所覆写掉了。
-
-或者也可以理解为，上述的实现原理是，Airalogy会先根据AIMD构建出初始的Pydantic Model类，然后再根据`model.py`中的定义对该Pydantic Model类进行覆写，最终得到正确的Pydantic Model类，从而实现正确的Json Schema生成。
-
-例如，上述案例中，根据AIMD构建出的初始Pydantic Model类为：
+`model.py`:
 
 ```py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+
 class VarModel(BaseModel):
-    name: str = Field(
-        default="未知", title="学生姓名", description="学生的全名", max_length=50
-    )
+    sample_id: str
+    operator_id: str
+```
+
+`airalogy check protocol.aimd` 会报告该不兼容，因为 `operator_id` 不是 AIMD 中声明过的 `var`。如果确实需要记录该字段，应该先在 AIMD 中声明它；如果它只是导入来源、运行元信息或后端状态，通常应放入 `metadata` 或其他专门结构，而不是放入 `data.var`。
+
+下面这种同名显式类型冲突也无效：
+
+`protocol.aimd`:
+
+```aimd
+年龄：{{var|age: int}}
+```
+
+`model.py`:
+
+```py
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
     age: str
-    school: str
 ```
 
-而根据`model.py`中的定义获得的Pydantic Model类为：
+`airalogy check protocol.aimd` 会报告该冲突，因为 AIMD 将 `age` 显式声明为 `int`，但 `VarModel` 将其声明为 `str`。批量导入也会在导入 Record 前执行同样的兼容性检查，并使用聚合后的模型校验 `data.var`。
+
+如果需要更丰富的 Pydantic 约束，应保持基础类型一致，并在 `model.py` 中增加约束：
 
 ```py
 from pydantic import BaseModel, Field
+
 class VarModel(BaseModel):
-    name: str
-    age: int = Field(default=18, title="年龄", description="学生的年龄，单位为岁", ge=0)
+    age: int = Field(ge=0, title="年龄")
 ```
-
-则最终得到的Pydantic Model类为：
-
-```py
-from pydantic import BaseModel, Field
-class VarModel(BaseModel):
-    name: str
-    age: int = Field(default=18, title="年龄", description="学生的年龄，单位为岁", ge=0)
-    school: str
-```
-
-然后我们通过调用`VarModel.model_json_schema()`即可得到上述最终的Json Schema。
-
-#### 未来功能
-
-当然，出于语意一致性和原子性原则，我们并不推荐用户在`model.py`和`protocol.aimd`中重复定义同一个AF。在未来的版本中，我们计划增加对该行为的警告提示，以帮助用户避免这种潜在的错误使用。

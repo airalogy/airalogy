@@ -14,6 +14,12 @@
 - Keep the maintainer release guides `RELEASING.md` and `RELEASING.zh-CN.md` aligned when either one changes.
 - Do not leave one language side outdated.
 
+### Documentation Formatting
+
+- Do not hard-wrap prose in Markdown documentation solely to satisfy source line length checks.
+- Keep documentation paragraphs naturally formatted unless wrapping improves readability.
+- Line-length cleanup may apply to source code, but should not be used as a reason to reflow prose-only Markdown docs.
+
 ## Dependency Management
 
 - When adding/removing/updating dependencies, use `uv add` / `uv remove` instead of editing `pyproject.toml` manually.

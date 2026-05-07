@@ -24,6 +24,7 @@ def test_cli_help():
     assert "generate_assigner" in result.stdout
     assert "pack" in result.stdout
     assert "unpack" in result.stdout
+    assert "import-records" in result.stdout
 
 
 def test_cli_version():
@@ -68,6 +69,34 @@ def test_check_command_invalid_file():
         assert result.returncode == 1
         assert "Syntax check failed" in result.stderr
         assert "underscore" in result.stderr
+
+
+def test_check_command_detects_model_py_mismatch():
+    """Test check command validates protocol.aimd against model.py when present."""
+    with TemporaryDirectory() as tmpdir:
+        protocol_dir = Path(tmpdir)
+        test_file = protocol_dir / "protocol.aimd"
+        test_file.write_text("{{var|age: int}}\n")
+        (protocol_dir / "model.py").write_text(
+            "\n".join(
+                [
+                    "from pydantic import BaseModel",
+                    "",
+                    "class VarModel(BaseModel):",
+                    "    age: str",
+                ]
+            )
+        )
+
+        result = subprocess.run(
+            [sys.executable, "-m", "airalogy.cli", "check", str(test_file)],
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 1
+        assert "model.py: VarModel is incompatible" in result.stderr
+        assert "field 'age' AIMD type is int" in result.stderr
 
 
 def test_check_command_nonexistent_file():
@@ -302,6 +331,40 @@ def test_pack_and_unpack_protocol_commands():
         assert unpack_result.returncode == 0
         assert (unpack_dir / "protocol.aimd").exists()
         assert not (unpack_dir / ".env").exists()
+
+
+def test_import_records_command():
+    """Test import-records command with a protocol directory and CSV input."""
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        protocol_dir = tmp_path / "protocol_demo"
+        protocol_dir.mkdir()
+        (protocol_dir / "protocol.aimd").write_text(
+            "{{var|sample_id: str}}\n{{var|amount: int}}\n"
+        )
+        input_file = tmp_path / "records.csv"
+        input_file.write_text("sample_id,amount\nS1,12\n")
+        output_file = tmp_path / "records.json"
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "import-records",
+                str(protocol_dir),
+                "-i",
+                str(input_file),
+                "-o",
+                str(output_file),
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        assert "Imported 1 records" in result.stdout
+        assert output_file.exists()
 
 
 def test_generate_assigner_command():

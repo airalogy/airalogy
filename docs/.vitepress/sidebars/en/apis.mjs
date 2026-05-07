@@ -4,6 +4,7 @@ export default [
     items: [
       { text: 'Overview', link: '/en/apis/' },
       { text: 'Archive Packaging', link: '/en/apis/archive' },
+      { text: 'Batch Record Import', link: '/en/apis/ingest' },
       { text: 'Types', link: '/en/apis/types' },
       { text: 'Type Plugins', link: '/en/apis/type-plugins' },
       { text: 'Models', link: '/en/apis/models' },

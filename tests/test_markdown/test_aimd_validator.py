@@ -63,6 +63,120 @@ According to {{ref_var|user}} and {{ref_step|step_1}}
         assert is_valid
         assert len(errors) == 0
 
+    def test_validate_model_py_matches_aimd_vars(self, tmp_path):
+        content = """
+{{var|name: str}}
+{{var|age: int}}
+"""
+        protocol_dir = tmp_path / "protocol"
+        protocol_dir.mkdir()
+        (protocol_dir / "model.py").write_text(
+            "\n".join(
+                [
+                    "from pydantic import BaseModel",
+                    "",
+                    "class VarModel(BaseModel):",
+                    "    name: str",
+                    "    age: int",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        is_valid, errors = validate_aimd(content, protocol_dir=protocol_dir)
+
+        assert is_valid
+        assert errors == []
+
+    def test_validate_model_py_can_type_untyped_aimd_var(self, tmp_path):
+        content = "{{var|age}}\n"
+        protocol_dir = tmp_path / "protocol"
+        protocol_dir.mkdir()
+        (protocol_dir / "model.py").write_text(
+            "\n".join(
+                [
+                    "from pydantic import BaseModel",
+                    "",
+                    "class VarModel(BaseModel):",
+                    "    age: int",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        is_valid, errors = validate_aimd(content, protocol_dir=protocol_dir)
+
+        assert is_valid
+        assert errors == []
+
+    def test_validate_model_py_can_omit_aimd_var(self, tmp_path):
+        content = """
+{{var|name: str}}
+{{var|age: int}}
+"""
+        protocol_dir = tmp_path / "protocol"
+        protocol_dir.mkdir()
+        (protocol_dir / "model.py").write_text(
+            "\n".join(
+                [
+                    "from pydantic import BaseModel",
+                    "",
+                    "class VarModel(BaseModel):",
+                    "    name: str",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        is_valid, errors = validate_aimd(content, protocol_dir=protocol_dir)
+
+        assert is_valid
+        assert errors == []
+
+    def test_validate_model_py_rejects_extra_var(self, tmp_path):
+        content = "{{var|name: str}}\n"
+        protocol_dir = tmp_path / "protocol"
+        protocol_dir.mkdir()
+        (protocol_dir / "model.py").write_text(
+            "\n".join(
+                [
+                    "from pydantic import BaseModel",
+                    "",
+                    "class VarModel(BaseModel):",
+                    "    lab_id: str",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        is_valid, errors = validate_aimd(content, protocol_dir=protocol_dir)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert "not AIMD vars: lab_id" in errors[0].message
+
+    def test_validate_model_py_type_mismatch(self, tmp_path):
+        content = "{{var|age: int}}\n"
+        protocol_dir = tmp_path / "protocol"
+        protocol_dir.mkdir()
+        (protocol_dir / "model.py").write_text(
+            "\n".join(
+                [
+                    "from pydantic import BaseModel",
+                    "",
+                    "class VarModel(BaseModel):",
+                    "    age: str",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        is_valid, errors = validate_aimd(content, protocol_dir=protocol_dir)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert "field 'age' AIMD type is int" in errors[0].message
+
     def test_validate_valid_quizs(self):
         content = """
 ```quiz

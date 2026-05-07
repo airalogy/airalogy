@@ -17,6 +17,7 @@ from .assigner.inline_assigner import (
     extract_inline_assigner_code_blocks,
     strip_inline_assigner_blocks,
 )
+from .ingest import import_records
 from .markdown import generate_model, validate_aimd
 
 
@@ -185,6 +186,44 @@ def unpack_command(args):
         return 1
 
 
+def import_records_command(args):
+    """Import batch row data into Airalogy Record JSON."""
+    try:
+        result = import_records(
+            protocol_dir=args.protocol_dir,
+            input_path=args.input,
+            input_format=args.input_format,
+            output_path=args.output,
+            output_format=args.output_format,
+            force=args.force,
+            allow_extra_var_fields=args.allow_extra_var_fields,
+            require_complete_quiz=args.require_complete_quiz,
+            include_template_defaults=not args.no_template_defaults,
+            generate_record_ids=not args.no_record_ids,
+            validate_model_sync=not args.skip_model_sync_check,
+        )
+    except (FileExistsError, OSError, ValueError, TypeError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    if not result.ok:
+        print(
+            f"Error: failed to import {len(result.errors)} row issue(s).",
+            file=sys.stderr,
+        )
+        for error in result.errors:
+            print(f"- {error}", file=sys.stderr)
+        return 1
+
+    if args.output:
+        print(f"✓ Imported {len(result.records)} records: {args.output}")
+    else:
+        import json
+
+        print(json.dumps(result.records, ensure_ascii=False, indent=2))
+    return 0
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -329,6 +368,78 @@ def main():
         help="Allow extraction into an existing directory.",
     )
     unpack_parser.set_defaults(func=unpack_command)
+
+    # Import records command
+    import_parser = subparsers.add_parser(
+        "import-records",
+        aliases=["ir"],
+        help="Import batch data into Airalogy Record JSON",
+        description=(
+            "Import CSV, TSV, JSON, or JSONL rows into Record JSON for a protocol."
+        ),
+    )
+    import_parser.add_argument(
+        "protocol_dir",
+        help="Protocol directory containing protocol.aimd.",
+    )
+    import_parser.add_argument(
+        "-i",
+        "--input",
+        required=True,
+        help="Input CSV, TSV, JSON, or JSONL file.",
+    )
+    import_parser.add_argument(
+        "-o",
+        "--output",
+        help="Output record file. Defaults to printing a JSON array to stdout.",
+    )
+    import_parser.add_argument(
+        "--input-format",
+        choices=["auto", "csv", "tsv", "json", "jsonl"],
+        default="auto",
+        help="Input format (default: auto).",
+    )
+    import_parser.add_argument(
+        "--output-format",
+        choices=["auto", "json", "jsonl"],
+        default="auto",
+        help="Output format (default: auto from output suffix).",
+    )
+    import_parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Overwrite the output file if it already exists.",
+    )
+    import_parser.add_argument(
+        "--allow-extra-var-fields",
+        action="store_true",
+        help="Keep unrecognized variable fields instead of failing the row.",
+    )
+    import_parser.add_argument(
+        "--require-complete-quiz",
+        action="store_true",
+        help="Require every quiz item in the protocol to have an imported answer.",
+    )
+    import_parser.add_argument(
+        "--no-template-defaults",
+        action="store_true",
+        help="Do not add default step/check data from the protocol template.",
+    )
+    import_parser.add_argument(
+        "--no-record-ids",
+        action="store_true",
+        help="Do not generate record_id values for imported records.",
+    )
+    import_parser.add_argument(
+        "--skip-model-sync-check",
+        action="store_true",
+        help=(
+            "Do not check compatibility between protocol.aimd vars and "
+            "model.py::VarModel."
+        ),
+    )
+    import_parser.set_defaults(func=import_records_command)
 
     # Parse arguments
     args = parser.parse_args()

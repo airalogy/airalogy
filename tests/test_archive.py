@@ -73,6 +73,25 @@ def test_pack_protocol_archive_round_trip(tmp_path: Path):
     assert not (unpack_dir / ".env").exists()
 
 
+def test_pack_protocol_archive_rejects_model_py_type_conflict(tmp_path: Path):
+    protocol_dir = tmp_path / "protocol_demo"
+    protocol_dir.mkdir()
+    (protocol_dir / "protocol.aimd").write_text("{{var|age: int}}\n")
+    (protocol_dir / "model.py").write_text(
+        "\n".join(
+            [
+                "from pydantic import BaseModel",
+                "",
+                "class VarModel(BaseModel):",
+                "    age: str",
+            ]
+        )
+    )
+
+    with pytest.raises(ArchiveError, match="VarModel is incompatible"):
+        pack_protocol_archive(protocol_dir, tmp_path / "protocol_demo.aira")
+
+
 def test_pack_records_archive_with_embedded_protocol_and_record_list(tmp_path: Path):
     protocol_dir = tmp_path / "protocol_demo"
     _write_protocol(

@@ -11,6 +11,11 @@ from airalogy.assigner.graph import (
     extract_server_assigner_graph_nodes_from_file,
     validate_assigner_graph,
 )
+from .model_sync import (
+    ModelSyncError,
+    load_var_model_from_path,
+    validate_var_model_compatible_with_aimd_vars,
+)
 from .parser import AimdParser
 
 
@@ -123,6 +128,19 @@ class AimdValidator:
                         ref_step.position.end_col,
                     )
                 )
+
+        model_file = (
+            self.protocol_dir / "model.py" if self.protocol_dir is not None else None
+        )
+        if model_file is not None and model_file.exists():
+            try:
+                var_model = load_var_model_from_path(model_file)
+                validate_var_model_compatible_with_aimd_vars(
+                    result["templates"]["var"],
+                    var_model,
+                )
+            except (ModelSyncError, ValueError, TypeError, OSError) as exc:
+                errors.append(ValidationError(f"model.py: {exc}", 0, 0, 0, 0))
 
         assigner_file = (
             self.protocol_dir / "assigner.py" if self.protocol_dir is not None else None

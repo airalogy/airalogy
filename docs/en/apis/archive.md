@@ -64,6 +64,7 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 
 ## Protocol archive behavior
 
+- The protocol is validated before packaging; if a sibling `model.py` exists, Airalogy also checks that `model.py::VarModel` only defines AIMD variable fields and that same-name fields do not have explicit type conflicts.
 - The archive preserves the original protocol directory layout.
 - `files/` and other regular protocol assets are included as-is.
 - `.env` plus common cache artifacts such as `__pycache__/` and `.pyc` files are excluded by default.
@@ -73,7 +74,7 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 
 - Input JSON files may contain either one record object or a list of record objects.
 - Record bundle manifests keep per-record metadata such as `record_id`, `record_version`, `protocol_id`, and `protocol_version` when available.
-- If embedded protocol directories are provided, Airalogy tries to link each record to the matching embedded protocol in the manifest.
+- If embedded protocol directories are provided, Airalogy validates each protocol first, then tries to link each record to the matching embedded protocol in the manifest.
 
 ## Safety and limitations
 
