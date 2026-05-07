@@ -2,13 +2,22 @@
 
 ## Unreleased
 
+## 0.10.0 (20260507)
+
 ### Features
 
 - Add `true_false.options[].followups` syntax, with structured `{ selected, followups }` answers only when followups are present while preserving plain boolean answers for ordinary judgment questions.
+- Add `airalogy.ingest.import_records()` for importing CSV, TSV, JSON, and JSON Lines rows into protocol-scoped Airalogy Record JSON with Pydantic variable validation, quiz answer validation, step/check validation, record id generation, protocol metadata, and deterministic `metadata.sha1`.
+- Add the `airalogy import-records` / `airalogy ir` CLI for batch Record import workflows.
+- Add AIMD/model compatibility checks so `model.py::VarModel` may strengthen or override AIMD-declared variables, AIMD-only variables are retained, but model-only variable fields and explicit same-field scalar type conflicts fail validation.
+- Validate AIMD/model compatibility during `airalogy check`, batch import, protocol archive packaging, and record bundle protocol embedding.
 
 ### Documentation
 
 - Document true/false followup syntax and recorder answer shape.
+- Add English and Chinese batch import API docs and sidebar entries.
+- Document AIMD/model aggregation and override semantics, including the rule that `data.var` field identity remains AIMD-defined.
+- Document protocol validation during archive packaging.
 
 ## 0.9.0 (20260423)
 
