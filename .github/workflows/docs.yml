@@ -52,6 +52,11 @@ jobs:
       - name: Install npm workspace dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build docs home
+        run: pnpm docs:home:build
+        env:
+          BASE_PATH: ${{ env.ROOT_BASE }}
+
       - name: Build Airalogy docs
         run: pnpm docs:airalogy:build
         env:
@@ -69,28 +74,13 @@ jobs:
 
       - name: Assemble Pages artifact
         run: |
+          rm -rf .pages
+          mkdir -p .pages
+          cp -R docs/home/.vitepress/dist/. .pages/
           mkdir -p .pages/airalogy .pages/aimd .pages/airalogy-engine
           cp -R docs/airalogy/.vitepress/dist/. .pages/airalogy/
           cp -R docs/aimd/.vitepress/dist/. .pages/aimd/
           cp -R docs/airalogy-engine/.vitepress/dist/. .pages/airalogy-engine/
-          cat > .pages/index.html <<'HTML'
-          <!doctype html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1">
-              <title>Airalogy Docs</title>
-            </head>
-            <body>
-              <h1>Airalogy Docs</h1>
-              <ul>
-                <li><a href="./airalogy/">Airalogy Python docs</a></li>
-                <li><a href="./aimd/">AIMD npm docs</a></li>
-                <li><a href="./airalogy-engine/">Airalogy Engine docs</a></li>
-              </ul>
-            </body>
-          </html>
-          HTML
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

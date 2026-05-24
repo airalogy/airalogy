@@ -37,6 +37,16 @@ pnpm test:vitest
 pnpm type-check
 ```
 
+Docs:
+
+```bash
+pnpm docs:home:dev
+pnpm docs:home:build
+pnpm docs:airalogy:build
+pnpm docs:aimd:build
+pnpm docs:airalogy-engine:build
+```
+
 ## Compatibility Fixtures
 
 Protocol behavior belongs in `spec/fixtures` first. If a change affects AIMD syntax, parser output,

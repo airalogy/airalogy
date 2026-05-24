@@ -141,6 +141,7 @@ venv.bak/
 
 # mkdocs documentation
 /site
+.pages/
 
 # VitePress
 docs/.vitepress/cache/
