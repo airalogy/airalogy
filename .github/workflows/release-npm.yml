@@ -1,0 +1,58 @@
+name: Release npm
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".changeset/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "packages/npm/*/package.json"
+      - "packages/npm/*/CHANGELOG.md"
+      - ".github/workflows/release-npm.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.32.1 --activate
+
+      - name: Install dependencies
+        run: CI=true pnpm install --frozen-lockfile
+
+      - name: Create release pull request or publish packages
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: corepack pnpm changeset:version
+          publish: corepack pnpm release:npm
+          createGithubReleases: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,42 @@
+{
+  "name": "airalogy-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.32.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/airalogy/airalogy.git"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "build:npm": "pnpm --filter './packages/npm/*' -r --if-present build",
+    "changeset": "changeset",
+    "changeset:add": "changeset add",
+    "changeset:status": "changeset status --verbose",
+    "changeset:version": "changeset version",
+    "dev": "pnpm --filter './packages/npm/*' -r --parallel --if-present dev",
+    "dev:demo": "pnpm --filter @airalogy/aimd-demo dev",
+    "docs:airalogy:dev": "pnpm -C docs/airalogy docs:dev",
+    "docs:airalogy:build": "pnpm -C docs/airalogy docs:build",
+    "docs:airalogy:preview": "pnpm -C docs/airalogy docs:preview",
+    "docs:aimd:dev": "pnpm -C docs/aimd docs:dev",
+    "docs:aimd:build": "DEMO_BASE=\"${BASE_PATH%/}/demo/\" pnpm --filter @airalogy/aimd-demo build && pnpm -C docs/aimd docs:build && rm -rf docs/aimd/.vitepress/dist/demo && mkdir -p docs/aimd/.vitepress/dist/demo && cp -R apps/aimd-demo/dist/. docs/aimd/.vitepress/dist/demo/ && node ./scripts/aimd/create-demo-route-shims.mjs",
+    "docs:aimd:preview": "pnpm -C docs/aimd docs:preview",
+    "release:npm": "pnpm build:npm && pnpm --filter './packages/npm/*' -r publish --no-git-checks --access public --provenance",
+    "test": "pnpm test:npm",
+    "test:aimd": "pnpm --filter '@airalogy/aimd-*' -r --if-present test",
+    "test:engine-node": "pnpm --filter @airalogy/airalogy-engine test",
+    "test:npm": "pnpm test:aimd && pnpm test:engine-node && pnpm test:vitest",
+    "test:python:airalogy": "uv --directory packages/pypi/airalogy run pytest tests/",
+    "test:python:engine": "uv --directory packages/pypi/airalogy-engine run pytest tests/ --sandbox-mode=rootfs",
+    "test:vitest": "vitest run",
+    "test:vitest:watch": "vitest",
+    "test:vitest:coverage": "vitest run --coverage",
+    "type-check": "pnpm --filter './packages/npm/*' -r --if-present type-check"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^20.8.4",
+    "vitest": "^4.1.0"
+  }
+}

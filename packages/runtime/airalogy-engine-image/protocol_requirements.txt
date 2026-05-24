@@ -1,0 +1,11 @@
+# airalogy protocol executor dependencies
+
+airalogy[markitdown]==0.10.0
+biopython==1.85
+pillow==11.1.0
+openai==2.32.0
+numpy==2.4.0
+pandas==2.2.3
+matplotlib==3.10.0
+scipy==1.15.1
+dashscope==1.25.17

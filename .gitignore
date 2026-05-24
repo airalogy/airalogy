@@ -124,6 +124,8 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.uv-cache/
+packages/**/.uv-cache/
 env/
 venv/
 ENV/
@@ -144,6 +146,22 @@ venv.bak/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
 docs/.vitepress/.temp/
+docs/**/.vitepress/cache/
+docs/**/.vitepress/dist/
+docs/**/.vitepress/.temp/
+packages/**/docs/.vitepress/cache/
+packages/**/docs/.vitepress/dist/
+packages/**/docs/.vitepress/.temp/
+
+# Node.js
+node_modules/
+.pnpm-store/
+*.tsbuildinfo
+coverage/
+*.lcov
+*.tgz
+packages/npm/airalogy-engine/protocol_executor.py
+packages/runtime/airalogy-engine-image/airalogy-engine-image/
 
 # mypy
 .mypy_cache/
@@ -167,5 +185,3 @@ cython_debug/
 #.idea/
 
 .DS_Store
-
-node_modules/

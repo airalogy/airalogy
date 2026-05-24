@@ -1,0 +1,122 @@
+# Clinical Information Record Case
+
+> This case demonstrates a structured way to record clinical encounter information. It does not replace official medical record requirements, clinical judgment, or medical advice. Before production use, review it against local privacy, audit, signature, and data retention requirements.
+
+## Record Information
+
+Record ID: {{var|record_id: str, title = "Record ID"}}
+
+Recorded by: {{var|recorded_by: UserName, title = "Recorded by"}}
+
+Recorded at: {{var|recorded_at: CurrentTime, title = "Recorded at"}}
+
+Information source: {{var|information_source: str, title = "Patient/family/medical record/referral material"}}
+
+Required consent obtained: {{var|consent_obtained: bool = false, title = "Consent confirmation"}}
+
+## Patient and Encounter Information
+
+Patient identifier: {{var|patient_id: str, title = "Unique patient identifier"}}
+
+Name or de-identified initials: {{var|patient_name: str, title = "Name or de-identified initials"}}
+
+Date of birth: {{var|date_of_birth: date, title = "Date of birth"}}
+
+Age: {{var|age_years: int, title = "Age"}}
+
+Sex: {{var|sex: str, title = "Sex"}}
+
+Encounter ID: {{var|encounter_id: str, title = "Encounter ID"}}
+
+Encounter time: {{var|encounter_time: datetime, title = "Encounter time"}}
+
+Encounter type: {{var|encounter_type: str, title = "Outpatient/emergency/inpatient/follow-up"}}
+
+Department or ward: {{var|department: str, title = "Department or ward"}}
+
+Attending clinician: {{var|attending_clinician: str, title = "Attending clinician"}}
+
+## Chief Complaint and History
+
+Chief complaint: {{var|chief_complaint: str, title = "Chief complaint"}}
+
+History of present illness: {{var|history_present_illness: AiralogyMarkdown, title = "History of present illness"}}
+
+Past medical history: {{var|past_medical_history: AiralogyMarkdown, title = "Past medical history"}}
+
+Personal and family history: {{var|personal_family_history: AiralogyMarkdown, title = "Personal and family history"}}
+
+Allergies: {{var_table|allergies, subvars=[allergen: str, reaction: str, severity: str, status: str, note: str]}}
+
+Current medications: {{var_table|current_medications, subvars=[medication_name: str, dose: str, frequency: str, route: str, started_at: date, note: str]}}
+
+## Signs and Assessment
+
+Height: {{var|height_cm: float, title = "Height cm", gt = 0}}
+
+Weight: {{var|weight_kg: float, title = "Weight kg", gt = 0}}
+
+BMI: {{var|bmi: float, title = "BMI"}}
+
+Vital signs: {{var_table|vital_signs, subvars=[measured_at: datetime, temperature_c: float, systolic_bp_mmhg: int, diastolic_bp_mmhg: int, heart_rate_bpm: int, respiratory_rate_bpm: int, spo2_percent: float, pain_score: int, note: str]}}
+
+Physical exam: {{var|physical_exam: AiralogyMarkdown, title = "Physical exam"}}
+
+Risk assessment: {{var|risk_assessment: AiralogyMarkdown, title = "Risk assessment"}}
+
+## Investigations and Diagnosis
+
+Laboratory findings summary: {{var|lab_findings: AiralogyMarkdown, title = "Laboratory findings summary"}}
+
+Imaging and ancillary findings summary: {{var|imaging_findings: AiralogyMarkdown, title = "Imaging and ancillary findings summary"}}
+
+Diagnosis records: {{var_table|diagnoses, subvars=[diagnosis_name: str, diagnosis_type: str, icd_code: str, onset_date: date, confidence: str, note: str]}}
+
+Differential diagnosis and rationale: {{var|differential_diagnosis: AiralogyMarkdown, title = "Differential diagnosis and rationale"}}
+
+## Care Plan
+
+Management and treatment plan: {{var|care_plan: AiralogyMarkdown, title = "Management and treatment plan"}}
+
+Clinical orders: {{var_table|clinical_orders, subvars=[order_name: str, order_type: str, priority: str, frequency: str, start_time: datetime, stop_time: datetime, note: str]}}
+
+Patient education points: {{var|patient_education: AiralogyMarkdown, title = "Patient education points"}}
+
+Follow-up plan: {{var|follow_up_plan: AiralogyMarkdown, title = "Follow-up plan"}}
+
+Referral or consultation needs: {{var|referral_consultation_need: AiralogyMarkdown, title = "Referral or consultation needs"}}
+
+## Record Workflow
+
+{{step|confirm_patient_identity, check=True}} Verify the patient identifier, encounter ID, and information source.
+
+{{step|capture_encounter_context, check=True}} Complete encounter time, encounter type, department, and attending clinician fields.
+
+{{step|review_allergy_and_medication, check=True}} Review allergies and current medications, and add source notes when needed.
+
+{{step|record_assessment_and_plan, check=True}} Complete assessment, diagnosis, orders, and follow-up plan.
+
+{{step|clinician_review, check=True}} Have an authorized clinician review the record for completeness and consistency.
+
+{{check|privacy_and_consent_reviewed, checked_message="Privacy and consent information reviewed"}}
+
+{{check|record_ready_for_submission, checked_message="Record is ready for submission"}}
+
+## Browser-side Assigner
+
+```assigner runtime=client
+assigner(
+  {
+    mode: "auto",
+    dependent_fields: ["height_cm", "weight_kg"],
+    assigned_fields: ["bmi"],
+  },
+  function calculate_bmi({ height_cm, weight_kg }) {
+    const height = Number(height_cm) / 100;
+    const weight = Number(weight_kg);
+    return {
+      bmi: Math.round((weight / (height * height)) * 10) / 10,
+    };
+  }
+);
+```

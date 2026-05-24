@@ -1,0 +1,122 @@
+# 临床信息记录案例
+
+> 本案例用于展示如何结构化记录临床接触信息，不替代医疗机构正式病历规范、临床判断或诊疗建议。落地前请按本地隐私、审计、签名和数据留存要求审定。
+
+## 记录信息
+
+记录编号：{{var|record_id: str, title = "记录编号"}}
+
+记录人：{{var|recorded_by: UserName, title = "记录人"}}
+
+记录时间：{{var|recorded_at: CurrentTime, title = "记录时间"}}
+
+信息来源：{{var|information_source: str, title = "患者本人/家属/病历/转诊资料"}}
+
+是否已取得必要同意：{{var|consent_obtained: bool = false, title = "同意确认"}}
+
+## 患者与就诊信息
+
+患者标识：{{var|patient_id: str, title = "患者唯一标识"}}
+
+姓名或脱敏简称：{{var|patient_name: str, title = "姓名或脱敏简称"}}
+
+出生日期：{{var|date_of_birth: date, title = "出生日期"}}
+
+年龄：{{var|age_years: int, title = "年龄"}}
+
+性别：{{var|sex: str, title = "性别"}}
+
+就诊号：{{var|encounter_id: str, title = "就诊号"}}
+
+就诊时间：{{var|encounter_time: datetime, title = "就诊时间"}}
+
+就诊类型：{{var|encounter_type: str, title = "门诊/急诊/住院/随访"}}
+
+科室或病区：{{var|department: str, title = "科室或病区"}}
+
+主诊医生：{{var|attending_clinician: str, title = "主诊医生"}}
+
+## 主诉与病史
+
+主诉：{{var|chief_complaint: str, title = "主诉"}}
+
+现病史：{{var|history_present_illness: AiralogyMarkdown, title = "现病史"}}
+
+既往史：{{var|past_medical_history: AiralogyMarkdown, title = "既往史"}}
+
+个人史和家族史：{{var|personal_family_history: AiralogyMarkdown, title = "个人史和家族史"}}
+
+过敏史：{{var_table|allergies, subvars=[allergen: str, reaction: str, severity: str, status: str, note: str]}}
+
+当前用药：{{var_table|current_medications, subvars=[medication_name: str, dose: str, frequency: str, route: str, started_at: date, note: str]}}
+
+## 体征与评估
+
+身高：{{var|height_cm: float, title = "身高 cm", gt = 0}}
+
+体重：{{var|weight_kg: float, title = "体重 kg", gt = 0}}
+
+BMI：{{var|bmi: float, title = "BMI"}}
+
+生命体征：{{var_table|vital_signs, subvars=[measured_at: datetime, temperature_c: float, systolic_bp_mmhg: int, diastolic_bp_mmhg: int, heart_rate_bpm: int, respiratory_rate_bpm: int, spo2_percent: float, pain_score: int, note: str]}}
+
+体格检查：{{var|physical_exam: AiralogyMarkdown, title = "体格检查"}}
+
+风险评估：{{var|risk_assessment: AiralogyMarkdown, title = "风险评估"}}
+
+## 检查与诊断
+
+实验室检查摘要：{{var|lab_findings: AiralogyMarkdown, title = "实验室检查摘要"}}
+
+影像和辅助检查摘要：{{var|imaging_findings: AiralogyMarkdown, title = "影像和辅助检查摘要"}}
+
+诊断记录：{{var_table|diagnoses, subvars=[diagnosis_name: str, diagnosis_type: str, icd_code: str, onset_date: date, confidence: str, note: str]}}
+
+鉴别诊断和依据：{{var|differential_diagnosis: AiralogyMarkdown, title = "鉴别诊断和依据"}}
+
+## 诊疗计划
+
+处理和治疗计划：{{var|care_plan: AiralogyMarkdown, title = "处理和治疗计划"}}
+
+医嘱和处置：{{var_table|clinical_orders, subvars=[order_name: str, order_type: str, priority: str, frequency: str, start_time: datetime, stop_time: datetime, note: str]}}
+
+患者教育要点：{{var|patient_education: AiralogyMarkdown, title = "患者教育要点"}}
+
+随访安排：{{var|follow_up_plan: AiralogyMarkdown, title = "随访安排"}}
+
+转诊或会诊需求：{{var|referral_consultation_need: AiralogyMarkdown, title = "转诊或会诊需求"}}
+
+## 记录流程
+
+{{step|confirm_patient_identity, check=True}} 核对患者标识、就诊号和信息来源。
+
+{{step|capture_encounter_context, check=True}} 完成就诊时间、就诊类型、科室和主诊医生记录。
+
+{{step|review_allergy_and_medication, check=True}} 复核过敏史和当前用药，必要时补充来源说明。
+
+{{step|record_assessment_and_plan, check=True}} 完成评估、诊断、医嘱和随访计划。
+
+{{step|clinician_review, check=True}} 由授权临床人员审核记录完整性和一致性。
+
+{{check|privacy_and_consent_reviewed, checked_message="隐私与同意信息已复核"}}
+
+{{check|record_ready_for_submission, checked_message="记录已准备提交"}}
+
+## 浏览器侧 Assigner
+
+```assigner runtime=client
+assigner(
+  {
+    mode: "auto",
+    dependent_fields: ["height_cm", "weight_kg"],
+    assigned_fields: ["bmi"],
+  },
+  function calculate_bmi({ height_cm, weight_kg }) {
+    const height = Number(height_cm) / 100;
+    const weight = Number(weight_kg);
+    return {
+      bmi: Math.round((weight / (height * height)) * 10) / 10,
+    };
+  }
+);
+```

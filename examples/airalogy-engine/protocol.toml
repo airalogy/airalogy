@@ -1,0 +1,14 @@
+[airalogy_protocol]
+id = "alice_s_protocol"
+version = "0.0.1"
+name = "Alice's Protocol"
+description = "An example protocol for demonstration purposes."
+authors = [
+    { name = "Alice", email = "alice@airalogy.com", airalogy_user_id = "airalogy.id.user.alice" },
+]
+maintainers = [
+    { name = "Alice", email = "alice@airalogy.com", airalogy_user_id = "airalogy.id.user.alice" },
+]
+disciplines = ["drug discovery", "biology"]
+keywords = ["cck-8", "cell viability", "drug screening", "proliferation assay"]
+license = "CC-BY-4.0"

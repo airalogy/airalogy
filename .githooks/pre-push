@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pre-push: pnpm is required to run tests." >&2
+  echo "pre-push: install pnpm or enable Corepack before pushing." >&2
+  exit 1
+fi
+
+echo "pre-push: running pnpm test"
+pnpm test

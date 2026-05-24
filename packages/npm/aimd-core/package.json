@@ -1,0 +1,86 @@
+{
+  "name": "@airalogy/aimd-core",
+  "type": "module",
+  "version": "2.7.0",
+  "description": "AIMD (Airalogy Markdown) core parser and syntax definitions",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/airalogy/airalogy.git",
+    "directory": "packages/npm/aimd-core"
+  },
+  "bugs": {
+    "url": "https://github.com/airalogy/airalogy/issues"
+  },
+  "homepage": "https://github.com/airalogy/airalogy/tree/main/packages/npm/aimd-core#readme",
+  "keywords": [
+    "aimd",
+    "markdown",
+    "parser",
+    "unified",
+    "remark",
+    "syntax"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./parser": {
+      "types": "./src/parser/index.ts",
+      "import": "./src/parser/index.ts"
+    },
+    "./syntax": {
+      "types": "./src/syntax/index.ts",
+      "import": "./src/syntax/index.ts"
+    },
+    "./types": {
+      "types": "./src/types/index.ts",
+      "import": "./src/types/index.ts"
+    },
+    "./utils": {
+      "types": "./src/utils/index.ts",
+      "import": "./src/utils/index.ts"
+    }
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "build:types": "tsc --emitDeclarationOnly --declaration --outDir dist",
+    "build": "vite build && pnpm run build:types",
+    "dev": "vite build --watch",
+    "test": "pnpm run build && node --test ./tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@types/hast": "^3.0.4",
+    "@types/mdast": "^4.0.4",
+    "@types/unist": "^3.0.3",
+    "big.js": "catalog:",
+    "acorn": "^8.15.0",
+    "remark-breaks": "^4.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0",
+    "vfile": "^6.0.3",
+    "yaml": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/big.js": "catalog:",
+    "@types/node": "^24.3.0",
+    "shiki": "^2.3.2",
+    "typescript": "5.8.3",
+    "vite": "^7.1.3",
+    "vite-tsconfig-paths": "^5.1.4"
+  }
+}

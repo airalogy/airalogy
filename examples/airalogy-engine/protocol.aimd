@@ -1,0 +1,12 @@
+## Protocol AIMD example
+
+## 变量
+
+秒：{{var|seconds}}
+将上值以`duration`格式表示：{{var|duration}}
+
+Variable with Airalogy custom types:
+{{var|user_name: UserName}}
+{{var|current_time: CurrentTime}}
+
+Get endpoint from ENV, ENDPOINT: {{var|endpoint}}

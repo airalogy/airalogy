@@ -1,0 +1,32 @@
+{
+  "name": "@airalogy/aimd-demo",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@airalogy/aimd-core": "workspace:*",
+    "@airalogy/aimd-editor": "workspace:*",
+    "@airalogy/aimd-recorder": "workspace:*",
+    "@airalogy/aimd-renderer": "workspace:*",
+    "katex": "catalog:",
+    "monaco-editor": "^0.52.2",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "vfile": "^6.0.3",
+    "vue": "^3.5.17",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "typescript": "5.8.3",
+    "vite": "^7.1.3",
+    "vite-plugin-vue-devtools": "catalog:",
+    "vite-tsconfig-paths": "^5.1.4"
+  }
+}

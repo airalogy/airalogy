@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+set -eu
+
+echo "pre-commit: checking staged diff"
+git diff --cached --check

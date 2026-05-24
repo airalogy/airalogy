@@ -1,0 +1,5 @@
+{
+  "var": ["operator_name", "temperature_c"],
+  "step": ["prepare_sample", "measure_sample"],
+  "check": ["measurement_recorded"]
+}

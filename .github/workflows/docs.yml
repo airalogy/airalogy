@@ -6,6 +6,12 @@ on:
       - main
     paths:
       - docs/**
+      - packages/npm/**
+      - apps/aimd-demo/**
+      - scripts/aimd/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
       - .github/workflows/docs.yml
   workflow_dispatch:
 
@@ -23,27 +29,66 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
           node-version: 24
 
-      - name: Install dependencies
-        run: npm install
-        working-directory: docs
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.32.1 --activate
 
-      - name: Build VitePress site
-        run: npm run docs:build
-        working-directory: docs
+      - name: Resolve base path
+        run: |
+          if [ "${{ github.event.repository.name }}" = "${{ github.repository_owner }}.github.io" ]; then
+            echo "ROOT_BASE=/" >> "$GITHUB_ENV"
+          else
+            echo "ROOT_BASE=/${{ github.event.repository.name }}/" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install npm workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Airalogy docs
+        run: pnpm docs:airalogy:build
         env:
-          BASE_PATH: /${{ github.event.repository.name }}/
+          BASE_PATH: ${{ env.ROOT_BASE }}airalogy/
+
+      - name: Build AIMD docs
+        run: pnpm docs:aimd:build
+        env:
+          BASE_PATH: ${{ env.ROOT_BASE }}aimd/
+
+      - name: Assemble Pages artifact
+        run: |
+          mkdir -p .pages/airalogy .pages/aimd
+          cp -R docs/airalogy/.vitepress/dist/. .pages/airalogy/
+          cp -R docs/aimd/.vitepress/dist/. .pages/aimd/
+          cat > .pages/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>Airalogy Docs</title>
+            </head>
+            <body>
+              <h1>Airalogy Docs</h1>
+              <ul>
+                <li><a href="./airalogy/">Airalogy Python docs</a></li>
+                <li><a href="./aimd/">AIMD npm docs</a></li>
+              </ul>
+            </body>
+          </html>
+          HTML
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/.vitepress/dist
+          path: .pages
 
   deploy:
     needs: build

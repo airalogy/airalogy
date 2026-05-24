@@ -23,7 +23,7 @@
         }
     ],
     "python.testing.pytestArgs": [
-        "tests"
+        "packages/pypi/airalogy/tests"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true

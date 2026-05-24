@@ -1,0 +1,303 @@
+# Airalogy Protocol Example
+
+## Variable Definitions
+
+Enter sample name: {{var|sample_name: str}}
+
+Operator: {{var|operator: UserName}}
+
+Record time: {{var|current_time: CurrentTime}}
+
+Experiment summary: {{var|summary: AiralogyMarkdown}}
+
+Plasmid sequence: {{var|plasmid_sequence: DNASequence}}
+
+Python analysis snippet: {{var|python_code: PyStr, title = "Python analysis helper"}}
+
+JavaScript formatter: {{var|javascript_code: JsStr, title = "JavaScript formatter"}}
+
+JSON config: {{var|json_config: JsonStr, title = "Structured JSON config"}}
+
+YAML workflow: {{var|yaml_workflow: YamlStr, title = "YAML workflow definition"}}
+
+Generic code block: {{var|generic_code: CodeStr, title = "Language-agnostic code"}}
+
+Temperature setting: {{var|temperature: float = 25.0}}
+
+Concentration setting: {{var|concentration: float = 1.0, title = "Concentration (M)"}}
+
+Is active: {{var|is_active: bool = true}}
+
+## Variable Table
+
+{{var|samples, subvars=[sample_id, concentration, volume]}}
+
+## Inline Vars In Markdown Table
+
+| Ingredient | Amount |
+| --- | --- |
+| Water | {{var|water_volume_ml: float}} mL |
+| Lemon juice | {{var|lemon_juice_ml: float}} mL |
+| Total liquid | {{var|total_liquid_ml: float}} mL |
+| Sugar | {{var|sugar_weight_g: float}} g |
+| Ice cubes | {{var|ice_cube_count: int}} |
+
+```assigner runtime=client
+assigner(
+  {
+    mode: "auto",
+    dependent_fields: ["water_volume_ml", "lemon_juice_ml"],
+    assigned_fields: ["total_liquid_ml"],
+  },
+  function calculate_total_liquid_ml({ water_volume_ml, lemon_juice_ml }) {
+    return {
+      total_liquid_ml: Math.round((water_volume_ml + lemon_juice_ml) * 100) / 100,
+    };
+  }
+);
+```
+
+## Experiment Steps
+
+{{step|sample_preparation}} Prepare the sample and confirm sample name {{ref_var|sample_name}}. This step does not enable a checkpoint, so it should render without a checkbox.
+
+Record the preparation temperature here: {{var|prep_temperature_c: float}} °C
+
+Capture a short preparation note here: {{var|prep_observation: str}}
+
+{{step|pre_chill_tube, 2}} Place the collection tube on ice before adding reagents. This demonstrates a level 2 child step under sample preparation.
+
+{{step|verify_tube_label, 2, check=True}} Verify that the tube label matches {{ref_var|sample_name}}. This demonstrates a level 2 child step that also enables a checkpoint.
+
+{{step|quick_spin_sample, 3, duration='15s', timer='countdown'}} Briefly spin down the sample before continuing. This demonstrates a level 3 nested step with countdown timing.
+
+{{step|buffer_setup, check=True}} Prepare the dilution buffer for the sample. This step enables a checkpoint so the recorder shows a completion checkbox.
+
+{{step|mix_reaction, check=True, duration='2m'}} Mix the reaction thoroughly. This step uses the default elapsed timer mode with an estimated duration.
+
+{{step|wash_window, duration='30s', timer='countdown'}} Finish the wash within 30 seconds. This step demonstrates countdown mode.
+
+{{step|transfer_window, check=True, duration='90s', timer='both'}} Transfer the sample before overtime begins. This step demonstrates combined countdown and elapsed timing.
+
+{{step|data_analysis}} Analyze the data and verify temperature {{ref_var|temperature}}.
+
+## Quality Checks
+
+{{check|quality_control}} Confirm data completeness, reagent lots, and sample identifiers before submission.
+
+{{check|safety_verification}}
+
+## Quiz
+
+```quiz
+id: quiz_single_1
+type: choice
+mode: single
+stem: What temperature should the sample be stored at first?
+score: 2
+options:
+  - key: A
+    text: -20°C
+    explanation: This is too cold for the initial storage step and may complicate the next handling stage.
+  - key: B
+    text: 4°C
+    explanation: Correct. Initial short-term storage is usually kept at 4°C to preserve stability without freezing the sample.
+  - key: C
+    text: Room temperature
+    explanation: Room temperature increases the risk of sample degradation before the next step.
+grading:
+  strategy: option_points
+  option_points:
+    A: 0
+    B: 2
+    C: 1
+```
+
+```quiz
+id: quiz_true_false_1
+type: true_false
+stem: The sample stayed at 4°C before the transfer step.
+score: 1
+options:
+  - key: true
+    text: "True"
+    explanation: Correct. The record indicates the sample stayed at 4°C before transfer.
+  - key: false
+    text: "False"
+    explanation: This would be selected only if the sample warmed before transfer.
+answer: true
+```
+
+```quiz
+id: quiz_followup_1
+type: choice
+mode: single
+stem: Which transfer handling method was used for this sample?
+score: 1
+options:
+  - key: A
+    text: Ice box transfer
+    explanation: Add the handling details so the record keeps both the selection and its structured context.
+    followups:
+      - key: duration_min
+        type: int
+        title: Transfer duration
+        unit: min
+      - key: max_temperature_c
+        type: float
+        title: Maximum observed temperature
+        unit: °C
+      - key: seal_verified
+        type: bool
+        title: Seal verified before transfer
+        required: false
+  - key: B
+    text: Pre-chilled container transfer
+    explanation: Record the container temperature and transfer duration for review.
+    followups:
+      - key: container_temperature_c
+        type: float
+        title: Container temperature
+        unit: °C
+      - key: duration_min
+        type: int
+        title: Transfer duration
+        unit: min
+  - key: C
+    text: Room-temperature transfer
+    explanation: The record should document how long the sample stayed outside cold-chain handling.
+    followups:
+      - key: duration_min
+        type: int
+        title: Time at room temperature
+        unit: min
+answer: A
+```
+
+```quiz
+id: quiz_multiple_1
+type: choice
+mode: multiple
+stem: Which items must be included in the experiment record?
+score: 3
+options:
+  - key: A
+    text: Sample ID
+    explanation: Correct. The sample identifier is required for traceability.
+  - key: B
+    text: Operation time
+    explanation: Correct. The operation time is part of the core experiment record.
+  - key: C
+    text: Operator
+    explanation: Correct. The operator name is needed for accountability and review.
+  - key: D
+    text: Weather conditions
+    explanation: Usually not required for this record, so selecting it would be unnecessary here.
+answer: [A, B, C]
+```
+
+```quiz
+id: quiz_blank_1
+type: blank
+stem: The target NaCl concentration in the reaction system is [[b1]].
+score: 2
+blanks:
+  - key: b1
+    answer: 0.9%
+grading:
+  strategy: normalized_match
+  blanks:
+    - key: b1
+      accepted_answers: ["0.9%", "0.9 %", "0.009"]
+      normalize: ["trim", "remove_spaces"]
+```
+
+```quiz
+id: quiz_open_1
+type: open
+stem: Explain why temperature control is required in this step and provide at least two reasons.
+score: 5
+rubric: Mention both reaction rate and sample stability.
+grading:
+  strategy: keyword_rubric
+  rubric_items:
+    - id: rate
+      points: 2
+      desc: Mention reaction rate.
+      keywords: ["reaction rate", "rate"]
+    - id: stability
+      points: 3
+      desc: Mention sample stability.
+      keywords: ["sample stability", "stability"]
+```
+
+```quiz
+id: quiz_scale_1
+type: scale
+title: GAD-2 Style Check
+description: This matrix example demonstrates shared options, auto-scoring, and delayed score display in the recorder.
+stem: Over the last two weeks, how often have you been bothered by the following problems?
+display: matrix
+items:
+  - key: s1
+    stem: Feeling nervous, anxious, or on edge
+  - key: s2
+    stem: Not being able to stop or control worrying
+options:
+  - key: not_at_all
+    text: Not at all
+    points: 0
+  - key: several_days
+    text: Several days
+    points: 1
+  - key: more_than_half_the_days
+    text: More than half the days
+    points: 2
+  - key: nearly_every_day
+    text: Nearly every day
+    points: 3
+grading:
+  strategy: sum
+  bands:
+    - min: 0
+      max: 1
+      label: Minimal
+      interpretation: No immediate action required.
+    - min: 2
+      max: 3
+      label: Mild
+      interpretation: Monitor symptoms and consider follow-up if they persist.
+    - min: 4
+      max: 6
+      label: Moderate to severe
+      interpretation: Recommend clinical follow-up.
+```
+
+## References
+
+Referenced step: {{ref_step|sample_preparation}}
+
+Checkpoint step reference: {{ref_step|buffer_setup}}
+
+Nested step reference: {{ref_step|quick_spin_sample}}
+
+Timed step reference: {{ref_step|transfer_window}}
+
+## Markdown Features
+
+**Bold** *Italic* ~~Strikethrough~~
+
+- List item 1
+- List item 2
+
+| Column A | Column B | Column C |
+|----------|----------|----------|
+| 1        | 2        | 3        |
+
+> Blockquote content
+
+Inline math $E = mc^2$
+
+$$
+\sum_{i=1}^{n} x_i = x_1 + x_2 + \cdots + x_n
+$$

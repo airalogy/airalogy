@@ -1,0 +1,2 @@
+/* Re-export KaTeX base styles for AIMD renderer consumers. */
+@import "katex/dist/katex.min.css";

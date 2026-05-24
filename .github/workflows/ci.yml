@@ -7,26 +7,89 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  test:
-    name: Run tests
+  python-airalogy:
+    name: Python / airalogy
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version-file: ".python-version"
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: packages/pypi/airalogy/.python-version
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
 
-    - name: Install project dependencies
-      run: uv sync --locked --all-extras --dev
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+        working-directory: packages/pypi/airalogy
 
-    - name: Run tests
-      run: uv run pytest tests/ 
+      - name: Run tests
+        run: uv run pytest tests/
+        working-directory: packages/pypi/airalogy
+
+  python-airalogy-engine:
+    name: Python / airalogy-engine
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: packages/pypi/airalogy-engine/.python-version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --locked --dev
+        working-directory: packages/pypi/airalogy-engine
+
+      - name: Run rootfs-skipping tests
+        run: uv run pytest tests/ --sandbox-mode=rootfs
+        working-directory: packages/pypi/airalogy-engine
+
+  npm:
+    name: npm packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.32.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build npm packages
+        run: pnpm build:npm
+
+      - name: Type check npm packages
+        run: pnpm type-check
+
+      - name: Run AIMD tests
+        run: pnpm test:aimd
+
+      - name: Run airalogy-engine Node tests
+        run: pnpm test:engine-node
+
+      - name: Run root Vitest projects
+        run: pnpm test:vitest

@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "examples": [
+    {
+      "id": "clinical-information-record",
+      "category": "clinical",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ],
+      "title": {
+        "en-US": "Clinical information record",
+        "zh-CN": "临床信息记录"
+      },
+      "description": {
+        "en-US": "A bilingual AIMD case for structured clinical encounter, assessment, plan, and review records.",
+        "zh-CN": "用于展示结构化记录临床就诊、评估、诊疗计划和审核信息的中英文双语 AIMD 案例。"
+      },
+      "entry": {
+        "en-US": "clinical-information-record/protocol.en-US.aimd",
+        "zh-CN": "clinical-information-record/protocol.zh-CN.aimd"
+      },
+      "readme": {
+        "en-US": "clinical-information-record/README.md",
+        "zh-CN": "clinical-information-record/README.zh-CN.md"
+      },
+      "tags": [
+        "clinical",
+        "record",
+        "encounter",
+        "en-US",
+        "zh-CN"
+      ]
+    }
+  ]
+}

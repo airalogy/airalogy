@@ -1,0 +1,1009 @@
+/**
+ * AIMD Field Styles
+ */
+
+/* CSS Variables */
+:root {
+  --aimd-border-color: #90caf9;
+  --aimd-border-color-focus: #4181fd;
+  --aimd-var-bg: #e3f2fd;
+  --aimd-var-scope-bg: #bbdefb;
+  --aimd-var-text: #1565c0;
+  --aimd-var-scope-text: #1976d2;
+}
+
+/* Base field styles */
+.aimd-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  vertical-align: middle;
+  margin: 4px 0;
+}
+
+/* Variable field */
+.aimd-field--var {
+  background-color: var(--aimd-var-bg);
+  border: 1px solid var(--aimd-border-color);
+  color: var(--aimd-var-text);
+}
+
+.aimd-field--var .aimd-field__scope {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1976d2;
+  background-color: #bbdefb;
+  padding: 0 4px;
+  border-radius: 2px;
+  text-transform: lowercase;
+}
+
+.aimd-field--var .aimd-field__name {
+  font-weight: 500;
+}
+
+.aimd-field--var .aimd-field__type {
+  font-size: 12px;
+  color: #7b1fa2;
+  font-style: italic;
+}
+
+/* Table variable field */
+.aimd-field--var-table {
+  display: block;
+  width: fit-content;
+  background-color: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  color: #2e7d32;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.aimd-field--var-table .aimd-field__scope {
+  font-size: 12px;
+  font-weight: 600;
+  color: #388e3c;
+  background-color: #c8e6c9;
+  padding: 0 4px;
+  border-radius: 2px;
+  text-transform: lowercase;
+}
+
+.aimd-field--var-table .aimd-field__name {
+  font-weight: 500;
+}
+
+.aimd-field--var-table .aimd-field__header {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.aimd-field--var-table .aimd-field__table-preview {
+  margin-top: 8px;
+  margin-bottom: 4px;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.aimd-field--var-table .aimd-field__table-preview th,
+.aimd-field--var-table .aimd-field__table-preview td {
+  padding: 4px 8px;
+  border: 1px solid #c8e6c9;
+  text-align: left;
+}
+
+.aimd-field--var-table .aimd-field__table-preview th {
+  background: #cfeed0;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.aimd-field--var-table .aimd-field__table-preview td {
+  color: #666;
+  font-style: italic;
+}
+
+/* Quiz field */
+.aimd-field--quiz {
+  display: block;
+  width: 100%;
+  max-width: 860px;
+  background-color: #fff8e1;
+  border: 1px solid #ffe082;
+  color: #4e342e;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin: 10px 0;
+}
+
+.aimd-field--quiz .aimd-quiz__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.aimd-field--quiz .aimd-field__scope {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8d6e63;
+  background-color: #ffecb3;
+  border-radius: 2px;
+  padding: 0 4px;
+}
+
+.aimd-field--quiz .aimd-field__name {
+  font-weight: 600;
+}
+
+.aimd-field--quiz .aimd-field__type,
+.aimd-field--quiz .aimd-quiz__score {
+  font-size: 12px;
+  color: #6d4c41;
+}
+
+.aimd-field--quiz .aimd-quiz__title {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #3b2f2f;
+}
+
+.aimd-field--quiz .aimd-quiz__stem {
+  margin-top: 6px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.aimd-field--quiz .aimd-quiz__description {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #6d4c41;
+  white-space: pre-wrap;
+}
+
+.aimd-field--quiz .aimd-quiz__blank-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  margin: 0 2px;
+  padding: 0 6px;
+  border-bottom: 2px solid #f9a825;
+  border-radius: 4px 4px 2px 2px;
+  background: #fffde7;
+  color: #8d6e63;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  vertical-align: baseline;
+}
+
+.aimd-field--quiz .aimd-quiz__options {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.aimd-field--quiz .aimd-quiz__options li {
+  margin: 3px 0;
+}
+
+.aimd-field--quiz .aimd-quiz__rubric {
+  margin-top: 8px;
+  padding: 6px 8px;
+  border-left: 3px solid #ffcc80;
+  background: #fff3cd;
+  font-size: 13px;
+  color: #6d4c41;
+}
+
+.aimd-field--quiz .aimd-scale__table {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.aimd-field--quiz .aimd-scale__table th,
+.aimd-field--quiz .aimd-scale__table td {
+  border: 1px solid #f1d8a7;
+  padding: 8px 10px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.aimd-field--quiz .aimd-scale__table thead th {
+  background: #fff4d6;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.aimd-field--quiz .aimd-scale__item-header,
+.aimd-field--quiz .aimd-scale__item-stem {
+  text-align: left;
+}
+
+.aimd-field--quiz .aimd-scale__item-stem {
+  width: 34%;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.aimd-field--quiz .aimd-scale__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.aimd-field--quiz .aimd-scale__list-item {
+  padding: 10px 12px;
+  border: 1px solid #f1d8a7;
+  border-radius: 8px;
+  background: #fffdf7;
+}
+
+.aimd-field--quiz .aimd-scale__item-options {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.aimd-field--quiz .aimd-scale__bands {
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+
+/* Step field */
+.aimd-field--step {
+  background-color: #fff3e0;
+  border: 1px solid #ffcc80;
+  color: #e65100;
+}
+
+.aimd-field--step .aimd-field__icon {
+  font-size: 14px;
+}
+
+.aimd-field--step .aimd-field__name {
+  font-weight: 500;
+}
+
+/* Checkpoint field */
+.aimd-field--check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background-color: #fffafa;
+  border: 1px solid rgba(185, 28, 28, 0.2);
+  border-radius: 4px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.aimd-field--check:hover {
+  background-color: #fff5f5;
+  border-color: rgba(185, 28, 28, 0.32);
+}
+
+.aimd-field--check.aimd-rec-inline--check-passed {
+  background-color: #f6fdf9;
+  border-color: rgba(22, 101, 52, 0.22);
+  color: #1f3d2a;
+}
+
+.aimd-field--check.aimd-rec-inline--check-passed:hover {
+  background-color: #effcf4;
+  border-color: rgba(22, 101, 52, 0.34);
+}
+
+.aimd-field--check .aimd-checkbox {
+  margin: 0;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #dc2626;
+}
+
+.aimd-field--check.aimd-rec-inline--check-passed .aimd-checkbox {
+  accent-color: #16a34a;
+}
+
+.aimd-field--check .aimd-field__label,
+.aimd-field--check .aimd-field__name {
+  font-weight: 500;
+  user-select: none;
+}
+
+/* Reference styles - blockquote style like markdown */
+.aimd-ref {
+  display: inline-block;
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-left: 4px solid #dfe2e5;
+  background-color: #f6f8fa;
+  color: inherit;
+  text-decoration: none;
+  cursor: default;
+  transition: all 0.2s ease;
+  vertical-align: middle;
+}
+
+.aimd-ref:hover {
+  border-left-color: #b0b0b0;
+  background-color: #f0f0f0;
+}
+
+.aimd-ref--step {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.aimd-ref--step:hover {
+  border: none;
+  background: transparent;
+}
+
+/* Reference content wrapper */
+.aimd-ref__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.aimd-ref--step .aimd-ref__content {
+  gap: 0;
+}
+
+.aimd-ref--step .aimd-field--step {
+  margin: 0;
+}
+
+.aimd-ref--step .research-step__sequence {
+  font-size: inherit;
+  font-weight: 600;
+  color: inherit;
+  background-image: none;
+  background-size: 0 0;
+}
+
+.aimd-ref--var {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.aimd-ref--var:hover {
+  border: none;
+  background: transparent;
+}
+
+/* Readonly field in reference (variable reference) */
+.aimd-ref .aimd-field--readonly {
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.95;
+}
+
+.aimd-ref .aimd-field--readonly .aimd-field__value {
+  font-weight: 500;
+  color: inherit;
+}
+
+/* Variable reference wrapper inside reference block */
+.aimd-ref .aimd-field-wrapper--ref {
+  display: inline-block;
+  position: relative;
+  opacity: 0.9;
+}
+
+/* Reference block containing input field */
+.aimd-ref--var .aimd-ref__content {
+  display: block;
+  width: 100%;
+  gap: 0;
+}
+
+.aimd-ref--var .aimd-field-wrapper--ref {
+  width: 100%;
+}
+
+.aimd-ref--var .aimd-field--var {
+  margin: 0;
+}
+
+.aimd-ref--var .aimd-field--readonly {
+  opacity: 1;
+}
+
+/* Disabled input in reference */
+.aimd-ref .aimd-field-wrapper--ref input,
+.aimd-ref .aimd-field-wrapper--ref textarea,
+.aimd-ref .aimd-field-wrapper--ref select {
+  background-color: #f5f5f5 !important;
+  cursor: not-allowed !important;
+  opacity: 0.85 !important;
+}
+
+/* Citation styles */
+.aimd-cite {
+  display: inline;
+  color: #1976d2;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.aimd-cite:hover {
+  text-decoration: underline;
+}
+
+.aimd-cite__refs {
+  font-weight: 500;
+}
+
+/* Editable state */
+.aimd-field--editable {
+  cursor: text;
+  min-width: 80px;
+  padding: 2px 8px;
+}
+
+.aimd-field--editable .aimd-field__value {
+  display: inline-block;
+  min-width: 60px;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 3px;
+  border: 1px dashed currentColor;
+  opacity: 0.8;
+}
+
+.aimd-field--editable:hover {
+  opacity: 1;
+}
+
+.aimd-field--editable:focus-within {
+  outline: 2px solid #2196f3;
+  outline-offset: 2px;
+}
+
+/* ========================================
+   Additional utility classes for migration
+   ======================================== */
+
+/* No style variant - for form labels in edit mode */
+.aimd-field--no-style {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Edit mode label styling - connects with input below */
+.aimd-field--no-style.aimd-field__label {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-bottom: 0;
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  overflow: hidden;
+  border: 1px solid var(--aimd-border-color);
+  border-bottom: none;
+  background-color: var(--aimd-var-bg);
+  min-height: 28px;
+}
+
+/* Default scope color for edit mode labels (var type - blue, matches preview) */
+.aimd-field--no-style.aimd-field__label .aimd-field__scope {
+  border-radius: 6px 0 0 0;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1976d2;
+  background-color: #bbdefb;
+  display: flex;
+  align-items: center;
+}
+
+.aimd-field--no-style.aimd-field__label .aimd-field__name {
+  border-radius: 0 6px 0 0;
+  padding: 4px 8px;
+  flex: 1;
+  font-weight: 500;
+  color: #1565c0;
+  display: flex;
+  align-items: center;
+}
+
+/* Edit mode label scope colors - step type (orange) */
+.aimd-field--no-style.aimd-field__label:has(.aimd-field__scope[class*="--step"]),
+.aimd-field--no-style.aimd-field__label:has(.aimd-field__scope[class*="--rns"]),
+.aimd-field--no-style.aimd-field__label:has(.aimd-field__scope[class*="--rs-"]) {
+  background-color: #fff3e0;
+  border-color: #ffcc80;
+}
+
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--step"],
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--rns"],
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--rs-"] {
+  background-color: #ffcc80;
+  color: #e65100;
+}
+
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--step"] + .aimd-field__name,
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--rns"] + .aimd-field__name,
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--rs-"] + .aimd-field__name {
+  color: #e65100;
+}
+
+/* Edit mode label scope colors - check type (green) */
+.aimd-field--no-style.aimd-field__label:has(.aimd-field__scope[class*="--check"]),
+.aimd-field--no-style.aimd-field__label:has(.aimd-field__scope[class*="--rnc"]),
+.aimd-field--no-style.aimd-field__label:has(.aimd-field__scope[class*="--rc-"]) {
+  background-color: #e8f5e9;
+  border-color: #a5d6a7;
+}
+
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--check"],
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--rnc"],
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--rc-"] {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--check"] + .aimd-field__name,
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--rnc"] + .aimd-field__name,
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--rc-"] + .aimd-field__name {
+  color: #2e7d32;
+}
+
+/* Edit mode label scope colors - var_table type (green) */
+.aimd-field--no-style.aimd-field__label:has(.aimd-field__scope[class*="--var_table"]),
+.aimd-field--no-style.aimd-field__label:has(.aimd-field__scope[class*="--var-table"]) {
+  background-color: #e8f5e9;
+  border-color: #a5d6a7;
+}
+
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--var_table"],
+.aimd-field--no-style.aimd-field__label .aimd-field__scope[class*="--var-table"] {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.aimd-field--no-style.aimd-field__label
+  .aimd-field__scope[class*="--var_table"]
+  + .aimd-field__name,
+.aimd-field--no-style.aimd-field__label
+  .aimd-field__scope[class*="--var-table"]
+  + .aimd-field__name {
+  color: #2e7d32;
+}
+
+/* Edit mode input border - connects with label above */
+/* 使用 naive-ui 的 CSS 变量 --n-border 来覆盖边框样式 */
+.aimd-field--no-style.aimd-field__label + * .n-input,
+.aimd-field--no-style.aimd-field__label + .n-input,
+.aimd-field--no-style.aimd-field__label ~ .n-input-group .n-input,
+.aimd-field--no-style.aimd-field__label ~ * .n-input,
+.n-form-item:has(.aimd-field--no-style.aimd-field__label) .n-input {
+  --n-border: 1px solid var(--aimd-border-color) !important;
+  --n-border-hover: 1px solid var(--aimd-border-color) !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+.n-form-item:has(.aimd-field--no-style.aimd-field__label) .n-input:not(:focus-within) {
+  --n-border: 1px solid var(--aimd-border-color) !important;
+  border-top-color: transparent !important;
+}
+
+/* Date picker and select input styling */
+.n-form-item:has(.aimd-field--no-style.aimd-field__label) .n-date-picker,
+.n-form-item:has(.aimd-field--no-style.aimd-field__label) .n-select {
+  --n-border: 1px solid var(--aimd-border-color) !important;
+}
+
+/* Select base selection styling */
+.n-form-item:has(.aimd-field--no-style.aimd-field__label) .n-base-selection {
+  --n-border: 1px solid var(--aimd-border-color) !important;
+  --n-border-hover: 1px solid var(--aimd-border-color) !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+/* Upload component styling */
+.n-form-item:has(.aimd-field--no-style.aimd-field__label) .n-upload {
+  border-color: var(--aimd-border-color) !important;
+}
+
+.n-form-item:has(.aimd-field--no-style.aimd-field__label) .n-upload-trigger {
+  border-color: var(--aimd-border-color) !important;
+}
+
+/* Markdown editor styling - connects with label */
+.aimd-field--no-style.aimd-field__label + .markdown-editor,
+.n-form-item:has(.aimd-field--no-style.aimd-field__label) .markdown-editor {
+  border: 1px solid var(--aimd-border-color) !important;
+  border-top-color: transparent !important;
+}
+
+/* Small variant */
+.aimd-field--small {
+  font-size: 12px;
+  padding: 1px 4px;
+}
+
+/* Tooltip variant */
+.aimd-field--tooltip {
+  background: #fff;
+  border-radius: 4px;
+}
+
+/* Active/Inactive states */
+.aimd-field--active {
+  opacity: 1;
+  transition: all 0.2s ease;
+}
+
+.aimd-field--active:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.aimd-field--inactive {
+  opacity: 0.5;
+  transition: all 0.2s ease;
+}
+
+.aimd-field--inactive:hover {
+  opacity: 0.7;
+}
+
+/* Focus state */
+.aimd-field--focus {
+  outline: 2px solid #2196f3;
+  outline-offset: 2px;
+}
+
+/* Field wrapper */
+.aimd-field-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: start;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.aimd-field-wrapper--inline {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 2px 4px !important;
+  vertical-align: bottom;
+  border: 1px solid var(--aimd-border-color);
+  border-radius: 6px;
+  min-width: 180px;
+}
+
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-input[class],
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-input-wrapper[class] {
+  --n-border: 0 none transparent !important;
+  --n-border-hover: 0 none transparent !important;
+  --n-border-focus: 0 none transparent !important;
+  border: 0 none !important;
+  border-radius: 0 0 5px 5px !important;
+  box-shadow: none !important;
+  margin-top: 0 !important;
+}
+
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-input__border,
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-input__state-border {
+  display: none !important;
+}
+
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-base-selection[class],
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-base-selection-overlay {
+  --n-border: 0 none transparent !important;
+  --n-border-hover: 0 none transparent !important;
+  --n-border-focus: 0 none transparent !important;
+  border: 0 none !important;
+  border-radius: 0 0 5px 5px !important;
+  box-shadow: none !important;
+}
+
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-base-selection__border,
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-base-selection__state-border {
+  display: none !important;
+}
+
+/* Date picker */
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-date-picker[class] {
+  --n-border: 0 none transparent !important;
+}
+
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-upload-trigger,
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-upload-file-list {
+  border: 0 none !important;
+}
+
+/* Markdown editor - 移除边框 */
+.aimd-field-wrapper.aimd-field-wrapper--inline .markdown-editor,
+.aimd-field-wrapper.aimd-field-wrapper--inline .editor-container,
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-card[class],
+.aimd-field-wrapper.aimd-field-wrapper--inline .n-card__content {
+  border: 0 none !important;
+  border-radius: 0 0 5px 5px !important;
+  box-shadow: none !important;
+}
+
+/* 标签部分样式调整 - 移除独立边框，顶部圆角 */
+.aimd-field-wrapper.aimd-field-wrapper--inline .aimd-field--no-style.aimd-field__label {
+  border: none;
+  border-radius: 5px 5px 0 0;
+  border-bottom: 1px solid var(--aimd-border-color);
+}
+
+.aimd-field-wrapper--error {
+  /* Error state styling */
+  border-color: #d03050 !important;
+}
+
+/* Checkbox layout */
+.aimd-field--checkbox {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Scope colors by type */
+.aimd-field__scope--step,
+.aimd-field__scope--rns,
+.aimd-field__scope--rns-label,
+.aimd-field__scope--rs-minimal,
+.aimd-field__scope--rs-check,
+.aimd-field__scope--rs-annotation,
+.aimd-field__scope--ref-step {
+  background-color: rgba(240, 160, 32, 0.8);
+  color: white;
+}
+
+/* Matching name colors for step type */
+.aimd-field__scope--step + .aimd-field__name,
+.aimd-field__scope--rns + .aimd-field__name,
+.aimd-field__scope--rns-label + .aimd-field__name,
+.aimd-field__scope--rs-minimal + .aimd-field__name,
+.aimd-field__scope--rs-check + .aimd-field__name,
+.aimd-field__scope--rs-annotation + .aimd-field__name,
+.aimd-field__scope--ref-step + .aimd-field__name {
+  color: rgb(240, 160, 32);
+  background: rgba(240, 160, 32, 0.16);
+}
+
+.aimd-field__scope--check,
+.aimd-field__scope--rnc,
+.aimd-field__scope--rc-check,
+.aimd-field__scope--rc-annotation {
+  background-color: rgba(24, 160, 88, 0.8);
+  color: white;
+}
+
+/* Matching name colors for check type */
+.aimd-field__scope--check + .aimd-field__name,
+.aimd-field__scope--rnc + .aimd-field__name,
+.aimd-field__scope--rc-check + .aimd-field__name,
+.aimd-field__scope--rc-annotation + .aimd-field__name {
+  color: #18a058;
+  background: rgba(24, 160, 88, 0.12);
+}
+
+.aimd-field__scope--var_table,
+.aimd-field__scope--var-table-header,
+.aimd-field__scope--var-table-wrapper {
+  background-color: rgba(24, 160, 88, 0.8);
+  color: white;
+}
+
+/* Matching name colors for var_table type */
+.aimd-field__scope--var_table + .aimd-field__name,
+.aimd-field__scope--var-table-header + .aimd-field__name,
+.aimd-field__scope--var-table-wrapper + .aimd-field__name {
+  color: #18a058;
+  background: rgba(24, 160, 88, 0.12);
+}
+
+/* Dark theme has been removed from the project */
+
+/* Print styles */
+@media print {
+  .aimd-field,
+  .aimd-ref {
+    border: 1px solid #000;
+    background-color: transparent !important;
+  }
+}
+
+/* ========================================
+   Research Step & Check Components
+   ======================================== */
+
+/* Research step item container */
+.research-step__item {
+  margin-top: 16px;
+}
+
+.research-step__item > p {
+  margin: 0;
+}
+
+.research-step__item > p > .field__checkbox {
+  vertical-align: middle;
+  margin-top: 0 !important;
+}
+
+/* Research step annotation */
+.research-step__annotation {
+  width: fit-content;
+  margin: 0 0 16px 0 !important;
+}
+
+/* Research step header */
+.research-step__header.research-step__header.research-step__header {
+  margin: 0 !important;
+}
+
+.research-step__header {
+  font-size: var(--list-title-font-size, 1rem);
+  font-weight: bold;
+  width: fit-content !important;
+  position: relative;
+  vertical-align: bottom;
+}
+
+.research-step__header .field__wrapper--tagged {
+  --bottom-offset: -0.3em;
+}
+
+/* Research step sequence - the "Step 1 >" text with gradient background */
+.research-step__sequence {
+  font-size: var(--list-title-font-size, 1rem);
+  font-weight: bold;
+  display: inline-block;
+  white-space: nowrap;
+  background-image: linear-gradient(to right, rgba(255, 157, 0, 0.8), rgba(255, 255, 255, 0));
+  background-position: left 80%;
+  background-size: 100% 30%;
+  background-repeat: no-repeat;
+}
+
+/* Research check annotation */
+.research-check__annotation.research-check__annotation {
+  display: flex !important;
+  width: fit-content !important;
+  margin: 0 !important;
+}
+
+/* Research step content */
+.research-step__content {
+  margin-left: 0;
+  margin-top: 8px;
+}
+
+/* Nested list items - dynamically adjust font size based on nesting depth */
+.research-step__item > p > .research-step__header {
+  --list-title-font-size: 18px;
+}
+
+.research-step__item
+  > p
+  > .research-step__header
+  .research-step__item
+  > p
+  > .research-step__header {
+  --list-title-font-size: 16px;
+}
+
+.research-step__item
+  > p
+  > .research-step__header
+  .research-step__item
+  > p
+  > .research-step__header
+  .research-step__item
+  > p
+  > .research-step__header {
+  --list-title-font-size: 14px;
+}
+
+.research-step__item
+  > p
+  > .research-step__header
+  .research-step__item
+  > p
+  > .research-step__header
+  .research-step__item
+  > p
+  > .research-step__header
+  .research-step__item
+  > p
+  > .research-step__header {
+  --list-title-font-size: 12px;
+}
+
+.research-step__item
+  > p
+  > .research-step__header
+  .research-step__item
+  > p
+  > .research-step__header
+  .research-step__item
+  > p
+  > .research-step__header
+  .research-step__item
+  > p
+  > .research-step__header
+  .research-step__item
+  > p
+  > .research-step__header {
+  --list-title-font-size: 10px;
+}
+
+/* ========================================
+   Field Wrapper Variants
+   ======================================== */
+
+/* Tagged field wrapper - adjust vertical alignment */
+.field__wrapper--tagged {
+  --bottom-offset: -0.3em;
+}
+
+/* Tagged field wrapper inside table cells */
+td .field__wrapper--tagged {
+  --bottom-offset: 0px;
+}
+
+/* Markdown field wrapper - wider min width */
+.field__wrapper--Md {
+  min-width: 80%;
+}
+
+/* ========================================
+   Asset & Chain Components
+   ======================================== */
+
+/* Asset wrapper */
+.asset__wrapper {
+  width: fit-content;
+}
+
+/* Chain/Workflow wrapper */
+.chain__wrapper {
+  min-height: 200px;
+  border-width: 1px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Chain description */
+.chain__description {
+  margin-top: 12px;
+  padding: 0 16px;
+}
+
+.chain__description ol li,
+.chain__description ul li {
+  margin-bottom: 12px !important;
+}

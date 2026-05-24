@@ -1,0 +1,52 @@
+{
+  "name": "@airalogy/airalogy-engine",
+  "version": "0.0.1",
+  "description": "Airalogy protocol execute sandbox",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/airalogy/airalogy.git",
+    "directory": "packages/npm/airalogy-engine"
+  },
+  "bugs": {
+    "url": "https://github.com/airalogy/airalogy/issues"
+  },
+  "homepage": "https://github.com/airalogy/airalogy/tree/main/packages/npm/airalogy-engine#readme",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/",
+    "protocol_executor.py"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "pnpm run copy-executor && tsc",
+    "lint": "oxlint --ignore-path=.gitignore",
+    "lint:fix": "oxlint --fix --ignore-path=.gitignore",
+    "type-check": "tsc --noEmit",
+    "copy-executor": "cp ../../pypi/airalogy-engine/src/airalogy_engine/protocol_executor.py ./protocol_executor.py",
+    "test": "vitest run --config vitest.config.ts --pool=threads --maxWorkers=1 --no-file-parallelism",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "airalogy",
+    "protocol",
+    "sandbox"
+  ],
+  "author": "Airalogy Team",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "oxfmt": "^0.43.0",
+    "oxlint": "^1.58.0",
+    "oxlint-tsgolint": "^0.19.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  },
+  "dependencies": {
+    "@boxlite-ai/boxlite": "0.8.2"
+  }
+}

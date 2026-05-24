@@ -1,0 +1,90 @@
+{
+  "name": "@airalogy/aimd-editor",
+  "type": "module",
+  "version": "1.9.0",
+  "description": "AIMD (Airalogy Markdown) editor with Monaco source mode and Milkdown WYSIWYG mode",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/airalogy/airalogy.git",
+    "directory": "packages/npm/aimd-editor"
+  },
+  "bugs": {
+    "url": "https://github.com/airalogy/airalogy/issues"
+  },
+  "homepage": "https://github.com/airalogy/airalogy/tree/main/packages/npm/aimd-editor#readme",
+  "keywords": [
+    "aimd",
+    "monaco",
+    "milkdown",
+    "editor",
+    "wysiwyg",
+    "markdown",
+    "vue"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./monaco": {
+      "types": "./src/monaco.ts",
+      "import": "./src/monaco.ts"
+    },
+    "./vue": {
+      "types": "./src/vue/index.ts",
+      "import": "./src/vue/index.ts"
+    },
+    "./embedded": {
+      "types": "./src/embedded.ts",
+      "import": "./src/embedded.ts"
+    },
+    "./wysiwyg": {
+      "types": "./src/wysiwyg.ts",
+      "import": "./src/wysiwyg.ts"
+    }
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "node --test ./tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@airalogy/aimd-core": "workspace:^",
+    "@airalogy/aimd-renderer": "workspace:^",
+    "@codingame/monaco-vscode-editor-api": "^20.2.1",
+    "@codingame/monaco-vscode-standalone-languages": "^20.2.1",
+    "@milkdown/kit": "^7.18.0",
+    "@milkdown/theme-nord": "^7.18.0",
+    "@milkdown/vue": "^7.18.0"
+  },
+  "peerDependencies": {
+    "monaco-editor": ">=0.50.0",
+    "vue": ">=3.3.0"
+  },
+  "peerDependenciesMeta": {
+    "monaco-editor": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "monaco-editor": "^0.52.2",
+    "shiki": "^2.3.2",
+    "typescript": "5.8.3",
+    "vite": "^7.1.3",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vue": "^3.5.17",
+    "@vitejs/plugin-vue": "^6.0.1"
+  }
+}
