@@ -2,48 +2,55 @@
 
 [English Version](RELEASING.md)
 
-Airalogy 通过 GitHub Actions 在推送类似 `airalogy-v0.8.1` 的版本标签时自动发布到 PyPI。
+Airalogy 的 PyPI 包使用 Changesets 管理版本，并通过 GitHub Actions 和 PyPI Trusted Publishing 自动发布。
 
 ## 发布流程
 
-1. 更新 `pyproject.toml` 中的包版本。
-2. 在 `CHANGELOG.md` 顶部补上对应版本条目。
-3. 刷新 `uv.lock`，保证 `uv sync --locked --all-extras --dev` 仍然可用。
-4. 将 release-prep 改动合并到 `main`。
-5. 推送对应的 Git tag，例如 `git tag airalogy-v0.8.1 && git push origin airalogy-v0.8.1`。
+1. 完成功能或修复。
+2. 如果改动影响已发布包的外部行为，运行 `corepack pnpm changeset:add`。
+3. 选择受影响的包，例如 `airalogy` 或 `airalogy-engine`，并选择 SemVer bump。
+4. 将功能 PR 合并到 `main`。
+5. Changesets workflow 会创建或更新 release PR。
+6. release PR 会更新包版本、changelog、Python `pyproject.toml` 和 `uv.lock`。
+7. 将 release PR 合并到 `main`。
+8. `.github/workflows/release.yml` 会构建并发布 PyPI 上尚不存在的包版本。
 
-发布 workflow 会先校验 Git tag 与 `pyproject.toml` 中的版本是否一致，然后通过 Trusted Publishing 构建并发布到 PyPI。
+`airalogy-vX.Y.Z` 这类版本 tag 不再作为发布触发源。如果项目仍希望保留 Git tag，可以在发布完成后把它作为 release 标记创建。
 
-普通 `git push` 默认只会把分支提交推到远端，不会自动创建版本 tag，也不会自动把本地已有 tag 一起推上去。
+## 版本元数据
 
-这个仓库的发布 workflow 监听的是 `airalogy-v*` 形式的 tag push，而不是分支 push。要触发发布，必须先创建 tag，再显式推送它，例如：
+每个 PyPI 包都有一个 private `package.json`，只作为 Changesets 的版本锚点：
 
-```bash
-git tag airalogy-v0.8.1
-git push origin airalogy-v0.8.1
-```
+- `packages/pypi/airalogy/package.json`
+- `packages/pypi/airalogy-engine/package.json`
 
-## 版本更新
-
-建议优先使用 `uv version` 更新 `pyproject.toml` 里的 `project.version`，而不是手动改值：
-
-```bash
-uv version 0.8.1
-```
-
-也可以按 SemVer 级别递增：
+真正发布到 PyPI 的 Python 元数据仍然在 `pyproject.toml` 中。生成 release PR 时，`corepack pnpm changeset:version` 会运行：
 
 ```bash
-uv version --bump patch
-uv version --bump minor
-uv version --bump major
+corepack pnpm sync:python-versions
+corepack pnpm lock:python
 ```
 
-`src/airalogy/__init__.py` 现在会在运行时读取已安装包元数据，因此不再需要维护第二处硬编码版本号。
+这会把 Changesets 计算出的版本同步到 `pyproject.toml`，更新 `airalogy-engine` 对 `airalogy` 的开发依赖版本，并刷新 Python lockfile。
+
+## 本地检查
+
+检查 Python 发布元数据是否同步：
+
+```bash
+corepack pnpm check:python-versions
+```
+
+如果在 release 维护场景中手动调整了版本锚点，可以重新同步：
+
+```bash
+corepack pnpm sync:python-versions
+corepack pnpm lock:python
+```
 
 ## PyPI 配置
 
-要让自动发布成功，需要在 PyPI 项目中将 `airalogy/airalogy` 的 `.github/workflows/release.yml` 配置为受信任发布者。
+要让自动发布成功，需要在每个 PyPI 项目中将 `airalogy/airalogy` 的 `.github/workflows/release.yml` 配置为受信任发布者。
 
 这项配置通常只需要做一次：
 
@@ -53,5 +60,6 @@ uv version --bump major
 
 ## 说明
 
-- 普通功能开发不应修改版本号或 `CHANGELOG.md`，除非当前改动就是明确的 release preparation。
-- Git tag、`CHANGELOG.md` 和 `pyproject.toml` 中的版本号应保持一致。
+- 普通功能开发不应手动 bump 版本号或编辑 changelog。
+- 常规发布不要从本地机器手动发布 PyPI 包。
+- 发布 workflow 会检查目标版本是否已经存在于 PyPI，并跳过已存在版本。

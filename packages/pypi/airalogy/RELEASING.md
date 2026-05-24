@@ -2,50 +2,65 @@
 
 [中文版本](RELEASING.zh-CN.md)
 
-Airalogy publishes to PyPI from GitHub Actions when a version tag like `airalogy-v0.8.1` is pushed.
+Airalogy PyPI packages are versioned with Changesets and published by GitHub
+Actions through PyPI Trusted Publishing.
 
 ## Release Flow
 
-1. Update the package version in `pyproject.toml`.
-2. Add the matching top entry to `CHANGELOG.md`.
-3. Refresh `uv.lock` so `uv sync --locked --all-extras --dev` continues to work.
-4. Merge the release-prep change to `main`.
-5. Push the matching Git tag, for example `git tag airalogy-v0.8.1 && git push origin airalogy-v0.8.1`.
+1. Make the feature or fix.
+2. If it changes a published package's external behavior, run `corepack pnpm changeset:add`.
+3. Select the affected package, such as `airalogy` or `airalogy-engine`, and the SemVer bump.
+4. Merge the feature PR to `main`.
+5. The Changesets workflow creates or updates a release PR.
+6. The release PR updates package versions, changelogs, Python `pyproject.toml` files, and `uv.lock` files.
+7. Merge the release PR to `main`.
+8. `.github/workflows/release.yml` builds and publishes any PyPI package version that does not already exist on PyPI.
 
-The release workflow validates that the Git tag matches `pyproject.toml`, then builds and publishes the package to PyPI through Trusted Publishing.
+Version tags such as `airalogy-vX.Y.Z` are no longer the release trigger. They
+may still be created after publishing if the project wants Git tags as release
+markers.
 
-A normal `git push` only pushes branch commits to the remote. It does not create a version tag, and it does not push existing local tags automatically.
+## Version Metadata
 
-This repository's release workflow listens for `airalogy-v*` tag pushes, not branch pushes. To trigger a release, create the tag first and then push it explicitly, for example:
+Each PyPI package has a private `package.json` used only as the Changesets
+version anchor:
 
-```bash
-git tag airalogy-v0.8.1
-git push origin airalogy-v0.8.1
-```
+- `packages/pypi/airalogy/package.json`
+- `packages/pypi/airalogy-engine/package.json`
 
-## Version Updates
-
-Use `uv version` to update `project.version` in `pyproject.toml` instead of editing the value by hand when convenient:
-
-```bash
-uv version 0.8.1
-```
-
-Or bump by SemVer component:
+The publishable Python metadata remains in `pyproject.toml`. During release PR
+generation, `corepack pnpm changeset:version` runs:
 
 ```bash
-uv version --bump patch
-uv version --bump minor
-uv version --bump major
+corepack pnpm sync:python-versions
+corepack pnpm lock:python
 ```
 
-`src/airalogy/__init__.py` reads the installed package metadata at runtime, so there is no second hardcoded version to keep in sync.
+That syncs the Changesets-computed versions into `pyproject.toml`, updates the
+`airalogy-engine` development dependency on `airalogy`, and refreshes Python
+lockfiles.
+
+## Local Checks
+
+Verify Python release metadata without changing files:
+
+```bash
+corepack pnpm check:python-versions
+```
+
+Regenerate synced metadata after a manual release-maintenance change:
+
+```bash
+corepack pnpm sync:python-versions
+corepack pnpm lock:python
+```
 
 ## PyPI Setup
 
-PyPI must trust `airalogy/airalogy` with workflow file `.github/workflows/release.yml` for publishing to succeed.
+PyPI must trust `airalogy/airalogy` with workflow file `.github/workflows/release.yml`
+for publishing to succeed.
 
-Configure this once in the PyPI project settings:
+Configure this once for each PyPI project:
 
 - Owner: `airalogy`
 - Repository: `airalogy`
@@ -53,5 +68,6 @@ Configure this once in the PyPI project settings:
 
 ## Notes
 
-- Normal feature work should not bump versions or edit `CHANGELOG.md` unless it is explicitly release preparation.
-- Keep the intended Git tag and `CHANGELOG.md` entry aligned with the version in `pyproject.toml`.
+- Normal feature work should not manually bump versions or edit changelogs.
+- Do not publish PyPI packages from local machines during normal releases.
+- The release workflow checks whether the target version already exists on PyPI and skips existing versions.

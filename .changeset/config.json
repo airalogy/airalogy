@@ -6,10 +6,10 @@
   "linked": [],
   "privatePackages": {
     "tag": false,
-    "version": false
+    "version": true
   },
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": ["@airalogy/aimd-demo", "airalogy-docs", "aimd-docs"]
 }

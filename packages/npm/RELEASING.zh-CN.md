@@ -1,4 +1,4 @@
-# AIMD 发布与 Changesets 说明
+# Airalogy 发布与 Changesets 说明
 
 本文面向中文开发者，说明本仓库里 `Changesets` 的用途、日常使用方式，以及自动发布的大致机制。
 
@@ -10,6 +10,9 @@
 - `@airalogy/aimd-editor`
 - `@airalogy/aimd-renderer`
 - `@airalogy/aimd-recorder`
+- `@airalogy/airalogy-engine`
+- `airalogy`
+- `airalogy-engine`
 
 这些包之间存在依赖关系。一个功能或修复经常会同时改动多个包，如果继续手动维护每个包的版本号和 changelog，容易出现：
 
@@ -41,7 +44,7 @@ Add quiz grading support across parser, renderer, and recorder.
 
 下面那段摘要文字会在 release 时用于生成 changelog。
 
-这个文件不会立刻发布 npm，它只是 release 意图记录。等 release PR 生成并消费它之后，这个文件通常会被删除。
+这个文件不会立刻发布包，它只是 release 意图记录。等 release PR 生成并消费它之后，这个文件通常会被删除。
 
 ## 日常开发流程
 
@@ -119,7 +122,9 @@ corepack pnpm changeset:add
 
 仓库内的 `@airalogy/aimd-*` 包之间使用 workspace 依赖。
 
-开发时它们仍然走本地 workspace 链接；发布时，pnpm 会把这些 workspace 依赖转换成正常 semver 范围。
+开发时它们仍然走本地 workspace 链接；发布 npm 包时，pnpm 会把这些 workspace 依赖转换成正常 semver 范围。
+
+PyPI 包也有 private `package.json`，但它们只是 Changesets 的版本锚点，不会发布到 npm。release PR 会把这些版本同步到对应的 `pyproject.toml`。
 
 因此日常开发时：
 
@@ -140,7 +145,7 @@ corepack pnpm changeset:add
    - 各包 `CHANGELOG.md`
    - 需要联动的内部依赖范围
 4. 合并 release PR
-5. workflow 自动将待发布包发布到 npm
+5. workflow 自动将待发布 npm 包发布到 npm，并将待发布 PyPI 包发布到 PyPI
 
 ## 常用命令
 
@@ -162,10 +167,10 @@ corepack pnpm changeset:status
 corepack pnpm changeset:version
 ```
 
-本地执行发布（通常由 CI 完成）：
+本地执行 npm 发布脚本（通常由 CI 完成）：
 
 ```bash
-corepack pnpm release
+corepack pnpm release:npm
 ```
 
 ## 对 AI / 开发者最重要的规则

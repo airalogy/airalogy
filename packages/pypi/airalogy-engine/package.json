@@ -1,0 +1,12 @@
+{
+  "name": "airalogy-engine",
+  "version": "0.0.3",
+  "private": true,
+  "description": "Python protocol execution sandbox API",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/airalogy/airalogy.git",
+    "directory": "packages/pypi/airalogy-engine"
+  }
+}

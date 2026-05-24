@@ -2,39 +2,36 @@ name: Release Python
 
 on:
   push:
-    tags:
-      - "airalogy-v*"
-      - "airalogy-engine-v*"
+    branches:
+      - main
+    paths:
+      - "packages/pypi/*/package.json"
+      - "packages/pypi/*/CHANGELOG.md"
+      - "packages/pypi/*/pyproject.toml"
+      - "packages/pypi/*/uv.lock"
+      - "scripts/release/**"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build distributions
+  publish:
+    name: Publish PyPI packages
     runs-on: ubuntu-latest
+    environment: pypi
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-
-      - name: Resolve package
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          case "$RELEASE_TAG" in
-            airalogy-v*)
-              echo "PACKAGE_NAME=airalogy" >> "$GITHUB_ENV"
-              echo "PACKAGE_DIR=packages/pypi/airalogy" >> "$GITHUB_ENV"
-              echo "EXPECTED_VERSION=${RELEASE_TAG#airalogy-v}" >> "$GITHUB_ENV"
-              ;;
-            airalogy-engine-v*)
-              echo "PACKAGE_NAME=airalogy-engine" >> "$GITHUB_ENV"
-              echo "PACKAGE_DIR=packages/pypi/airalogy-engine" >> "$GITHUB_ENV"
-              echo "EXPECTED_VERSION=${RELEASE_TAG#airalogy-engine-v}" >> "$GITHUB_ENV"
-              ;;
-            *)
-              echo "Unsupported release tag: $RELEASE_TAG" >&2
-              exit 1
-              ;;
-          esac
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -44,58 +41,29 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
 
-      - name: Verify release version matches tag
-        run: |
-          python - <<'PY'
-          import os
-          import pathlib
-          import tomllib
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
 
-          expected_version = os.environ["EXPECTED_VERSION"]
-          pyproject_path = pathlib.Path(os.environ["PACKAGE_DIR"]) / "pyproject.toml"
-          pyproject = tomllib.loads(pyproject_path.read_text())
-          pyproject_version = pyproject["project"]["version"]
+      - name: Verify Python version metadata
+        run: node scripts/release/sync-python-versions.mjs --check
 
-          if pyproject_version != expected_version:
-              raise SystemExit(
-                  f"{pyproject_path} has {pyproject_version}, expected {expected_version}"
-              )
-
-          print(f"Validated {os.environ['PACKAGE_NAME']} {expected_version}")
-          PY
+      - name: Select PyPI packages to publish
+        id: python
+        run: node scripts/release/list-python-packages-to-publish.mjs
 
       - name: Build distributions
-        run: uv build "$PACKAGE_DIR" --out-dir dist-to-publish
-
-      - name: Upload distributions
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.PACKAGE_NAME }}-distributions
-          path: dist-to-publish/
-
-  publish:
-    name: Publish to PyPI
-    needs: build
-    runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write
-
-    steps:
-      - name: Resolve package name
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
+        if: steps.python.outputs.has_packages == 'true'
         run: |
-          case "$RELEASE_TAG" in
-            airalogy-v*) echo "PACKAGE_NAME=airalogy" >> "$GITHUB_ENV" ;;
-            airalogy-engine-v*) echo "PACKAGE_NAME=airalogy-engine" >> "$GITHUB_ENV" ;;
-          esac
-
-      - name: Download distributions
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.PACKAGE_NAME }}-distributions
-          path: dist/
+          rm -rf dist-to-publish
+          mkdir -p dist-to-publish
+          for package_dir in ${{ steps.python.outputs.package_dirs }}; do
+            uv build "$package_dir" --out-dir dist-to-publish
+          done
 
       - name: Publish package distributions to PyPI
+        if: steps.python.outputs.has_packages == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist-to-publish

@@ -37,8 +37,8 @@
 ## Release Hygiene
 
 - Normal feature and bug-fix work should not bump package versions or edit `CHANGELOG.md` unless the user explicitly asks for release preparation.
-- `pyproject.toml` is the single source of truth for the package version; do not hardcode `__version__` elsewhere.
-- Release preparation must update `pyproject.toml`, add the matching top entry in `CHANGELOG.md`, and keep the intended Git tag aligned with that version.
-- When bumping the package version in `pyproject.toml`, also refresh `uv.lock` so `uv sync --locked` continues to pass.
-- GitHub Actions publishes this package to PyPI from tags like `airalogy-v0.8.1`; prepare the release commit first, merge it, then tag the matching version on `main`.
-- Do not finish an explicit release-prep change with partial metadata updates; version, changelog, and tag intent must stay aligned.
+- Changesets uses this package's private `package.json` as the release version anchor.
+- `pyproject.toml` is the Python packaging source of truth and must be synced from `package.json` with `corepack pnpm sync:python-versions`.
+- When release metadata changes, refresh `uv.lock` so `uv sync --locked` continues to pass.
+- GitHub Actions publishes this package to PyPI from the Changesets release PR flow, not from version tags.
+- Do not finish an explicit release-prep change with partial metadata updates; `package.json`, `pyproject.toml`, `CHANGELOG.md`, and `uv.lock` must stay aligned.

@@ -1,6 +1,6 @@
 [project]
 name = "airalogy"
-# Release checklist: bump version here, add an entry to `CHANGELOG.md`, then tag the merged release commit as `airalogy-vX.Y.Z`.
+# Release versions are managed by Changesets through package.json and synced into this file.
 version = "0.10.0"
 description = "The world's first universal framework for standardized data digitization"
 readme = "README.md"

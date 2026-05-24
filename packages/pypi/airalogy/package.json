@@ -1,0 +1,12 @@
+{
+  "name": "airalogy",
+  "version": "0.10.0",
+  "private": true,
+  "description": "Python protocol core, AIMD parsing, validation, records, and CLI",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/airalogy/airalogy.git",
+    "directory": "packages/pypi/airalogy"
+  }
+}

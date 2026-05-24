@@ -45,5 +45,7 @@ tests.
 
 ## Releases
 
-- PyPI tags use `airalogy-vX.Y.Z` and `airalogy-engine-vX.Y.Z`.
-- npm packages use Changesets from `packages/npm/*`.
+- Use Changesets for publishable npm and PyPI packages.
+- Run `corepack pnpm changeset:add` when a change affects a published package's external behavior.
+- Do not manually edit package versions or changelogs during normal feature work.
+- Python package versions are synced from their private `package.json` files into `pyproject.toml` during the release PR.

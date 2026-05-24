@@ -62,10 +62,9 @@ pnpm test
 
 ## Releases
 
-- PyPI packages are released from tags:
-  - `airalogy-vX.Y.Z`
-  - `airalogy-engine-vX.Y.Z`
-- npm packages are released with Changesets from `packages/npm/*`.
+- Published packages are versioned with Changesets.
+- npm packages publish from `packages/npm/*` through npm Trusted Publishing.
+- PyPI package versions are anchored by private `package.json` files, synced to `pyproject.toml`, and published through PyPI Trusted Publishing.
 
 ## Citation
 

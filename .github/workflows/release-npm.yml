@@ -1,4 +1,4 @@
-name: Release npm
+name: Release Packages
 
 on:
   push:
@@ -11,6 +11,11 @@ on:
       - "pnpm-workspace.yaml"
       - "packages/npm/*/package.json"
       - "packages/npm/*/CHANGELOG.md"
+      - "packages/pypi/*/package.json"
+      - "packages/pypi/*/CHANGELOG.md"
+      - "packages/pypi/*/pyproject.toml"
+      - "packages/pypi/*/uv.lock"
+      - "scripts/release/**"
       - ".github/workflows/release-npm.yml"
   workflow_dispatch:
 
@@ -38,6 +43,14 @@ jobs:
           node-version: 24
           registry-url: "https://registry.npmjs.org"
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+
       - name: Enable pnpm
         run: |
           corepack enable
@@ -56,3 +69,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
