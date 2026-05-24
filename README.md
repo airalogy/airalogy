@@ -58,7 +58,13 @@ pnpm test
 
 - Airalogy Python package docs: `docs/airalogy`
 - AIMD npm package docs: `docs/aimd`
-- Airalogy Engine overview: `docs/airalogy-engine`
+- Airalogy Engine docs: `docs/airalogy-engine`
+
+Published docs are assembled into one GitHub Pages site:
+
+- <https://airalogy.github.io/airalogy/airalogy/>
+- <https://airalogy.github.io/airalogy/aimd/>
+- <https://airalogy.github.io/airalogy/airalogy-engine/>
 
 ## Releases
 

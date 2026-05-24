@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/airalogy/airalogy/issues"
   },
-  "homepage": "https://github.com/airalogy/airalogy/tree/main/packages/npm/airalogy-engine#readme",
+  "homepage": "https://airalogy.github.io/airalogy/airalogy-engine/",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

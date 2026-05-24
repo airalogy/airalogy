@@ -16,7 +16,7 @@ classifiers = [
 license = { text = "Apache-2.0" }
 
 [project.urls]
-Documentation = "https://github.com/airalogy/airalogy/tree/main/packages/pypi/airalogy-engine#readme"
+Documentation = "https://airalogy.github.io/airalogy/airalogy-engine/"
 Source = "https://github.com/airalogy/airalogy/tree/main/packages/pypi/airalogy-engine"
 
 

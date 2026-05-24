@@ -11,5 +11,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@airalogy/aimd-demo", "airalogy-docs", "aimd-docs"]
+  "ignore": ["@airalogy/aimd-demo", "airalogy-docs", "airalogy-engine-docs", "aimd-docs"]
 }

@@ -62,11 +62,17 @@ jobs:
         env:
           BASE_PATH: ${{ env.ROOT_BASE }}aimd/
 
+      - name: Build Airalogy Engine docs
+        run: pnpm docs:airalogy-engine:build
+        env:
+          BASE_PATH: ${{ env.ROOT_BASE }}airalogy-engine/
+
       - name: Assemble Pages artifact
         run: |
-          mkdir -p .pages/airalogy .pages/aimd
+          mkdir -p .pages/airalogy .pages/aimd .pages/airalogy-engine
           cp -R docs/airalogy/.vitepress/dist/. .pages/airalogy/
           cp -R docs/aimd/.vitepress/dist/. .pages/aimd/
+          cp -R docs/airalogy-engine/.vitepress/dist/. .pages/airalogy-engine/
           cat > .pages/index.html <<'HTML'
           <!doctype html>
           <html lang="en">
@@ -80,6 +86,7 @@ jobs:
               <ul>
                 <li><a href="./airalogy/">Airalogy Python docs</a></li>
                 <li><a href="./aimd/">AIMD npm docs</a></li>
+                <li><a href="./airalogy-engine/">Airalogy Engine docs</a></li>
               </ul>
             </body>
           </html>
