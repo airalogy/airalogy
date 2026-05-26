@@ -46,6 +46,107 @@
   font-weight: 500;
 }
 
+.aimd-field__name--with-metadata {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  line-height: 1.25;
+}
+
+.aimd-field__metadata-host {
+  position: relative;
+  cursor: help;
+  outline: none;
+}
+
+.aimd-field__metadata-host:hover,
+.aimd-field__metadata-host:focus,
+.aimd-field__metadata-host:focus-within {
+  z-index: 90;
+}
+
+.aimd-field__metadata-host:focus-visible {
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(65, 129, 253, 0.24);
+}
+
+.aimd-field__metadata-host .aimd-field__title {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: rgba(15, 23, 42, 0.36);
+  text-underline-offset: 3px;
+}
+
+.aimd-field__title {
+  font-weight: inherit;
+}
+
+.aimd-field__key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: rgba(15, 23, 42, 0.55);
+}
+
+.aimd-field__metadata-popover {
+  position: absolute;
+  z-index: 80;
+  inset-inline-start: 0;
+  top: calc(100% + 7px);
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(360px, 82vw);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.96);
+  color: #f8fafc;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-2px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 120ms ease;
+}
+
+.aimd-field__metadata-popover::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 14px;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  background: rgba(15, 23, 42, 0.96);
+  transform: rotate(45deg);
+}
+
+.aimd-field__metadata-popover-line {
+  display: block;
+  color: inherit;
+}
+
+.aimd-field__metadata-host:hover > .aimd-field__metadata-popover,
+.aimd-field__metadata-host:focus > .aimd-field__metadata-popover,
+.aimd-field__metadata-host:focus-within > .aimd-field__metadata-popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
 .aimd-field--var .aimd-field__type {
   font-size: 12px;
   color: #7b1fa2;
@@ -92,7 +193,7 @@
   border-collapse: collapse;
   font-size: 12px;
   border-radius: 4px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .aimd-field--var-table .aimd-field__table-preview th,
@@ -103,9 +204,17 @@
 }
 
 .aimd-field--var-table .aimd-field__table-preview th {
+  position: relative;
+  overflow: visible;
   background: #cfeed0;
   font-weight: 600;
   color: #2e7d32;
+}
+
+.aimd-field--var-table .aimd-field__table-preview th:has(.aimd-field__metadata-host:hover),
+.aimd-field--var-table .aimd-field__table-preview th:has(.aimd-field__metadata-host:focus),
+.aimd-field--var-table .aimd-field__table-preview th:has(.aimd-field__metadata-host:focus-within) {
+  z-index: 95;
 }
 
 .aimd-field--var-table .aimd-field__table-preview td {
@@ -508,6 +617,10 @@
   min-height: 28px;
 }
 
+.aimd-field--no-style.aimd-field__label.aimd-field__label--has-metadata {
+  overflow: visible;
+}
+
 /* Default scope color for edit mode labels (var type - blue, matches preview) */
 .aimd-field--no-style.aimd-field__label .aimd-field__scope {
   border-radius: 6px 0 0 0;
@@ -528,6 +641,15 @@
   color: #1565c0;
   display: flex;
   align-items: center;
+}
+
+.aimd-field--no-style.aimd-field__label .aimd-field__name--with-metadata {
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 5px;
+  padding-bottom: 5px;
 }
 
 /* Edit mode label scope colors - step type (orange) */

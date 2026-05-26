@@ -128,6 +128,17 @@ export {
   toTemplateEnv,
 } from './utils/aimd-utils'
 
+export {
+  formatAimdExampleValue,
+  formatAimdExamples,
+  getAimdFieldDescription,
+  getAimdFieldDisplayLabel,
+  getAimdFieldExamples,
+  getAimdFieldTitle,
+  resolveAimdFieldMetadata,
+  type AimdResolvedFieldMetadata,
+} from './utils/field-metadata'
+
 // Domain constants
 export {
   getRecordDataKey,

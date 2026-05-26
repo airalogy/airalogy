@@ -386,7 +386,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
     codeLanguage: meta?.codeLanguage,
     typePlugin,
   })
-  const placeholder = meta?.placeholder ?? fieldRendering.getVarPlaceholder(node)
+  const placeholder = meta?.placeholder ?? fieldRendering.getVarPlaceholder(node, meta)
 
   function emitVarChange(value: unknown) {
     fieldRendering.clearVarInputDisplayOverride(id)
@@ -1210,7 +1210,7 @@ defineExpose({
   max-width: 100%;
   border: 1px solid var(--aimd-border-color, #90caf9);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: none;
   background: #f7fbff;
 }
@@ -1220,10 +1220,35 @@ defineExpose({
   border-color: var(--aimd-border-color-focus, #4181fd);
   box-shadow: 0 0 0 2px rgba(65, 129, 253, 0.14);
 }
-.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field) { margin: 0; box-shadow: none; }
-.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field--no-style.aimd-field__label) { min-height: 30px; border-radius: 6px 6px 0 0; }
-.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__scope) { align-self: center; height: 22px; margin-left: 3px; padding: 0 7px; border-radius: 6px; }
-.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__id) { display: flex; flex: 1; align-items: center; padding: 0 10px 0 6px; font-size: 13px; font-weight: 500; color: #1565c0; white-space: nowrap; }
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field) { margin: 0; box-shadow: none; }
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field--no-style.aimd-field__label) { min-height: 30px; border-radius: 6px 6px 0 0; }
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__scope) { align-self: center; height: 22px; margin-left: 3px; padding: 0 7px; border-radius: 6px; }
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__name) {
+	  display: flex;
+	  flex: 1;
+	  align-items: center;
+	  min-width: 0;
+	  padding: 4px 10px 4px 6px;
+	  font-size: 13px;
+	  font-weight: 600;
+	  color: #1565c0;
+	  white-space: nowrap;
+	}
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__name--with-metadata) {
+	  align-items: flex-start;
+	  justify-content: center;
+	  gap: 2px;
+	  min-height: 34px;
+	  white-space: normal;
+	}
+	.aimd-protocol-recorder__content :deep(.aimd-field__key) {
+	  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+	  font-size: 11px;
+	  font-weight: 500;
+	  line-height: 1.2;
+	  color: #64748b;
+	}
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__id) { display: flex; flex: 1; align-items: center; padding: 0 10px 0 6px; font-size: 13px; font-weight: 500; color: #1565c0; white-space: nowrap; }
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-markdown) {
   display: flex;
   flex-direction: column;
@@ -1675,16 +1700,31 @@ defineExpose({
   transition: width 0.18s ease;
 }
 
-.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__column-head) {
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  padding-left: 6px;
-  padding-right: 6px;
-}
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__column-head) {
+	  color: #64748b;
+	  font-size: 11px;
+	  font-weight: 700;
+	  letter-spacing: 0;
+	  text-transform: none;
+	  white-space: nowrap;
+	  padding-left: 6px;
+	  padding-right: 6px;
+	}
+
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__column-label) {
+	  display: inline-flex;
+	  flex-direction: column;
+	  align-items: flex-start;
+	  gap: 2px;
+	  max-width: 100%;
+	  line-height: 1.25;
+	  white-space: normal;
+	}
+
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__column-label .aimd-field__title) {
+	  font-weight: 700;
+	  color: #475569;
+	}
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__column-head--compact) {
   text-align: center;
@@ -2002,13 +2042,18 @@ defineExpose({
   gap: 0;
 }
 
-.aimd-protocol-recorder__content :deep(.aimd-rec-card__label) {
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
+	.aimd-protocol-recorder__content :deep(.aimd-rec-card__label) {
+	  display: inline-flex;
+	  flex-direction: column;
+	  align-items: flex-start;
+	  gap: 2px;
+	  color: #64748b;
+	  font-size: 11px;
+	  font-weight: 700;
+	  letter-spacing: 0;
+	  line-height: 1.25;
+	  text-transform: none;
+	}
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-card__input) {
   width: 100%;

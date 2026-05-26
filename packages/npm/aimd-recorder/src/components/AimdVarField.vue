@@ -1,6 +1,14 @@
 <script lang="ts">
 import { defineAsyncComponent, defineComponent, h, type PropType, type VNode } from "vue"
 import type { AimdVarNode } from "@airalogy/aimd-core/types"
+import {
+  formatAimdExampleValue,
+  formatAimdExamples,
+  getAimdFieldDescription,
+  getAimdFieldDisplayLabel,
+  getAimdFieldExamples,
+  getAimdFieldTitle,
+} from "@airalogy/aimd-core/utils"
 import type { AimdFieldMeta, AimdTypePlugin, AimdVarInputKind } from "../types"
 import type { AimdRecorderMessages } from "../locales"
 import { getAimdRecorderScopeLabel } from "../locales"
@@ -17,6 +25,46 @@ import {
 } from "../composables/useVarHelpers"
 
 const AimdCodeField = defineAsyncComponent(() => import("./AimdCodeField.vue"))
+
+function normalizeMetaString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined
+}
+
+function getFieldMetaExamples(meta?: AimdFieldMeta): unknown[] {
+  if (!meta) return []
+  if (Array.isArray(meta.examples)) {
+    return meta.examples.filter(value => value !== undefined && value !== null)
+  }
+  const singleExample = (meta as { example?: unknown }).example
+  return singleExample === undefined || singleExample === null ? [] : [singleExample]
+}
+
+interface FieldMetadataHelp {
+  tooltip: string
+  detailLines: string[]
+}
+
+function createFieldMetadataHelp(description: string | undefined, examples: string | undefined): FieldMetadataHelp {
+  const exampleText = examples ? `e.g. ${examples}` : undefined
+  const detailLines = [description, exampleText].filter((value): value is string => Boolean(value))
+  return {
+    tooltip: detailLines.join("\n"),
+    detailLines,
+  }
+}
+
+function renderFieldMetadataPopover(help: FieldMetadataHelp): VNode | null {
+  if (help.detailLines.length === 0) {
+    return null
+  }
+  return h("span", {
+    class: "aimd-field__metadata-popover",
+    role: "tooltip",
+  }, help.detailLines.map((line, index) => h("span", {
+    key: `${index}-${line}`,
+    class: "aimd-field__metadata-popover-line",
+  }, line)))
+}
 
 export default defineComponent({
   name: "AimdVarField",
@@ -45,7 +93,7 @@ export default defineComponent({
       const meta = props.fieldMeta
       const disabled = props.disabled
       const extraClasses = props.extraClasses
-      const placeholder = meta?.placeholder ?? getVarPlaceholder(node)
+      const placeholder = meta?.placeholder ?? getVarPlaceholder(node, meta)
       const displayValue = props.displayValue
       const codeLanguage = resolveAimdCodeEditorLanguage(type, meta) ?? "plaintext"
       const numericInputAttributes: NumericInputAttributes = inputKind === "number"
@@ -73,16 +121,48 @@ export default defineComponent({
         }
       }
 
+      const renderVarLabel = (): VNode => {
+        const metaTitle = normalizeMetaString(meta?.title)
+        const definitionTitle = getAimdFieldTitle(node.definition)
+        const displayTitle = metaTitle ?? getAimdFieldDisplayLabel(id, node.definition)
+        const hasCustomTitle = (metaTitle ?? definitionTitle) !== undefined && displayTitle !== id
+        const description = normalizeMetaString(meta?.description) ?? getAimdFieldDescription(node.definition)
+        const metaExamples = getFieldMetaExamples(meta)
+        const examples = formatAimdExamples(metaExamples.length > 0 ? metaExamples : getAimdFieldExamples(node.definition))
+        const help = createFieldMetadataHelp(description, examples)
+
+        return h("span", {
+          class: [
+            "aimd-field",
+            "aimd-field--no-style",
+            "aimd-field__label",
+            help.detailLines.length > 0 ? "aimd-field__label--has-metadata" : undefined,
+          ],
+        }, [
+          h("span", { class: "aimd-field__scope aimd-field__scope--var" }, getAimdRecorderScopeLabel("var", props.messages)),
+          h("span", {
+            class: [
+              "aimd-field__name",
+              (hasCustomTitle || help.detailLines.length > 0) ? "aimd-field__name--with-metadata" : undefined,
+              help.detailLines.length > 0 ? "aimd-field__metadata-host" : undefined,
+            ],
+            tabindex: help.detailLines.length > 0 ? 0 : undefined,
+            "aria-label": help.tooltip || undefined,
+          }, [
+            h("span", { class: "aimd-field__title" }, displayTitle),
+            hasCustomTitle ? h("span", { class: "aimd-field__key" }, id) : null,
+            renderFieldMetadataPopover(help),
+          ]),
+        ])
+      }
+
       // Enum select (from fieldMeta override)
       const enumOptions = meta?.enumOptions ?? []
       if (enumOptions.length) {
         return h("span", {
           class: ["aimd-rec-inline aimd-rec-inline--var-stacked aimd-field-wrapper", ...extraClasses],
         }, [
-          h("span", { class: "aimd-field aimd-field--no-style aimd-field__label" }, [
-            h("span", { class: "aimd-field__scope aimd-field__scope--var" }, "var"),
-            h("span", { class: "aimd-field__id" }, id),
-          ]),
+          renderVarLabel(),
           h("select", {
             "data-rec-focus-key": `var:${id}`,
             class: "aimd-rec-inline__input aimd-rec-inline__input--stacked aimd-rec-inline__select",
@@ -104,10 +184,7 @@ export default defineComponent({
             ...extraClasses,
           ],
         }, [
-          h("span", { class: "aimd-field aimd-field--no-style aimd-field__label" }, [
-            h("span", { class: "aimd-field__scope aimd-field__scope--var" }, getAimdRecorderScopeLabel("var", props.messages)),
-            h("span", { class: "aimd-field__id" }, id),
-          ]),
+          renderVarLabel(),
           control,
         ])
 
@@ -244,8 +321,18 @@ export default defineComponent({
   },
 })
 
-function getVarPlaceholder(node: AimdVarNode): string | undefined {
-  const title = node.definition?.kwargs?.title
-  return typeof title === "string" && title.trim() ? title.trim() : undefined
+function getVarPlaceholder(node: AimdVarNode, meta?: AimdFieldMeta): string | undefined {
+  const placeholder = node.definition?.kwargs?.placeholder
+  if (typeof placeholder === "string" && placeholder.trim()) {
+    return placeholder.trim()
+  }
+
+  const metaExamples = getFieldMetaExamples(meta)
+  const [example] = metaExamples.length > 0 ? metaExamples : getAimdFieldExamples(node.definition)
+  if (example !== undefined && example !== null && typeof example !== "object") {
+    return formatAimdExampleValue(example)
+  }
+
+  return undefined
 }
 </script>

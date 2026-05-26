@@ -15,6 +15,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `renderToHtml(content)`：输出 HTML。
 - `renderToVue(content)`：输出 Vue vnode。
 - `parseAndExtract(content)`：提取 core 规范字段结构，包括 `fields.var_definitions` 中的普通 `var` 定义。
+- `var` 与 `var_table` 的默认预览会显示 AIMD `title`，保留规范字段 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。
 - `assignerVisibility`：用于作者视图或调试视图下切换 assigner 的可见性。
 - 内建 quiz 预览控制。
 - 支持通过 `locale` 切换渲染标签语言。

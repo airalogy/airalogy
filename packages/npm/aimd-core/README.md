@@ -7,6 +7,7 @@ Core parser and canonical field extraction for AIMD (Airalogy Markdown).
 
 It also extracts frontend-only assigners from fenced `assigner runtime=client` blocks into `fields.client_assigner`.
 Simple `var` ids remain available in `fields.var`; their parsed type, default, and kwargs metadata are also exposed through `fields.var_definitions`.
+Display metadata such as `title`, `description`, and `example`/`examples` is extracted for `var` and `var_table` fields so renderer and recorder packages can show human-friendly labels while keeping canonical ids stable.
 
 > Protocol-level AIMD syntax, assigner semantics, and validation rules are normative in Airalogy docs. `@airalogy/aimd-*` docs describe how the frontend parser, renderer, and recorder implement those rules.
 
@@ -23,7 +24,7 @@ import { unified } from "unified"
 import remarkParse from "remark-parse"
 import { remarkAimd } from "@airalogy/aimd-core/parser"
 
-const content = "{{var|sample_name: str}}"
+const content = '{{var|sample_name: str, title="Sample name", description="Human-readable sample label", examples=["S-001"]}}'
 const processor = unified().use(remarkParse).use(remarkAimd)
 const tree = processor.parse(content)
 const file = { data: {} } as any

@@ -22,15 +22,19 @@ YAML workflow: {{var|yaml_workflow: YamlStr, title = "YAML workflow definition"}
 
 Generic code block: {{var|generic_code: CodeStr, title = "Language-agnostic code"}}
 
-Temperature setting: {{var|temperature: float = 25.0}}
+Temperature setting: {{var|temperature: float = 25.0, title = "Temperature (C)", description = "Ambient temperature used for the run", examples = [25.0, 37.0]}}
 
-Concentration setting: {{var|concentration: float = 1.0, title = "Concentration (M)"}}
+Concentration setting: {{var|concentration: float = 1.0, title = "Concentration (M)", description = "Final reagent molarity", examples = [0.5, 1.0, 2.0]}}
 
 Is active: {{var|is_active: bool = true}}
 
 ## Variable Table
 
-{{var|samples, subvars=[sample_id, concentration, volume]}}
+{{var|samples, title = "Sample Measurements", description = "One row per prepared sample", examples = ["S-001 row"], subvars=[
+  var(sample_id: str, title = "Sample ID", description = "Tube or plate well identifier", examples = ["S-001"]),
+  var(concentration: float, title = "Concentration (M)", description = "Measured reagent molarity", examples = [1.0]),
+  var(volume: float, title = "Volume (mL)", description = "Final sample volume", examples = [2.5])
+]}}
 
 ## Inline Vars In Markdown Table
 

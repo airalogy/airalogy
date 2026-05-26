@@ -1,7 +1,7 @@
 # Basic Protocol
 
-Operator: {{var|operator_name: UserName, title="Operator"}}
-Temperature: {{var|temperature_c: float = 25.0, ge=0}}
+Operator: {{var|operator_name: UserName, title="Operator", description="Person responsible for the run", examples=["Ada Lovelace"]}}
+Temperature: {{var|temperature_c: float = 25.0, title="Temperature", description="Ambient temperature in Celsius", examples=[25.0, 37.0], ge=0}}
 
 {{step|prepare_sample, 1}} Prepare the sample.
 {{step|measure_sample, 2, duration="5m", timer="countdown"}} Measure the sample.

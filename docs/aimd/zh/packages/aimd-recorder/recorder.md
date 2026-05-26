@@ -16,10 +16,10 @@ import "@airalogy/aimd-recorder/styles"
 
 const content = ref(`# Protocol
 
-样本名：{{var|sample_name: str}}
+样本名：{{var|sample_name: str, title="样本名", description="样本的人类可读标签", examples=["S-001"]}}
 记录者：{{var|operator: UserName}}
 记录时间：{{var|current_time: CurrentTime}}
-温度设置：{{var|temperature: float = 25.0}}
+温度设置：{{var|temperature: float = 25.0, title="温度 (C)", description="环境温度，单位为摄氏度", examples=[25.0, 37.0]}}
 实验摘要：{{var|summary: AiralogyMarkdown}}
 质粒：{{var|plasmid: DNASequence}}`)
 const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
@@ -52,6 +52,7 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - `AiralogyMarkdown` 会渲染为横铺的 AIMD/Markdown 内嵌编辑器，默认打开 `源码` 模式，同时保留切换到 `所见即所得` 的能力。
 - `DNASequence` 会渲染专用序列控件，支持交互式模式、原始结构模式、文件导入导出、拓扑切换、feature 编辑，以及基于 `SeqViz` 的可视化。
 - `ref_var` 如果已有记录值，会优先以内联只读内容显示当前值。
+- `var` 和 `var_table` 标签会显示 AIMD 里的 `title`，设置标题时仍显示规范 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。没有显式 placeholder 覆盖时，第一个标量示例会作为默认占位文案。
 - `choice`、`true_false`、`blank`、`open`、`scale` 五类 quiz 都有内建 recorder 输入。
 - 数值 `var` 输入会识别 `gt`、`ge`、`lt`、`le`、`multiple_of` 这类 Pydantic 风格约束；这些约束只对 `int`、`integer`、`float`、`number` 类型生效。
 - client assigner 会用同一组数值约束判断依赖是否就绪；依赖字段违反声明边界时会跳过执行。

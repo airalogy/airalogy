@@ -48,6 +48,31 @@ import { AimdRecorder } from "@airalogy/aimd-recorder"
 
 Each adapter receives the parsed AIMD node, current field value, full record snapshot, built-in localized messages, and the default recorder vnode. `wrapField` still runs after adapter resolution, so hosts can keep global wrappers for validation or assigner chrome.
 
+## Field Metadata Overrides
+
+Use `fieldMeta` when the host needs runtime display overrides or input behavior without changing AIMD source. Keys use the same field scopes as recorder events:
+
+```vue
+<AimdRecorder
+  :content="content"
+  :model-value="record"
+  :field-meta="{
+    'var:temperature': {
+      title: 'Temperature (C)',
+      description: 'Runtime label supplied by the host app',
+      examples: [25.0, 37.0],
+    },
+    'var_table:samples:sample_id': {
+      title: 'Sample ID',
+      description: 'Tube or well identifier',
+      examples: ['S-001'],
+    },
+  }"
+/>
+```
+
+`fieldMeta.title`, `fieldMeta.description`, and `fieldMeta.examples` override the equivalent AIMD kwargs for recorder labels and example placeholders. Existing behavior fields such as `inputType`, `placeholder`, `enumOptions`, `disabled`, and `assigner` continue to work on the same entries.
+
 ## Message Overrides
 
 Override `messages` when you only need to tune built-in labels:

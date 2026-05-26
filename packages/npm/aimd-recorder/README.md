@@ -8,6 +8,7 @@ Reusable recording UI for AIMD (Airalogy Markdown), including inline protocol re
 Built-in variable input types include `CurrentTime`, `UserName`, `AiralogyMarkdown`, and `DNASequence`.
 `AiralogyMarkdown` now uses a full-width embedded AIMD/Markdown editor in recorder mode, opens in `Source` mode by default, keeps the full top toolbar, and still supports switching to `WYSIWYG` instead of a plain textarea.
 In recorder/edit mode, `ref_var` references display current var values as readonly inline content when available.
+`var` and `var_table` labels display AIMD `title`, keep canonical ids visible, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus. Host `fieldMeta` can override the same display fields at runtime.
 Frontend-only `assigner runtime=client` blocks are executed locally for pure var computations.
 For simultaneous protocol restructuring and data entry, `AimdRecorderEditor` keeps the AIMD source editor and recorder bound to the same `content` + `record` state and can surface detached values after field IDs disappear from the current protocol.
 
@@ -33,10 +34,10 @@ import "@airalogy/aimd-recorder/styles"
 
 const content = ref(`# Protocol
 
-Sample: {{var|sample_name: str}}
+Sample: {{var|sample_name: str, title="Sample name", description="Human-readable sample label", examples=["S-001"]}}
 Operator: {{var|operator: UserName}}
 Record Time: {{var|current_time: CurrentTime}}
-Temperature: {{var|temperature: float = 25.0}}
+Temperature: {{var|temperature: float = 25.0, title="Temperature (C)", description="Ambient temperature in Celsius", examples=[25.0, 37.0]}}
 Notes: {{var|notes: AiralogyMarkdown}}
 Plasmid: {{var|plasmid: DNASequence}}`)
 const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())

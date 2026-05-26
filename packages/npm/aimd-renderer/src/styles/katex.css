@@ -1,2 +1,83 @@
 /* Re-export KaTeX base styles for AIMD renderer consumers. */
 @import "katex/dist/katex.min.css";
+
+.aimd-field__metadata-host {
+  position: relative;
+  cursor: help;
+  outline: none;
+}
+
+.aimd-field__metadata-host:hover,
+.aimd-field__metadata-host:focus,
+.aimd-field__metadata-host:focus-within {
+  z-index: 90;
+}
+
+.aimd-field__metadata-host:focus-visible {
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(65, 129, 253, 0.24);
+}
+
+.aimd-field__metadata-host .aimd-field__title {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: rgba(15, 23, 42, 0.36);
+  text-underline-offset: 3px;
+}
+
+.aimd-field__metadata-popover {
+  position: absolute;
+  z-index: 80;
+  inset-inline-start: 0;
+  top: calc(100% + 7px);
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(360px, 82vw);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.96);
+  color: #f8fafc;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-2px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 120ms ease;
+}
+
+.aimd-field__metadata-popover::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 14px;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  background: rgba(15, 23, 42, 0.96);
+  transform: rotate(45deg);
+}
+
+.aimd-field__metadata-popover-line {
+  display: block;
+  color: inherit;
+}
+
+.aimd-field__metadata-host:hover > .aimd-field__metadata-popover,
+.aimd-field__metadata-host:focus > .aimd-field__metadata-popover,
+.aimd-field__metadata-host:focus-within > .aimd-field__metadata-popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}

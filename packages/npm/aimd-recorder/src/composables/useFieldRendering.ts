@@ -1,5 +1,6 @@
 import { reactive, type VNode } from "vue"
 import type { AimdVarNode } from "@airalogy/aimd-core/types"
+import { formatAimdExampleValue, getAimdFieldExamples } from "@airalogy/aimd-core/utils"
 import type { AimdFieldMeta, AimdFieldState, AimdTypePlugin, AimdTypePluginInitContext, AimdTypePluginValueContext } from "../types"
 import {
   normalizeVarTypeName,
@@ -29,6 +30,15 @@ export interface FieldRenderingOptions {
   fieldState: () => Record<string, AimdFieldState> | undefined
   typePlugins: () => AimdTypePlugin[] | undefined
   wrapField: () => ((fieldKey: string, fieldType: string, defaultVNode: VNode) => VNode) | undefined
+}
+
+function getFieldMetaExamples(meta?: AimdFieldMeta): unknown[] {
+  if (!meta) return []
+  if (Array.isArray(meta.examples)) {
+    return meta.examples.filter(value => value !== undefined && value !== null)
+  }
+  const singleExample = (meta as { example?: unknown }).example
+  return singleExample === undefined || singleExample === null ? [] : [singleExample]
 }
 
 // ---------------------------------------------------------------------------
@@ -227,9 +237,19 @@ export function useFieldRendering(options: FieldRenderingOptions) {
     return value
   }
 
-  function getVarPlaceholder(node: AimdVarNode): string | undefined {
-    const title = node.definition?.kwargs?.title
-    return typeof title === "string" && title.trim() ? title.trim() : undefined
+  function getVarPlaceholder(node: AimdVarNode, meta?: AimdFieldMeta): string | undefined {
+    const placeholder = node.definition?.kwargs?.placeholder
+    if (typeof placeholder === "string" && placeholder.trim()) {
+      return placeholder.trim()
+    }
+
+    const metaExamples = getFieldMetaExamples(meta)
+    const [example] = metaExamples.length > 0 ? metaExamples : getAimdFieldExamples(node.definition)
+    if (example !== undefined && example !== null && typeof example !== "object") {
+      return formatAimdExampleValue(example)
+    }
+
+    return undefined
   }
 
   // ── ID helpers ─────────────────────────────────────────────────────────

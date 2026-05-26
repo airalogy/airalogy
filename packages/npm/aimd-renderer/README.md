@@ -7,6 +7,7 @@ Rendering engine for AIMD (Airalogy Markdown): HTML output, Vue output, and fiel
 
 Assigner blocks are hidden from normal rendered output by default. You can opt into collapsed or expanded assigner display when building authoring/debug views, while extracted field metadata remains available through `parseAndExtract`.
 `parseAndExtract` returns the canonical core field structure, including simple `var` metadata in `fields.var_definitions`.
+Default `var` and `var_table` previews render AIMD `title`, preserve the canonical field id for automation, and expose `description` plus `example`/`examples` details only on hover or keyboard focus.
 
 > Protocol-level AIMD syntax, assigner semantics, and validation rules are normative in Airalogy docs. `@airalogy/aimd-*` docs describe how the frontend parser, renderer, and recorder implement those rules.
 
@@ -21,7 +22,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 ```ts
 import { renderToHtml, parseAndExtract } from "@airalogy/aimd-renderer"
 
-const content = "{{step|sample_preparation}}"
+const content = '{{var|sample_name: str, title="Sample name", description="Human-readable sample label", examples=["S-001"]}}'
 const { html } = await renderToHtml(content)
 const fields = parseAndExtract(content)
 

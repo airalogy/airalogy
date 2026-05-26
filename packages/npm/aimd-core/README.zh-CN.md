@@ -7,6 +7,7 @@ AIMD（Airalogy Markdown）的核心解析器与规范化字段提取能力。
 
 它也会把 fenced `assigner runtime=client` 代码块提取为 `fields.client_assigner` 前端元数据。
 普通 `var` 的 id 仍然保留在 `fields.var`；其解析出的类型、默认值和 kwargs 元数据也会通过 `fields.var_definitions` 暴露。
+`title`、`description`、`example`/`examples` 这类显示元数据会被提取到 `var` 和 `var_table` 字段结构里，renderer 与 recorder 可以显示更友好的标签，同时保留稳定的规范 id。
 
 > 协议级 AIMD 语法、assigner 语义与校验规则以 Airalogy 文档为准；`@airalogy/aimd-*` 文档只描述前端 parser、renderer、recorder 如何实现这些规范。
 
@@ -23,7 +24,7 @@ import { unified } from "unified"
 import remarkParse from "remark-parse"
 import { remarkAimd } from "@airalogy/aimd-core/parser"
 
-const content = "{{var|sample_name: str}}"
+const content = '{{var|sample_name: str, title="样本名", description="样本的人类可读标签", examples=["S-001"]}}'
 const processor = unified().use(remarkParse).use(remarkAimd)
 const tree = processor.parse(content)
 const file = { data: {} } as any

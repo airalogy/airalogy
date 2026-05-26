@@ -1,6 +1,13 @@
 import type { Element, Root as HastRoot, Text as HastText, RootContent } from "hast"
 import type { Component, VNode, VNodeChild } from "vue"
 import type { AimdNode, AimdQuizNode, AimdStepNode, RenderContext } from "@airalogy/aimd-core/types"
+import {
+  formatAimdExamples,
+  getAimdFieldDescription,
+  getAimdFieldDisplayLabel,
+  getAimdFieldExamples,
+  getAimdFieldTitle,
+} from "@airalogy/aimd-core/utils"
 import { Fragment, h } from "vue"
 import type { AimdRendererI18nOptions, AimdRendererLocale, AimdRendererMessages } from "../locales"
 import { resolveQuizPreviewOptions, type ResolvedQuizPreviewOptions } from "../common/quiz-preview"
@@ -152,6 +159,56 @@ function buildScaleBandChildren(quizNode: AimdQuizNode): VNodeChild[] {
   ]
 }
 
+interface FieldMetadataHelp {
+  tooltip: string
+  detailLines: string[]
+}
+
+function getFieldHelpText(definition: { kwargs?: Record<string, unknown> } | undefined): FieldMetadataHelp {
+  const description = getAimdFieldDescription(definition)
+  const examples = formatAimdExamples(getAimdFieldExamples(definition))
+  const exampleText = examples ? `e.g. ${examples}` : undefined
+  const detailLines = [description, exampleText].filter((value): value is string => Boolean(value))
+
+  return {
+    tooltip: detailLines.join("\n"),
+    detailLines,
+  }
+}
+
+function renderFieldMetadataPopover(help: FieldMetadataHelp): VNode | null {
+  if (help.detailLines.length === 0) {
+    return null
+  }
+  return h("span", {
+    class: "aimd-field__metadata-popover",
+    role: "tooltip",
+  }, help.detailLines.map((line, index) => h("span", {
+    key: `${index}-${line}`,
+    class: "aimd-field__metadata-popover-line",
+  }, line)))
+}
+
+function renderFieldName(id: string, definition: { kwargs?: Record<string, unknown> } | undefined): VNode {
+  const displayTitle = getAimdFieldDisplayLabel(id, definition)
+  const hasCustomTitle = getAimdFieldTitle(definition) !== undefined && displayTitle !== id
+  const help = getFieldHelpText(definition)
+
+  return h("span", {
+    class: [
+      "aimd-field__name",
+      (hasCustomTitle || help.detailLines.length > 0) ? "aimd-field__name--with-metadata" : undefined,
+      help.detailLines.length > 0 ? "aimd-field__metadata-host" : undefined,
+    ],
+    tabindex: help.detailLines.length > 0 ? 0 : undefined,
+    "aria-label": help.tooltip || undefined,
+  }, [
+    h("span", { class: "aimd-field__title" }, displayTitle),
+    hasCustomTitle ? h("span", { class: "aimd-field__key" }, id) : null,
+    renderFieldMetadataPopover(help),
+  ])
+}
+
 function isStepBodyVNode(node: unknown): node is VNode {
   if (!node || typeof node !== "object") {
     return false
@@ -209,11 +266,11 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
         "data-aimd-type": "var",
         "data-aimd-id": id,
         "data-aimd-scope": scope,
-      }, [
-        h("span", { class: "aimd-field__scope" }, getAimdRendererScopeLabel(scope, ctx.messages)),
-        h("span", { class: "aimd-field__name" }, id),
-        definition?.type ? h("span", { class: "aimd-field__type" }, `: ${definition.type}`) : null,
-      ])
+	      }, [
+	        h("span", { class: "aimd-field__scope" }, getAimdRendererScopeLabel(scope, ctx.messages)),
+	        renderFieldName(id, definition),
+	        definition?.type ? h("span", { class: "aimd-field__type" }, `: ${definition.type}`) : null,
+	      ])
     }
 
     // Edit mode - render as editable field with value display
@@ -236,24 +293,28 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
   },
 
   var_table: (node, ctx) => {
-    const { id } = node
-    const columns = "columns" in node ? node.columns : []
+	    const { id } = node
+	    const columns = "columns" in node ? node.columns : []
+	    const definition = "definition" in node ? node.definition : undefined
+	    const subvarDefs = definition?.subvars
 
-    if (ctx.mode === "preview") {
+	    if (ctx.mode === "preview") {
       // Preview mode: render tag with table preview inside
       const children: VNodeChild[] = [
-        h("div", { class: "aimd-field__header" }, [
-          h("span", { class: "aimd-field__scope" }, ctx.messages.scope.table),
-          h("span", { class: "aimd-field__name" }, id),
-        ]),
-      ]
+	        h("div", { class: "aimd-field__header" }, [
+	          h("span", { class: "aimd-field__scope" }, ctx.messages.scope.table),
+	          renderFieldName(id, definition),
+	        ]),
+	      ]
       // Add table preview inside the container
       if (columns && columns.length > 0) {
         children.push(
           h("table", { class: "aimd-field__table-preview" }, [
-            h("thead", [
-              h("tr", columns.map(col => h("th", col))),
-            ]),
+	            h("thead", [
+	              h("tr", columns.map(col => h("th", {
+	                "data-column-id": col,
+	              }, [renderFieldName(col, subvarDefs?.[col])]))),
+	            ]),
             h("tbody", [
               h("tr", columns.map(() => h("td", "..."))),
             ]),

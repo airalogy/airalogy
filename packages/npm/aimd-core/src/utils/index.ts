@@ -13,6 +13,17 @@ export {
   toTemplateEnv,
 } from './aimd-utils'
 
+export {
+  formatAimdExampleValue,
+  formatAimdExamples,
+  getAimdFieldDescription,
+  getAimdFieldDisplayLabel,
+  getAimdFieldExamples,
+  getAimdFieldTitle,
+  resolveAimdFieldMetadata,
+  type AimdResolvedFieldMetadata,
+} from './field-metadata'
+
 // Domain constants
 export {
   getRecordDataKey,

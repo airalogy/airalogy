@@ -16,10 +16,10 @@ import "@airalogy/aimd-recorder/styles"
 
 const content = ref(`# Protocol
 
-Sample: {{var|sample_name: str}}
+Sample: {{var|sample_name: str, title="Sample name", description="Human-readable sample label", examples=["S-001"]}}
 Operator: {{var|operator: UserName}}
 Record Time: {{var|current_time: CurrentTime}}
-Temperature: {{var|temperature: float = 25.0}}
+Temperature: {{var|temperature: float = 25.0, title="Temperature (C)", description="Ambient temperature in Celsius", examples=[25.0, 37.0]}}
 Notes: {{var|notes: AiralogyMarkdown}}
 Plasmid: {{var|plasmid: DNASequence}}`)
 const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
@@ -52,6 +52,7 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - `AiralogyMarkdown` renders as a full-width embedded AIMD/Markdown editor, opens in `Source` mode by default, keeps the full top toolbar, and still supports switching to `WYSIWYG`.
 - `DNASequence` renders a dedicated sequence widget with interactive and raw-structure modes, file import/export, topology switching, feature editing, and `SeqViz`-based visualization.
 - `ref_var` references display current var values as readonly inline content when available.
+- `var` and `var_table` labels display AIMD `title`, keep the canonical id visible when a title is present, and show `description` plus `example`/`examples` details only on hover or keyboard focus. The first scalar example becomes the default placeholder when no explicit placeholder override is provided.
 - `choice`, `true_false`, `blank`, `open`, and `scale` quiz types all have built-in recorder inputs.
 - Numeric `var` inputs honor Pydantic-style constraints such as `gt`, `ge`, `lt`, `le`, and `multiple_of`; these constraints apply to `int`, `integer`, `float`, and `number` var types.
 - Client assigners use the same numeric constraints for dependency readiness and skip execution while a dependent numeric field violates its declared bounds.

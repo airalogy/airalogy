@@ -34,6 +34,11 @@ import {
   restoreAimdInlineTemplates,
   type AimdInlineTemplateMap,
 } from "./inline-template-protection"
+import {
+  getAimdFieldDescription,
+  getAimdFieldExamples,
+  getAimdFieldTitle,
+} from "../utils/field-metadata"
 import { parseQuizContent } from "./quiz-parser"
 import { SKIP, visit } from "unist-util-visit"
 
@@ -195,14 +200,18 @@ function createExtractedVarField(node: AimdVarNode): AimdVarField {
     field.default = def.default
   }
 
-  const title = typeof def?.kwargs?.title === "string" ? def.kwargs.title : undefined
-  const description = typeof def?.kwargs?.description === "string" ? def.kwargs.description : undefined
+  const title = getAimdFieldTitle(def)
+  const description = getAimdFieldDescription(def)
+  const examples = getAimdFieldExamples(def)
 
   if (title) {
     field.title = title
   }
   if (description) {
     field.description = description
+  }
+  if (examples.length > 0) {
+    field.examples = examples
   }
   if (def?.kwargs) {
     field.kwargs = def.kwargs
@@ -429,8 +438,9 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
                   const names = subvarDefs ? Object.keys(subvarDefs) : tableNode.columns
                   const subvars = names.map((name: string) => {
                     const subDef = subvarDefs?.[name]
-                    const title = typeof subDef?.kwargs?.title === "string" ? subDef.kwargs.title : undefined
-                    const description = typeof subDef?.kwargs?.description === "string" ? subDef.kwargs.description : undefined
+                    const title = getAimdFieldTitle(subDef)
+                    const description = getAimdFieldDescription(subDef)
+                    const examples = getAimdFieldExamples(subDef)
                     return subDef
                       ? {
                           id: name,
@@ -438,15 +448,23 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
                           default: subDef.default,
                           title: title || name,
                           description,
+                          examples: examples.length > 0 ? examples : undefined,
                           kwargs: subDef.kwargs,
                         }
                       : { id: name }
                   })
+                  const title = getAimdFieldTitle(def)
+                  const description = getAimdFieldDescription(def)
+                  const examples = getAimdFieldExamples(def)
                   fields.var_table.push({
                     id: aimdNode.id,
                     scope: "var_table",
                     subvars,
                     type_annotation: def?.type,
+                    title,
+                    description,
+                    examples: examples.length > 0 ? examples : undefined,
+                    kwargs: def?.kwargs,
                   })
                 }
                 break

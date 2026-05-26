@@ -513,6 +513,13 @@ import { unified } from "unified"
 
 import { protectAimdInlineTemplates, remarkAimd } from "@airalogy/aimd-core/parser"
 import {
+  formatAimdExamples,
+  getAimdFieldDescription,
+  getAimdFieldDisplayLabel,
+  getAimdFieldExamples,
+  getAimdFieldTitle,
+} from "@airalogy/aimd-core/utils"
+import {
   createAimdRendererMessages,
   getAimdRendererQuizTypeLabel,
   getAimdRendererScopeLabel,
@@ -790,6 +797,90 @@ function buildScaleBandChildren(quizNode: AimdQuizNode): Array<Element | HastTex
   } as Element]
 }
 
+function createTextNode(value: string): HastText {
+  return { type: "text", value }
+}
+
+interface FieldMetadataHelp {
+  tooltip: string
+  detailLines: string[]
+}
+
+function getFieldHelpText(definition: { kwargs?: Record<string, unknown> } | undefined): FieldMetadataHelp {
+  const description = getAimdFieldDescription(definition)
+  const examples = formatAimdExamples(getAimdFieldExamples(definition))
+  const exampleText = examples ? `e.g. ${examples}` : undefined
+  const detailLines = [description, exampleText].filter((value): value is string => Boolean(value))
+
+  return {
+    tooltip: detailLines.join("\n"),
+    detailLines,
+  }
+}
+
+function createFieldMetadataPopover(help: FieldMetadataHelp): Element | null {
+  if (help.detailLines.length === 0) {
+    return null
+  }
+  return {
+    type: "element",
+    tagName: "span",
+    properties: { className: ["aimd-field__metadata-popover"], role: "tooltip" },
+    children: help.detailLines.map((line) => ({
+      type: "element",
+      tagName: "span",
+      properties: { className: ["aimd-field__metadata-popover-line"] },
+      children: [createTextNode(line)],
+    } as Element)),
+  } as Element
+}
+
+function createFieldNameElement(id: string, definition: { kwargs?: Record<string, unknown> } | undefined): Element {
+  const displayTitle = getAimdFieldDisplayLabel(id, definition)
+  const hasCustomTitle = getAimdFieldTitle(definition) !== undefined && displayTitle !== id
+  const help = getFieldHelpText(definition)
+  const className = ["aimd-field__name"]
+  if (hasCustomTitle || help.detailLines.length > 0) {
+    className.push("aimd-field__name--with-metadata")
+  }
+  if (help.detailLines.length > 0) {
+    className.push("aimd-field__metadata-host")
+  }
+  const children: Array<Element | HastText> = [
+    {
+      type: "element",
+      tagName: "span",
+      properties: { className: ["aimd-field__title"] },
+      children: [createTextNode(displayTitle)],
+    } as Element,
+  ]
+
+  if (hasCustomTitle) {
+    children.push({
+      type: "element",
+      tagName: "span",
+      properties: { className: ["aimd-field__key"] },
+      children: [createTextNode(id)],
+    } as Element)
+  }
+
+  const popover = createFieldMetadataPopover(help)
+  if (popover) {
+    children.push(popover)
+  }
+
+  return {
+    type: "element",
+    tagName: "span",
+    properties: cleanProperties({
+      className,
+      tabIndex: help.detailLines.length > 0 ? 0 : undefined,
+      "aria-label": help.tooltip || undefined,
+    }),
+    children,
+  } as Element
+}
+
 // ---------------------------------------------------------------------------
 // AIMD handler (remark-rehype custom handler)
 // ---------------------------------------------------------------------------
@@ -968,23 +1059,18 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
       children: [{ type: "text", value: `[${refs.join(", ")}]` }],
     } as Element)
   }
-  else if (fieldType === "var") {
-    // Variable: type label + id + optional type annotation
-    const definition = "definition" in node ? node.definition : undefined
-    children.push(
+	  else if (fieldType === "var") {
+	    // Variable: type label + id + optional type annotation
+	    const definition = "definition" in node ? node.definition : undefined
+	    children.push(
       {
         type: "element",
         tagName: "span",
-        properties: { className: ["aimd-field__scope"] },
-        children: [{ type: "text", value: getAimdRendererScopeLabel("var", messages) }],
-      } as Element,
-      {
-        type: "element",
-        tagName: "span",
-        properties: { className: ["aimd-field__name"] },
-        children: [{ type: "text", value: id }],
-      } as Element,
-    )
+	        properties: { className: ["aimd-field__scope"] },
+	        children: [{ type: "text", value: getAimdRendererScopeLabel("var", messages) }],
+	      } as Element,
+	      createFieldNameElement(id, definition),
+	    )
     if (definition?.type) {
       children.push({
         type: "element",
@@ -994,11 +1080,13 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
       } as Element)
     }
   }
-  else if (fieldType === "var_table") {
-    // var_table: render header + table preview
-    const columns = "columns" in node ? (node as any).columns as string[] : []
-    children.push(
-      {
+	  else if (fieldType === "var_table") {
+	    // var_table: render header + table preview
+	    const columns = "columns" in node ? (node as any).columns as string[] : []
+	    const definition = "definition" in node ? node.definition : undefined
+	    const subvarDefs = definition?.subvars
+	    children.push(
+	      {
         type: "element",
         tagName: "div",
         properties: { className: ["aimd-field__header"] },
@@ -1006,17 +1094,12 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
           {
             type: "element",
             tagName: "span",
-            properties: { className: ["aimd-field__scope"] },
-            children: [{ type: "text", value: getAimdRendererScopeLabel("var_table", messages) }],
-          } as Element,
-          {
-            type: "element",
-            tagName: "span",
-            properties: { className: ["aimd-field__name"] },
-            children: [{ type: "text", value: id }],
-          } as Element,
-        ],
-      } as Element,
+	            properties: { className: ["aimd-field__scope"] },
+	            children: [{ type: "text", value: getAimdRendererScopeLabel("var_table", messages) }],
+	          } as Element,
+	          createFieldNameElement(id, definition),
+	        ],
+	      } as Element,
     )
     if (columns && columns.length > 0) {
       children.push({
@@ -1033,12 +1116,14 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
                 type: "element",
                 tagName: "tr",
                 properties: {},
-                children: columns.map(col => ({
-                  type: "element",
-                  tagName: "th",
-                  properties: {},
-                  children: [{ type: "text", value: col }],
-                } as Element)),
+	                children: columns.map(col => ({
+	                  type: "element",
+	                  tagName: "th",
+	                  properties: cleanProperties({
+	                    "data-column-id": col,
+	                  }),
+	                  children: [createFieldNameElement(col, subvarDefs?.[col])],
+	                } as Element)),
               } as Element,
             ],
           } as Element,
@@ -1242,14 +1327,29 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
   }
 
   // Build properties
-  const properties: Properties = {
-    "className": [baseClass, modifierClass],
-    "data-aimd-type": node.fieldType,
+	  const properties: Properties = {
+	    "className": [baseClass, modifierClass],
+	    "data-aimd-type": node.fieldType,
     "data-aimd-id": node.id,
     "data-aimd-scope": node.scope,
     "data-aimd-raw": node.raw,
-    "data-aimd-json": aimdJson,
-  }
+	    "data-aimd-json": aimdJson,
+	  }
+
+	  if ((node.fieldType === "var" || node.fieldType === "var_table") && "definition" in node) {
+	    const title = getAimdFieldTitle(node.definition)
+	    const description = getAimdFieldDescription(node.definition)
+	    const examples = formatAimdExamples(getAimdFieldExamples(node.definition))
+	    if (title) {
+	      properties["data-aimd-title"] = title
+	    }
+	    if (description) {
+	      properties["data-aimd-description"] = description
+	    }
+	    if (examples) {
+	      properties["data-aimd-examples"] = examples
+	    }
+	  }
 
   // Add reference href
   if (isRef) {

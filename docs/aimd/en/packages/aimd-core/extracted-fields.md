@@ -16,9 +16,9 @@ These scopes are still simple `string[]`, and each string is an identifier:
 
 ## What Uses Structured Objects
 
-- `var_definitions[]` mirrors simple `var` fields with `id`, `type`, `default`, `title`, `description`, and raw AIMD `kwargs`
-- `var_table[]` exposes canonical `id`
-- `var_table[].subvars[]` exposes canonical `id`
+- `var_definitions[]` mirrors simple `var` fields with `id`, `type`, `default`, `title`, `description`, `examples`, and raw AIMD `kwargs`
+- `var_table[]` exposes canonical `id` plus optional table-level `title`, `description`, `examples`, and raw AIMD `kwargs`
+- `var_table[].subvars[]` exposes canonical `id` plus optional column-level `title`, `description`, and `examples`
 - `client_assigner[]` exposes `id`, `mode`, `dependent_fields`, `assigned_fields`, and `function_source` extracted from `assigner(config, function ...)` client blocks
 - `quiz[]` already exposes `id`
 - `step_hierarchy[]` exposes `id`, `step`, `parent_id`, `prev_id`, `next_id`, `estimated_duration_ms`, `timer_mode`, `has_check`, and `has_children`
@@ -34,8 +34,12 @@ These scopes are still simple `string[]`, and each string is an identifier:
       "type": "float",
       "default": 36.5,
       "title": "Temperature",
+      "description": "Ambient temperature in Celsius",
+      "examples": [25.0, 37.0],
       "kwargs": {
         "title": "Temperature",
+        "description": "Ambient temperature in Celsius",
+        "examples": [25.0, 37.0],
         "gt": 0
       }
     }
@@ -44,9 +48,21 @@ These scopes are still simple `string[]`, and each string is an identifier:
     {
       "id": "samples",
       "scope": "var_table",
+      "title": "Samples",
+      "description": "Measured sample rows",
+      "examples": ["S-001 row"],
       "subvars": [
-        { "id": "sample_id" },
-        { "id": "concentration" }
+        {
+          "id": "sample_id",
+          "title": "Sample ID",
+          "description": "Tube identifier",
+          "examples": ["S-001"]
+        },
+        {
+          "id": "concentration",
+          "title": "Concentration",
+          "examples": [1.0]
+        }
       ]
     }
   ],

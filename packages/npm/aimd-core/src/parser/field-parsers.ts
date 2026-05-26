@@ -26,57 +26,6 @@ export function createStepContext(): StepContext {
   }
 }
 
-/**
- * Parse key-value parameters from content.
- * Handles formats like: key=value, key="value", key='value'
- */
-export function parseKeyValueParams(content: string): Record<string, string | boolean | number> {
-  const params: Record<string, string | boolean | number> = {}
-  // Match key=value, key="value" (with escaped quotes), key='value', or key=r"value"
-  const kvPattern = /(\w+)\s*=\s*(?:r?"((?:[^"\\]|\\.)*)"|r?'((?:[^'\\]|\\.)*)'|(\S+?)(?=,|$|\s))/g
-  let match: RegExpExecArray | null = kvPattern.exec(content)
-
-  while (match !== null) {
-    const key = match[1]
-    let value = match[2] ?? match[3] ?? match[4]
-
-    // Remove Python raw string prefix if present.
-    if (value && typeof value === "string") {
-      if (match[4] && match[4].startsWith("r\"")) {
-        value = match[4].slice(2, -1)
-      }
-      else if (match[4] && match[4].startsWith("r'")) {
-        value = match[4].slice(2, -1)
-      }
-      // Unescape escaped quotes within quoted strings
-      if (match[2] !== undefined) {
-        value = value.replace(/\\"/g, "\"")
-      } else if (match[3] !== undefined) {
-        value = value.replace(/\\'/g, "'")
-      }
-    }
-
-    if (value === "True" || value === "true") {
-      params[key] = true
-    }
-    else if (value === "False" || value === "false") {
-      params[key] = false
-    }
-    else if (/^-?\d+$/.test(value)) {
-      params[key] = Number.parseInt(value, 10)
-    }
-    else if (/^-?\d+\.\d+$/.test(value)) {
-      params[key] = Number.parseFloat(value)
-    }
-    else {
-      params[key] = value
-    }
-    match = kvPattern.exec(content)
-  }
-
-  return params
-}
-
 function splitTopLevelCommaSegments(content: string): string[] {
   const parts: string[] = []
   let current = ""
@@ -159,6 +108,76 @@ function splitTopLevelCommaSegments(content: string): string[] {
   }
 
   return parts
+}
+
+function unescapeQuotedString(value: string, quote: "\"" | "'"): string {
+  return value
+    .replace(/\\\\/g, "\\")
+    .replace(quote === "\"" ? /\\"/g : /\\'/g, quote)
+}
+
+function parseKeyValueLiteral(rawValue: string): unknown {
+  const value = rawValue.trim()
+  if (!value) {
+    return ""
+  }
+
+  const rawStringMatch = value.match(/^r(["'])([\s\S]*)\1$/)
+  if (rawStringMatch) {
+    return rawStringMatch[2]
+  }
+
+  if (
+    (value.startsWith("\"") && value.endsWith("\""))
+    || (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    const quote = value[0] as "\"" | "'"
+    return unescapeQuotedString(value.slice(1, -1), quote)
+  }
+
+  if (value.startsWith("[") && value.endsWith("]")) {
+    const inner = value.slice(1, -1).trim()
+    if (!inner) {
+      return []
+    }
+    return splitTopLevelCommaSegments(inner).map(parseKeyValueLiteral)
+  }
+
+  if (value === "True" || value === "true") {
+    return true
+  }
+  if (value === "False" || value === "false") {
+    return false
+  }
+  if (value === "None" || value === "null") {
+    return null
+  }
+  if (/^-?\d+$/.test(value)) {
+    return Number.parseInt(value, 10)
+  }
+  if (/^-?(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(value) || /^-?\d+[eE][+-]?\d+$/.test(value)) {
+    return Number.parseFloat(value)
+  }
+
+  return value
+}
+
+/**
+ * Parse key-value parameters from content.
+ * Handles scalar values and top-level list literals such as examples=["A", "B"].
+ */
+export function parseKeyValueParams(content: string): Record<string, unknown> {
+  const params: Record<string, unknown> = {}
+
+  for (const part of splitTopLevelCommaSegments(content)) {
+    const match = part.match(/^(\w+)\s*=\s*([\s\S]+)$/)
+    if (!match) {
+      continue
+    }
+    params[match[1]] = parseKeyValueLiteral(match[2])
+  }
+
+  return params
 }
 
 function findMatchingBracketIndex(content: string, openIndex: number): number {
@@ -298,7 +317,7 @@ export function parseDurationToMs(value: unknown): number | undefined {
   return Math.round(totalMs)
 }
 
-function getEstimatedStepDurationMs(props: Record<string, string | boolean | number>): number | undefined {
+function getEstimatedStepDurationMs(props: Record<string, unknown>): number | undefined {
   if ("duration" in props) {
     const parsed = parseDurationToMs(props.duration)
     if (parsed !== undefined) {
@@ -340,10 +359,10 @@ export function parseStepContent(content: string): {
   estimated_duration_ms?: number
   timer_mode?: AimdStepTimerMode
   result?: boolean
-  props: Record<string, string | boolean | number>
+  props: Record<string, unknown>
 } {
   const trimmed = content.trim()
-  const parts = trimmed.split(/,\s*/)
+  const parts = splitTopLevelCommaSegments(trimmed)
   const id = parts[0].trim()
   let level = 1
   let check = false
@@ -402,7 +421,7 @@ export function parseCheckContent(content: string): {
   label: string
 } {
   const trimmed = content.trim()
-  const parts = trimmed.split(/,\s*/)
+  const parts = splitTopLevelCommaSegments(trimmed)
   const id = parts[0].trim()
   let checked_message: string | undefined
 

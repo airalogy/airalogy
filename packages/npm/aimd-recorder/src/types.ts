@@ -79,6 +79,9 @@ export function createEmptyProtocolRecordData(): AimdProtocolRecordData {
 
 /** Field metadata — app passes via prop to describe extra field info */
 export interface AimdFieldMeta {
+  title?: string                // display title override
+  description?: string          // helper text override
+  examples?: unknown[]          // example values used for helper text and placeholders
   inputType?: string           // override built-in input kind or a host-defined custom type mapping
   codeLanguage?: string        // Monaco language id for code-like fields (e.g. "python", "json")
   required?: boolean

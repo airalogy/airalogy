@@ -96,8 +96,8 @@ export interface AimdVarDefinition {
   defaultRaw?: string
   required?: boolean
   subvars?: Record<string, AimdVarDefinition>
-  /** Additional kwargs like pattern, title, description, etc. */
-  kwargs?: Record<string, string | number | boolean>
+  /** Additional kwargs like pattern, title, description, examples, etc. */
+  kwargs?: Record<string, unknown>
   /** Validation warnings (e.g. type/default mismatch). Non-breaking. */
   warnings?: string[]
 }
@@ -196,7 +196,7 @@ export interface AimdStepNode extends BaseNode {
   /** Whether this step should be treated as a result/output step. */
   result?: boolean
   /** Preserved step kwargs for host-side render adapters. */
-  props?: Record<string, string | boolean | number>
+  props?: Record<string, unknown>
   /** Parent node reference (for hierarchy) */
   parent?: IndentNode
 }

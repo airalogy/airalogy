@@ -1,6 +1,14 @@
 <script lang="ts">
 import { Transition, defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref, watch, type PropType, type VNode } from "vue"
-import type { AimdVarTableNode } from "@airalogy/aimd-core/types"
+import type { AimdVarDefinition, AimdVarTableNode } from "@airalogy/aimd-core/types"
+import {
+  formatAimdExampleValue,
+  formatAimdExamples,
+  getAimdFieldDescription,
+  getAimdFieldDisplayLabel,
+  getAimdFieldExamples,
+  getAimdFieldTitle,
+} from "@airalogy/aimd-core/utils"
 import type { AimdFieldMeta, AimdFieldState } from "../types"
 import type { AimdRecorderMessages } from "../locales"
 import { getAimdRecorderScopeLabel } from "../locales"
@@ -35,24 +43,64 @@ function estimateDisplayWidth(value: unknown): number {
 
 type ColumnSizingKind = "compact" | "default" | "wide"
 
-function resolveColumnSizingKind(column: string): ColumnSizingKind {
-  const normalizedColumn = column.trim().toLowerCase()
+function resolveColumnSizingKind(column: string, displayLabel = column): ColumnSizingKind {
+  const normalizedColumn = `${column} ${displayLabel}`.trim().toLowerCase()
 
   if (
     /^(id|no|num|qty|amount|count|index|step|day|time|min|max|ph|temp|volume|mass|weight|age)$/.test(normalizedColumn)
-    || /^(编号|数量|序号|步数|天数|时间|分钟|最大|最小|温度|体积|质量|重量|年龄)$/.test(column.trim())
+    || /^(编号|数量|序号|步数|天数|时间|分钟|最大|最小|温度|体积|质量|重量|年龄)$/.test(displayLabel.trim())
   ) {
     return "compact"
   }
 
   if (
     /note|remark|comment|description|summary|title|name|result|detail|observation/.test(normalizedColumn)
-    || /备注|说明|描述|总结|标题|名称|结果|详情|观察/.test(column)
+    || /备注|说明|描述|总结|标题|名称|结果|详情|观察/.test(`${column} ${displayLabel}`)
   ) {
     return "wide"
   }
 
   return "default"
+}
+
+function normalizeMetaString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined
+}
+
+function getFieldMetaExamples(meta?: AimdFieldMeta): unknown[] {
+  if (!meta) return []
+  if (Array.isArray(meta.examples)) {
+    return meta.examples.filter(value => value !== undefined && value !== null)
+  }
+  const singleExample = (meta as { example?: unknown }).example
+  return singleExample === undefined || singleExample === null ? [] : [singleExample]
+}
+
+interface FieldMetadataHelp {
+  tooltip: string
+  detailLines: string[]
+}
+
+function createFieldMetadataHelp(description: string | undefined, examples: string | undefined): FieldMetadataHelp {
+  const exampleText = examples ? `e.g. ${examples}` : undefined
+  const detailLines = [description, exampleText].filter((value): value is string => Boolean(value))
+  return {
+    tooltip: detailLines.join("\n"),
+    detailLines,
+  }
+}
+
+function renderFieldMetadataPopover(help: FieldMetadataHelp): VNode | null {
+  if (help.detailLines.length === 0) {
+    return null
+  }
+  return h("span", {
+    class: "aimd-field__metadata-popover",
+    role: "tooltip",
+  }, help.detailLines.map((line, index) => h("span", {
+    key: `${index}-${line}`,
+    class: "aimd-field__metadata-popover-line",
+  }, line)))
 }
 
 export default defineComponent({
@@ -95,12 +143,12 @@ export default defineComponent({
       return !!(props.fieldMeta?.[`var_table:${props.node.id}:${col}`]?.disabled)
     }
 
-    function estimateColumnWidthCh(column: string, rows: Record<string, string>[]): number {
+    function estimateColumnWidthCh(column: string, rows: Record<string, string>[], displayLabel = column): number {
       const contentWidth = rows.reduce((maxWidth, row) => {
         return Math.max(maxWidth, estimateDisplayWidth(row[column]))
-      }, estimateDisplayWidth(column))
+      }, Math.max(estimateDisplayWidth(column), estimateDisplayWidth(displayLabel)))
 
-      const kind = resolveColumnSizingKind(column)
+      const kind = resolveColumnSizingKind(column, displayLabel)
 
       if (kind === "compact") {
         return Math.max(7, Math.min(12, contentWidth + 2))
@@ -113,21 +161,21 @@ export default defineComponent({
       return Math.max(10, Math.min(22, contentWidth + 4))
     }
 
-    function estimateTableWidthPx(columns: string[], rows: Record<string, string>[]): number {
+    function estimateTableWidthPx(columns: string[], rows: Record<string, string>[], getDisplayLabel: (column: string) => string): number {
       const CHARACTER_PX = 8.2
       const CELL_HORIZONTAL_PADDING_PX = 24
       const dragColumnPx = 44
       const actionColumnPx = 64
 
       const contentColumnsPx = columns.reduce((total, column) => {
-        return total + estimateColumnWidthCh(column, rows) * CHARACTER_PX + CELL_HORIZONTAL_PADDING_PX
+        return total + estimateColumnWidthCh(column, rows, getDisplayLabel(column)) * CHARACTER_PX + CELL_HORIZONTAL_PADDING_PX
       }, 0)
 
       return dragColumnPx + actionColumnPx + contentColumnsPx
     }
 
     function estimateColumnWidthStyle(column: string, rows: Record<string, string>[]): string {
-      return `${estimateColumnWidthCh(column, rows)}ch`
+      return `${estimateColumnWidthCh(column, rows, getColumnDisplayLabel(column))}ch`
     }
 
     function resolveAvailableWidth(): number {
@@ -147,7 +195,7 @@ export default defineComponent({
       const availableWidth = resolveAvailableWidth()
       if (availableWidth <= 0) return
 
-      const estimatedWidth = estimateTableWidthPx(props.columns, props.rows)
+      const estimatedWidth = estimateTableWidthPx(props.columns, props.rows, getColumnDisplayLabel)
       const nextOverflow = isOverflow.value
         ? estimatedWidth > availableWidth - HYSTERESIS_PX
         : estimatedWidth > availableWidth + HYSTERESIS_PX
@@ -202,6 +250,73 @@ export default defineComponent({
       requestAnimationFrame(tick)
     }
 
+    function getColumnDefinition(column: string): AimdVarDefinition | undefined {
+      return props.node.definition?.subvars?.[column]
+    }
+
+    function getTableMeta(): AimdFieldMeta | undefined {
+      return props.fieldMeta?.[`var_table:${props.node.id}`]
+    }
+
+    function getColumnMeta(column: string): AimdFieldMeta | undefined {
+      return props.fieldMeta?.[`var_table:${props.node.id}:${column}`]
+    }
+
+    function getMetadataHelp(definition?: AimdVarDefinition, meta?: AimdFieldMeta): FieldMetadataHelp {
+      const description = normalizeMetaString(meta?.description) ?? getAimdFieldDescription(definition)
+      const metaExamples = getFieldMetaExamples(meta)
+      const examples = formatAimdExamples(metaExamples.length > 0 ? metaExamples : getAimdFieldExamples(definition))
+      return createFieldMetadataHelp(description, examples)
+    }
+
+    function getColumnDisplayLabel(column: string): string {
+      return normalizeMetaString(getColumnMeta(column)?.title)
+        ?? getAimdFieldDisplayLabel(column, getColumnDefinition(column))
+    }
+
+    function getColumnPlaceholder(column: string): string {
+      const definition = getColumnDefinition(column)
+      const meta = getColumnMeta(column)
+      if (typeof meta?.placeholder === "string" && meta.placeholder.trim()) {
+        return meta.placeholder.trim()
+      }
+
+      const placeholder = definition?.kwargs?.placeholder
+      if (typeof placeholder === "string" && placeholder.trim()) {
+        return placeholder.trim()
+      }
+
+      const metaExamples = getFieldMetaExamples(meta)
+      const [example] = metaExamples.length > 0 ? metaExamples : getAimdFieldExamples(definition)
+      if (example !== undefined && example !== null && typeof example !== "object") {
+        return formatAimdExampleValue(example)
+      }
+
+      return ""
+    }
+
+    function renderMetadataLabel(id: string, definition: AimdVarDefinition | undefined, className: string, meta?: AimdFieldMeta): VNode {
+      const metaTitle = normalizeMetaString(meta?.title)
+      const definitionTitle = getAimdFieldTitle(definition)
+      const displayTitle = metaTitle ?? getAimdFieldDisplayLabel(id, definition)
+      const hasCustomTitle = (metaTitle ?? definitionTitle) !== undefined && displayTitle !== id
+      const help = getMetadataHelp(definition, meta)
+
+      return h("span", {
+        class: [
+          className,
+          (hasCustomTitle || help.detailLines.length > 0) ? `${className}--with-metadata` : undefined,
+          help.detailLines.length > 0 ? "aimd-field__metadata-host" : undefined,
+        ],
+        tabindex: help.detailLines.length > 0 ? 0 : undefined,
+        "aria-label": help.tooltip || undefined,
+      }, [
+        h("span", { class: "aimd-field__title" }, displayTitle),
+        hasCustomTitle ? h("span", { class: "aimd-field__key" }, id) : null,
+        renderFieldMetadataPopover(help),
+      ])
+    }
+
     function renderCardView(tableName: string, columns: string[], rows: Record<string, string>[], disabled: boolean, messages: AimdRecorderMessages) {
       return rows.map((row, rowIndex) => {
         const rowKey = getVarTableRowKey(row)
@@ -239,12 +354,12 @@ export default defineComponent({
           ]),
           titleColumn
             ? h("div", { class: "aimd-rec-card__field aimd-rec-card__field--title" }, [
-                h("span", { class: "aimd-rec-card__label" }, titleColumn),
+                renderMetadataLabel(titleColumn, getColumnDefinition(titleColumn), "aimd-rec-card__label", getColumnMeta(titleColumn)),
                 h("input", {
                   "data-rec-focus-key": `var_table:${tableName}:${rowIndex}:${titleColumn}`,
                   class: "aimd-rec-card__input",
                   disabled: isColumnDisabled(titleColumn),
-                  placeholder: titleColumn,
+                  placeholder: getColumnPlaceholder(titleColumn),
                   value: row[titleColumn] ?? "",
                   onInput: (event: Event) => {
                     emit("cell-input", {
@@ -282,12 +397,12 @@ export default defineComponent({
               key: `${tableName}-${rowKey}-${column}`,
               class: "aimd-rec-card__field",
             }, [
-              h("span", { class: "aimd-rec-card__label" }, column),
+              renderMetadataLabel(column, getColumnDefinition(column), "aimd-rec-card__label", getColumnMeta(column)),
               h("input", {
                 "data-rec-focus-key": `var_table:${tableName}:${rowIndex}:${column}`,
                 class: inputClass,
                 disabled: isColumnDisabled(column),
-                placeholder: column,
+                placeholder: getColumnPlaceholder(column),
                 value: row[column] ?? "",
                 onInput: (event: Event) => {
                   emit("cell-input", {
@@ -343,6 +458,12 @@ export default defineComponent({
       const rows = props.rows
       const disabled = props.disabled
       const messages = props.messages
+      const tableMeta = getTableMeta()
+      const tableMetaTitle = normalizeMetaString(tableMeta?.title)
+      const tableDefinitionTitle = getAimdFieldTitle(props.node.definition)
+      const tableHelp = getMetadataHelp(props.node.definition, tableMeta)
+      const tableTitle = tableMetaTitle ?? getAimdFieldDisplayLabel(tableName, props.node.definition)
+      const hasCustomTableTitle = (tableMetaTitle ?? tableDefinitionTitle) !== undefined && tableTitle !== tableName
 
       return h("div", {
         ref: wrapperRef,
@@ -352,7 +473,19 @@ export default defineComponent({
       }, [
         h("div", { class: "aimd-field__header" }, [
           h("span", { class: "aimd-field__scope" }, getAimdRecorderScopeLabel("var_table", messages)),
-          h("span", { class: "aimd-field__name" }, tableName),
+          h("span", {
+            class: [
+              "aimd-field__name",
+              (hasCustomTableTitle || tableHelp.detailLines.length > 0) ? "aimd-field__name--with-metadata" : undefined,
+              tableHelp.detailLines.length > 0 ? "aimd-field__metadata-host" : undefined,
+            ],
+            tabindex: tableHelp.detailLines.length > 0 ? 0 : undefined,
+            "aria-label": tableHelp.tooltip || undefined,
+          }, [
+            h("span", { class: "aimd-field__title" }, tableTitle),
+            hasCustomTableTitle ? h("span", { class: "aimd-field__key" }, tableName) : null,
+            renderFieldMetadataPopover(tableHelp),
+          ]),
         ]),
         h(Transition, {
           name: "aimd-table-layout-switch",
@@ -381,11 +514,14 @@ export default defineComponent({
                     ...columns.map(column => h("th", {
                       class: [
                         "aimd-rec-inline-table__column-head",
-                        `aimd-rec-inline-table__column-head--${resolveColumnSizingKind(column)}`,
+                        `aimd-rec-inline-table__column-head--${resolveColumnSizingKind(column, getColumnDisplayLabel(column))}`,
                       ],
                       scope: "col",
-                      "data-column-kind": resolveColumnSizingKind(column),
-                    }, column)),
+                      "data-column-kind": resolveColumnSizingKind(column, getColumnDisplayLabel(column)),
+                      "data-column-id": column,
+                    }, [
+                      renderMetadataLabel(column, getColumnDefinition(column), "aimd-rec-inline-table__column-label", getColumnMeta(column)),
+                    ])),
                     h("th", { class: "aimd-rec-inline-table__action-head" }, messages.table.actionColumn),
                   ]),
                 ]),
@@ -420,10 +556,10 @@ export default defineComponent({
                       key: `${tableName}-${rowIndex}-${column}`,
                       class: [
                         "aimd-rec-inline-table__value-cell",
-                        `aimd-rec-inline-table__value-cell--${resolveColumnSizingKind(column)}`,
+                        `aimd-rec-inline-table__value-cell--${resolveColumnSizingKind(column, getColumnDisplayLabel(column))}`,
                       ],
                       "data-column-label": column,
-                      "data-column-kind": resolveColumnSizingKind(column),
+                      "data-column-kind": resolveColumnSizingKind(column, getColumnDisplayLabel(column)),
                     }, [
                       (() => {
                         const colState = props.fieldState?.[`var_table:${tableName}:${column}`]
@@ -442,7 +578,7 @@ export default defineComponent({
                           "data-rec-focus-key": `var_table:${tableName}:${rowIndex}:${column}`,
                           class: cellClass,
                           disabled: isColumnDisabled(column),
-                          placeholder: column,
+                          placeholder: getColumnPlaceholder(column),
                           value: row[column] ?? "",
                           onInput: (event: Event) => {
                             emit("cell-input", {

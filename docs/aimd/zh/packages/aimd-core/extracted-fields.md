@@ -16,9 +16,9 @@
 
 ## 使用对象结构的部分
 
-- `var_definitions[]` 对应普通 `var` 字段，包含 `id`、`type`、`default`、`title`、`description` 与原始 AIMD `kwargs`
-- `var_table[]` 提供规范字段 `id`
-- `var_table[].subvars[]` 提供规范字段 `id`
+- `var_definitions[]` 对应普通 `var` 字段，包含 `id`、`type`、`default`、`title`、`description`、`examples` 与原始 AIMD `kwargs`
+- `var_table[]` 提供规范字段 `id`，以及可选的表级 `title`、`description`、`examples` 和原始 AIMD `kwargs`
+- `var_table[].subvars[]` 提供规范字段 `id`，以及可选的列级 `title`、`description`、`examples`
 - `client_assigner[]` 提供 `id`、`mode`、`dependent_fields`、`assigned_fields`、`function_source`，它们来自 `assigner(config, function ...)` 形式的前端代码块
 - `quiz[]` 本来就使用 `id`
 - `step_hierarchy[]` 提供 `id`、`step`、`parent_id`、`prev_id`、`next_id`、`estimated_duration_ms`、`timer_mode`、`has_check`、`has_children`
@@ -34,8 +34,12 @@
       "type": "float",
       "default": 36.5,
       "title": "Temperature",
+      "description": "Ambient temperature in Celsius",
+      "examples": [25.0, 37.0],
       "kwargs": {
         "title": "Temperature",
+        "description": "Ambient temperature in Celsius",
+        "examples": [25.0, 37.0],
         "gt": 0
       }
     }
@@ -44,9 +48,21 @@
     {
       "id": "samples",
       "scope": "var_table",
+      "title": "Samples",
+      "description": "Measured sample rows",
+      "examples": ["S-001 row"],
       "subvars": [
-        { "id": "sample_id" },
-        { "id": "concentration" }
+        {
+          "id": "sample_id",
+          "title": "Sample ID",
+          "description": "Tube identifier",
+          "examples": ["S-001"]
+        },
+        {
+          "id": "concentration",
+          "title": "Concentration",
+          "examples": [1.0]
+        }
       ]
     }
   ],

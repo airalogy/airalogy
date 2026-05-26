@@ -196,6 +196,8 @@ export interface AimdSubvar {
   title?: string
   /** Description/tooltip */
   description?: string
+  /** Example values for recorder placeholders or help text */
+  examples?: unknown[]
   /** Additional kwargs from AIMD syntax */
   kwargs?: Record<string, unknown>
   /** Position info from parser */
@@ -243,6 +245,14 @@ export interface AimdVarTableField {
   end_line?: number
   start_col?: number
   end_col?: number
+  /** Optional display title */
+  title?: string
+  /** Optional description/help text */
+  description?: string
+  /** Example rows or values for the table */
+  examples?: unknown[]
+  /** Additional kwargs from AIMD syntax */
+  kwargs?: Record<string, unknown>
 }
 
 /**
@@ -259,6 +269,8 @@ export interface AimdVarField {
   title?: string
   /** Description */
   description?: string
+  /** Example values for recorder placeholders or help text */
+  examples?: unknown[]
   /** Additional kwargs from AIMD syntax */
   kwargs?: Record<string, unknown>
 }

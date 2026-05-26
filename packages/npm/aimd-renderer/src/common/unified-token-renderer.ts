@@ -13,6 +13,13 @@ import type {
 } from "@airalogy/aimd-core/types"
 import type { AimdNode, QuizPreviewOptions, RenderContext } from "@airalogy/aimd-core/types"
 import type { ExtractedAimdFields } from "@airalogy/aimd-core/types"
+import {
+  formatAimdExamples,
+  getAimdFieldDescription,
+  getAimdFieldDisplayLabel,
+  getAimdFieldExamples,
+  getAimdFieldTitle,
+} from "@airalogy/aimd-core/utils"
 import type { AimdRendererI18nOptions, AimdRendererMessages } from "../locales"
 import type { AimdComponentRenderer, ElementRenderer, ShikiHighlighter, VueRendererOptions } from "../vue/vue-renderer"
 import type { AimdRendererOptions, RenderResult } from "./processor"
@@ -226,6 +233,56 @@ function buildScaleBandChildren(quizNode: AimdQuizNode): VNode[] {
   ]
 }
 
+interface FieldMetadataHelp {
+  tooltip: string
+  detailLines: string[]
+}
+
+function getFieldHelpText(definition: { kwargs?: Record<string, unknown> } | undefined): FieldMetadataHelp {
+  const description = getAimdFieldDescription(definition)
+  const examples = formatAimdExamples(getAimdFieldExamples(definition))
+  const exampleText = examples ? `e.g. ${examples}` : undefined
+  const detailLines = [description, exampleText].filter((value): value is string => Boolean(value))
+
+  return {
+    tooltip: detailLines.join("\n"),
+    detailLines,
+  }
+}
+
+function renderFieldMetadataPopover(help: FieldMetadataHelp): VNode | null {
+  if (help.detailLines.length === 0) {
+    return null
+  }
+  return h("span", {
+    class: "aimd-field__metadata-popover",
+    role: "tooltip",
+  }, help.detailLines.map((line, index) => h("span", {
+    key: `${index}-${line}`,
+    class: "aimd-field__metadata-popover-line",
+  }, line)))
+}
+
+function renderFieldName(id: string, definition: { kwargs?: Record<string, unknown> } | undefined): VNode {
+  const displayTitle = getAimdFieldDisplayLabel(id, definition)
+  const hasCustomTitle = getAimdFieldTitle(definition) !== undefined && displayTitle !== id
+  const help = getFieldHelpText(definition)
+
+  return h("span", {
+    class: [
+      "aimd-field__name",
+      (hasCustomTitle || help.detailLines.length > 0) ? "aimd-field__name--with-metadata" : undefined,
+      help.detailLines.length > 0 ? "aimd-field__metadata-host" : undefined,
+    ],
+    tabindex: help.detailLines.length > 0 ? 0 : undefined,
+    "aria-label": help.tooltip || undefined,
+  }, [
+    h("span", { class: "aimd-field__title" }, displayTitle),
+    hasCustomTitle ? h("span", { class: "aimd-field__key" }, id) : null,
+    renderFieldMetadataPopover(help),
+  ])
+}
+
 /**
  * Render preview tag for AIMD field
  */
@@ -234,6 +291,7 @@ function renderPreviewTag(
   id: string,
   messages: AimdRendererMessages,
   columns?: string[],
+  definition?: { kwargs?: Record<string, unknown>, subvars?: Record<string, { kwargs?: Record<string, unknown> }> },
 ): VNode {
   const scopeKey = getScopeKey(scope)
   const scopeLabel = getAimdRendererScopeLabel(scope, messages)
@@ -241,17 +299,19 @@ function renderPreviewTag(
   // var_table: render tag with table preview inside
   if (scope === "var_table") {
     const children: VNode[] = [
-      h("div", { class: "aimd-field__header" }, [
-        h("span", { class: "aimd-field__scope" }, messages.scope.table),
-        h("span", { class: "aimd-field__name" }, id),
-      ]),
+	      h("div", { class: "aimd-field__header" }, [
+	        h("span", { class: "aimd-field__scope" }, messages.scope.table),
+	        renderFieldName(id, definition),
+	      ]),
     ]
     // Add table preview inside the container
     if (columns && columns.length > 0) {
       children.push(
         h("table", { class: "aimd-field__table-preview" }, [
           h("thead", [
-            h("tr", columns.map(col => h("th", col))),
+	            h("tr", columns.map(col => h("th", {
+	              "data-column-id": col,
+	            }, [renderFieldName(col, definition?.subvars?.[col])]))),
           ]),
           h("tbody", [
             h("tr", columns.map(() => h("td", "..."))),
@@ -272,10 +332,10 @@ function renderPreviewTag(
     "class": `aimd-field aimd-field--${classSuffix}`,
     "data-aimd-type": scopeKey,
     "data-aimd-id": id,
-  }, [
-    h("span", { class: "aimd-field__scope" }, scopeLabel),
-    h("span", { class: "aimd-field__name" }, id),
-  ])
+	}, [
+	  h("span", { class: "aimd-field__scope" }, scopeLabel),
+	  renderFieldName(id, definition),
+	])
 }
 
 /**
@@ -299,19 +359,20 @@ function createAimdRenderers(options: UnifiedTokenRendererOptions): Record<strin
     resolveQuizPreviewOptions(getMode(), options.quizPreview)
 
   return {
-    var: async (node, ctx, children) => {
-      const varNode = node as AimdVarNode
-      const { id, scope } = varNode
+	    var: async (node, ctx, children) => {
+	      const varNode = node as AimdVarNode
+	      const { id, scope } = varNode
+	      const definition = varNode.definition
 
-      if (isPreview()) {
+	      if (isPreview()) {
         if (PreviewRenderer) {
           return h(PreviewRenderer, { type: "var" }, {
             default: () => children,
             name: () => id,
           })
         }
-        return renderPreviewTag(scope, id, messages)
-      }
+	        return renderPreviewTag(scope, id, messages, undefined, definition)
+	      }
 
       // Edit mode
       if (getTokenProps && AIMDItem) {
@@ -325,12 +386,13 @@ function createAimdRenderers(options: UnifiedTokenRendererOptions): Record<strin
         }
       }
 
-      return renderPreviewTag(scope, id, messages)
-    },
+	      return renderPreviewTag(scope, id, messages, undefined, definition)
+	    },
 
-    var_table: async (node, ctx, children) => {
-      const tableNode = node as AimdVarTableNode
-      const { id, scope, columns } = tableNode
+	    var_table: async (node, ctx, children) => {
+	      const tableNode = node as AimdVarTableNode
+	      const { id, scope, columns } = tableNode
+	      const definition = tableNode.definition
 
       if (isPreview()) {
         if (PreviewRenderer) {
@@ -340,8 +402,8 @@ function createAimdRenderers(options: UnifiedTokenRendererOptions): Record<strin
           })
         }
         // Preview mode: render inline tag with columns info
-        return renderPreviewTag(scope, id, messages, columns)
-      }
+	        return renderPreviewTag(scope, id, messages, columns, definition)
+	      }
 
       // Edit mode
       if (getTokenProps && AIMDTag) {
@@ -349,8 +411,8 @@ function createAimdRenderers(options: UnifiedTokenRendererOptions): Record<strin
         return h(AIMDTag, { ...item, props: columns })
       }
 
-      return renderPreviewTag(scope, id, messages, columns)
-    },
+	      return renderPreviewTag(scope, id, messages, columns, definition)
+	    },
 
     quiz: async (node, ctx, children) => {
       const quizNode = node as AimdQuizNode
