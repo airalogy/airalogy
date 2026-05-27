@@ -576,9 +576,43 @@ function measureLabelTokenWidth(token: HTMLElement): number {
   return textWidth + horizontal
 }
 
+function getElementHorizontalSpace(element: HTMLElement): number {
+  if (typeof window === "undefined") {
+    return 0
+  }
+
+  const computed = window.getComputedStyle(element)
+  return parsePx(computed.paddingLeft)
+    + parsePx(computed.paddingRight)
+    + parsePx(computed.borderLeftWidth)
+    + parsePx(computed.borderRightWidth)
+    + parsePx(computed.marginLeft)
+    + parsePx(computed.marginRight)
+}
+
+function measureFieldNameWidth(name: HTMLElement): number {
+  const title = name.querySelector(".aimd-field__title") as HTMLElement | null
+  const key = name.querySelector(".aimd-field__key") as HTMLElement | null
+  const visibleTokenWidth = Math.max(
+    title ? measureLabelTokenWidth(title) : 0,
+    key ? measureLabelTokenWidth(key) : 0,
+  )
+
+  if (visibleTokenWidth > 0) {
+    return visibleTokenWidth + getElementHorizontalSpace(name)
+  }
+
+  return measureLabelTokenWidth(name)
+}
+
 export function measureVarLabelWidth(wrapper: HTMLElement): number {
   const scope = wrapper.querySelector(".aimd-field__scope--var") as HTMLElement | null
+  const name = wrapper.querySelector(".aimd-field__name") as HTMLElement | null
   const id = wrapper.querySelector(".aimd-field__id") as HTMLElement | null
+  if (scope && name) {
+    return measureLabelTokenWidth(scope) + measureFieldNameWidth(name) + 4
+  }
+
   if (scope && id) {
     return measureLabelTokenWidth(scope) + measureLabelTokenWidth(id) + 4
   }

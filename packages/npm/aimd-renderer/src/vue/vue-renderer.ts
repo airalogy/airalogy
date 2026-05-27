@@ -2,7 +2,7 @@ import type { Element, Root as HastRoot, Text as HastText, RootContent } from "h
 import type { Component, VNode, VNodeChild } from "vue"
 import type { AimdNode, AimdQuizNode, AimdStepNode, RenderContext } from "@airalogy/aimd-core/types"
 import {
-  formatAimdExamples,
+  formatAimdExampleValue,
   getAimdFieldDescription,
   getAimdFieldDisplayLabel,
   getAimdFieldExamples,
@@ -161,46 +161,64 @@ function buildScaleBandChildren(quizNode: AimdQuizNode): VNodeChild[] {
 
 interface FieldMetadataHelp {
   tooltip: string
-  detailLines: string[]
+  description?: string
+  examples: string[]
 }
 
 function getFieldHelpText(definition: { kwargs?: Record<string, unknown> } | undefined): FieldMetadataHelp {
   const description = getAimdFieldDescription(definition)
-  const examples = formatAimdExamples(getAimdFieldExamples(definition))
-  const exampleText = examples ? `e.g. ${examples}` : undefined
-  const detailLines = [description, exampleText].filter((value): value is string => Boolean(value))
+  const examples = getAimdFieldExamples(definition)
+    .map(formatAimdExampleValue)
+    .map(example => example.trim())
+    .filter(Boolean)
+  const exampleText = examples.length > 0 ? `e.g. ${examples.join(", ")}` : undefined
+  const tooltipLines = [description, exampleText].filter((value): value is string => Boolean(value))
 
   return {
-    tooltip: detailLines.join("\n"),
-    detailLines,
+    tooltip: tooltipLines.join("\n"),
+    description,
+    examples,
   }
 }
 
 function renderFieldMetadataPopover(help: FieldMetadataHelp): VNode | null {
-  if (help.detailLines.length === 0) {
+  if (!help.description && help.examples.length === 0) {
     return null
+  }
+  const children: VNode[] = []
+  if (help.description) {
+    children.push(h("span", {
+      class: "aimd-field__metadata-popover-line",
+    }, help.description))
+  }
+  if (help.examples.length > 0) {
+    children.push(h("span", { class: "aimd-field__metadata-examples" }, [
+      h("span", { class: "aimd-field__metadata-examples-label" }, "e.g."),
+      ...help.examples.map((example, index) => h("span", {
+        key: `${index}-${example}`,
+        class: "aimd-field__metadata-example",
+      }, example)),
+    ]))
   }
   return h("span", {
     class: "aimd-field__metadata-popover",
     role: "tooltip",
-  }, help.detailLines.map((line, index) => h("span", {
-    key: `${index}-${line}`,
-    class: "aimd-field__metadata-popover-line",
-  }, line)))
+  }, children)
 }
 
 function renderFieldName(id: string, definition: { kwargs?: Record<string, unknown> } | undefined): VNode {
   const displayTitle = getAimdFieldDisplayLabel(id, definition)
   const hasCustomTitle = getAimdFieldTitle(definition) !== undefined && displayTitle !== id
   const help = getFieldHelpText(definition)
+  const hasHelp = Boolean(help.description) || help.examples.length > 0
 
   return h("span", {
     class: [
       "aimd-field__name",
-      (hasCustomTitle || help.detailLines.length > 0) ? "aimd-field__name--with-metadata" : undefined,
-      help.detailLines.length > 0 ? "aimd-field__metadata-host" : undefined,
+      (hasCustomTitle || hasHelp) ? "aimd-field__name--with-metadata" : undefined,
+      hasHelp ? "aimd-field__metadata-host" : undefined,
     ],
-    tabindex: help.detailLines.length > 0 ? 0 : undefined,
+    tabindex: hasHelp ? 0 : undefined,
     "aria-label": help.tooltip || undefined,
   }, [
     h("span", { class: "aimd-field__title" }, displayTitle),

@@ -3,7 +3,6 @@ import { Transition, defineComponent, h, nextTick, onBeforeUnmount, onMounted, r
 import type { AimdVarDefinition, AimdVarTableNode } from "@airalogy/aimd-core/types"
 import {
   formatAimdExampleValue,
-  formatAimdExamples,
   getAimdFieldDescription,
   getAimdFieldDisplayLabel,
   getAimdFieldExamples,
@@ -78,29 +77,47 @@ function getFieldMetaExamples(meta?: AimdFieldMeta): unknown[] {
 
 interface FieldMetadataHelp {
   tooltip: string
-  detailLines: string[]
+  description?: string
+  examples: string[]
 }
 
-function createFieldMetadataHelp(description: string | undefined, examples: string | undefined): FieldMetadataHelp {
-  const exampleText = examples ? `e.g. ${examples}` : undefined
-  const detailLines = [description, exampleText].filter((value): value is string => Boolean(value))
+function createFieldMetadataHelp(description: string | undefined, examples: unknown[]): FieldMetadataHelp {
+  const formattedExamples = examples
+    .map(formatAimdExampleValue)
+    .map(example => example.trim())
+    .filter(Boolean)
+  const exampleText = formattedExamples.length > 0 ? `e.g. ${formattedExamples.join(", ")}` : undefined
+  const tooltipLines = [description, exampleText].filter((value): value is string => Boolean(value))
   return {
-    tooltip: detailLines.join("\n"),
-    detailLines,
+    tooltip: tooltipLines.join("\n"),
+    description,
+    examples: formattedExamples,
   }
 }
 
 function renderFieldMetadataPopover(help: FieldMetadataHelp): VNode | null {
-  if (help.detailLines.length === 0) {
+  if (!help.description && help.examples.length === 0) {
     return null
+  }
+  const children: VNode[] = []
+  if (help.description) {
+    children.push(h("span", {
+      class: "aimd-field__metadata-popover-line",
+    }, help.description))
+  }
+  if (help.examples.length > 0) {
+    children.push(h("span", { class: "aimd-field__metadata-examples" }, [
+      h("span", { class: "aimd-field__metadata-examples-label" }, "e.g."),
+      ...help.examples.map((example, index) => h("span", {
+        key: `${index}-${example}`,
+        class: "aimd-field__metadata-example",
+      }, example)),
+    ]))
   }
   return h("span", {
     class: "aimd-field__metadata-popover",
     role: "tooltip",
-  }, help.detailLines.map((line, index) => h("span", {
-    key: `${index}-${line}`,
-    class: "aimd-field__metadata-popover-line",
-  }, line)))
+  }, children)
 }
 
 export default defineComponent({
@@ -265,7 +282,7 @@ export default defineComponent({
     function getMetadataHelp(definition?: AimdVarDefinition, meta?: AimdFieldMeta): FieldMetadataHelp {
       const description = normalizeMetaString(meta?.description) ?? getAimdFieldDescription(definition)
       const metaExamples = getFieldMetaExamples(meta)
-      const examples = formatAimdExamples(metaExamples.length > 0 ? metaExamples : getAimdFieldExamples(definition))
+      const examples = metaExamples.length > 0 ? metaExamples : getAimdFieldExamples(definition)
       return createFieldMetadataHelp(description, examples)
     }
 
@@ -301,14 +318,15 @@ export default defineComponent({
       const displayTitle = metaTitle ?? getAimdFieldDisplayLabel(id, definition)
       const hasCustomTitle = (metaTitle ?? definitionTitle) !== undefined && displayTitle !== id
       const help = getMetadataHelp(definition, meta)
+      const hasHelp = Boolean(help.description) || help.examples.length > 0
 
       return h("span", {
         class: [
           className,
-          (hasCustomTitle || help.detailLines.length > 0) ? `${className}--with-metadata` : undefined,
-          help.detailLines.length > 0 ? "aimd-field__metadata-host" : undefined,
+          (hasCustomTitle || hasHelp) ? `${className}--with-metadata` : undefined,
+          hasHelp ? "aimd-field__metadata-host" : undefined,
         ],
-        tabindex: help.detailLines.length > 0 ? 0 : undefined,
+        tabindex: hasHelp ? 0 : undefined,
         "aria-label": help.tooltip || undefined,
       }, [
         h("span", { class: "aimd-field__title" }, displayTitle),
@@ -464,6 +482,7 @@ export default defineComponent({
       const tableHelp = getMetadataHelp(props.node.definition, tableMeta)
       const tableTitle = tableMetaTitle ?? getAimdFieldDisplayLabel(tableName, props.node.definition)
       const hasCustomTableTitle = (tableMetaTitle ?? tableDefinitionTitle) !== undefined && tableTitle !== tableName
+      const hasTableHelp = Boolean(tableHelp.description) || tableHelp.examples.length > 0
 
       return h("div", {
         ref: wrapperRef,
@@ -476,10 +495,10 @@ export default defineComponent({
           h("span", {
             class: [
               "aimd-field__name",
-              (hasCustomTableTitle || tableHelp.detailLines.length > 0) ? "aimd-field__name--with-metadata" : undefined,
-              tableHelp.detailLines.length > 0 ? "aimd-field__metadata-host" : undefined,
+              (hasCustomTableTitle || hasTableHelp) ? "aimd-field__name--with-metadata" : undefined,
+              hasTableHelp ? "aimd-field__metadata-host" : undefined,
             ],
-            tabindex: tableHelp.detailLines.length > 0 ? 0 : undefined,
+            tabindex: hasTableHelp ? 0 : undefined,
             "aria-label": tableHelp.tooltip || undefined,
           }, [
             h("span", { class: "aimd-field__title" }, tableTitle),

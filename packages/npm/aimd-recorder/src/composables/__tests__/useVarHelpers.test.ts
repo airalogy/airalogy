@@ -16,6 +16,7 @@ import {
   getNumericInputAttributes,
   calculateVarStackWidth,
   syncAutoWrapTextareaHeight,
+  measureVarLabelWidth,
 } from '../useVarHelpers'
 
 // ---------------------------------------------------------------------------
@@ -411,6 +412,67 @@ describe('calculateVarStackWidth', () => {
     const result = calculateVarStackWidth('x', 'dna')
     const px = parseInt(result)
     expect(px).toBeGreaterThanOrEqual(160)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// measureVarLabelWidth
+// ---------------------------------------------------------------------------
+
+describe('measureVarLabelWidth', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    document.body.innerHTML = ''
+  })
+
+  it('measures visible label tokens without letting metadata popovers expand the field', () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => ({
+      measureText: (text: string) => ({ width: text.length * 8 }),
+    } as unknown as CanvasRenderingContext2D))
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element: Element) => {
+      const classList = (element as HTMLElement).classList
+      const horizontalPadding = classList.contains('aimd-field__name')
+        ? '16px'
+        : classList.contains('aimd-field__scope--var')
+          ? '14px'
+          : '0px'
+      return {
+        fontSize: '14px',
+        fontFamily: 'sans-serif',
+        fontWeight: '500',
+        fontStyle: 'normal',
+        paddingLeft: horizontalPadding,
+        paddingRight: '0px',
+        borderLeftWidth: '0px',
+        borderRightWidth: '0px',
+        marginLeft: '0px',
+        marginRight: '0px',
+      } as CSSStyleDeclaration
+    })
+
+    const wrapper = document.createElement('span')
+    wrapper.className = 'aimd-rec-inline--var-stacked'
+    wrapper.innerHTML = `
+      <span class="aimd-field__label">
+        <span class="aimd-field__scope aimd-field__scope--var">var</span>
+        <span class="aimd-field__name aimd-field__metadata-host">
+          <span class="aimd-field__title">Sample Name</span>
+          <span class="aimd-field__key">sample_name</span>
+          <span class="aimd-field__metadata-popover">Human-readable label used throughout this protocol</span>
+        </span>
+      </span>
+    `
+    Object.defineProperty(wrapper.querySelector('.aimd-field__label'), 'scrollWidth', {
+      configurable: true,
+      get: () => 720,
+    })
+    Object.defineProperty(wrapper.querySelector('.aimd-field__metadata-popover'), 'scrollWidth', {
+      configurable: true,
+      get: () => 680,
+    })
+    document.body.appendChild(wrapper)
+
+    expect(measureVarLabelWidth(wrapper)).toBeLessThan(240)
   })
 })
 

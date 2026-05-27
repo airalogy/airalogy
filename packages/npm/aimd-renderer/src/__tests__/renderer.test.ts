@@ -183,6 +183,8 @@ describe('renderToHtmlSync', () => {
     expect(html).not.toContain('title="ISO date')
     expect(html).not.toContain('aimd-field__description')
     expect(html).toContain('aimd-field__metadata-popover')
+    expect(html).toContain('aimd-field__metadata-examples')
+    expect(html).toContain('aimd-field__metadata-example')
     expect(html).toContain('tabindex="0"')
     expect(html).toContain('2026-05-26')
   })
@@ -207,6 +209,7 @@ describe('renderToHtmlSync', () => {
     expect(html).not.toContain('title="Tube identifier')
     expect(html).not.toContain('aimd-field__description')
     expect(html).toContain('aimd-field__metadata-popover')
+    expect(html).toContain('aimd-field__metadata-example')
     expect(html).toContain('S-001')
   })
 

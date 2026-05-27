@@ -2,15 +2,15 @@
 
 ## Variable Definitions
 
-Enter sample name: {{var|sample_name: str}}
+Enter sample name: {{var|sample_name: str, title = "Sample Name", description = "Human-readable label used throughout this protocol", examples = ["S-001", "Control A"]}}
 
-Operator: {{var|operator: UserName}}
+Operator: {{var|operator: UserName, title = "Operator", description = "Person responsible for running and reviewing this protocol", examples = ["Dr. Chen"]}}
 
-Record time: {{var|current_time: CurrentTime}}
+Record time: {{var|current_time: CurrentTime, title = "Record Time", description = "Timestamp captured when the protocol record is prepared", examples = ["2026-05-27 09:30"]}}
 
-Experiment summary: {{var|summary: AiralogyMarkdown}}
+Experiment summary: {{var|summary: AiralogyMarkdown, title = "Experiment Summary", description = "Short Markdown note for context, observations, and review comments", examples = ["Initial sample looked clear before mixing."]}}
 
-Plasmid sequence: {{var|plasmid_sequence: DNASequence}}
+Plasmid sequence: {{var|plasmid_sequence: DNASequence, title = "Plasmid Sequence", description = "Sequence record with topology and feature annotations", examples = ["ATGCGTACGTAGCTAG"]}}
 
 Python analysis snippet: {{var|python_code: PyStr, title = "Python analysis helper"}}
 

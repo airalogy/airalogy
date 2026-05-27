@@ -47,6 +47,12 @@ describe('AimdVarField render behavior', () => {
     expect(styles).toContain('.aimd-field--var-table .aimd-field__table-preview th:has(.aimd-field__metadata-host:hover)')
   })
 
+  it('styles metadata examples as distinct chips', () => {
+    expect(styles).toContain('.aimd-field__metadata-examples')
+    expect(styles).toContain('.aimd-field__metadata-example')
+    expect(styles).toMatch(/\.aimd-field__metadata-example \{[\s\S]*?border: 1px solid rgba\(248, 250, 252, 0\.18\);/)
+  })
+
   it('renders AIMD var metadata and uses examples as placeholders', () => {
     const node: AimdVarNode = {
       type: 'aimd',
@@ -81,7 +87,8 @@ describe('AimdVarField render behavior', () => {
     expect(wrapper.find('.aimd-field__key').text()).toBe('record_date')
     expect(wrapper.find('.aimd-field__description').exists()).toBe(false)
     expect(wrapper.find('.aimd-field__metadata-popover').text()).toContain('ISO date')
-    expect(wrapper.find('.aimd-field__metadata-popover').text()).toContain('e.g. 2026-05-26, 2026-05-27')
+    expect(wrapper.find('.aimd-field__metadata-examples-label').text()).toBe('e.g.')
+    expect(wrapper.findAll('.aimd-field__metadata-example').map(example => example.text())).toEqual(['2026-05-26', '2026-05-27'])
     expect(wrapper.find('.aimd-field__metadata-host').attributes('tabindex')).toBe('0')
     expect(wrapper.find('.aimd-field__metadata-host').attributes('title')).toBeUndefined()
     expect(wrapper.find('.aimd-field__metadata-host').attributes('aria-label')).toContain('ISO date')
@@ -160,7 +167,7 @@ describe('AimdVarField render behavior', () => {
     expect(wrapper.find('.aimd-field__title').text()).toBe('Runtime title')
     expect(wrapper.find('.aimd-field__description').exists()).toBe(false)
     expect(wrapper.find('.aimd-field__metadata-popover').text()).toContain('Runtime description')
-    expect(wrapper.find('.aimd-field__metadata-popover').text()).toContain('runtime-example')
+    expect(wrapper.find('.aimd-field__metadata-example').text()).toBe('runtime-example')
     expect(wrapper.find('.aimd-field__metadata-host').attributes('title')).toBeUndefined()
     expect(wrapper.find('.aimd-field__metadata-host').attributes('aria-label')).toContain('Runtime description')
     expect((wrapper.find('input, textarea').element as HTMLInputElement | HTMLTextAreaElement).placeholder).toBe('runtime-example')

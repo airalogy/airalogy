@@ -513,6 +513,7 @@ import { unified } from "unified"
 
 import { protectAimdInlineTemplates, remarkAimd } from "@airalogy/aimd-core/parser"
 import {
+  formatAimdExampleValue,
   formatAimdExamples,
   getAimdFieldDescription,
   getAimdFieldDisplayLabel,
@@ -803,35 +804,65 @@ function createTextNode(value: string): HastText {
 
 interface FieldMetadataHelp {
   tooltip: string
-  detailLines: string[]
+  description?: string
+  examples: string[]
 }
 
 function getFieldHelpText(definition: { kwargs?: Record<string, unknown> } | undefined): FieldMetadataHelp {
   const description = getAimdFieldDescription(definition)
-  const examples = formatAimdExamples(getAimdFieldExamples(definition))
-  const exampleText = examples ? `e.g. ${examples}` : undefined
-  const detailLines = [description, exampleText].filter((value): value is string => Boolean(value))
+  const examples = getAimdFieldExamples(definition)
+    .map(formatAimdExampleValue)
+    .map(example => example.trim())
+    .filter(Boolean)
+  const exampleText = examples.length > 0 ? `e.g. ${examples.join(", ")}` : undefined
+  const tooltipLines = [description, exampleText].filter((value): value is string => Boolean(value))
 
   return {
-    tooltip: detailLines.join("\n"),
-    detailLines,
+    tooltip: tooltipLines.join("\n"),
+    description,
+    examples,
   }
 }
 
 function createFieldMetadataPopover(help: FieldMetadataHelp): Element | null {
-  if (help.detailLines.length === 0) {
+  if (!help.description && help.examples.length === 0) {
     return null
+  }
+  const children: Array<Element | HastText> = []
+  if (help.description) {
+    children.push({
+      type: "element",
+      tagName: "span",
+      properties: { className: ["aimd-field__metadata-popover-line"] },
+      children: [createTextNode(help.description)],
+    } as Element)
+  }
+  if (help.examples.length > 0) {
+    children.push({
+      type: "element",
+      tagName: "span",
+      properties: { className: ["aimd-field__metadata-examples"] },
+      children: [
+        {
+          type: "element",
+          tagName: "span",
+          properties: { className: ["aimd-field__metadata-examples-label"] },
+          children: [createTextNode("e.g.")],
+        } as Element,
+        ...help.examples.map((example) => ({
+          type: "element",
+          tagName: "span",
+          properties: { className: ["aimd-field__metadata-example"] },
+          children: [createTextNode(example)],
+        } as Element)),
+      ],
+    } as Element)
   }
   return {
     type: "element",
     tagName: "span",
     properties: { className: ["aimd-field__metadata-popover"], role: "tooltip" },
-    children: help.detailLines.map((line) => ({
-      type: "element",
-      tagName: "span",
-      properties: { className: ["aimd-field__metadata-popover-line"] },
-      children: [createTextNode(line)],
-    } as Element)),
+    children,
   } as Element
 }
 
@@ -839,11 +870,12 @@ function createFieldNameElement(id: string, definition: { kwargs?: Record<string
   const displayTitle = getAimdFieldDisplayLabel(id, definition)
   const hasCustomTitle = getAimdFieldTitle(definition) !== undefined && displayTitle !== id
   const help = getFieldHelpText(definition)
+  const hasHelp = Boolean(help.description) || help.examples.length > 0
   const className = ["aimd-field__name"]
-  if (hasCustomTitle || help.detailLines.length > 0) {
+  if (hasCustomTitle || hasHelp) {
     className.push("aimd-field__name--with-metadata")
   }
-  if (help.detailLines.length > 0) {
+  if (hasHelp) {
     className.push("aimd-field__metadata-host")
   }
   const children: Array<Element | HastText> = [
@@ -874,7 +906,7 @@ function createFieldNameElement(id: string, definition: { kwargs?: Record<string
     tagName: "span",
     properties: cleanProperties({
       className,
-      tabIndex: help.detailLines.length > 0 ? 0 : undefined,
+      tabIndex: hasHelp ? 0 : undefined,
       "aria-label": help.tooltip || undefined,
     }),
     children,
