@@ -96,6 +96,9 @@ export default defineComponent({
     inputKind: { type: String as PropType<AimdVarInputKind>, required: true },
     typePlugin: { type: Object as PropType<AimdTypePlugin | undefined>, default: undefined },
     initialized: { type: Boolean, default: false },
+    assignerControl: { type: Object as PropType<VNode | undefined>, default: undefined },
+    assignerStatus: { type: Object as PropType<VNode | undefined>, default: undefined },
+    assignerError: { type: String, default: undefined },
   },
   emits: ["change", "blur"],
   setup(props, { emit }) {
@@ -174,21 +177,48 @@ export default defineComponent({
         ])
       }
 
+      const renderControlRow = (control: VNode): VNode => {
+        if (!props.assignerControl && !props.assignerStatus) {
+          return control
+        }
+
+        return h("span", { class: "aimd-rec-inline__control-row" }, [
+          props.assignerControl
+            ? h("span", { class: "aimd-rec-inline__assigner-prefix" }, [props.assignerControl])
+            : null,
+          h("span", { class: "aimd-rec-inline__control-main" }, [control]),
+          props.assignerStatus
+            ? h("span", { class: "aimd-rec-inline__assigner-status" }, [props.assignerStatus])
+            : null,
+        ])
+      }
+
+      const renderAssignerError = (): VNode | null => (
+        props.assignerError
+          ? h("span", { class: "aimd-rec-inline__assigner-error" }, props.assignerError)
+          : null
+      )
+
       // Enum select (from fieldMeta override)
       const enumOptions = meta?.enumOptions ?? []
       if (enumOptions.length) {
         return h("span", {
-          class: ["aimd-rec-inline aimd-rec-inline--var-stacked aimd-field-wrapper", ...extraClasses],
+          class: [
+            "aimd-rec-inline aimd-rec-inline--var-stacked aimd-field-wrapper",
+            (props.assignerControl || props.assignerStatus) ? "aimd-rec-inline--has-assigner-control" : undefined,
+            ...extraClasses,
+          ],
         }, [
           renderVarLabel(),
-          h("select", {
+          renderControlRow(h("select", {
             "data-rec-focus-key": `var:${id}`,
             class: "aimd-rec-inline__input aimd-rec-inline__input--stacked aimd-rec-inline__select",
             disabled,
             value: props.value,
             onChange: (e: Event) => onVarChange((e.target as HTMLSelectElement).value),
             onBlur: onVarBlur,
-          }, enumOptions.map(opt => h("option", { key: String(opt.value), value: opt.value }, opt.label))),
+          }, enumOptions.map(opt => h("option", { key: String(opt.value), value: opt.value }, opt.label)))),
+          renderAssignerError(),
         ])
       }
 
@@ -197,13 +227,15 @@ export default defineComponent({
         h("span", {
           class: [
             "aimd-rec-inline aimd-rec-inline--var-stacked aimd-field-wrapper aimd-field-wrapper--inline",
+            (props.assignerControl || props.assignerStatus) ? "aimd-rec-inline--has-assigner-control" : undefined,
             variantClass,
             numericConstraintViolation ? "aimd-rec-inline--error" : undefined,
             ...extraClasses,
           ],
         }, [
           renderVarLabel(),
-          control,
+          renderControlRow(control),
+          renderAssignerError(),
         ])
 
       if (inputKind === "checkbox") {

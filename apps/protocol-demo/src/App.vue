@@ -476,6 +476,10 @@ function updateSourceDraft(pathValue: string, content: string) {
 }
 
 function handleSourceContentChange(payload: { path: string, content: string }) {
+  if (payload.content === sourceContentForPath(payload.path, originalSourceContent(payload.path))) {
+    return
+  }
+
   updateSourceDraft(payload.path, payload.content)
 
   if (payload.path === selectedVariant.value?.aimdPath) {
@@ -485,6 +489,10 @@ function handleSourceContentChange(payload: { path: string, content: string }) {
 }
 
 function handleRecordSourceContentChange(content: string) {
+  if (content === sourceContent.value) {
+    return
+  }
+
   const aimdPath = selectedVariant.value?.aimdPath
   sourceContent.value = content
   if (aimdPath) {

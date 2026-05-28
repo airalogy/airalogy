@@ -74,6 +74,8 @@ import AimdVarField from "./AimdVarField.vue"
 import AimdVarTableField from "./AimdVarTableField.vue"
 import { AimdStepField, AimdCheckField } from "./AimdStepCheckField.vue"
 import AimdQuizRecorder from "./AimdQuizRecorder.vue"
+import AimdAssignerCalculatorIcon from "./icons/AimdAssignerCalculatorIcon.vue"
+import AimdAssignerCloudStatusIcon from "./icons/AimdAssignerCloudStatusIcon.vue"
 
 // ---------------------------------------------------------------------------
 // Props & emits
@@ -264,56 +266,132 @@ function getManualClientAssignerForField(
   ))
 }
 
+interface ResolvedAssignerControl {
+  fieldType: AssignableRecorderFieldType
+  fieldKey: string
+  payloadFieldKey: string
+  clientAssigner?: AimdClientAssignerField
+  state?: AimdFieldState
+  loading: boolean
+  disabled: boolean
+  label: string
+  titleTarget: string
+}
+
+function resolveAssignerControl(
+  fieldType: AssignableRecorderFieldType,
+  fieldKey: string,
+): ResolvedAssignerControl | null {
+  const meta = props.fieldMeta?.[fieldKey]
+  const payloadFieldKey = getAssignerPayloadFieldKey(fieldType, fieldKey)
+  const clientAssigner = meta?.assigner ? undefined : getManualClientAssignerForField(fieldType, payloadFieldKey)
+  if ((!meta?.assigner && !clientAssigner) || props.readonly) {
+    return null
+  }
+
+  const state = props.fieldState?.[fieldKey]
+  const loading = state?.loading === true
+  const disabled = loading || state?.disabled === true
+  const label = loading ? resolvedMessages.value.assigner.running : resolvedMessages.value.assigner.run
+  const titleTarget = clientAssigner?.id ?? payloadFieldKey
+
+  return {
+    fieldType,
+    fieldKey,
+    payloadFieldKey,
+    clientAssigner,
+    state,
+    loading,
+    disabled,
+    label,
+    titleTarget,
+  }
+}
+
+function renderAssignerButton(control: ResolvedAssignerControl, value: unknown): VNode {
+  return h("button", {
+    type: "button",
+    class: "aimd-rec-assigner-field__button",
+    disabled: control.disabled,
+    "aria-label": `${control.label}: ${control.titleTarget}`,
+    onClick: (event: MouseEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (control.clientAssigner) {
+        assignerRunner.triggerClientAssigner(control.clientAssigner.id)
+        return
+      }
+      emit("assigner-request", {
+        section: control.fieldType,
+        fieldKey: control.payloadFieldKey,
+        value,
+      })
+    },
+    title: `${resolvedMessages.value.assigner.run}: ${control.titleTarget}`,
+  }, [
+    control.loading
+      ? h("span", { class: "aimd-rec-assigner-field__spinner", "aria-hidden": "true" })
+      : h(AimdAssignerCalculatorIcon),
+    h("span", { class: "aimd-rec-assigner-field__label" }, control.label),
+  ])
+}
+
+function renderAssignerCloudStatusIcon(control: ResolvedAssignerControl): VNode {
+  const statusClass = control.loading
+    ? "loading"
+    : control.state?.error
+      ? "error"
+      : control.state && control.state.loading === false
+        ? "done"
+        : "idle"
+
+  if (statusClass === "loading") {
+    return h("span", {
+      class: ["aimd-rec-assigner-field__status", "aimd-rec-assigner-field__status--loading"],
+      title: control.label,
+    }, [
+      h("span", { class: "aimd-rec-assigner-field__status-spinner", "aria-hidden": "true" }),
+    ])
+  }
+
+  return h("span", {
+    class: ["aimd-rec-assigner-field__status", `aimd-rec-assigner-field__status--${statusClass}`],
+    title: statusClass === "done"
+      ? control.titleTarget
+      : (control.state?.error || control.titleTarget),
+  }, [
+    h(AimdAssignerCloudStatusIcon, {
+      variant: statusClass === "done" ? "done" : "idle",
+    }),
+  ])
+}
+
 function withAssignerControl(
   fieldType: AssignableRecorderFieldType,
   fieldKey: string,
   value: unknown,
   defaultVNode: VNode,
 ): VNode {
-  const meta = props.fieldMeta?.[fieldKey]
-  const payloadFieldKey = getAssignerPayloadFieldKey(fieldType, fieldKey)
-  const clientAssigner = meta?.assigner ? undefined : getManualClientAssignerForField(fieldType, payloadFieldKey)
-  if ((!meta?.assigner && !clientAssigner) || props.readonly) {
+  const control = resolveAssignerControl(fieldType, fieldKey)
+  if (!control) {
     return defaultVNode
   }
 
-  const state = props.fieldState?.[fieldKey]
-  const loading = state?.loading === true
-  const disabled = loading || state?.disabled === true
   const tag = fieldType === "var" ? "span" : "div"
-  const titleTarget = clientAssigner?.id ?? payloadFieldKey
 
   return h(tag, {
     class: [
       "aimd-rec-assigner-field",
       `aimd-rec-assigner-field--${fieldType}`,
-      loading ? "aimd-rec-assigner-field--loading" : undefined,
-      state?.error ? "aimd-rec-assigner-field--error" : undefined,
+      control.loading ? "aimd-rec-assigner-field--loading" : undefined,
+      control.state?.error ? "aimd-rec-assigner-field--error" : undefined,
     ],
     "data-rec-assigner-key": fieldKey,
   }, [
+    renderAssignerButton(control, value),
     h("span", { class: "aimd-rec-assigner-field__control" }, [defaultVNode]),
-    h("button", {
-      type: "button",
-      class: "aimd-rec-assigner-field__button",
-      disabled,
-      onClick: (event: MouseEvent) => {
-        event.preventDefault()
-        event.stopPropagation()
-        if (clientAssigner) {
-          assignerRunner.triggerClientAssigner(clientAssigner.id)
-          return
-        }
-        emit("assigner-request", {
-          section: fieldType,
-          fieldKey: payloadFieldKey,
-          value,
-        })
-      },
-      title: `${resolvedMessages.value.assigner.run}: ${titleTarget}`,
-    }, loading ? resolvedMessages.value.assigner.running : resolvedMessages.value.assigner.run),
-    state?.error
-      ? h("span", { class: "aimd-rec-assigner-field__error" }, state.error)
+    control.state?.error
+      ? h("span", { class: "aimd-rec-assigner-field__error" }, control.state.error)
       : null,
   ])
 }
@@ -515,8 +593,15 @@ function renderInlineVar(node: AimdVarNode): VNode {
   )
   const disabled = fieldRendering.isFieldDisabled(fieldKey)
   const extraClasses = fieldRendering.fieldStateClasses(fieldKey)
+  const canUseInternalAssignerControl = Boolean(meta?.enumOptions?.length)
+    || ["number", "date", "datetime", "time", "text", "textarea", "checkbox"].includes(inputKind)
+  const internalAssignerControl = canUseInternalAssignerControl
+    ? resolveAssignerControl("var", fieldKey)
+    : null
 
   if (typePlugin?.renderField) {
+    const pluginSupportsInternalAssignerControl = typePlugin.supportsInlineAssignerControl === true
+    const pluginAssignerControl = pluginSupportsInternalAssignerControl ? internalAssignerControl : null
     const pluginVNode = typePlugin.renderField({
       type,
       normalizedType: normalizeVarTypeName(type),
@@ -536,12 +621,21 @@ function renderInlineVar(node: AimdVarNode): VNode {
       extraClasses,
       placeholder,
       fieldState: props.fieldState?.[fieldKey],
+      assignerControl: pluginAssignerControl
+        ? renderAssignerButton(pluginAssignerControl, localRecord.var[id])
+        : undefined,
+      assignerStatus: pluginAssignerControl
+        ? renderAssignerCloudStatusIcon(pluginAssignerControl)
+        : undefined,
+      assignerError: pluginAssignerControl?.state?.error,
       emitChange: emitVarChange,
       emitBlur: emitVarBlur,
     })
 
     if (pluginVNode) {
-      const assignerVNode = withAssignerControl("var", fieldKey, localRecord.var[id], pluginVNode)
+      const assignerVNode = pluginAssignerControl
+        ? pluginVNode
+        : withAssignerControl("var", fieldKey, localRecord.var[id], pluginVNode)
       return applyFieldAdapter("var", fieldKey, node, localRecord.var[id], assignerVNode)
     }
   }
@@ -557,13 +651,22 @@ function renderInlineVar(node: AimdVarNode): VNode {
     inputKind,
     typePlugin,
     initialized: id in localRecord.var,
+    assignerControl: internalAssignerControl
+      ? renderAssignerButton(internalAssignerControl, localRecord.var[id])
+      : undefined,
+    assignerStatus: internalAssignerControl
+      ? renderAssignerCloudStatusIcon(internalAssignerControl)
+      : undefined,
+    assignerError: internalAssignerControl?.state?.error,
     onChange: (payload: { id: string, value: unknown, type: string, inputKind: string }) => {
       emitVarChange(payload.value)
     },
     onBlur: () => emitVarBlur(),
   })
 
-  const assignerVNode = withAssignerControl("var", fieldKey, localRecord.var[id], vnode)
+  const assignerVNode = internalAssignerControl
+    ? vnode
+    : withAssignerControl("var", fieldKey, localRecord.var[id], vnode)
   return applyFieldAdapter("var", fieldKey, node, localRecord.var[id], assignerVNode)
 }
 
@@ -1064,6 +1167,24 @@ watch(
 )
 
 watch(
+  () => ({
+    readonly: props.readonly,
+    currentUserName: props.currentUserName,
+    now: props.now,
+    fieldMeta: props.fieldMeta,
+    fieldState: props.fieldState,
+    stepDetailDisplay: props.stepDetailDisplay,
+    customRenderers: props.customRenderers,
+    fieldAdapters: props.fieldAdapters,
+    typePlugins: props.typePlugins,
+  }),
+  () => {
+    scheduleInlineRebuild()
+  },
+  { deep: true },
+)
+
+watch(
   () => props.quizGrades,
   () => {
     scheduleInlineRebuild()
@@ -1232,8 +1353,12 @@ defineExpose({
   display: inline-flex;
   max-width: 100%;
   align-items: center;
-  gap: 8px;
+  gap: 0;
   vertical-align: middle;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field--var) {
+  align-items: flex-end;
 }
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field--var_table),
@@ -1248,18 +1373,40 @@ defineExpose({
   flex: 1 1 auto;
 }
 
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field--var .aimd-rec-assigner-field__control) {
+  flex: 0 1 auto;
+}
+
 .aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__button) {
+  display: inline-flex;
   flex: 0 0 auto;
-  min-height: 30px;
-  padding: 0 10px;
-  border: 1px solid #2f855a;
-  border-radius: 7px;
-  background: #e6f4ea;
-  color: #276749;
+  width: 30px;
+  min-width: 30px;
+  height: 34px;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #2563eb;
+  border-radius: 7px 0 0 7px;
+  margin-right: -1px;
+  background: #2563eb;
+  color: #ffffff;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
+  font-size: 17px;
+  line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__button:hover:not(:disabled)) {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__button:focus-visible) {
+  outline: 2px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 2px;
 }
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__button:disabled) {
@@ -1267,11 +1414,45 @@ defineExpose({
   opacity: 0.7;
 }
 
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__icon) {
+  display: block;
+  width: 1em;
+  height: 1em;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__label) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__spinner) {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.38);
+  border-top-color: #ffffff;
+  border-radius: 999px;
+  animation: aimd-rec-assigner-spin 0.75s linear infinite;
+}
+
 .aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__error) {
   min-width: 0;
+  margin-left: 8px;
   color: #b42318;
   font-size: 12px;
   line-height: 1.35;
+}
+
+@keyframes aimd-rec-assigner-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Field colours ──────────────────────────────────────────────────────── */
@@ -1455,6 +1636,128 @@ defineExpose({
   padding: 0 10px;
   border-top: 1px solid var(--aimd-border-color, #90caf9);
   background: #fff;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline--has-assigner-control) {
+  overflow: hidden;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row) {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--rec-var-control-height);
+  align-items: stretch;
+  border-top: 1px solid var(--aimd-border-color, #90caf9);
+  border-radius: 0 0 6px 6px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__assigner-prefix) {
+  display: flex;
+  flex: 0 0 36px;
+  align-items: stretch;
+  justify-content: stretch;
+  border-right: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-main) {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: stretch;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__assigner-status) {
+  display: flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__input--stacked),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__textarea--stacked),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__checkbox-row) {
+  width: 100%;
+  height: auto;
+  min-height: var(--rec-var-control-height);
+  flex: 1 1 auto;
+  border-top: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__checkbox-row) {
+  padding: 0 10px;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__assigner-prefix .aimd-rec-assigner-field__button) {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: var(--rec-var-control-height);
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  background: transparent;
+  color: #1976d2;
+  font-size: 17px;
+  box-shadow: none;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__assigner-prefix .aimd-rec-assigner-field__button:hover:not(:disabled)) {
+  background: #eff6ff;
+  color: #1565c0;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__assigner-prefix .aimd-rec-assigner-field__button:disabled) {
+  opacity: 0.68;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__assigner-prefix .aimd-rec-assigner-field__spinner) {
+  border-color: rgba(25, 118, 210, 0.25);
+  border-top-color: #1976d2;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__status) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 17px;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__status--done) {
+  color: #16a34a;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__status--error) {
+  color: #dc2626;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__status-spinner) {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(25, 118, 210, 0.2);
+  border-top-color: #1976d2;
+  border-radius: 999px;
+  animation: aimd-rec-assigner-spin 0.75s linear infinite;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__assigner-error) {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  border-top: 1px solid #fecaca;
+  background: #fff7f7;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 /* ── Select ─────────────────────────────────────────────────────────────── */
@@ -1803,7 +2106,26 @@ defineExpose({
   }
 }
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline__input.aimd-rec-inline__input--stacked),
-.aimd-protocol-recorder__content :deep(.aimd-rec-inline__textarea.aimd-rec-inline__textarea--stacked) { font-family: inherit; outline: none; }
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__textarea.aimd-rec-inline__textarea--stacked) {
+  border: 0 none;
+  border-top: 1px solid var(--aimd-border-color, #90caf9);
+  border-radius: 0 0 6px 6px;
+  box-shadow: none;
+  font-family: inherit;
+  outline: none;
+}
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__input.aimd-rec-inline__input--stacked),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__textarea.aimd-rec-inline__textarea--stacked) {
+  border: 0 none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__input.aimd-rec-inline__input--stacked:focus),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__textarea.aimd-rec-inline__textarea--stacked:focus) {
+  border: 0 none;
+  box-shadow: none;
+  outline: none;
+}
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__table td) {
   vertical-align: middle;
   transition:

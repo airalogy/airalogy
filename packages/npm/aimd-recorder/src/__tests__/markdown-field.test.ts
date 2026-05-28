@@ -25,6 +25,12 @@ describe('AimdMarkdownField', () => {
     expect(source).toMatch(/aimd-markdown-field__editor/)
   })
 
+  it('can host assigner controls inside the markdown field shell', () => {
+    expect(source).toMatch(/assignerControl/)
+    expect(source).toMatch(/assignerStatus/)
+    expect(source).toMatch(/aimd-markdown-field__assigner-actions/)
+  })
+
   it('keeps a local draft so parent v-model echoes do not reset the editor session', () => {
     expect(source).toMatch(/const draftValue = ref\(normalizeMarkdownModelValue\(props\.modelValue\)\)/)
     expect(source).toMatch(/watch\(\(\) => props\.modelValue, \(value\) => \{/)

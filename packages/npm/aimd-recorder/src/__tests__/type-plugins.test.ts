@@ -13,6 +13,7 @@ describe('type-plugins', () => {
     const markdownPlugin = resolveAimdTypePlugin('AiralogyMarkdown', BUILT_IN_AIMD_TYPE_PLUGINS)
     expect(markdownPlugin?.type).toBe('AiralogyMarkdown')
     expect(markdownPlugin?.inputKind).toBe('textarea')
+    expect(markdownPlugin?.supportsInlineAssignerControl).toBe(true)
 
     const pythonCodePlugin = resolveAimdTypePlugin('PyStr', BUILT_IN_AIMD_TYPE_PLUGINS)
     expect(pythonCodePlugin?.type).toBe('PyStr')

@@ -62,6 +62,7 @@ export const BUILT_IN_AIMD_TYPE_PLUGINS: AimdTypePlugin[] = [
   {
     type: 'AiralogyMarkdown',
     inputKind: 'textarea',
+    supportsInlineAssignerControl: true,
     renderField: ({
       node,
       value,
@@ -69,6 +70,9 @@ export const BUILT_IN_AIMD_TYPE_PLUGINS: AimdTypePlugin[] = [
       locale,
       messages,
       extraClasses,
+      assignerControl,
+      assignerStatus,
+      assignerError,
       emitChange,
       emitBlur,
     }) => h(AimdMarkdownField, {
@@ -78,6 +82,9 @@ export const BUILT_IN_AIMD_TYPE_PLUGINS: AimdTypePlugin[] = [
       disabled,
       locale,
       messages,
+      assignerControl,
+      assignerStatus,
+      assignerError,
       'onUpdate:modelValue': (nextValue: string) => emitChange(nextValue),
       onBlur: emitBlur,
     }),

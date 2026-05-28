@@ -644,6 +644,14 @@ export function measureSingleLineControlWidth(input: HTMLInputElement | HTMLText
   return textWidth + padding + 2
 }
 
+function measureOptionalControlSlotWidth(wrapper: HTMLElement, selector: string, fallbackWidth: number): number {
+  const element = wrapper.querySelector(selector) as HTMLElement | null
+  if (!element) {
+    return 0
+  }
+  return element.offsetWidth || fallbackWidth
+}
+
 // ---------------------------------------------------------------------------
 // Textarea auto-height
 // ---------------------------------------------------------------------------
@@ -684,6 +692,11 @@ export function applyVarStackWidth(target: HTMLElement, inputKind: VarInputKind)
     HTMLInputElement | HTMLTextAreaElement | null
   if (input) {
     controlWidth = measureSingleLineControlWidth(input) + getVarControlExtraWidth(inputKind)
+  }
+
+  if (wrapper.querySelector(".aimd-rec-inline__control-row")) {
+    controlWidth += measureOptionalControlSlotWidth(wrapper, ".aimd-rec-inline__assigner-prefix", 36)
+      + measureOptionalControlSlotWidth(wrapper, ".aimd-rec-inline__assigner-status", 30)
   }
 
   const measuredWidth = Math.max(minWidthPx, labelWidth, controlWidth)

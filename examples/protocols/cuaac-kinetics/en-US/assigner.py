@@ -9,12 +9,19 @@ from airalogy.assigner import AssignerResult, assigner
 from airalogy import Airalogy
 
 EPS = 1e-12
-client = Airalogy()
+_AIRALOGY_CLIENT = None
+
+
+def _client() -> Airalogy:
+    global _AIRALOGY_CLIENT
+    if _AIRALOGY_CLIENT is None:
+        _AIRALOGY_CLIENT = Airalogy()
+    return _AIRALOGY_CLIENT
 
 
 def _read_csv_bytes(fid) -> pd.DataFrame:
     """Read a CSV from an Airalogy file ID and return it as a DataFrame."""
-    raw_bytes = client.download_file_bytes(fid)
+    raw_bytes = _client().download_file_bytes(fid)
     buf = io.BytesIO(raw_bytes)
     df = pd.read_csv(buf)
     return df
@@ -132,7 +139,7 @@ def compute_and_plot(dependent_fields) -> AssignerResult:
     plt.title("Conversion vs Time")
     plt.grid(True, linestyle="--", linewidth=0.5)
     svg1_bytes = _fig_to_svg_bytes(fig1)
-    file1 = client.upload_file_bytes(
+    file1 = _client().upload_file_bytes(
         file_name="conversion_curve.svg", file_bytes=svg1_bytes
     )
 
@@ -150,7 +157,7 @@ def compute_and_plot(dependent_fields) -> AssignerResult:
     plt.title("Linearization: -ln(1-Conv) vs Time")
     plt.grid(True, linestyle="--", linewidth=0.5)
     svg2_bytes = _fig_to_svg_bytes(fig2)
-    file2 = client.upload_file_bytes(file_name="lnfit_curve.svg", file_bytes=svg2_bytes)
+    file2 = _client().upload_file_bytes(file_name="lnfit_curve.svg", file_bytes=svg2_bytes)
 
     # 5) QC rule (constants): final conversion ≥ 90 AND R^2 ≥ 0.95
     qc_pass = (final_conv_pct >= 90.0) and (r2 >= 0.95)

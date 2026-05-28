@@ -157,6 +157,9 @@ export interface AimdTypePluginRenderContext extends AimdTypePluginValueContext 
   extraClasses: string[]
   placeholder?: string
   fieldState?: AimdFieldState
+  assignerControl?: VNode
+  assignerStatus?: VNode
+  assignerError?: string
   emitChange: (value: unknown) => void
   emitBlur: () => void
 }
@@ -165,6 +168,7 @@ export interface AimdTypePlugin {
   type: string
   aliases?: string[]
   inputKind?: AimdVarInputKind
+  supportsInlineAssignerControl?: boolean
   getInitialValue?: (context: AimdTypePluginInitContext) => unknown
   normalizeValue?: (context: AimdTypePluginValueContext) => unknown
   getDisplayValue?: (context: AimdTypePluginValueContext) => string | number
