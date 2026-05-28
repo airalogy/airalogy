@@ -5,7 +5,7 @@
 可以在 [Airalogy Markdown Demo 案例页](https://airalogy.github.io/airalogy/aimd/demo/#/examples) 中预览和填写这些协议的 AIMD 部分。如果需要 engine 支持的解析、变量校验和 assigner 执行，运行本地 Airalogy Protocol Demo：
 
 ```bash
-pnpm dev:protocol-demo
+pnpm dev:protocol-demo:full
 ```
 
 包含 `assigner.py` 的协议需要 Airalogy Engine 来执行自动计算、文件处理和报告生成。

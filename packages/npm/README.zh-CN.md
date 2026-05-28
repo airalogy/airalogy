@@ -56,6 +56,12 @@ pnpm dev:demo
 - **Renderer 渲染器**：AIMD 渲染为 HTML / Vue VNodes 的实时预览
 - **Recorder 组件**：AIMD CSS 样式和 UI 组件预览
 
+启动带 engine rootfs 的完整本地 Airalogy Protocol Demo：
+
+```bash
+pnpm dev:protocol-demo:full
+```
+
 ## 文档
 
 文档位于 `docs/aimd/`，采用中英文双语与按包组织结构：

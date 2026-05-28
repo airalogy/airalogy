@@ -57,10 +57,10 @@ pnpm type-check
 pnpm test
 ```
 
-Run the local protocol demo with engine-backed parse, validation, and assigner calls:
+Run the full local protocol demo with a Docker-built engine rootfs:
 
 ```bash
-pnpm dev:protocol-demo
+pnpm dev:protocol-demo:full
 ```
 
 ## Documentation

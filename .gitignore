@@ -163,6 +163,7 @@ coverage/
 *.tgz
 packages/npm/airalogy-engine/protocol_executor.py
 packages/runtime/airalogy-engine-image/airalogy-engine-image/
+packages/runtime/airalogy-engine-image/airalogy-engine-image.tar
 
 # mypy
 .mypy_cache/

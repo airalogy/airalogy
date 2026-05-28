@@ -5,7 +5,7 @@ Official Airalogy Protocol examples live in the monorepo under [`examples/protoc
 You can preview and fill the AIMD portions on the [Airalogy Markdown Demo examples page](https://airalogy.github.io/airalogy/aimd/demo/#/examples). For engine-backed parsing, variable validation, and assigner execution, run the local Airalogy Protocol Demo:
 
 ```bash
-pnpm dev:protocol-demo
+pnpm dev:protocol-demo:full
 ```
 
 Protocols with `assigner.py` require Airalogy Engine for automatic calculation, file processing, and report generation.

@@ -8,6 +8,8 @@
   },
   "scripts": {
     "build": "pnpm -r --if-present build",
+    "build:engine-rootfs": "node scripts/airalogy-engine/build-rootfs.mjs",
+    "build:engine-rootfs:force": "node scripts/airalogy-engine/build-rootfs.mjs --force",
     "build:npm": "pnpm --filter './packages/npm/*' -r --if-present build",
     "changeset": "changeset",
     "changeset:add": "changeset add",
@@ -17,6 +19,7 @@
     "dev": "pnpm --filter './packages/npm/*' -r --parallel --if-present dev",
     "dev:demo": "pnpm --filter @airalogy/aimd-demo dev",
     "dev:protocol-demo": "pnpm --filter @airalogy/protocol-demo dev",
+    "dev:protocol-demo:full": "pnpm build:engine-rootfs && pnpm dev:protocol-demo",
     "build:protocol-demo": "pnpm --filter @airalogy/protocol-demo build",
     "docs:home:dev": "pnpm -C docs/home docs:dev",
     "docs:home:build": "pnpm -C docs/home docs:build",

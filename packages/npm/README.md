@@ -56,6 +56,12 @@ Visit http://localhost:5188 to see the Airalogy Markdown Demo, which includes:
 - **Renderer**: Live HTML / Vue VNode rendering preview
 - **Recorder**: AIMD CSS styles and UI component preview
 
+Start the full local Airalogy Protocol Demo with the engine rootfs:
+
+```bash
+pnpm dev:protocol-demo:full
+```
+
 ## Documentation
 
 Docs are hosted under `docs/aimd/` with bilingual structure:

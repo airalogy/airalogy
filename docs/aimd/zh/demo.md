@@ -45,7 +45,7 @@ const linkTo = path => `${demoRoot}/#${path}`
 
 - 文档站：`pnpm docs:dev`
 - Demo：`pnpm dev:demo`
-- Protocol Demo：`pnpm dev:protocol-demo`
+- Protocol Demo：`pnpm dev:protocol-demo:full`
 
 <style scoped>
 .aimd-demo-actions {

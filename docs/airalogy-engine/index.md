@@ -37,11 +37,15 @@ apps/protocol-demo/              # Local engine-backed demo
 Build the shared sandbox image from the runtime package:
 
 ```bash
-cd packages/runtime/airalogy-engine-image
-docker build -t airalogy-engine:latest .
-docker save airalogy-engine:latest -o airalogy-engine-image.tar
-mkdir airalogy-engine-image
-tar -xf airalogy-engine-image.tar -C airalogy-engine-image
+pnpm build:engine-rootfs
+```
+
+This creates the default rootfs at
+`packages/runtime/airalogy-engine-image/airalogy-engine-image`. Rebuild it after
+runtime dependency changes with:
+
+```bash
+pnpm build:engine-rootfs:force
 ```
 
 Pass the exported rootfs directory to either engine package.
@@ -86,7 +90,7 @@ const result = await parseProtocol("./protocol", {
 Run the local demo service from the repository root:
 
 ```bash
-pnpm dev:protocol-demo
+pnpm dev:protocol-demo:full
 ```
 
 The demo loads `examples/protocols`, shows the AIMD recorder surface, and calls

@@ -120,7 +120,7 @@ function resolveSandboxOptions(input) {
   } else {
     throw new Error(
       `Local Airalogy Engine rootfs not found at ${defaultRootfsPath}. ` +
-      'Build the rootfs, set ROOTFS_PATH, or explicitly use sandbox mode "image".',
+      'Run "pnpm build:engine-rootfs", set ROOTFS_PATH, or explicitly use sandbox mode "image".',
     )
   }
 

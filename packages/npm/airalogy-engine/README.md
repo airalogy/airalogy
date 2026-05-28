@@ -24,20 +24,17 @@ const result = await parseProtocol(protocolPath, undefined, {
 
 ### Local OCI Rootfs (Recommended)
 
-Build and export the image locally for faster, offline execution:
+In this monorepo, build and export the image locally for faster, offline execution:
 
 ```bash
-docker build -t airalogy-engine:latest ../../runtime/airalogy-engine-image
-docker save airalogy-engine:latest -o airalogy-engine-image.tar
-mkdir airalogy-engine-image
-tar -xf airalogy-engine-image.tar -C airalogy-engine-image
+pnpm build:engine-rootfs
 ```
 
 Then use `rootfsPath`:
 
 ```typescript
 const result = await parseProtocol(protocolPath, undefined, {
-  rootfsPath: "./airalogy-engine-image",
+  rootfsPath: "packages/runtime/airalogy-engine-image/airalogy-engine-image",
 });
 ```
 

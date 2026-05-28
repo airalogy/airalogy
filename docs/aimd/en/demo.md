@@ -45,7 +45,7 @@ In local development:
 
 - `pnpm docs:dev` for docs
 - `pnpm dev:demo` for demo app
-- `pnpm dev:protocol-demo` for engine-backed Protocol demo
+- `pnpm dev:protocol-demo:full` for engine-backed Protocol demo
 
 <style scoped>
 .aimd-demo-actions {
