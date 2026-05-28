@@ -5,6 +5,8 @@
     "paths": {
       "@airalogy/aimd-core": ["../../packages/npm/aimd-core/src"],
       "@airalogy/aimd-core/*": ["../../packages/npm/aimd-core/src/*"],
+      "@airalogy/aimd-editor": ["../../packages/npm/aimd-editor/src"],
+      "@airalogy/aimd-editor/*": ["../../packages/npm/aimd-editor/src/*"],
       "@airalogy/aimd-recorder": ["../../packages/npm/aimd-recorder/src"],
       "@airalogy/aimd-recorder/*": ["../../packages/npm/aimd-recorder/src/*"]
     }

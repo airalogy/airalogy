@@ -69,6 +69,7 @@ export interface ProtocolDemoMessages {
   source: {
     files: string
     empty: string
+    loading: string
   }
   record: {
     reset: string
@@ -165,6 +166,7 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
     source: {
       files: 'Protocol files',
       empty: 'No source files',
+      loading: 'Loading source viewer',
     },
     record: {
       reset: 'Reset',
@@ -259,6 +261,7 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
     source: {
       files: '协议文件',
       empty: '没有源码文件',
+      loading: '正在加载源码视图',
     },
     record: {
       reset: '重置',

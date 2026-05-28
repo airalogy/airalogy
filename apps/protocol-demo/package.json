@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@airalogy/aimd-core": "workspace:*",
+    "@airalogy/aimd-editor": "workspace:*",
     "@airalogy/aimd-recorder": "workspace:*",
     "@airalogy/airalogy-engine": "workspace:*",
+    "monaco-editor": "catalog:",
     "vue": "^3.5.17"
   },
   "devDependencies": {

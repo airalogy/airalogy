@@ -12,6 +12,7 @@ import {
   useDemoLocale,
   useDemoMessages,
 } from './composables/demoI18n'
+import ProtocolSourceBrowser from './components/ProtocolSourceBrowser.vue'
 import '@airalogy/aimd-recorder/styles'
 
 type LocaleMap<T> = Record<string, T | undefined>
@@ -21,21 +22,12 @@ type EngineStatusState =
   | { type: 'running' | 'complete', action: EngineAction }
   | { type: 'selectAssignerTarget' }
   | { type: 'message', message: string }
-type SourceFileKind = 'aimd' | 'toml' | 'python' | 'csv' | 'text'
 
 interface SourceFile {
   path: string
   relativePath: string
   content: string
-  kind: SourceFileKind
-}
-
-interface SourceTreeRow {
-  key: string
-  type: 'folder' | 'file'
-  label: string
-  depth: number
-  file?: SourceFile
+  language: string
 }
 
 interface ProtocolVariant {
@@ -179,53 +171,6 @@ const sourceFiles = computed<SourceFile[]>(() => {
   return files
 })
 
-const sourceTreeRows = computed<SourceTreeRow[]>(() => {
-  const rows: SourceTreeRow[] = []
-  const seenFolders = new Set<string>()
-
-  for (const file of sourceFiles.value) {
-    const segments = file.relativePath.split('/').filter(Boolean)
-    let prefix = ''
-
-    for (let index = 0; index < segments.length - 1; index += 1) {
-      prefix = prefix ? `${prefix}/${segments[index]}` : segments[index]
-      if (!seenFolders.has(prefix)) {
-        seenFolders.add(prefix)
-        rows.push({
-          key: `folder:${prefix}`,
-          type: 'folder',
-          label: segments[index],
-          depth: index + 1,
-        })
-      }
-    }
-
-    rows.push({
-      key: `file:${file.path}`,
-      type: 'file',
-      label: segments[segments.length - 1] ?? file.relativePath,
-      depth: Math.max(1, segments.length),
-      file,
-    })
-  }
-
-  return rows
-})
-
-const selectedSourceFile = computed(() => (
-  sourceFiles.value.find((file) => file.path === selectedSourcePath.value)
-  ?? sourceFiles.value[0]
-  ?? null
-))
-
-const selectedSourceContent = computed(() => selectedSourceFile.value?.content ?? '')
-
-const selectedSourceDisplayPath = computed(() => selectedSourceFile.value?.path ?? '')
-
-const selectedSourceKind = computed(() => selectedSourceFile.value?.kind ?? 'text')
-
-const selectedSourceRelativePath = computed(() => selectedSourceFile.value?.relativePath ?? '')
-
 const parseAssigners = computed(() => {
   const data = parseResult.value?.data
   if (!data || typeof data !== 'object') return []
@@ -287,13 +232,16 @@ function protocolLocaleLabel(locale: string) {
   return `${messages.value.app.localeNames[normalized]} (${locale})`
 }
 
-function sourceFileKind(pathValue: string): SourceFileKind {
+function sourceFileLanguage(pathValue: string) {
   const lowerPath = pathValue.toLowerCase()
   if (lowerPath.endsWith('.aimd')) return 'aimd'
   if (lowerPath.endsWith('.toml')) return 'toml'
   if (lowerPath.endsWith('.py')) return 'python'
   if (lowerPath.endsWith('.csv')) return 'csv'
-  return 'text'
+  if (lowerPath.endsWith('.json')) return 'json'
+  if (lowerPath.endsWith('.md')) return 'markdown'
+  if (lowerPath.endsWith('.yaml') || lowerPath.endsWith('.yml')) return 'yaml'
+  return 'plaintext'
 }
 
 function relativeProtocolPath(pathValue: string, protocolDir?: string) {
@@ -320,7 +268,7 @@ function appendSourceFile(
     path: pathValue,
     relativePath,
     content: content ?? '',
-    kind: sourceFileKind(relativePath),
+    language: sourceFileLanguage(relativePath),
   })
 }
 
@@ -748,46 +696,12 @@ onMounted(() => {
         </section>
 
         <section v-else-if="activeTab === 'source'" class="source-panel">
-          <div class="source-layout">
-            <aside class="source-tree" :aria-label="messages.source.files">
-              <div class="source-tree-root">
-                <span class="source-tree-glyph folder" aria-hidden="true"></span>
-                <span>{{ sourceRootLabel }}</span>
-              </div>
-              <template v-if="sourceTreeRows.length > 0">
-                <template v-for="row in sourceTreeRows" :key="row.key">
-                  <button
-                    v-if="row.type === 'file' && row.file"
-                    :class="{ active: selectedSourcePath === row.file.path }"
-                    :style="{ paddingLeft: `${10 + row.depth * 16}px` }"
-                    class="source-tree-node file"
-                    type="button"
-                    @click="selectedSourcePath = row.file.path"
-                  >
-                    <span class="source-tree-glyph file" aria-hidden="true"></span>
-                    <span>{{ row.label }}</span>
-                  </button>
-                  <div
-                    v-else
-                    :style="{ paddingLeft: `${10 + row.depth * 16}px` }"
-                    class="source-tree-node folder"
-                  >
-                    <span class="source-tree-glyph folder" aria-hidden="true"></span>
-                    <span>{{ row.label }}</span>
-                  </div>
-                </template>
-              </template>
-              <div v-else class="source-tree-empty">{{ messages.source.empty }}</div>
-            </aside>
-
-            <div class="source-viewer">
-              <div class="source-path">
-                <span>{{ selectedSourceRelativePath }}</span>
-                <span>{{ selectedSourceDisplayPath }}</span>
-              </div>
-              <pre :class="['code-view', `code-view--${selectedSourceKind}`]"><code>{{ selectedSourceContent }}</code></pre>
-            </div>
-          </div>
+          <ProtocolSourceBrowser
+            v-model="selectedSourcePath"
+            :files="sourceFiles"
+            :labels="messages.source"
+            :root-label="sourceRootLabel"
+          />
         </section>
 
         <section v-else class="engine-panel">
@@ -1184,144 +1098,6 @@ button:disabled {
   gap: 12px;
 }
 
-.source-layout {
-  display: grid;
-  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
-  gap: 12px;
-  align-items: stretch;
-}
-
-.source-tree {
-  overflow: auto;
-  min-width: 0;
-  max-height: 65vh;
-  padding: 8px;
-  border: 1px solid #d9e2ec;
-  border-radius: 8px;
-  background: #ffffff;
-}
-
-.source-tree-root,
-.source-tree-node {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 32px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: #334e68;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 12px;
-  text-align: left;
-}
-
-.source-tree-root {
-  padding: 0 10px;
-  color: #243b53;
-  font-weight: 700;
-}
-
-.source-tree-node.file {
-  cursor: pointer;
-}
-
-.source-tree-node.file:hover {
-  background: #f0f4f8;
-}
-
-.source-tree-node.file.active {
-  background: #e6f4ea;
-  color: #276749;
-  font-weight: 700;
-}
-
-.source-tree-root span:last-child,
-.source-tree-node span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.source-tree-glyph {
-  position: relative;
-  flex: 0 0 auto;
-  width: 14px;
-  height: 12px;
-  border: 1.5px solid currentColor;
-  border-radius: 2px;
-  opacity: 0.72;
-}
-
-.source-tree-glyph.folder::before {
-  position: absolute;
-  top: -5px;
-  left: -1.5px;
-  width: 7px;
-  height: 4px;
-  border: 1.5px solid currentColor;
-  border-bottom: 0;
-  border-radius: 2px 2px 0 0;
-  background: #ffffff;
-  content: "";
-}
-
-.source-tree-glyph.file {
-  height: 15px;
-  border-radius: 2px;
-}
-
-.source-tree-glyph.file::before {
-  position: absolute;
-  top: -1.5px;
-  right: -1.5px;
-  width: 5px;
-  height: 5px;
-  border-left: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  background: #ffffff;
-  content: "";
-}
-
-.source-tree-empty {
-  padding: 8px 10px;
-  color: #829ab1;
-  font-size: 12px;
-}
-
-.source-viewer {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.source-path {
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  color: #627d98;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 12px;
-}
-
-.source-path span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.source-path span:first-child {
-  color: #243b53;
-  font-weight: 700;
-}
-
-.source-path span:last-child {
-  text-align: right;
-}
-
-.code-view,
 .json-view {
   overflow: auto;
   min-height: 360px;
@@ -1336,10 +1112,6 @@ button:disabled {
   font-size: 12px;
   line-height: 1.55;
   white-space: pre-wrap;
-}
-
-.source-viewer .code-view {
-  min-height: 460px;
 }
 
 .engine-controls {
@@ -1404,13 +1176,8 @@ button:disabled {
 
   .engine-form-grid,
   .metadata-row,
-  .engine-output-grid,
-  .source-layout {
+  .engine-output-grid {
     grid-template-columns: 1fr;
-  }
-
-  .source-tree {
-    max-height: 260px;
   }
 }
 

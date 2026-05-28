@@ -15,6 +15,9 @@ catalogs:
     katex:
       specifier: ^0.16.28
       version: 0.16.28
+    monaco-editor:
+      specifier: ^0.52.2
+      version: 0.52.2
     vite-plugin-vue-devtools:
       specifier: ^8.0.0
       version: 8.0.7
@@ -96,12 +99,18 @@ importers:
       '@airalogy/aimd-core':
         specifier: workspace:*
         version: link:../../packages/npm/aimd-core
+      '@airalogy/aimd-editor':
+        specifier: workspace:*
+        version: link:../../packages/npm/aimd-editor
       '@airalogy/aimd-recorder':
         specifier: workspace:*
         version: link:../../packages/npm/aimd-recorder
       '@airalogy/airalogy-engine':
         specifier: workspace:*
         version: link:../../packages/npm/airalogy-engine
+      monaco-editor:
+        specifier: 'catalog:'
+        version: 0.52.2
       vue:
         specifier: ^3.5.17
         version: 3.5.27(typescript@5.8.3)
