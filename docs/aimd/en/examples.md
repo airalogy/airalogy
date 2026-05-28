@@ -18,6 +18,8 @@ Open the [Demo examples page](/demo/#/examples) to switch, edit, and fill these 
 | --- | --- | --- |
 | `meeting-notes` | Meeting notes | General-purpose meeting notes protocol for teams and projects. |
 | `cuaac-kinetics` | Click reaction kinetics | CuAAC kinetic data upload, automatic calculation, plots, and report drafting. |
+| `fiber-endface-process` | Fiber endface micro/nano fabrication workflow | Topic decomposition, process-route design, process window recording, and characterization planning for fiber endface devices. |
+| `fiber-endface-sensing-calibration` | Fiber endface sensing calibration | Calibration data upload, sensitivity fitting, LOD estimation, QC, plotting, and report generation. |
 | `drug-response-ic50` | Drug response IC50 analysis | Dose-response upload, IC50 estimation, QC, curve plotting, and report generation. |
 | `diary` | Diary | Compact structured diary protocol. |
 

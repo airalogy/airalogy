@@ -150,6 +150,7 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       productivity: 'Productivity',
       chemistry: 'Chemistry',
       biomedicine: 'Biomedicine',
+      photonics: 'Photonics',
       personal: 'Personal',
     },
     common: {
@@ -248,6 +249,7 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       productivity: '生产力',
       chemistry: '化学',
       biomedicine: '生物医学',
+      photonics: '光子学',
       personal: '个人',
     },
     common: {

@@ -1,0 +1,14 @@
+[airalogy_protocol]
+id = "fiber_endface_sensing_calibration_zh"
+version = "0.1.0"
+name = "光纤端面微纳结构传感标定数据分析"
+description = "面向光纤端面微纳结构传感器的标定数据上传、灵敏度拟合、检测限估计、质控判定、绘图和报告生成的 Airalogy Protocol 示例。"
+authors = [
+    { name = "杨子杰", email = "yangzijie@westlake.edu.cn", airalogy_user_id = "airalogy.id.user.yangzijie" },
+]
+maintainers = [
+    { name = "杨子杰", email = "yangzijie@westlake.edu.cn", airalogy_user_id = "airalogy.id.user.yangzijie" },
+]
+disciplines = ["photonics", "optical fiber sensing", "micro-nano fabrication"]
+keywords = ["光纤端面", "微纳结构", "传感标定", "灵敏度", "检测限", "assigner"]
+license = "Apache-2.0"

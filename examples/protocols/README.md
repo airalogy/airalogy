@@ -10,6 +10,8 @@ Preview and fill the AIMD portions in the [AIMD demo examples page](https://aira
 | --- | --- | --- | --- | --- |
 | `meeting-notes` | Meeting notes | `en-US`, `zh-CN` | No | General-purpose meeting notes template for teams and projects. |
 | `cuaac-kinetics` | Click reaction kinetics | `en-US`, `zh-CN` | Yes | CuAAC kinetic data upload, parameter calculation, plots, and report drafting. |
+| `fiber-endface-process` | Fiber endface micro/nano fabrication workflow | `zh-CN` | No | Topic decomposition, process-route design, process window recording, and characterization planning for fiber endface devices. |
+| `fiber-endface-sensing-calibration` | Fiber endface sensing calibration | `zh-CN` | Yes | Calibration data upload, sensitivity fitting, LOD estimation, QC, plotting, and report generation. |
 | `drug-response-ic50` | Drug response IC50 analysis | `en-US`, `zh-CN` | Yes | Dose-response upload, IC50 estimation, QC, curve plotting, and report generation. |
 | `diary` | Diary | `en-US`, `zh-CN` | No | Compact structured diary protocol. |
 
