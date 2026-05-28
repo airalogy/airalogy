@@ -68,6 +68,115 @@ describe('AimdVarField render behavior', () => {
     expect(recorderSource).toContain('.aimd-rec-inline__value-control::-webkit-datetime-edit')
   })
 
+  it('renders file-like vars with a native file picker control', async () => {
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'dose_response_file',
+      raw: '{{var|dose_response_file}}',
+      definition: {
+        id: 'dose_response_file',
+        type: 'FileIdCSV',
+        kwargs: {
+          title: 'Dose response file',
+        },
+      },
+    }
+    const uploadFile = vi.fn(() => 'uploaded-file-id')
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '',
+        inputKind: 'file',
+        initialized: true,
+        uploadFile,
+      },
+    })
+
+    const input = wrapper.find('input[type="file"]')
+    expect(input.exists()).toBe(true)
+    expect(input.attributes('accept')).toBe('.csv,text/csv')
+    expect(wrapper.find('.aimd-rec-file-field__badge').text()).toBe('CSV')
+    expect(wrapper.find('.aimd-rec-file-field__name').text()).toBe('Choose file')
+
+    const file = new File(['a,b\n1,2'], 'dose.csv', { type: 'text/csv' })
+    Object.defineProperty(input.element, 'files', {
+      value: [file],
+      configurable: true,
+    })
+    await input.trigger('change')
+    await Promise.resolve()
+
+    expect(uploadFile).toHaveBeenCalledWith(file, expect.objectContaining({
+      fieldKey: 'var:dose_response_file',
+      type: 'FileIdCSV',
+      normalizedType: 'fileidcsv',
+      accept: '.csv,text/csv',
+    }))
+    expect(wrapper.emitted('change')?.[0]?.[0]).toMatchObject({
+      id: 'dose_response_file',
+      value: 'uploaded-file-id',
+      type: 'FileIdCSV',
+      inputKind: 'file',
+    })
+  })
+
+  it('falls back to serializable selected-file metadata without an upload handler', async () => {
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'image_file',
+      raw: '{{var|image_file}}',
+      definition: {
+        id: 'image_file',
+        type: 'image',
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '',
+        inputKind: 'file',
+        initialized: true,
+      },
+    })
+
+    const input = wrapper.find('input[type="file"]')
+    expect(input.attributes('accept')).toBe('image/*')
+    const file = new File(['png'], 'chart.png', {
+      type: 'image/png',
+      lastModified: 456,
+    })
+    Object.defineProperty(input.element, 'files', {
+      value: [file],
+      configurable: true,
+    })
+    await input.trigger('change')
+    await Promise.resolve()
+
+    expect(wrapper.emitted('change')?.[0]?.[0]).toMatchObject({
+      id: 'image_file',
+      value: {
+        format: 'airalogy_selected_file_v1',
+        name: 'chart.png',
+        type: 'image/png',
+        size: 3,
+        lastModified: 456,
+      },
+      inputKind: 'file',
+    })
+  })
+
   it('styles metadata examples as distinct chips', () => {
     expect(styles).toContain('.aimd-field__metadata-examples')
     expect(styles).toContain('.aimd-field__metadata-example')

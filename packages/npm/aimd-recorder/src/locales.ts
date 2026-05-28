@@ -84,6 +84,12 @@ export interface AimdRecorderMessages {
     run: string
     running: string
   }
+  file: {
+    choose: string
+    clear: string
+    open: string
+    uploadFailed: string
+  }
   dna: {
     editMode: string
     interactiveMode: string
@@ -257,6 +263,12 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     run: "Run Assigner",
     running: "Running",
   },
+  file: {
+    choose: "Choose file",
+    clear: "Clear file",
+    open: "Open file",
+    uploadFailed: "File upload failed.",
+  },
   dna: {
     editMode: "Edit mode",
     interactiveMode: "Interactive",
@@ -402,6 +414,12 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
   assigner: {
     run: "运行赋值器",
     running: "运行中",
+  },
+  file: {
+    choose: "选择文件",
+    clear: "清除文件",
+    open: "打开文件",
+    uploadFailed: "文件上传失败。",
   },
   dna: {
     editMode: "编辑模式",

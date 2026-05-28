@@ -20,6 +20,7 @@ import {
 } from "../locales"
 import type {
   AimdChoiceOptionExplanationMode,
+  AimdFileUploadHandler,
   AimdFieldMeta,
   AimdFieldState,
   AimdRecorderFieldAdapters,
@@ -135,9 +136,14 @@ const props = withDefaults(defineProps<{
 
   /**
    * Resolves relative paths / Airalogy file IDs to displayable URLs.
-   * Reserved for future file-type field support.
    */
   resolveFile?: (src: string) => string | null
+
+  /**
+   * Uploads file-like var selections. Return the record value to store,
+   * typically an Airalogy file ID or a structured file descriptor.
+   */
+  uploadFile?: AimdFileUploadHandler
 
   /**
    * Type-level plugins for custom var types.
@@ -162,6 +168,7 @@ const props = withDefaults(defineProps<{
   customRenderers: undefined,
   fieldAdapters: undefined,
   resolveFile: undefined,
+  uploadFile: undefined,
   typePlugins: undefined,
 })
 
@@ -540,6 +547,8 @@ function renderInlineVar(node: AimdVarNode): VNode {
   const inputKind = getVarInputKind(type, {
     inputType: meta?.inputType,
     codeLanguage: meta?.codeLanguage,
+    kwargs: node.definition?.kwargs,
+    fieldMeta: meta,
     typePlugin,
   })
   const placeholder = meta?.placeholder ?? fieldRendering.getVarPlaceholder(node, meta)
@@ -594,7 +603,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
   const disabled = fieldRendering.isFieldDisabled(fieldKey)
   const extraClasses = fieldRendering.fieldStateClasses(fieldKey)
   const canUseInternalAssignerControl = Boolean(meta?.enumOptions?.length)
-    || ["number", "date", "datetime", "time", "text", "textarea", "checkbox"].includes(inputKind)
+    || ["number", "date", "datetime", "time", "text", "textarea", "checkbox", "file"].includes(inputKind)
   const internalAssignerControl = canUseInternalAssignerControl
     ? resolveAssignerControl("var", fieldKey)
     : null
@@ -628,6 +637,8 @@ function renderInlineVar(node: AimdVarNode): VNode {
         ? renderAssignerCloudStatusIcon(pluginAssignerControl)
         : undefined,
       assignerError: pluginAssignerControl?.state?.error,
+      uploadFile: props.uploadFile,
+      resolveFile: props.resolveFile,
       emitChange: emitVarChange,
       emitBlur: emitVarBlur,
     })
@@ -658,6 +669,8 @@ function renderInlineVar(node: AimdVarNode): VNode {
       ? renderAssignerCloudStatusIcon(internalAssignerControl)
       : undefined,
     assignerError: internalAssignerControl?.state?.error,
+    uploadFile: props.uploadFile,
+    resolveFile: props.resolveFile,
     onChange: (payload: { id: string, value: unknown, type: string, inputKind: string }) => {
       emitVarChange(payload.value)
     },
@@ -1651,6 +1664,133 @@ defineExpose({
   background: #fff;
 }
 
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__file-control) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--rec-var-control-height);
+  padding: 0 8px;
+  border-top: 1px solid var(--aimd-border-color, #90caf9);
+  border-radius: 0 0 6px 6px;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__trigger) {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  min-height: var(--rec-var-control-height);
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__trigger--disabled) {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__input) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__badge) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-width: 38px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: #e3f2fd;
+  color: #1565c0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__badge--csv),
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__badge--text) {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__badge--image) {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__badge--audio),
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__badge--video) {
+  background: #fef3c7;
+  color: #a16207;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__badge--document) {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__name) {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--rec-text);
+  font-size: var(--rec-var-value-font-size);
+  font-weight: 400;
+  line-height: var(--rec-var-single-line-height);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__name--placeholder) {
+  color: #94a3b8;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__link),
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__clear) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__clear) {
+  width: 24px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__link:hover),
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__clear:hover) {
+  background: #f1f5f9;
+  color: #1f2937;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__error) {
+  flex: 0 0 auto;
+  color: #dc2626;
+  font-size: 12px;
+}
+
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline--has-assigner-control) {
   overflow: hidden;
 }
@@ -1694,7 +1834,8 @@ defineExpose({
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__input--stacked),
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__textarea--stacked),
-.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__checkbox-row) {
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__checkbox-row),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__file-control) {
   width: 100%;
   height: auto;
   min-height: var(--rec-var-control-height);

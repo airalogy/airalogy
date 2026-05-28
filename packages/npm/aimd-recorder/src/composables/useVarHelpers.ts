@@ -8,7 +8,14 @@
 import { resolveAimdTypePlugin } from '../type-plugins'
 import { isAimdCodeEditorType } from '../code-types'
 import { normalizeAimdTypeName } from '../type-utils'
-import type { AimdTypePlugin, AimdTypePluginParseContext, AimdTypePluginValueContext, AimdVarInputKind } from '../types'
+import type {
+  AimdFieldMeta,
+  AimdSelectedFileValue,
+  AimdTypePlugin,
+  AimdTypePluginParseContext,
+  AimdTypePluginValueContext,
+  AimdVarInputKind,
+} from '../types'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,6 +26,8 @@ export type VarInputKind = AimdVarInputKind
 export interface VarInputKindOptions {
   inputType?: string
   codeLanguage?: string
+  kwargs?: Record<string, unknown>
+  fieldMeta?: AimdFieldMeta
   typePlugin?: AimdTypePlugin
   typePlugins?: AimdTypePlugin[]
 }
@@ -26,7 +35,6 @@ export interface VarInputKindOptions {
 export interface VarInputValueOptions extends VarInputKindOptions {
   type?: string
   nodeFieldKey?: string
-  fieldMeta?: Record<string, unknown>
 }
 
 export interface AimdNumericFieldConstraints {
@@ -41,6 +49,241 @@ export interface NumericInputAttributes {
   min?: number
   max?: number
   step?: number
+}
+
+export type FileInputDisplayKind = "file" | "csv" | "image" | "audio" | "video" | "document" | "text"
+
+export interface FileInputConfig {
+  kind: FileInputDisplayKind
+  accept?: string
+  badge: string
+}
+
+const FILE_CONFIG_BY_NORMALIZED_TYPE: Record<string, FileInputConfig> = {
+  file: { kind: "file", badge: "FILE" },
+  upload: { kind: "file", badge: "FILE" },
+  csv: { kind: "csv", accept: ".csv,text/csv", badge: "CSV" },
+  fileidcsv: { kind: "csv", accept: ".csv,text/csv", badge: "CSV" },
+  image: { kind: "image", accept: "image/*", badge: "IMG" },
+  fileidpng: { kind: "image", accept: ".png,image/png", badge: "IMG" },
+  fileidjpg: { kind: "image", accept: ".jpg,.jpeg,image/jpeg", badge: "IMG" },
+  fileidjpeg: { kind: "image", accept: ".jpg,.jpeg,image/jpeg", badge: "IMG" },
+  fileidsvg: { kind: "image", accept: ".svg,image/svg+xml", badge: "IMG" },
+  fileidwebp: { kind: "image", accept: ".webp,image/webp", badge: "IMG" },
+  fileidtiff: { kind: "image", accept: ".tif,.tiff,image/tiff", badge: "IMG" },
+  audio: { kind: "audio", accept: "audio/*", badge: "AUD" },
+  fileidmp3: { kind: "audio", accept: ".mp3,audio/mpeg", badge: "AUD" },
+  video: { kind: "video", accept: "video/*", badge: "VID" },
+  fileidmp4: { kind: "video", accept: ".mp4,video/mp4", badge: "VID" },
+  fileidaimd: { kind: "text", accept: ".aimd,text/plain", badge: "AIMD" },
+  fileidmd: { kind: "text", accept: ".md,text/markdown,text/plain", badge: "MD" },
+  fileidtxt: { kind: "text", accept: ".txt,text/plain", badge: "TXT" },
+  fileidjson: { kind: "text", accept: ".json,application/json", badge: "JSON" },
+  fileiddocx: { kind: "document", accept: ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document", badge: "DOC" },
+  fileidxlsx: { kind: "document", accept: ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", badge: "XLS" },
+  fileidpptx: { kind: "document", accept: ".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation", badge: "PPT" },
+  fileidpdf: { kind: "document", accept: ".pdf,application/pdf", badge: "PDF" },
+}
+
+const FILE_KIND_BY_EXTENSION: Record<string, FileInputDisplayKind> = {
+  csv: "csv",
+  png: "image",
+  jpg: "image",
+  jpeg: "image",
+  svg: "image",
+  webp: "image",
+  tif: "image",
+  tiff: "image",
+  mp3: "audio",
+  wav: "audio",
+  m4a: "audio",
+  mp4: "video",
+  mov: "video",
+  webm: "video",
+  aimd: "text",
+  md: "text",
+  txt: "text",
+  json: "text",
+  pdf: "document",
+  docx: "document",
+  xlsx: "document",
+  pptx: "document",
+}
+
+const FILE_BADGE_BY_KIND: Record<FileInputDisplayKind, string> = {
+  file: "FILE",
+  csv: "CSV",
+  image: "IMG",
+  audio: "AUD",
+  video: "VID",
+  document: "DOC",
+  text: "TXT",
+}
+
+const MIME_BY_EXTENSION: Record<string, string> = {
+  csv: "text/csv",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  svg: "image/svg+xml",
+  webp: "image/webp",
+  tif: "image/tiff",
+  tiff: "image/tiff",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  m4a: "audio/mp4",
+  mp4: "video/mp4",
+  webm: "video/webm",
+  md: "text/markdown",
+  txt: "text/plain",
+  aimd: "text/plain",
+  json: "application/json",
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+}
+
+function getStringFromRecord(record: Record<string, unknown> | undefined, keys: string[]): string | undefined {
+  if (!record) {
+    return undefined
+  }
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === "string" && value.trim()) {
+      return value.trim()
+    }
+  }
+  return undefined
+}
+
+function normalizeFileExtension(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined
+  }
+  const trimmed = value.trim().toLowerCase()
+  if (!trimmed || trimmed === "*") {
+    return undefined
+  }
+  return trimmed.replace(/^\./, "")
+}
+
+function getConfiguredFileExtension(kwargs?: Record<string, unknown>, fieldMeta?: AimdFieldMeta): string | undefined {
+  const metaExtension = normalizeFileExtension((fieldMeta as { fileExtension?: unknown } | undefined)?.fileExtension)
+  if (metaExtension) {
+    return metaExtension
+  }
+  return normalizeFileExtension(kwargs?.file_extension)
+    ?? normalizeFileExtension(kwargs?.fileExtension)
+    ?? normalizeFileExtension(kwargs?.extension)
+}
+
+function acceptFromExtension(extension: string): string {
+  const ext = extension.replace(/^\./, "").toLowerCase()
+  const mime = MIME_BY_EXTENSION[ext]
+  return mime ? `.${ext},${mime}` : `.${ext}`
+}
+
+function fileKindFromExtension(extension: string | undefined): FileInputDisplayKind {
+  if (!extension) {
+    return "file"
+  }
+  return FILE_KIND_BY_EXTENSION[extension] ?? "file"
+}
+
+function isKnownFileTypeName(normalized: string | undefined): boolean {
+  if (!normalized) {
+    return false
+  }
+  return Boolean(FILE_CONFIG_BY_NORMALIZED_TYPE[normalized])
+    || normalized.startsWith("fileid")
+}
+
+export function getFileInputConfig(
+  type: string | undefined,
+  kwargs?: Record<string, unknown>,
+  fieldMeta?: AimdFieldMeta,
+): FileInputConfig {
+  const normalizedInputType = normalizeAimdTypeName(fieldMeta?.inputType)
+  const normalized = isKnownFileTypeName(normalizedInputType)
+    ? normalizedInputType
+    : normalizeVarTypeName(type)
+  const configuredExtension = getConfiguredFileExtension(kwargs, fieldMeta)
+  const configuredAccept = normalizeMetaString(fieldMeta?.accept)
+    ?? getStringFromRecord(kwargs, ["accept", "file_accept", "fileAccept"])
+  const base = FILE_CONFIG_BY_NORMALIZED_TYPE[normalized]
+
+  if (configuredExtension) {
+    const kind = fileKindFromExtension(configuredExtension)
+    return {
+      kind,
+      accept: configuredAccept ?? acceptFromExtension(configuredExtension),
+      badge: base?.badge ?? FILE_BADGE_BY_KIND[kind],
+    }
+  }
+
+  if (base) {
+    return {
+      ...base,
+      accept: configuredAccept ?? base.accept,
+    }
+  }
+
+  return {
+    kind: "file",
+    accept: configuredAccept,
+    badge: FILE_BADGE_BY_KIND.file,
+  }
+}
+
+export function isFileLikeVarType(
+  type: string | undefined,
+  kwargs?: Record<string, unknown>,
+  fieldMeta?: AimdFieldMeta,
+): boolean {
+  const normalized = normalizeVarTypeName(type)
+  const normalizedInputType = normalizeAimdTypeName(fieldMeta?.inputType)
+  return isKnownFileTypeName(normalized)
+    || isKnownFileTypeName(normalizedInputType)
+    || Boolean(getConfiguredFileExtension(kwargs, fieldMeta))
+    || Boolean(normalizeMetaString(fieldMeta?.accept))
+}
+
+export function createSelectedFileValue(file: File): AimdSelectedFileValue {
+  return {
+    format: "airalogy_selected_file_v1",
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    lastModified: file.lastModified,
+  }
+}
+
+export function getFileDisplayName(value: unknown): string {
+  const normalized = unwrapStructuredValue(value)
+  if (typeof normalized === "string") {
+    return normalized
+  }
+  if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) {
+    return ""
+  }
+  const record = normalized as Record<string, unknown>
+  return getStringFromRecord(record, [
+    "name",
+    "fileName",
+    "file_name",
+    "filename",
+    "originalName",
+    "original_name",
+    "id",
+    "file_id",
+    "src",
+    "url",
+  ]) ?? ""
+}
+
+function normalizeMetaString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined
 }
 
 function resolveOverrideInputKind(inputType: string | undefined, codeLanguage: string | undefined): VarInputKind | undefined {
@@ -82,8 +325,8 @@ function resolveOverrideInputKind(inputType: string | undefined, codeLanguage: s
     return 'dna'
   }
 
-  if (normalized === 'file') {
-    return 'text'
+  if (isKnownFileTypeName(normalized)) {
+    return 'file'
   }
 
   if (normalized === 'text' || normalized === 'string') {
@@ -145,6 +388,10 @@ export function getVarInputKind(type: string | undefined, options: VarInputKindO
 
   if (normalized === "md" || normalized === "markdown" || normalized === "airalogymarkdown") {
     return "textarea"
+  }
+
+  if (isFileLikeVarType(type, options.kwargs, options.fieldMeta)) {
+    return "file"
   }
 
   if (isAimdCodeEditorType(type, { codeLanguage: options.codeLanguage })) {
@@ -433,6 +680,10 @@ export function getVarInputDisplayValue(
     return typeof normalized === "string" ? normalized : JSON.stringify(normalized)
   }
 
+  if (kind === "file") {
+    return getFileDisplayName(normalized)
+  }
+
   if (typeof normalized === "string") {
     return normalized
   }
@@ -493,6 +744,7 @@ function getVarControlMinWidth(inputKind: VarInputKind): number {
     case "textarea":
     case "dna":
     case "code":
+    case "file":
       return 160
     default:
       return 0
@@ -507,6 +759,8 @@ function getVarControlExtraWidth(inputKind: VarInputKind): number {
       return 32
     case "time":
       return 28
+    case "file":
+      return 24
     default:
       return 4
   }
@@ -621,7 +875,7 @@ export function measureVarLabelWidth(wrapper: HTMLElement): number {
   return fallbackLabel ? fallbackLabel.scrollWidth + 2 : 0
 }
 
-export function measureSingleLineControlWidth(input: HTMLInputElement | HTMLTextAreaElement): number {
+export function measureSingleLineControlWidth(input: HTMLElement): number {
   if (typeof window === "undefined") {
     return input.scrollWidth
   }
@@ -638,7 +892,9 @@ export function measureSingleLineControlWidth(input: HTMLInputElement | HTMLText
   const fontStyle = computed.fontStyle || "normal"
   ctx.font = `${fontStyle} ${fontWeight} ${fontSize} ${fontFamily}`
 
-  const text = input.value || input.placeholder || ""
+  const text = "value" in input
+    ? ((input as HTMLInputElement | HTMLTextAreaElement).value || (input as HTMLInputElement | HTMLTextAreaElement).placeholder || "")
+    : ((input.textContent || "").trim())
   const textWidth = ctx.measureText(text).width
   const padding = parsePx(computed.paddingLeft) + parsePx(computed.paddingRight)
   return textWidth + padding + 2
@@ -688,8 +944,7 @@ export function applyVarStackWidth(target: HTMLElement, inputKind: VarInputKind)
 
   const minWidthPx = getVarControlMinWidth(inputKind)
   let controlWidth = 0
-  const input = wrapper.querySelector(".aimd-rec-inline__input--stacked, .aimd-rec-inline__textarea--stacked-text") as
-    HTMLInputElement | HTMLTextAreaElement | null
+  const input = wrapper.querySelector(".aimd-rec-inline__input--stacked, .aimd-rec-inline__textarea--stacked-text, .aimd-rec-inline__file-control") as HTMLElement | null
   if (input) {
     controlWidth = measureSingleLineControlWidth(input) + getVarControlExtraWidth(inputKind)
   }

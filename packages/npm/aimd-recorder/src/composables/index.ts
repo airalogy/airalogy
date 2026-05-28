@@ -47,6 +47,10 @@ export {
   formatDateTimeWithTimezone,
   normalizeDateTimeValueWithTimezone,
   formatDateForInput,
+  getFileDisplayName,
+  getFileInputConfig,
+  isFileLikeVarType,
+  createSelectedFileValue,
   getVarInputDisplayValue,
   parseVarInputValue,
   calculateVarStackWidth,
@@ -55,7 +59,7 @@ export {
   syncAutoWrapTextareaHeight,
   applyVarStackWidth,
 } from './useVarHelpers'
-export type { VarInputKind } from './useVarHelpers'
+export type { FileInputConfig, FileInputDisplayKind, VarInputKind } from './useVarHelpers'
 
 export {
   AIMD_DNA_SEQUENCE_FORMAT,

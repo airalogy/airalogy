@@ -6,6 +6,7 @@ import type { AimdEditorProps } from '@airalogy/aimd-editor/vue'
 import type { AimdComponentRenderer } from '@airalogy/aimd-renderer'
 import type { AimdRecorderMessagesInput } from '../locales'
 import type {
+  AimdFileUploadHandler,
   AimdFieldMeta,
   AimdFieldState,
   AimdProtocolRecordData,
@@ -59,6 +60,7 @@ const props = withDefaults(defineProps<{
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   resolveFile?: (src: string) => string | null
+  uploadFile?: AimdFileUploadHandler
   typePlugins?: AimdTypePlugin[]
   editorMode?: 'source' | 'wysiwyg'
   editorProps?: WorkbenchEditorProps
@@ -94,6 +96,7 @@ const props = withDefaults(defineProps<{
   customRenderers: undefined,
   fieldAdapters: undefined,
   resolveFile: undefined,
+  uploadFile: undefined,
   typePlugins: undefined,
   editorMode: 'source',
   editorProps: undefined,
@@ -1228,6 +1231,7 @@ defineExpose({
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
             :resolve-file="resolveFile"
+            :upload-file="uploadFile"
             :type-plugins="typePlugins"
             :enable-block-handle="editorProps?.enableBlockHandle ?? true"
             class="aimd-recorder-workbench__visual-editor"
@@ -1262,6 +1266,7 @@ defineExpose({
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
             :resolve-file="resolveFile"
+            :upload-file="uploadFile"
             :type-plugins="typePlugins"
             @update:model-value="handleRecordUpdate"
             @fields-change="handleFieldsChange"

@@ -16,6 +16,7 @@ import {
 import type { AimdComponentRenderer } from '@airalogy/aimd-renderer'
 import type { AimdRecorderMessagesInput } from '../locales'
 import type {
+  AimdFileUploadHandler,
   AimdFieldMeta,
   AimdFieldState,
   AimdProtocolRecordData,
@@ -49,6 +50,7 @@ export interface RecorderMilkdownSurfaceState {
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   resolveFile?: (src: string) => string | null
+  uploadFile?: AimdFileUploadHandler
   typePlugins?: AimdTypePlugin[]
   onUpdateRecord: (value: AimdProtocolRecordData) => void
   onFieldsChange?: (fields: ExtractedAimdFields) => void

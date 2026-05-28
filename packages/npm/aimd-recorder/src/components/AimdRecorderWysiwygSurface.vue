@@ -16,6 +16,7 @@ import type { ExtractedAimdFields } from '@airalogy/aimd-core/types'
 import type { AimdComponentRenderer } from '@airalogy/aimd-renderer'
 import type { AimdRecorderMessagesInput } from '../locales'
 import type {
+  AimdFileUploadHandler,
   AimdFieldMeta,
   AimdFieldState,
   AimdProtocolRecordData,
@@ -58,6 +59,7 @@ const props = withDefaults(defineProps<{
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   resolveFile?: (src: string) => string | null
+  uploadFile?: AimdFileUploadHandler
   typePlugins?: AimdTypePlugin[]
   enableBlockHandle?: boolean
 }>(), {
@@ -75,6 +77,7 @@ const props = withDefaults(defineProps<{
   customRenderers: undefined,
   fieldAdapters: undefined,
   resolveFile: undefined,
+  uploadFile: undefined,
   typePlugins: undefined,
   enableBlockHandle: true,
 })
@@ -171,6 +174,7 @@ const surfaceState = reactive<RecorderMilkdownSurfaceState>({
   customRenderers: props.customRenderers,
   fieldAdapters: props.fieldAdapters,
   resolveFile: props.resolveFile,
+  uploadFile: props.uploadFile,
   typePlugins: props.typePlugins,
   onUpdateRecord: handleRecordUpdate,
   onError: (message) => emit('error', message),
@@ -195,6 +199,7 @@ watchEffect(() => {
   surfaceState.customRenderers = props.customRenderers
   surfaceState.fieldAdapters = props.fieldAdapters
   surfaceState.resolveFile = props.resolveFile
+  surfaceState.uploadFile = props.uploadFile
   surfaceState.typePlugins = props.typePlugins
 })
 

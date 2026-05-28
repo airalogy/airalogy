@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineAsyncComponent, defineComponent, h, type PropType, type VNode } from "vue"
+import { defineAsyncComponent, defineComponent, h, ref, type PropType, type VNode } from "vue"
 import type { AimdVarNode } from "@airalogy/aimd-core/types"
 import {
   formatAimdExampleValue,
@@ -8,7 +8,7 @@ import {
   getAimdFieldExamples,
   getAimdFieldTitle,
 } from "@airalogy/aimd-core/utils"
-import type { AimdFieldMeta, AimdTypePlugin, AimdVarInputKind } from "../types"
+import type { AimdFieldMeta, AimdFileUploadHandler, AimdTypePlugin, AimdVarInputKind } from "../types"
 import type { AimdRecorderMessages } from "../locales"
 import { getAimdRecorderScopeLabel } from "../locales"
 import { resolveAimdCodeEditorLanguage } from "../code-types"
@@ -20,6 +20,9 @@ import {
   getNumericInputAttributes,
   syncAutoWrapTextareaHeight,
   toBooleanValue,
+  createSelectedFileValue,
+  getFileDisplayName,
+  getFileInputConfig,
   type NumericInputAttributes,
 } from "../composables/useVarHelpers"
 
@@ -99,9 +102,13 @@ export default defineComponent({
     assignerControl: { type: Object as PropType<VNode | undefined>, default: undefined },
     assignerStatus: { type: Object as PropType<VNode | undefined>, default: undefined },
     assignerError: { type: String, default: undefined },
+    uploadFile: { type: Function as PropType<AimdFileUploadHandler | undefined>, default: undefined },
+    resolveFile: { type: Function as PropType<((src: string) => string | null) | undefined>, default: undefined },
   },
   emits: ["change", "blur"],
   setup(props, { emit }) {
+    const fileUploadError = ref("")
+
     return () => {
       const node = props.node
       const id = node.id
@@ -138,6 +145,42 @@ export default defineComponent({
         applyVarStackWidth(control, inputKind)
         if (typeof HTMLTextAreaElement !== "undefined" && control instanceof HTMLTextAreaElement) {
           syncAutoWrapTextareaHeight(control)
+        }
+      }
+
+      function syncFileControlLayout(control: HTMLElement) {
+        applyVarStackWidth(control, inputKind)
+      }
+
+      async function onFileChange(event: Event) {
+        const input = event.target as HTMLInputElement
+        const file = input.files?.[0]
+        input.value = ""
+        if (!file) {
+          return
+        }
+
+        fileUploadError.value = ""
+        const fileConfig = getFileInputConfig(type, node.definition?.kwargs, meta)
+        try {
+          const uploadedValue = props.uploadFile
+            ? await props.uploadFile(file, {
+              type,
+              normalizedType,
+              fieldKey: `var:${id}`,
+              node,
+              fieldMeta: meta,
+              accept: fileConfig.accept,
+            })
+            : undefined
+          emit("change", {
+            id,
+            value: uploadedValue ?? createSelectedFileValue(file),
+            type,
+            inputKind,
+          })
+        } catch {
+          fileUploadError.value = props.messages.file.uploadFailed
         }
       }
 
@@ -286,6 +329,82 @@ export default defineComponent({
             onBlur: onVarBlur,
           }),
           "aimd-rec-inline--var-stacked--code",
+        )
+      }
+
+      if (inputKind === "file") {
+        const fileConfig = getFileInputConfig(type, node.definition?.kwargs, meta)
+        const fileName = getFileDisplayName(props.value)
+        const displayName = fileName || placeholder || props.messages.file.choose
+        const resolvedUrl = typeof props.value === "string" && props.resolveFile
+          ? props.resolveFile(props.value)
+          : null
+
+        return renderStackedVar(
+          h("span", {
+            class: "aimd-rec-inline__value-control aimd-rec-inline__file-control",
+            "data-file-kind": fileConfig.kind,
+            onVnodeMounted: (vnode: any) => syncFileControlLayout(vnode.el as HTMLElement),
+            onVnodeUpdated: (vnode: any) => syncFileControlLayout(vnode.el as HTMLElement),
+          }, [
+            h("label", {
+              class: [
+                "aimd-rec-file-field__trigger",
+                disabled ? "aimd-rec-file-field__trigger--disabled" : undefined,
+              ],
+              title: displayName,
+            }, [
+              h("input", {
+                "data-rec-focus-key": `var:${id}`,
+                class: "aimd-rec-file-field__input",
+                type: "file",
+                accept: fileConfig.accept,
+                disabled,
+                onChange: onFileChange,
+                onBlur: onVarBlur,
+              }),
+              h("span", {
+                class: [
+                  "aimd-rec-file-field__badge",
+                  `aimd-rec-file-field__badge--${fileConfig.kind}`,
+                ],
+                "aria-hidden": "true",
+              }, fileConfig.badge),
+              h("span", {
+                class: [
+                  "aimd-rec-file-field__name",
+                  fileName ? undefined : "aimd-rec-file-field__name--placeholder",
+                ],
+              }, displayName),
+            ]),
+            resolvedUrl
+              ? h("a", {
+                class: "aimd-rec-file-field__link",
+                href: resolvedUrl,
+                target: "_blank",
+                rel: "noopener noreferrer",
+                title: props.messages.file.open,
+                onClick: (event: Event) => event.stopPropagation(),
+              }, props.messages.file.open)
+              : null,
+            fileName && !disabled
+              ? h("button", {
+                type: "button",
+                class: "aimd-rec-file-field__clear",
+                "aria-label": props.messages.file.clear,
+                title: props.messages.file.clear,
+                onClick: (event: Event) => {
+                  event.stopPropagation()
+                  fileUploadError.value = ""
+                  emit("change", { id, value: "", type, inputKind })
+                },
+              }, "×")
+              : null,
+            fileUploadError.value
+              ? h("span", { class: "aimd-rec-file-field__error" }, fileUploadError.value)
+              : null,
+          ]),
+          "aimd-rec-inline--var-stacked--file",
         )
       }
 

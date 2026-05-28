@@ -23,6 +23,9 @@ export {
 } from './locales'
 export type {
   AimdProtocolRecordData,
+  AimdFileUploadContext,
+  AimdFileUploadHandler,
+  AimdSelectedFileValue,
   AimdTypePlugin,
   AimdTypePluginInitContext,
   AimdTypePluginParseContext,

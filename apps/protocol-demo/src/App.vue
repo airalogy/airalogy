@@ -5,6 +5,7 @@ import {
   createEmptyProtocolRecordData,
   type AimdFieldMeta,
   type AimdFieldState,
+  type AimdFileUploadContext,
   type AimdProtocolRecordData,
   type FieldEventPayload,
 } from '@airalogy/aimd-recorder'
@@ -540,6 +541,32 @@ async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   return payload as T
 }
 
+async function uploadProtocolFile(file: File, context: AimdFileUploadContext): Promise<string> {
+  const form = new FormData()
+  form.append('file', file, file.name)
+  form.append('fieldKey', context.fieldKey)
+  form.append('type', context.type)
+
+  const response = await fetch('/api/files/upload', {
+    method: 'POST',
+    body: form,
+  })
+  const payload = await response.json() as ApiEnvelope<{ id?: string, file_name?: string }>
+
+  if (!response.ok || payload.ok === false || !payload.result?.id) {
+    const fallback = formatMessage(messages.value.errors.requestFailed, { status: response.status })
+    throw new Error(localizeErrorMessage(payload.message ?? fallback))
+  }
+
+  return payload.result.id
+}
+
+function resolveProtocolFile(src: string) {
+  return src.startsWith('airalogy.id.file.')
+    ? `/api/files/${encodeURIComponent(src)}`
+    : null
+}
+
 function resetProtocolState(resetSourceDrafts = false) {
   const variant = selectedVariant.value
   if (resetSourceDrafts) {
@@ -948,6 +975,8 @@ onMounted(() => {
             editor-title="protocol.aimd"
             :recorder-title="messages.record.recorderTitle"
             :record-data-title="messages.record.recordDataTitle"
+            :upload-file="uploadProtocolFile"
+            :resolve-file="resolveProtocolFile"
             @assigner-request="handleAssignerRequest"
           />
         </section>

@@ -59,7 +59,29 @@ export interface AimdProtocolRecordData {
   quiz: Record<string, unknown>
 }
 
-export type AimdVarInputKind = "text" | "number" | "checkbox" | "textarea" | "date" | "datetime" | "time" | "dna" | "code"
+export interface AimdSelectedFileValue {
+  format: "airalogy_selected_file_v1"
+  name: string
+  type: string
+  size: number
+  lastModified: number
+}
+
+export interface AimdFileUploadContext {
+  type: string
+  normalizedType: string
+  fieldKey: string
+  node: AimdVarNode
+  fieldMeta?: AimdFieldMeta
+  accept?: string
+}
+
+export type AimdFileUploadHandler = (
+  file: File,
+  context: AimdFileUploadContext,
+) => unknown | Promise<unknown>
+
+export type AimdVarInputKind = "text" | "number" | "checkbox" | "textarea" | "date" | "datetime" | "time" | "dna" | "code" | "file"
 export type AimdStepDetailDisplay = "auto" | "always"
 export type AimdChoiceOptionExplanationMode = "hidden" | "selected" | "submitted" | "graded"
 export type AimdScaleGradeDisplayMode = "hidden" | "completed" | "submitted" | "graded"
@@ -90,6 +112,7 @@ export interface AimdFieldMeta {
   enumOptions?: Array<{ label: string; value: unknown }>
   disabled?: boolean
   placeholder?: string
+  accept?: string              // native file input accept string for file-like vars
   assigner?: { mode: AimdAssignerMode }
 }
 
@@ -160,6 +183,8 @@ export interface AimdTypePluginRenderContext extends AimdTypePluginValueContext 
   assignerControl?: VNode
   assignerStatus?: VNode
   assignerError?: string
+  uploadFile?: AimdFileUploadHandler
+  resolveFile?: (src: string) => string | null
   emitChange: (value: unknown) => void
   emitBlur: () => void
 }

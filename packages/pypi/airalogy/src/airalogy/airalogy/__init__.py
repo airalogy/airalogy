@@ -1,36 +1,61 @@
 import base64
 import os
+import warnings
+from typing import Optional
 
 import httpx
 
 
 class Airalogy:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        protocol_id: Optional[str] = None,
+    ) -> None:
         """
-        Initialize the Airalogy client using environment variables.
+        Initialize the Airalogy client.
+
+        Explicit constructor values take precedence over environment variables.
 
         Required environment variables:
-          - AIRALOGY_ENDPOINT
+          - AIRALOGY_BASE_URL or AIRALOGY_ENDPOINT
           - AIRALOGY_API_KEY
-          - AIRALOGY_PROTOCOL_ID
+          - AIRALOGY_PROTOCOL_ID (required for upload and record APIs)
 
         Returns:
             None
 
         Raises:
-            ValueError: If any of the required environment variables are not set.
+            ValueError: If required client configuration is not set.
         """
-        if "AIRALOGY_ENDPOINT" not in os.environ:
-            raise ValueError("AIRALOGY_ENDPOINT is not set")
-        self._airalogy_endpoint = os.environ["AIRALOGY_ENDPOINT"]
+        legacy_endpoint = os.environ.get("AIRALOGY_ENDPOINT")
+        resolved_base_url = (
+            (base_url.rstrip("/") if base_url else None)
+            or os.environ.get("AIRALOGY_BASE_URL")
+            or legacy_endpoint
+        )
+        if not resolved_base_url:
+            raise ValueError("AIRALOGY_BASE_URL or AIRALOGY_ENDPOINT is not set")
+        if base_url is None and os.environ.get("AIRALOGY_BASE_URL") is None and legacy_endpoint:
+            warnings.warn(
+                "AIRALOGY_ENDPOINT is deprecated; use AIRALOGY_BASE_URL instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self._airalogy_base_url = resolved_base_url.rstrip("/")
 
-        if "AIRALOGY_API_KEY" not in os.environ:
+        self._airalogy_api_key = api_key or os.environ.get("AIRALOGY_API_KEY")
+        if not self._airalogy_api_key:
             raise ValueError("AIRALOGY_API_KEY is not set")
-        self._airalogy_api_key = os.environ["AIRALOGY_API_KEY"]
 
-        if "AIRALOGY_PROTOCOL_ID" not in os.environ:
+        self._airalogy_protocol_id = protocol_id or os.environ.get("AIRALOGY_PROTOCOL_ID")
+
+    def _require_protocol_id(self) -> str:
+        if not self._airalogy_protocol_id:
             raise ValueError("AIRALOGY_PROTOCOL_ID is not set")
-        self._airalogy_protocol_id = os.environ["AIRALOGY_PROTOCOL_ID"]
+        return self._airalogy_protocol_id
 
     def download_file_bytes(self, file_id: str) -> bytes:
         """
@@ -47,7 +72,7 @@ class Airalogy:
         """
 
         res = httpx.get(
-            f"{self._airalogy_endpoint}/airalogy/download/{file_id}",
+            f"{self._airalogy_base_url}/airalogy/download/{file_id}",
             headers={"AIRALOGY-API-KEY": self._airalogy_api_key},
         )
 
@@ -90,7 +115,7 @@ class Airalogy:
         """
 
         res = httpx.get(
-            f"{self._airalogy_endpoint}/airalogy/get_file_url/{file_id}",
+            f"{self._airalogy_base_url}/airalogy/get_file_url/{file_id}",
             headers={"AIRALOGY-API-KEY": self._airalogy_api_key},
         )
 
@@ -120,10 +145,10 @@ class Airalogy:
         """
 
         res = httpx.post(
-            f"{self._airalogy_endpoint}/airalogy/upload",
+            f"{self._airalogy_base_url}/airalogy/upload",
             headers={"AIRALOGY-API-KEY": self._airalogy_api_key},
             files={"file": (file_name, file_bytes)},
-            data={"airalogy_protocol_id": self._airalogy_protocol_id},
+            data={"airalogy_protocol_id": self._require_protocol_id()},
         )
         if res.status_code != 200:
             raise Exception(f"Failed to upload, error: {res.content}")
@@ -165,9 +190,9 @@ class Airalogy:
         """
 
         res: httpx.Response = httpx.post(
-            f"{self._airalogy_endpoint}/airalogy/get_records",
+            f"{self._airalogy_base_url}/airalogy/get_records",
             json={
-                "airalogy_protocol_id": self._airalogy_protocol_id,
+                "airalogy_protocol_id": self._require_protocol_id(),
                 "airalogy_record_ids": record_ids,
             },
             headers={"AIRALOGY-API-KEY": self._airalogy_api_key},

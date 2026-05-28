@@ -9,6 +9,8 @@ import {
   formatDateTimeWithTimezone,
   normalizeDateTimeValueWithTimezone,
   formatDateForInput,
+  getFileDisplayName,
+  getFileInputConfig,
   getVarInputDisplayValue,
   parseVarInputValue,
   getNumericConstraintViolation,
@@ -17,6 +19,7 @@ import {
   calculateVarStackWidth,
   syncAutoWrapTextareaHeight,
   measureVarLabelWidth,
+  createSelectedFileValue,
 } from '../useVarHelpers'
 
 // ---------------------------------------------------------------------------
@@ -111,6 +114,74 @@ describe('getVarInputKind', () => {
     expect(getVarInputKind('str', { inputType: 'code', codeLanguage: 'python' })).toBe('code')
     expect(getVarInputKind('str', { inputType: 'yaml' })).toBe('code')
     expect(getVarInputKind('str', { codeLanguage: 'sql' })).toBe('code')
+  })
+
+  it('returns "file" for file-like AIMD types and metadata overrides', () => {
+    expect(getVarInputKind('FileIdCSV')).toBe('file')
+    expect(getVarInputKind('csv')).toBe('file')
+    expect(getVarInputKind('FileIdPNG')).toBe('file')
+    expect(getVarInputKind('image')).toBe('file')
+    expect(getVarInputKind('str', { inputType: 'audio' })).toBe('file')
+    expect(getVarInputKind('str', { kwargs: { file_extension: 'xlsx' } })).toBe('file')
+    expect(getVarInputKind('str', { fieldMeta: { accept: '.pdf' } })).toBe('file')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// File-like vars
+// ---------------------------------------------------------------------------
+
+describe('file-like var helpers', () => {
+  it('resolves accept strings and display badges for built-in file aliases', () => {
+    expect(getFileInputConfig('FileIdCSV')).toMatchObject({
+      kind: 'csv',
+      accept: '.csv,text/csv',
+      badge: 'CSV',
+    })
+    expect(getFileInputConfig('FileIdPNG')).toMatchObject({
+      kind: 'image',
+      accept: '.png,image/png',
+      badge: 'IMG',
+    })
+    expect(getFileInputConfig('str', undefined, { inputType: 'image' })).toMatchObject({
+      kind: 'image',
+      accept: 'image/*',
+      badge: 'IMG',
+    })
+  })
+
+  it('honors explicit accept and file extension metadata', () => {
+    expect(getFileInputConfig('str', { file_extension: 'xlsx' })).toMatchObject({
+      kind: 'document',
+      accept: '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      badge: 'DOC',
+    })
+    expect(getFileInputConfig('FileIdCSV', undefined, { accept: '.tsv,text/tab-separated-values' })).toMatchObject({
+      kind: 'csv',
+      accept: '.tsv,text/tab-separated-values',
+      badge: 'CSV',
+    })
+  })
+
+  it('extracts display names from file ids and structured file values', () => {
+    expect(getFileDisplayName('file-123')).toBe('file-123')
+    expect(getFileDisplayName({ name: 'dose.csv' })).toBe('dose.csv')
+    expect(getFileDisplayName({ value: { file_name: 'chart.svg' } })).toBe('chart.svg')
+  })
+
+  it('creates serializable selected-file metadata when no host upload handler is provided', () => {
+    const file = new File(['a,b\n1,2'], 'dose.csv', {
+      type: 'text/csv',
+      lastModified: 123,
+    })
+
+    expect(createSelectedFileValue(file)).toEqual({
+      format: 'airalogy_selected_file_v1',
+      name: 'dose.csv',
+      type: 'text/csv',
+      size: 7,
+      lastModified: 123,
+    })
   })
 })
 

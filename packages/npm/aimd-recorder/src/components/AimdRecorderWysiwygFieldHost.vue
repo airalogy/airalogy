@@ -36,6 +36,7 @@ const renderedContent = computed(() => (
       :custom-renderers="surfaceState.customRenderers"
       :field-adapters="surfaceState.fieldAdapters"
       :resolve-file="surfaceState.resolveFile"
+      :upload-file="surfaceState.uploadFile"
       :type-plugins="surfaceState.typePlugins"
       @update:model-value="surfaceState.onUpdateRecord"
       @fields-change="surfaceState.onFieldsChange?.($event)"
