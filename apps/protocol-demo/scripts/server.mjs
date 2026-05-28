@@ -1,5 +1,5 @@
 import { createReadStream, existsSync } from 'node:fs'
-import { readFile, stat } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -11,6 +11,7 @@ const monorepoRoot = path.resolve(appRoot, '../..')
 const protocolRoot = path.join(monorepoRoot, 'examples/protocols')
 const registryPath = path.join(protocolRoot, 'index.json')
 const distRoot = path.join(appRoot, 'dist')
+const draftRoot = path.join(monorepoRoot, 'protocol-demo-tmp')
 const defaultRootfsPath = path.join(
   monorepoRoot,
   'packages/runtime/airalogy-engine-image/airalogy-engine-image',
@@ -19,6 +20,7 @@ const defaultImage = 'numbcoder/airalogy-engine:0.1'
 const port = Number(process.env.PORT ?? process.env.PROTOCOL_DEMO_PORT ?? 5190)
 const isDev = process.argv.includes('--dev') || !process.argv.includes('--prod')
 const jsonLimitBytes = 1_000_000
+const draftCleanupDelayMs = 60_000
 let engineModulePromise
 
 function sendJson(res, status, payload) {
@@ -46,6 +48,68 @@ function safeResolve(root, relativePath) {
     throw new Error(`Path escapes protocol root: ${relativePath}`)
   }
   return resolved
+}
+
+function normalizeDraftRelativePath(value) {
+  if (typeof value !== 'string') {
+    throw new Error('Draft source file path must be a string')
+  }
+
+  const normalized = path.posix.normalize(value.replace(/\\/g, '/').replace(/^\/+/, ''))
+  if (
+    !normalized
+    || normalized === '.'
+    || normalized === '..'
+    || normalized.startsWith('../')
+    || path.isAbsolute(normalized)
+  ) {
+    throw new Error(`Invalid draft source file path: ${value}`)
+  }
+
+  return normalized
+}
+
+function normalizeDraftSourceFiles(value) {
+  if (value === undefined) {
+    return null
+  }
+  if (!Array.isArray(value)) {
+    throw new Error('Draft source files must be an array')
+  }
+
+  return value.map((file) => {
+    if (!isPlainObject(file)) {
+      throw new Error('Draft source file must be an object')
+    }
+    if (typeof file.content !== 'string') {
+      throw new Error('Draft source file content must be a string')
+    }
+
+    return {
+      relativePath: normalizeDraftRelativePath(file.relativePath),
+      content: file.content,
+    }
+  })
+}
+
+async function createDraftProtocolDir(sourceFiles) {
+  await mkdir(draftRoot, { recursive: true })
+  const draftProtocolDir = await mkdtemp(path.join(draftRoot, 'protocol-'))
+
+  for (const file of sourceFiles) {
+    const targetPath = safeResolve(draftProtocolDir, file.relativePath)
+    await mkdir(path.dirname(targetPath), { recursive: true })
+    await writeFile(targetPath, file.content, 'utf8')
+  }
+
+  return draftProtocolDir
+}
+
+function scheduleDraftProtocolDirCleanup(draftProtocolDir) {
+  const timer = setTimeout(() => {
+    void rm(draftProtocolDir, { recursive: true, force: true }).catch(() => undefined)
+  }, draftCleanupDelayMs)
+  timer.unref?.()
 }
 
 function sanitizeEnvVars(value) {
@@ -242,31 +306,44 @@ async function callEngine(action, protocolDir, body) {
   const engine = await loadEngineModule()
   const envVars = sanitizeEnvVars(body.envVars)
   const options = resolveSandboxOptions(body.sandbox)
+  const draftSourceFiles = normalizeDraftSourceFiles(body.sourceFiles)
+  let draftProtocolDir
 
-  if (action === 'parse') {
-    return envVars
-      ? engine.parseProtocol(protocolDir, envVars, options)
-      : engine.parseProtocol(protocolDir, options)
+  if (draftSourceFiles) {
+    draftProtocolDir = await createDraftProtocolDir(draftSourceFiles)
+    protocolDir = draftProtocolDir
   }
 
-  if (action === 'assign') {
-    if (typeof body.varName !== 'string' || !body.varName.trim()) {
-      throw new Error('varName is required')
+  try {
+    if (action === 'parse') {
+      return envVars
+        ? engine.parseProtocol(protocolDir, envVars, options)
+        : engine.parseProtocol(protocolDir, options)
     }
-    const dependentData = isPlainObject(body.dependentData) ? body.dependentData : {}
-    return envVars
-      ? engine.assignVariable(protocolDir, body.varName.trim(), dependentData, envVars, options)
-      : engine.assignVariable(protocolDir, body.varName.trim(), dependentData, options)
-  }
 
-  if (action === 'validate') {
-    const vars = isPlainObject(body.vars) ? body.vars : {}
-    return envVars
-      ? engine.validateVariables(protocolDir, vars, envVars, options)
-      : engine.validateVariables(protocolDir, vars, options)
-  }
+    if (action === 'assign') {
+      if (typeof body.varName !== 'string' || !body.varName.trim()) {
+        throw new Error('varName is required')
+      }
+      const dependentData = isPlainObject(body.dependentData) ? body.dependentData : {}
+      return envVars
+        ? engine.assignVariable(protocolDir, body.varName.trim(), dependentData, envVars, options)
+        : engine.assignVariable(protocolDir, body.varName.trim(), dependentData, options)
+    }
 
-  throw new Error(`Unknown engine action: ${action}`)
+    if (action === 'validate') {
+      const vars = isPlainObject(body.vars) ? body.vars : {}
+      return envVars
+        ? engine.validateVariables(protocolDir, vars, envVars, options)
+        : engine.validateVariables(protocolDir, vars, options)
+    }
+
+    throw new Error(`Unknown engine action: ${action}`)
+  } finally {
+    if (draftProtocolDir) {
+      scheduleDraftProtocolDirCleanup(draftProtocolDir)
+    }
+  }
 }
 
 async function healthPayload() {

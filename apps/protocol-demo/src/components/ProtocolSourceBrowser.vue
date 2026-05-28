@@ -41,12 +41,15 @@ const props = withDefaults(defineProps<{
   modelValue: string
   rootLabel?: string
   labels: ProtocolSourceBrowserLabels
+  readonly?: boolean
 }>(), {
   rootLabel: 'protocol/',
+  readonly: false,
 })
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void
+  (event: 'content-change', payload: { path: string, content: string }): void
 }>()
 
 const editorContainer = ref<HTMLElement | null>(null)
@@ -126,6 +129,14 @@ function selectFile(path: string) {
   if (path !== props.modelValue) {
     emit('update:modelValue', path)
   }
+}
+
+function emitSelectedContentChange(content: string) {
+  if (!selectedFile.value) return
+  emit('content-change', {
+    path: selectedFile.value.path,
+    content,
+  })
 }
 
 function languageFromPath(path: string) {
@@ -331,8 +342,8 @@ async function createEditor() {
   monacoEditor = monacoModule.editor.create(editorContainer.value, {
     model: monacoModel,
     theme: 'protocol-source-light',
-    readOnly: true,
-    domReadOnly: true,
+    readOnly: props.readonly,
+    domReadOnly: props.readonly,
     automaticLayout: true,
     minimap: { enabled: false },
     fontSize: 12,
@@ -343,6 +354,10 @@ async function createEditor() {
     scrollBeyondLastLine: false,
     tabSize: 2,
     wordWrap: 'on',
+  })
+  monacoEditor.onDidChangeModelContent(() => {
+    if (isSyncingModel || !monacoModel) return
+    emitSelectedContentChange(monacoModel.getValue())
   })
 }
 
@@ -404,6 +419,13 @@ watch(selectedContent, (content) => {
 watch(selectedLanguage, (language) => {
   void updateEditorLanguage(language)
 })
+
+watch(() => props.readonly, (readonly) => {
+  monacoEditor?.updateOptions({
+    readOnly: readonly,
+    domReadOnly: readonly,
+  })
+})
 </script>
 
 <template>
@@ -446,7 +468,14 @@ watch(selectedLanguage, (language) => {
       </div>
       <div class="protocol-source-browser__editor-shell">
         <div v-if="loading" class="protocol-source-browser__loading">{{ labels.loading }}</div>
-        <pre v-if="loadFailed" class="protocol-source-browser__fallback"><code>{{ selectedContent }}</code></pre>
+        <textarea
+          v-if="loadFailed"
+          class="protocol-source-browser__fallback"
+          :readonly="readonly"
+          :value="selectedContent"
+          spellcheck="false"
+          @input="emitSelectedContentChange(($event.target as HTMLTextAreaElement).value)"
+        ></textarea>
         <div v-else ref="editorContainer" class="protocol-source-browser__editor"></div>
       </div>
     </div>
@@ -620,15 +649,19 @@ watch(selectedLanguage, (language) => {
 
 .protocol-source-browser__fallback {
   overflow: auto;
+  width: 100%;
   min-height: 460px;
   max-height: 65vh;
   margin: 0;
+  border: 0;
   padding: 14px;
   background: #111827;
   color: #dbeafe;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   line-height: 1.55;
+  outline: 0;
+  resize: none;
   white-space: pre-wrap;
 }
 

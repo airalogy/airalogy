@@ -70,6 +70,9 @@ export interface ProtocolDemoMessages {
     files: string
     empty: string
     loading: string
+    draftHint: string
+    draftActive: string
+    resetDraft: string
   }
   record: {
     reset: string
@@ -167,6 +170,9 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       files: 'Protocol files',
       empty: 'No source files',
       loading: 'Loading source viewer',
+      draftHint: 'Edits are temporary and run only in this demo.',
+      draftActive: 'Running with temporary source edits',
+      resetDraft: 'Reset source',
     },
     record: {
       reset: 'Reset',
@@ -262,6 +268,9 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       files: '协议文件',
       empty: '没有源码文件',
       loading: '正在加载源码视图',
+      draftHint: '源码修改仅保存在当前页面，用于本次试运行。',
+      draftActive: '正在使用临时源码草稿',
+      resetDraft: '恢复示例源码',
     },
     record: {
       reset: '重置',

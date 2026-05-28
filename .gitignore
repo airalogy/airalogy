@@ -187,3 +187,5 @@ cython_debug/
 #.idea/
 
 .DS_Store
+.tmp/
+protocol-demo-tmp/

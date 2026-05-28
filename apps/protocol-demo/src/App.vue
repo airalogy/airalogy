@@ -31,6 +31,11 @@ interface SourceFile {
   language: string
 }
 
+interface SourceDraftFile {
+  relativePath: string
+  content: string
+}
+
 interface ProtocolVariant {
   locale: string
   protocolDir: string
@@ -91,6 +96,7 @@ const selectedProtocolId = ref('')
 const selectedLocale = ref('')
 const activeTab = ref<'record' | 'source' | 'engine'>('record')
 const selectedSourcePath = ref('')
+const sourceDrafts = ref<Record<string, string>>({})
 const sourceContent = ref('')
 const recordData = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 const recorderKey = ref(0)
@@ -170,6 +176,25 @@ const sourceFiles = computed<SourceFile[]>(() => {
   }
 
   return files
+})
+
+const hasSourceDraftChanges = computed(() => (
+  sourceFiles.value.some((file) => Object.prototype.hasOwnProperty.call(sourceDrafts.value, file.path))
+))
+
+const recordSourceContent = computed({
+  get: () => sourceContent.value,
+  set: (content: string) => {
+    handleRecordSourceContentChange(content)
+  },
+})
+
+const draftSourceFiles = computed<SourceDraftFile[] | undefined>(() => {
+  if (!hasSourceDraftChanges.value) return undefined
+  return sourceFiles.value.map((file) => ({
+    relativePath: file.relativePath,
+    content: file.content,
+  }))
 })
 
 const parseAssigners = computed(() => {
@@ -268,9 +293,82 @@ function appendSourceFile(
   files.push({
     path: pathValue,
     relativePath,
-    content: content ?? '',
+    content: sourceContentForPath(pathValue, content),
     language: sourceFileLanguage(relativePath),
   })
+}
+
+function originalSourceContent(pathValue: string) {
+  const variant = selectedVariant.value
+  if (!variant) return ''
+  if (pathValue === variant.aimdPath) return variant.aimd ?? ''
+  if (pathValue === variant.tomlPath) return variant.toml ?? ''
+  if (pathValue === variant.assignerPath) return variant.assigner ?? ''
+  return variant.sampleData.find((sample) => sample.path === pathValue)?.content ?? ''
+}
+
+function sourceContentForPath(pathValue: string, originalContent: string | null | undefined) {
+  return sourceDrafts.value[pathValue] ?? originalContent ?? ''
+}
+
+function clearCurrentSourceDrafts() {
+  const currentPaths = new Set(sourceFiles.value.map((file) => file.path))
+  if (currentPaths.size === 0) return
+
+  const nextDrafts = { ...sourceDrafts.value }
+  for (const pathValue of currentPaths) {
+    delete nextDrafts[pathValue]
+  }
+  sourceDrafts.value = nextDrafts
+}
+
+function resetRuntimeState() {
+  recordData.value = createEmptyProtocolRecordData()
+  fieldRuntimeState.value = {}
+  engineStatusState.value = { type: 'idle' }
+  lastEngineResult.value = null
+  parseResult.value = null
+  assignerTarget.value = ''
+  recorderKey.value += 1
+}
+
+function resetEngineExecutionState() {
+  fieldRuntimeState.value = {}
+  engineStatusState.value = { type: 'idle' }
+  lastEngineResult.value = null
+  parseResult.value = null
+  assignerTarget.value = ''
+}
+
+function updateSourceDraft(pathValue: string, content: string) {
+  const originalContent = originalSourceContent(pathValue)
+  const nextDrafts = { ...sourceDrafts.value }
+
+  if (content === originalContent) {
+    delete nextDrafts[pathValue]
+  } else {
+    nextDrafts[pathValue] = content
+  }
+
+  sourceDrafts.value = nextDrafts
+}
+
+function handleSourceContentChange(payload: { path: string, content: string }) {
+  updateSourceDraft(payload.path, payload.content)
+
+  if (payload.path === selectedVariant.value?.aimdPath) {
+    sourceContent.value = payload.content
+  }
+  resetRuntimeState()
+}
+
+function handleRecordSourceContentChange(content: string) {
+  const aimdPath = selectedVariant.value?.aimdPath
+  sourceContent.value = content
+  if (aimdPath) {
+    updateSourceDraft(aimdPath, content)
+  }
+  resetEngineExecutionState()
 }
 
 function bestProtocolLocale(protocol: ProtocolExample | undefined, preferredLocale: string) {
@@ -312,16 +410,14 @@ async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   return payload as T
 }
 
-function resetProtocolState() {
+function resetProtocolState(resetSourceDrafts = false) {
   const variant = selectedVariant.value
-  sourceContent.value = variant?.aimd ?? ''
-  recordData.value = createEmptyProtocolRecordData()
-  fieldRuntimeState.value = {}
-  engineStatusState.value = { type: 'idle' }
-  lastEngineResult.value = null
-  parseResult.value = null
+  if (resetSourceDrafts) {
+    clearCurrentSourceDrafts()
+  }
+  sourceContent.value = variant?.aimdPath ? sourceContentForPath(variant.aimdPath, variant.aimd) : ''
+  resetRuntimeState()
   selectedSourcePath.value = variant?.aimdPath ?? sourceFiles.value[0]?.path ?? ''
-  recorderKey.value += 1
 }
 
 function parseEnvVars() {
@@ -358,6 +454,7 @@ async function postEngine<T>(action: 'parse' | 'assign' | 'validate', body: Reco
         ...body,
         envVars: parseEnvVars(),
         sandbox: sandboxPayload.value,
+        sourceFiles: draftSourceFiles.value,
       }),
     },
   )
@@ -674,15 +771,27 @@ onMounted(() => {
 
         <section v-if="activeTab === 'record'" class="record-panel">
           <div class="record-toolbar">
-            <button type="button" @click="resetProtocolState">{{ messages.record.reset }}</button>
-            <button type="button" :disabled="engineBusy" @click="runValidate">
-              {{ messages.record.validateVars }}
-            </button>
+            <span :class="['source-draft-state', { active: hasSourceDraftChanges }]">
+              {{ hasSourceDraftChanges ? messages.source.draftActive : messages.source.draftHint }}
+            </span>
+            <div class="record-toolbar__actions">
+              <button
+                type="button"
+                :disabled="!hasSourceDraftChanges"
+                @click="resetProtocolState(true)"
+              >
+                {{ messages.source.resetDraft }}
+              </button>
+              <button type="button" @click="resetProtocolState">{{ messages.record.reset }}</button>
+              <button type="button" :disabled="engineBusy" @click="runValidate">
+                {{ messages.record.validateVars }}
+              </button>
+            </div>
           </div>
           <AimdRecorderEditor
             :key="recorderKey"
             v-model="recordData"
-            v-model:content="sourceContent"
+            v-model:content="recordSourceContent"
             :locale="selectedLocale"
             :field-state="fieldState"
             :show-record-data="true"
@@ -691,7 +800,6 @@ onMounted(() => {
             :fit-viewport="false"
             :editor-min-height="520"
             :recorder-min-height="520"
-            :editor-props="{ readonly: true }"
             editor-title="protocol.aimd"
             :recorder-title="messages.record.recorderTitle"
             :record-data-title="messages.record.recordDataTitle"
@@ -700,11 +808,24 @@ onMounted(() => {
         </section>
 
         <section v-else-if="activeTab === 'source'" class="source-panel">
+          <div class="source-toolbar">
+            <span :class="['source-draft-state', { active: hasSourceDraftChanges }]">
+              {{ hasSourceDraftChanges ? messages.source.draftActive : messages.source.draftHint }}
+            </span>
+            <button
+              type="button"
+              :disabled="!hasSourceDraftChanges"
+              @click="resetProtocolState(true)"
+            >
+              {{ messages.source.resetDraft }}
+            </button>
+          </div>
           <ProtocolSourceBrowser
             v-model="selectedSourcePath"
             :files="sourceFiles"
             :labels="messages.source"
             :root-label="sourceRootLabel"
+            @content-change="handleSourceContentChange"
           />
         </section>
 
@@ -1057,7 +1178,8 @@ textarea {
 
 .tabbar,
 .engine-control-group,
-.record-toolbar {
+.record-toolbar,
+.source-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1069,7 +1191,8 @@ textarea {
 
 .tabbar button,
 .engine-control-group button,
-.record-toolbar button {
+.record-toolbar button,
+.source-toolbar button {
   min-height: 34px;
   padding: 0 12px;
   border: 1px solid #bcccdc;
@@ -1105,8 +1228,31 @@ button:disabled {
 }
 
 .record-toolbar {
+  align-items: center;
   justify-content: flex-end;
   margin-bottom: 12px;
+}
+
+.record-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.source-toolbar {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.source-draft-state {
+  color: #627d98;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.source-draft-state.active {
+  color: #276749;
 }
 
 .source-panel,
