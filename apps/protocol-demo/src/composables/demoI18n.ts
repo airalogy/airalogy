@@ -66,8 +66,9 @@ export interface ProtocolDemoMessages {
     source: string
     engine: string
   }
-  sourceTabs: {
-    sampleData: string
+  source: {
+    files: string
+    empty: string
   }
   record: {
     reset: string
@@ -161,8 +162,9 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       source: 'Source',
       engine: 'Engine',
     },
-    sourceTabs: {
-      sampleData: 'sample data',
+    source: {
+      files: 'Protocol files',
+      empty: 'No source files',
     },
     record: {
       reset: 'Reset',
@@ -254,8 +256,9 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       source: '源码',
       engine: '引擎',
     },
-    sourceTabs: {
-      sampleData: '示例数据',
+    source: {
+      files: '协议文件',
+      empty: '没有源码文件',
     },
     record: {
       reset: '重置',

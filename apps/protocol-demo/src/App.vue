@@ -21,6 +21,22 @@ type EngineStatusState =
   | { type: 'running' | 'complete', action: EngineAction }
   | { type: 'selectAssignerTarget' }
   | { type: 'message', message: string }
+type SourceFileKind = 'aimd' | 'toml' | 'python' | 'csv' | 'text'
+
+interface SourceFile {
+  path: string
+  relativePath: string
+  content: string
+  kind: SourceFileKind
+}
+
+interface SourceTreeRow {
+  key: string
+  type: 'folder' | 'file'
+  label: string
+  depth: number
+  file?: SourceFile
+}
 
 interface ProtocolVariant {
   locale: string
@@ -81,7 +97,7 @@ const messages = useDemoMessages()
 const selectedProtocolId = ref('')
 const selectedLocale = ref('')
 const activeTab = ref<'record' | 'source' | 'engine'>('record')
-const activeSourceTab = ref<'aimd' | 'toml' | 'assigner' | 'sample'>('aimd')
+const selectedSourcePath = ref('')
 const sourceContent = ref('')
 const recordData = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 const recorderKey = ref(0)
@@ -142,45 +158,73 @@ const engineSummary = computed(() => {
   return `${health.value.mode}${health.value.rootfs.exists ? ` / ${text.localRootfs}` : ` / ${text.image}`}`
 })
 
-const sourceTabs = computed(() => {
-  const tabs: Array<{ key: 'aimd' | 'toml' | 'assigner' | 'sample', label: string }> = [
-    { key: 'aimd', label: 'protocol.aimd' },
-    { key: 'toml', label: 'protocol.toml' },
-  ]
-
-  if (selectedVariant.value?.assigner) {
-    tabs.push({ key: 'assigner', label: 'assigner.py' })
-  }
-  if ((selectedVariant.value?.sampleData.length ?? 0) > 0) {
-    tabs.push({ key: 'sample', label: messages.value.sourceTabs.sampleData })
-  }
-
-  return tabs
-})
-
-const activeSourceContent = computed(() => {
+const sourceRootLabel = computed(() => {
   const variant = selectedVariant.value
-  if (!variant) return ''
+  return variant?.protocolDir ? `${variant.protocolDir}/` : 'protocol/'
+})
 
-  if (activeSourceTab.value === 'toml') return variant.toml ?? ''
-  if (activeSourceTab.value === 'assigner') return variant.assigner ?? ''
-  if (activeSourceTab.value === 'sample') {
-    return variant.sampleData
-      .map((sample) => [`# ${sample.path}`, sample.content ?? ''].join('\n'))
-      .join('\n\n')
+const sourceFiles = computed<SourceFile[]>(() => {
+  const variant = selectedVariant.value
+  if (!variant) return []
+
+  const files: SourceFile[] = []
+  appendSourceFile(files, variant.aimdPath, variant.aimd, variant.protocolDir)
+  appendSourceFile(files, variant.tomlPath, variant.toml, variant.protocolDir)
+  appendSourceFile(files, variant.assignerPath, variant.assigner, variant.protocolDir)
+
+  for (const sample of variant.sampleData) {
+    appendSourceFile(files, sample.path, sample.content, variant.protocolDir)
   }
 
-  return variant.aimd ?? ''
+  return files
 })
 
-const activeSourcePath = computed(() => {
-  const variant = selectedVariant.value
-  if (!variant) return ''
-  if (activeSourceTab.value === 'toml') return variant.tomlPath ?? ''
-  if (activeSourceTab.value === 'assigner') return variant.assignerPath ?? ''
-  if (activeSourceTab.value === 'sample') return variant.sampleData.map((sample) => sample.path).join(', ')
-  return variant.aimdPath ?? ''
+const sourceTreeRows = computed<SourceTreeRow[]>(() => {
+  const rows: SourceTreeRow[] = []
+  const seenFolders = new Set<string>()
+
+  for (const file of sourceFiles.value) {
+    const segments = file.relativePath.split('/').filter(Boolean)
+    let prefix = ''
+
+    for (let index = 0; index < segments.length - 1; index += 1) {
+      prefix = prefix ? `${prefix}/${segments[index]}` : segments[index]
+      if (!seenFolders.has(prefix)) {
+        seenFolders.add(prefix)
+        rows.push({
+          key: `folder:${prefix}`,
+          type: 'folder',
+          label: segments[index],
+          depth: index + 1,
+        })
+      }
+    }
+
+    rows.push({
+      key: `file:${file.path}`,
+      type: 'file',
+      label: segments[segments.length - 1] ?? file.relativePath,
+      depth: Math.max(1, segments.length),
+      file,
+    })
+  }
+
+  return rows
 })
+
+const selectedSourceFile = computed(() => (
+  sourceFiles.value.find((file) => file.path === selectedSourcePath.value)
+  ?? sourceFiles.value[0]
+  ?? null
+))
+
+const selectedSourceContent = computed(() => selectedSourceFile.value?.content ?? '')
+
+const selectedSourceDisplayPath = computed(() => selectedSourceFile.value?.path ?? '')
+
+const selectedSourceKind = computed(() => selectedSourceFile.value?.kind ?? 'text')
+
+const selectedSourceRelativePath = computed(() => selectedSourceFile.value?.relativePath ?? '')
 
 const parseAssigners = computed(() => {
   const data = parseResult.value?.data
@@ -243,6 +287,43 @@ function protocolLocaleLabel(locale: string) {
   return `${messages.value.app.localeNames[normalized]} (${locale})`
 }
 
+function sourceFileKind(pathValue: string): SourceFileKind {
+  const lowerPath = pathValue.toLowerCase()
+  if (lowerPath.endsWith('.aimd')) return 'aimd'
+  if (lowerPath.endsWith('.toml')) return 'toml'
+  if (lowerPath.endsWith('.py')) return 'python'
+  if (lowerPath.endsWith('.csv')) return 'csv'
+  return 'text'
+}
+
+function relativeProtocolPath(pathValue: string, protocolDir?: string) {
+  const normalizedPath = pathValue.replace(/^\/+/, '')
+  const normalizedDir = protocolDir?.replace(/^\/+|\/+$/g, '')
+
+  if (normalizedDir && normalizedPath.startsWith(`${normalizedDir}/`)) {
+    return normalizedPath.slice(normalizedDir.length + 1)
+  }
+
+  const segments = normalizedPath.split('/')
+  return segments[segments.length - 1] ?? normalizedPath
+}
+
+function appendSourceFile(
+  files: SourceFile[],
+  pathValue: string | undefined,
+  content: string | null | undefined,
+  protocolDir?: string,
+) {
+  if (!pathValue) return
+  const relativePath = relativeProtocolPath(pathValue, protocolDir)
+  files.push({
+    path: pathValue,
+    relativePath,
+    content: content ?? '',
+    kind: sourceFileKind(relativePath),
+  })
+}
+
 function bestProtocolLocale(protocol: ProtocolExample | undefined, preferredLocale: string) {
   if (!protocol) return ''
   const normalizedPreferred = normalizeDemoLocale(preferredLocale)
@@ -290,7 +371,7 @@ function resetProtocolState() {
   engineStatusState.value = { type: 'idle' }
   lastEngineResult.value = null
   parseResult.value = null
-  activeSourceTab.value = 'aimd'
+  selectedSourcePath.value = variant?.aimdPath ?? sourceFiles.value[0]?.path ?? ''
   recorderKey.value += 1
 }
 
@@ -508,6 +589,17 @@ watch(selectedVariant, () => {
   resetProtocolState()
 })
 
+watch(sourceFiles, (files) => {
+  if (files.length === 0) {
+    selectedSourcePath.value = ''
+    return
+  }
+
+  if (!files.some((file) => file.path === selectedSourcePath.value)) {
+    selectedSourcePath.value = files[0].path
+  }
+}, { immediate: true })
+
 watch(parseAssigners, (assigners) => {
   if (assigners.length > 0 && !assigners.includes(assignerTarget.value)) {
     assignerTarget.value = assigners[0]
@@ -656,19 +748,46 @@ onMounted(() => {
         </section>
 
         <section v-else-if="activeTab === 'source'" class="source-panel">
-          <div class="source-tabs">
-            <button
-              v-for="tab in sourceTabs"
-              :key="tab.key"
-              :class="{ active: activeSourceTab === tab.key }"
-              type="button"
-              @click="activeSourceTab = tab.key"
-            >
-              {{ tab.label }}
-            </button>
+          <div class="source-layout">
+            <aside class="source-tree" :aria-label="messages.source.files">
+              <div class="source-tree-root">
+                <span class="source-tree-glyph folder" aria-hidden="true"></span>
+                <span>{{ sourceRootLabel }}</span>
+              </div>
+              <template v-if="sourceTreeRows.length > 0">
+                <template v-for="row in sourceTreeRows" :key="row.key">
+                  <button
+                    v-if="row.type === 'file' && row.file"
+                    :class="{ active: selectedSourcePath === row.file.path }"
+                    :style="{ paddingLeft: `${10 + row.depth * 16}px` }"
+                    class="source-tree-node file"
+                    type="button"
+                    @click="selectedSourcePath = row.file.path"
+                  >
+                    <span class="source-tree-glyph file" aria-hidden="true"></span>
+                    <span>{{ row.label }}</span>
+                  </button>
+                  <div
+                    v-else
+                    :style="{ paddingLeft: `${10 + row.depth * 16}px` }"
+                    class="source-tree-node folder"
+                  >
+                    <span class="source-tree-glyph folder" aria-hidden="true"></span>
+                    <span>{{ row.label }}</span>
+                  </div>
+                </template>
+              </template>
+              <div v-else class="source-tree-empty">{{ messages.source.empty }}</div>
+            </aside>
+
+            <div class="source-viewer">
+              <div class="source-path">
+                <span>{{ selectedSourceRelativePath }}</span>
+                <span>{{ selectedSourceDisplayPath }}</span>
+              </div>
+              <pre :class="['code-view', `code-view--${selectedSourceKind}`]"><code>{{ selectedSourceContent }}</code></pre>
+            </div>
           </div>
-          <div class="source-path">{{ activeSourcePath }}</div>
-          <pre class="code-view"><code>{{ activeSourceContent }}</code></pre>
         </section>
 
         <section v-else class="engine-panel">
@@ -1005,7 +1124,6 @@ textarea {
 }
 
 .tabbar,
-.source-tabs,
 .engine-control-group,
 .record-toolbar {
   display: flex;
@@ -1018,7 +1136,6 @@ textarea {
 }
 
 .tabbar button,
-.source-tabs button,
 .engine-control-group button,
 .record-toolbar button {
   min-height: 34px;
@@ -1038,8 +1155,7 @@ textarea {
   border-radius: 7px 7px 0 0;
 }
 
-.tabbar button.active,
-.source-tabs button.active {
+.tabbar button.active {
   border-color: #2f855a;
   background: #e6f4ea;
   color: #276749;
@@ -1068,13 +1184,141 @@ button:disabled {
   gap: 12px;
 }
 
-.source-path {
+.source-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.source-tree {
+  overflow: auto;
+  min-width: 0;
+  max-height: 65vh;
+  padding: 8px;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.source-tree-root,
+.source-tree-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #334e68;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  text-align: left;
+}
+
+.source-tree-root {
+  padding: 0 10px;
+  color: #243b53;
+  font-weight: 700;
+}
+
+.source-tree-node.file {
+  cursor: pointer;
+}
+
+.source-tree-node.file:hover {
+  background: #f0f4f8;
+}
+
+.source-tree-node.file.active {
+  background: #e6f4ea;
+  color: #276749;
+  font-weight: 700;
+}
+
+.source-tree-root span:last-child,
+.source-tree-node span:last-child {
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-tree-glyph {
+  position: relative;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 12px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  opacity: 0.72;
+}
+
+.source-tree-glyph.folder::before {
+  position: absolute;
+  top: -5px;
+  left: -1.5px;
+  width: 7px;
+  height: 4px;
+  border: 1.5px solid currentColor;
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
+  background: #ffffff;
+  content: "";
+}
+
+.source-tree-glyph.file {
+  height: 15px;
+  border-radius: 2px;
+}
+
+.source-tree-glyph.file::before {
+  position: absolute;
+  top: -1.5px;
+  right: -1.5px;
+  width: 5px;
+  height: 5px;
+  border-left: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  background: #ffffff;
+  content: "";
+}
+
+.source-tree-empty {
+  padding: 8px 10px;
+  color: #829ab1;
+  font-size: 12px;
+}
+
+.source-viewer {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.source-path {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
   color: #627d98;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
+}
+
+.source-path span {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.source-path span:first-child {
+  color: #243b53;
+  font-weight: 700;
+}
+
+.source-path span:last-child {
+  text-align: right;
 }
 
 .code-view,
@@ -1092,6 +1336,10 @@ button:disabled {
   font-size: 12px;
   line-height: 1.55;
   white-space: pre-wrap;
+}
+
+.source-viewer .code-view {
+  min-height: 460px;
 }
 
 .engine-controls {
@@ -1156,8 +1404,13 @@ button:disabled {
 
   .engine-form-grid,
   .metadata-row,
-  .engine-output-grid {
+  .engine-output-grid,
+  .source-layout {
     grid-template-columns: 1fr;
+  }
+
+  .source-tree {
+    max-height: 260px;
   }
 }
 
