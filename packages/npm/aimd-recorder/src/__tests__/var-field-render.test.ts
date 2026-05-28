@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { mount } from '@vue/test-utils'
+import { h } from 'vue'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AimdVarNode, AimdVarTableNode } from '@airalogy/aimd-core/types'
 
@@ -124,6 +125,158 @@ describe('AimdVarField render behavior', () => {
       type: 'FileIdCSV',
       inputKind: 'file',
     })
+  })
+
+  it('places file assigner actions in the field header instead of the file card body', () => {
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'dose_response_file',
+      raw: '{{var|dose_response_file}}',
+      definition: {
+        id: 'dose_response_file',
+        type: 'FileIdCSV',
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '',
+        inputKind: 'file',
+        initialized: true,
+        assignerControl: h('button', { class: 'assigner-test-button', type: 'button' }, 'run'),
+        assignerStatus: h('span', { class: 'assigner-test-status' }, 'idle'),
+      },
+    })
+
+    expect(wrapper.find('.aimd-rec-inline__header-assigner-actions').exists()).toBe(true)
+    expect(wrapper.find('.aimd-rec-inline__header-assigner-action .assigner-test-button').exists()).toBe(true)
+    expect(wrapper.find('.aimd-rec-inline__header-assigner-state .assigner-test-status').exists()).toBe(true)
+    expect(wrapper.find('.aimd-rec-inline__control-row').exists()).toBe(false)
+    expect(recorderSource).toContain('.aimd-rec-inline__header-assigner-actions')
+  })
+
+  it('shows file ids as user-facing file cards instead of raw ids', async () => {
+    const fileId = 'airalogy.id.file.11111111-1111-1111-1111-111111111111'
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      text: async () => 't_min,area_a,area_p\n0,1000,0\n5,800,200\n',
+    })))
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'dose_response_file',
+      raw: '{{var|dose_response_file}}',
+      definition: {
+        id: 'dose_response_file',
+        type: 'FileIdCSV',
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        value: fileId as any,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '',
+        inputKind: 'file',
+        initialized: true,
+        resolveFile: (src: string) => `/api/files/${src}`,
+      },
+    })
+
+    expect(wrapper.text()).not.toContain(fileId)
+    expect(wrapper.find('.aimd-rec-file-field__name').text()).toBe('Selected file')
+    expect(wrapper.find('.aimd-rec-file-card__action[href]').attributes('href')).toBe(`/api/files/${fileId}`)
+    expect(wrapper.find('.aimd-rec-file-card__action--danger').exists()).toBe(true)
+    await flushPromises()
+    expect(wrapper.find('.aimd-rec-file-field__csv-preview').text()).toContain('t_min')
+    expect(wrapper.find('.aimd-rec-file-field__csv-preview').text()).toContain('1000')
+  })
+
+  it('renders image file ids with an inline preview when a resolver is available', () => {
+    const fileId = 'airalogy.id.file.22222222-2222-2222-2222-222222222222'
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'chart',
+      raw: '{{var|chart}}',
+      definition: {
+        id: 'chart',
+        type: 'FileIdPNG',
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        value: fileId as any,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '',
+        inputKind: 'file',
+        initialized: true,
+        resolveFile: (src: string) => `/api/files/${src}`,
+      },
+    })
+
+    const preview = wrapper.find('.aimd-rec-file-field__preview img')
+    expect(preview.exists()).toBe(true)
+    expect(preview.attributes('src')).toBe(`/api/files/${fileId}`)
+    expect(wrapper.text()).not.toContain(fileId)
+  })
+
+  it('uses host-resolved file metadata for file cards', async () => {
+    const fileId = 'airalogy.id.file.33333333-3333-3333-3333-333333333333'
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'chart',
+      raw: '{{var|chart}}',
+      definition: {
+        id: 'chart',
+        type: 'FileIdSVG',
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        value: fileId as any,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '',
+        inputKind: 'file',
+        initialized: true,
+        resolveFile: (src: string) => `/api/files/${src}`,
+        resolveFileInfo: async (src: string) => ({
+          id: src,
+          name: 'conversion_curve.svg',
+          url: `/signed/${src}`,
+          content_type: 'image/svg+xml',
+          size: 2048,
+        }),
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.find('.aimd-rec-file-field__name').text()).toBe('conversion_curve.svg')
+    expect(wrapper.find('.aimd-rec-file-card__meta').text()).toContain('IMG')
+    expect(wrapper.find('.aimd-rec-file-card__meta').text()).toContain('2.0 KB')
+    expect(wrapper.find('.aimd-rec-file-field__preview img').attributes('src')).toBe(`/signed/${fileId}`)
   })
 
   it('falls back to serializable selected-file metadata without an upload handler', async () => {

@@ -16,6 +16,11 @@ import type { ExtractedAimdFields } from '@airalogy/aimd-core/types'
 import type { AimdComponentRenderer } from '@airalogy/aimd-renderer'
 import type { AimdRecorderMessagesInput } from '../locales'
 import type {
+  AimdAssignerMap,
+  AimdAssignerRunner,
+  AimdServerAssignerMap,
+  AimdServerAssignerRunner,
+  AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
   AimdFieldState,
@@ -54,12 +59,19 @@ const props = withDefaults(defineProps<{
   messages?: AimdRecorderMessagesInput
   stepDetailDisplay?: AimdStepDetailDisplay
   fieldMeta?: Record<string, AimdFieldMeta>
+  serverAssigners?: AimdServerAssignerMap
+  /** @deprecated Use `serverAssigners` instead. */
+  assigners?: AimdAssignerMap
   fieldState?: Record<string, AimdFieldState>
   wrapField?: (fieldKey: string, fieldType: string, defaultVNode: any) => any
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   resolveFile?: (src: string) => string | null
+  resolveFileInfo?: AimdFileInfoResolver
   uploadFile?: AimdFileUploadHandler
+  runServerAssigner?: AimdServerAssignerRunner
+  /** @deprecated Use `runServerAssigner` instead. */
+  assignerRunner?: AimdAssignerRunner
   typePlugins?: AimdTypePlugin[]
   enableBlockHandle?: boolean
 }>(), {
@@ -72,12 +84,17 @@ const props = withDefaults(defineProps<{
   messages: undefined,
   stepDetailDisplay: 'auto',
   fieldMeta: undefined,
+  serverAssigners: undefined,
+  assigners: undefined,
   fieldState: undefined,
   wrapField: undefined,
   customRenderers: undefined,
   fieldAdapters: undefined,
   resolveFile: undefined,
+  resolveFileInfo: undefined,
   uploadFile: undefined,
+  runServerAssigner: undefined,
+  assignerRunner: undefined,
   typePlugins: undefined,
   enableBlockHandle: true,
 })
@@ -169,12 +186,17 @@ const surfaceState = reactive<RecorderMilkdownSurfaceState>({
   messages: props.messages,
   stepDetailDisplay: props.stepDetailDisplay,
   fieldMeta: props.fieldMeta,
+  serverAssigners: props.serverAssigners,
+  assigners: props.assigners,
   fieldState: props.fieldState,
   wrapField: props.wrapField,
   customRenderers: props.customRenderers,
   fieldAdapters: props.fieldAdapters,
   resolveFile: props.resolveFile,
+  resolveFileInfo: props.resolveFileInfo,
   uploadFile: props.uploadFile,
+  runServerAssigner: props.runServerAssigner,
+  assignerRunner: props.assignerRunner,
   typePlugins: props.typePlugins,
   onUpdateRecord: handleRecordUpdate,
   onError: (message) => emit('error', message),
@@ -194,12 +216,17 @@ watchEffect(() => {
   surfaceState.messages = props.messages
   surfaceState.stepDetailDisplay = props.stepDetailDisplay
   surfaceState.fieldMeta = props.fieldMeta
+  surfaceState.serverAssigners = props.serverAssigners
+  surfaceState.assigners = props.assigners
   surfaceState.fieldState = props.fieldState
   surfaceState.wrapField = props.wrapField
   surfaceState.customRenderers = props.customRenderers
   surfaceState.fieldAdapters = props.fieldAdapters
   surfaceState.resolveFile = props.resolveFile
+  surfaceState.resolveFileInfo = props.resolveFileInfo
   surfaceState.uploadFile = props.uploadFile
+  surfaceState.runServerAssigner = props.runServerAssigner
+  surfaceState.assignerRunner = props.assignerRunner
   surfaceState.typePlugins = props.typePlugins
 })
 

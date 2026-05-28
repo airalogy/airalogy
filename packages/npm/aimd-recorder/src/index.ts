@@ -23,8 +23,18 @@ export {
 } from './locales'
 export type {
   AimdProtocolRecordData,
+  AimdAssignerDefinition,
+  AimdAssignerMap,
+  AimdAssignerRunner,
+  AimdAssignerRunnerRequest,
+  AimdServerAssignerMap,
+  AimdServerAssignerRunner,
+  AimdServerAssignerRunnerRequest,
   AimdFileUploadContext,
   AimdFileUploadHandler,
+  AimdFileResolveContext,
+  AimdFileInfoResolver,
+  AimdResolvedFileInfo,
   AimdSelectedFileValue,
   AimdTypePlugin,
   AimdTypePluginInitContext,

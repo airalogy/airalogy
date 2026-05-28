@@ -2,12 +2,18 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   AimdRecorderEditor,
+  applyAimdAssignedFieldsToRecord,
+  buildAimdAssignerDependentData,
+  cloneRecordData,
   createEmptyProtocolRecordData,
-  type AimdFieldMeta,
+  extractAimdAssignedFields,
+  getAimdAssignerFieldKey,
   type AimdFieldState,
   type AimdFileUploadContext,
+  type AimdResolvedFileInfo,
+  type AimdAssignerMap,
+  type AimdAssignerRunnerRequest,
   type AimdProtocolRecordData,
-  type FieldEventPayload,
 } from '@airalogy/aimd-recorder'
 import {
   normalizeDemoLocale,
@@ -88,12 +94,6 @@ interface ApiEnvelope<T> {
   ok: boolean
   message?: string
   result?: T
-}
-
-interface ProtocolAssignerEntry {
-  assignedField: string
-  fieldKey: string
-  mode: string
 }
 
 const registry = ref<ProtocolRegistry | null>(null)
@@ -205,12 +205,16 @@ const draftSourceFiles = computed<SourceDraftFile[] | undefined>(() => {
   }))
 })
 
-const parseAssigners = computed(() => {
+const protocolAssigners = computed<AimdAssignerMap>(() => {
   const data = parseResult.value?.data
-  if (!data || typeof data !== 'object') return []
+  if (!data || typeof data !== 'object') return {}
   const assigners = (data as Record<string, unknown>).assigners
-  if (!assigners || typeof assigners !== 'object' || Array.isArray(assigners)) return []
-  return Object.keys(assigners)
+  if (!assigners || typeof assigners !== 'object' || Array.isArray(assigners)) return {}
+  return assigners as AimdAssignerMap
+})
+
+const parseAssigners = computed(() => {
+  return Object.keys(protocolAssigners.value)
 })
 
 const parsedFieldNames = computed(() => {
@@ -228,36 +232,6 @@ const parsedFieldNames = computed(() => {
     step: extractParsedFieldNameSet(fieldMap.step),
     check: extractParsedFieldNameSet(fieldMap.check),
   }
-})
-
-const protocolAssignerEntries = computed<ProtocolAssignerEntry[]>(() => {
-  const data = parseResult.value?.data
-  if (!data || typeof data !== 'object') return []
-
-  const assigners = (data as Record<string, unknown>).assigners
-  if (!assigners || typeof assigners !== 'object' || Array.isArray(assigners)) return []
-
-  return Object.entries(assigners as Record<string, unknown>).map(([assignedField, assigner]) => ({
-    assignedField,
-    fieldKey: assignedFieldToRecorderFieldKey(assignedField),
-    mode: getAssignerMode(assigner),
-  }))
-})
-
-const protocolFieldMeta = computed<Record<string, AimdFieldMeta>>(() => {
-  const meta: Record<string, AimdFieldMeta> = {}
-
-  for (const entry of protocolAssignerEntries.value) {
-    meta[entry.fieldKey] = {
-      ...meta[entry.fieldKey],
-      assigner: {
-        mode: normalizeRecorderAssignerMode(entry.mode),
-      },
-      disabled: isReadonlyAssignerMode(entry.mode) || undefined,
-    }
-  }
-
-  return meta
 })
 
 const currentVarsJson = computed(() => JSON.stringify(recordData.value.var, null, 2))
@@ -294,18 +268,7 @@ const sandboxPayload = computed(() => {
 })
 
 const fieldState = computed(() => {
-  if (!engineBusy.value) {
-    return fieldRuntimeState.value
-  }
-
-  const nextState: Record<string, AimdFieldState> = { ...fieldRuntimeState.value }
-  for (const entry of protocolAssignerEntries.value) {
-    nextState[entry.fieldKey] = {
-      ...nextState[entry.fieldKey],
-      disabled: true,
-    }
-  }
-  return nextState
+  return fieldRuntimeState.value
 })
 
 function formatMessage(template: string, values: Record<string, string | number>) {
@@ -356,41 +319,13 @@ function extractParsedFieldNameSet(value: unknown) {
 }
 
 function assignedFieldToRecorderFieldKey(assignedField: string) {
-  const normalized = assignedField.trim()
-  if (normalized.includes('.')) {
-    const [tableName, ...columnParts] = normalized.split('.')
-    return `var_table:${tableName}:${columnParts.join('.')}`
-  }
-
   const names = parsedFieldNames.value
-  if (names.varTable.has(normalized)) return `var_table:${normalized}`
-  if (names.step.has(normalized)) return `step:${normalized}`
-  if (names.check.has(normalized)) return `check:${normalized}`
-  return `var:${normalized}`
-}
-
-function getAssignerMode(assigner: unknown) {
-  if (!isObjectRecord(assigner)) return 'manual'
-  const mode = assigner.mode
-  return typeof mode === 'string' && mode.trim() ? mode.trim() : 'manual'
-}
-
-function normalizeRecorderAssignerMode(mode: string): NonNullable<AimdFieldMeta['assigner']>['mode'] {
-  if (
-    mode === 'auto'
-    || mode === 'auto_first'
-    || mode === 'auto_force'
-    || mode === 'manual'
-    || mode === 'manual_readonly'
-    || mode === 'auto_readonly'
-  ) {
-    return mode
-  }
-  return 'manual'
-}
-
-function isReadonlyAssignerMode(mode: string) {
-  return mode === 'auto_readonly' || mode === 'manual_readonly'
+  return getAimdAssignerFieldKey(assignedField, {
+    var: names.var,
+    varTable: names.varTable,
+    step: names.step,
+    check: names.check,
+  })
 }
 
 function relativeProtocolPath(pathValue: string, protocolDir?: string) {
@@ -567,6 +502,38 @@ function resolveProtocolFile(src: string) {
     : null
 }
 
+async function resolveProtocolFileInfo(src: string): Promise<AimdResolvedFileInfo | null> {
+  if (!src.startsWith('airalogy.id.file.')) {
+    return null
+  }
+
+  const response = await fetch(`/api/files/${encodeURIComponent(src)}/metadata`)
+  const payload = await response.json() as ApiEnvelope<{
+    id?: string
+    name?: string
+    file_name?: string
+    content_type?: string
+    size?: number
+  }>
+
+  if (!response.ok || payload.ok === false || !payload.result) {
+    return {
+      id: src,
+      url: resolveProtocolFile(src) ?? undefined,
+    }
+  }
+
+  const url = resolveProtocolFile(src) ?? undefined
+  return {
+    id: payload.result.id ?? src,
+    name: payload.result.name ?? payload.result.file_name,
+    url,
+    thumbnailUrl: url,
+    content_type: payload.result.content_type,
+    size: payload.result.size,
+  }
+}
+
 function resetProtocolState(resetSourceDrafts = false) {
   const variant = selectedVariant.value
   if (resetSourceDrafts) {
@@ -674,28 +641,13 @@ async function refreshProtocolMetadata() {
   }
 }
 
-function applyAssignedFields(result: unknown) {
-  if (!result || typeof result !== 'object') {
-    return
-  }
-
-  const data = (result as Record<string, unknown>).data
-  if (!data || typeof data !== 'object') {
-    return
-  }
-
-  const assignedFields = (data as Record<string, unknown>).assigned_fields
-  if (!assignedFields || typeof assignedFields !== 'object' || Array.isArray(assignedFields)) {
-    return
-  }
-
-  recordData.value = {
-    ...recordData.value,
-    var: {
-      ...recordData.value.var,
-      ...(assignedFields as Record<string, unknown>),
-    },
-  }
+async function runProtocolAssigner(request: AimdAssignerRunnerRequest) {
+  return runEngineAction<unknown>('assign', () => (
+    postEngine('assign', {
+      varName: request.assignedField,
+      dependentData: request.dependentData,
+    })
+  ))
 }
 
 async function runAssign(target = assignerTarget.value) {
@@ -712,13 +664,21 @@ async function runAssign(target = assignerTarget.value) {
   }
 
   try {
-    const result = await runEngineAction<unknown>('assign', () => (
-      postEngine('assign', {
-        varName: fieldKey,
-        dependentData: recordData.value.var,
-      })
-    ))
-    applyAssignedFields(result)
+    const assigner = protocolAssigners.value[fieldKey]
+    const result = await runProtocolAssigner({
+      section: 'var',
+      fieldKey: stateKey,
+      assignedField: fieldKey,
+      dependentData: buildAimdAssignerDependentData(recordData.value, assigner),
+      record: cloneRecordData(recordData.value),
+      assigner: isObjectRecord(assigner) ? assigner : {},
+    })
+    const assignedFields = extractAimdAssignedFields(result)
+    if (Object.keys(assignedFields).length > 0) {
+      const nextRecord = cloneRecordData(recordData.value)
+      applyAimdAssignedFieldsToRecord(nextRecord, assignedFields)
+      recordData.value = nextRecord
+    }
     fieldRuntimeState.value = {
       ...fieldRuntimeState.value,
       [stateKey]: { ...fieldRuntimeState.value[stateKey], loading: false, error: undefined },
@@ -775,15 +735,6 @@ async function runValidate() {
     })
   ))
   applyValidationErrors(result)
-}
-
-function handleAssignerRequest(payload: FieldEventPayload) {
-  if (payload.section !== 'var') {
-    return
-  }
-
-  assignerTarget.value = payload.fieldKey
-  void runAssign(payload.fieldKey)
 }
 
 async function loadDemo() {
@@ -978,7 +929,7 @@ onMounted(() => {
             v-model="recordData"
             v-model:content="recordSourceContent"
             :locale="selectedLocale"
-            :field-meta="protocolFieldMeta"
+            :server-assigners="protocolAssigners"
             :field-state="fieldState"
             :show-record-data="true"
             :show-field-structure="false"
@@ -991,7 +942,8 @@ onMounted(() => {
             :record-data-title="messages.record.recordDataTitle"
             :upload-file="uploadProtocolFile"
             :resolve-file="resolveProtocolFile"
-            @assigner-request="handleAssignerRequest"
+            :resolve-file-info="resolveProtocolFileInfo"
+            :run-server-assigner="runProtocolAssigner"
           />
         </section>
 

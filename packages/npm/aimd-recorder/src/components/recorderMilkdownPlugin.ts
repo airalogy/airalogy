@@ -16,6 +16,11 @@ import {
 import type { AimdComponentRenderer } from '@airalogy/aimd-renderer'
 import type { AimdRecorderMessagesInput } from '../locales'
 import type {
+  AimdAssignerMap,
+  AimdAssignerRunner,
+  AimdServerAssignerMap,
+  AimdServerAssignerRunner,
+  AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
   AimdFieldState,
@@ -45,12 +50,19 @@ export interface RecorderMilkdownSurfaceState {
   messages?: AimdRecorderMessagesInput
   stepDetailDisplay: AimdStepDetailDisplay
   fieldMeta?: Record<string, AimdFieldMeta>
+  serverAssigners?: AimdServerAssignerMap
+  /** @deprecated Use `serverAssigners` instead. */
+  assigners?: AimdAssignerMap
   fieldState?: Record<string, AimdFieldState>
   wrapField?: (fieldKey: string, fieldType: string, defaultVNode: any) => any
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   resolveFile?: (src: string) => string | null
+  resolveFileInfo?: AimdFileInfoResolver
   uploadFile?: AimdFileUploadHandler
+  runServerAssigner?: AimdServerAssignerRunner
+  /** @deprecated Use `runServerAssigner` instead. */
+  assignerRunner?: AimdAssignerRunner
   typePlugins?: AimdTypePlugin[]
   onUpdateRecord: (value: AimdProtocolRecordData) => void
   onFieldsChange?: (fields: ExtractedAimdFields) => void

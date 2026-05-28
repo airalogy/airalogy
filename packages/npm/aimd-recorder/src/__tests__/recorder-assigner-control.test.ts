@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick } from 'vue'
-import type { AimdTypePluginRenderContext } from '../types'
+import type { AimdAssignerRunnerRequest, AimdTypePluginRenderContext } from '../types'
 
 const mocks = vi.hoisted(() => ({
   parseAndExtract: vi.fn(),
@@ -134,6 +134,131 @@ describe('AimdRecorder assigner controls', () => {
       section: 'var',
       fieldKey: 'ic50',
     })
+  })
+
+  it('runs host assigners from parsed assigner metadata and applies assigned fields', async () => {
+    const runServerAssigner = vi.fn(async (_request: AimdAssignerRunnerRequest) => ({
+      data: {
+        assigned_fields: {
+          ic50: 42,
+        },
+      },
+    }))
+
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: '{{var|ic50: float}}',
+        locale: 'en-US',
+        modelValue: {
+          var: {
+            source: '12',
+            empty_input: '',
+          },
+          step: {},
+          check: {},
+          quiz: {},
+        },
+        serverAssigners: {
+          ic50: {
+            mode: 'manual',
+            dependent_fields: ['source', 'empty_input'],
+          },
+        },
+        runServerAssigner,
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    const button = wrapper.find('.aimd-rec-assigner-field__button')
+    expect(button.exists()).toBe(true)
+
+    await button.trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(runServerAssigner).toHaveBeenCalledTimes(1)
+    expect(runServerAssigner.mock.calls[0]?.[0]).toMatchObject({
+      section: 'var',
+      fieldKey: 'var:ic50',
+      assignedField: 'ic50',
+      dependentData: {
+        source: '12',
+      },
+    })
+    expect(wrapper.emitted('assigner-request')).toBeUndefined()
+
+    const updates = wrapper.emitted('update:modelValue') ?? []
+    const latestRecord = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    expect(latestRecord?.var?.ic50).toBe(42)
+  })
+
+  it('falls back to assigner-request for parsed assigners without a runner', async () => {
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: '{{var|ic50: float}}',
+        locale: 'en-US',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+        serverAssigners: {
+          ic50: {
+            mode: 'manual',
+            dependent_fields: [],
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    await wrapper.find('.aimd-rec-assigner-field__button').trigger('click')
+
+    expect(wrapper.emitted('assigner-request')?.[0]?.[0]).toMatchObject({
+      section: 'var',
+      fieldKey: 'ic50',
+    })
+  })
+
+  it('passes an AbortSignal to host assigners and cancels in-flight runs', async () => {
+    let receivedRequest: AimdAssignerRunnerRequest | undefined
+    const runServerAssigner = vi.fn(async (request: AimdAssignerRunnerRequest) => {
+      receivedRequest = request
+      return new Promise((resolve) => {
+        request.signal?.addEventListener('abort', () => resolve({ data: { assigned_fields: {} } }), { once: true })
+      })
+    })
+
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: '{{var|ic50: float}}',
+        locale: 'en-US',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+        serverAssigners: {
+          ic50: {
+            mode: 'manual',
+            dependent_fields: [],
+          },
+        },
+        runServerAssigner,
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    const button = wrapper.find('.aimd-rec-assigner-field__button')
+    await button.trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(receivedRequest?.signal).toBeInstanceOf(AbortSignal)
+    expect(receivedRequest?.signal?.aborted).toBe(false)
+    expect(wrapper.find('.aimd-rec-assigner-field__button').text()).toBe('Cancel')
+
+    await wrapper.find('.aimd-rec-assigner-field__button').trigger('click')
+
+    expect(receivedRequest?.signal?.aborted).toBe(true)
   })
 
   it('shows localized loading and error state for assigner fields', async () => {

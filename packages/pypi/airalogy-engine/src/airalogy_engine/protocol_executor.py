@@ -318,9 +318,21 @@ def assign_variable(protocol_name: str, params: dict) -> dict:
         fields = deep_merge(fields, var_model.VarModel.model_fields)
 
     try:
+        raw_dependent_data = params.get("dependent_data", {})
+        if not isinstance(raw_dependent_data, dict):
+            raise ValueError("dependent_data must be a dict")
+        declared_dependent_fields = set(
+            assigner.get_dependent_fields_of_assigned_key(params["var_name"])
+        )
+        raw_dependent_data = {
+            key: value
+            for key, value in raw_dependent_data.items()
+            if key in declared_dependent_fields
+        }
+
         # dependent_data validation and type convert
         attrs = {}
-        for k, v in params["dependent_data"].items():
+        for k, v in raw_dependent_data.items():
             if k in fields:
                 attrs[k] = (fields[k].annotation, fields[k].default)
             elif "." in k:
@@ -344,7 +356,7 @@ def assign_variable(protocol_name: str, params: dict) -> dict:
         ParamsModel = create_model("ParamsModel", **attrs)
         logger.info(f"ParamsModel: {ParamsModel.model_json_schema()}")
         try:
-            dependent_data = ParamsModel(**params["dependent_data"])
+            dependent_data = ParamsModel(**raw_dependent_data)
         except ValidationError as e:
             raise ValueError(f"Dependent data validation failed: {e}") from e
         res = assigner.assign(params["var_name"], dict(dependent_data))

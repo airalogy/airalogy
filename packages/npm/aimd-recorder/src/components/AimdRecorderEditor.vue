@@ -6,6 +6,11 @@ import type { AimdEditorProps } from '@airalogy/aimd-editor/vue'
 import type { AimdComponentRenderer } from '@airalogy/aimd-renderer'
 import type { AimdRecorderMessagesInput } from '../locales'
 import type {
+  AimdAssignerMap,
+  AimdAssignerRunner,
+  AimdServerAssignerMap,
+  AimdServerAssignerRunner,
+  AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
   AimdFieldState,
@@ -55,12 +60,19 @@ const props = withDefaults(defineProps<{
   messages?: AimdRecorderMessagesInput
   stepDetailDisplay?: AimdStepDetailDisplay
   fieldMeta?: Record<string, AimdFieldMeta>
+  serverAssigners?: AimdServerAssignerMap
+  /** @deprecated Use `serverAssigners` instead. */
+  assigners?: AimdAssignerMap
   fieldState?: Record<string, AimdFieldState>
   wrapField?: (fieldKey: string, fieldType: string, defaultVNode: any) => any
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   resolveFile?: (src: string) => string | null
+  resolveFileInfo?: AimdFileInfoResolver
   uploadFile?: AimdFileUploadHandler
+  runServerAssigner?: AimdServerAssignerRunner
+  /** @deprecated Use `runServerAssigner` instead. */
+  assignerRunner?: AimdAssignerRunner
   typePlugins?: AimdTypePlugin[]
   editorMode?: 'source' | 'wysiwyg'
   editorProps?: WorkbenchEditorProps
@@ -91,12 +103,17 @@ const props = withDefaults(defineProps<{
   messages: undefined,
   stepDetailDisplay: 'auto',
   fieldMeta: undefined,
+  serverAssigners: undefined,
+  assigners: undefined,
   fieldState: undefined,
   wrapField: undefined,
   customRenderers: undefined,
   fieldAdapters: undefined,
   resolveFile: undefined,
+  resolveFileInfo: undefined,
   uploadFile: undefined,
+  runServerAssigner: undefined,
+  assignerRunner: undefined,
   typePlugins: undefined,
   editorMode: 'source',
   editorProps: undefined,
@@ -1226,12 +1243,17 @@ defineExpose({
             :messages="messages"
             :step-detail-display="stepDetailDisplay"
             :field-meta="fieldMeta"
+            :server-assigners="serverAssigners"
+            :assigners="assigners"
             :field-state="fieldState"
             :wrap-field="wrapField"
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
             :resolve-file="resolveFile"
+            :resolve-file-info="resolveFileInfo"
             :upload-file="uploadFile"
+            :run-server-assigner="runServerAssigner"
+            :assigner-runner="assignerRunner"
             :type-plugins="typePlugins"
             :enable-block-handle="editorProps?.enableBlockHandle ?? true"
             class="aimd-recorder-workbench__visual-editor"
@@ -1261,12 +1283,17 @@ defineExpose({
             :messages="messages"
             :step-detail-display="stepDetailDisplay"
             :field-meta="fieldMeta"
+            :server-assigners="serverAssigners"
+            :assigners="assigners"
             :field-state="fieldState"
             :wrap-field="renderVisualEditWrapper"
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
             :resolve-file="resolveFile"
+            :resolve-file-info="resolveFileInfo"
             :upload-file="uploadFile"
+            :run-server-assigner="runServerAssigner"
+            :assigner-runner="assignerRunner"
             :type-plugins="typePlugins"
             @update:model-value="handleRecordUpdate"
             @fields-change="handleFieldsChange"

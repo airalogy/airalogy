@@ -82,6 +82,23 @@ export { useClientAssignerRunner } from './useClientAssignerRunner'
 export type { ClientAssignerRunnerOptions } from './useClientAssignerRunner'
 
 export {
+  applyAimdAssignedFieldsToRecord,
+  buildAimdAssignerDependentData,
+  extractAimdAssignedFields,
+  getAimdAssignerDependentFields,
+  getAimdAssignerFieldKey,
+  getAimdAssignerFieldNameSets,
+  getAimdAssignerMode,
+  getAimdAssignerPayloadFieldKey,
+  isReadonlyAimdAssignerMode,
+  normalizeAimdAssignerDependentData,
+  normalizeAimdAssignerDependentValue,
+  normalizeAimdAssignerMode,
+  resolveAimdAssigners,
+} from './useAssignerRunner'
+export type { AimdResolvedAssigner } from './useAssignerRunner'
+
+export {
   useVarTableDragDrop,
   getVarTableRowKey,
   getVarTableColumns,

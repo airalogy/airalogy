@@ -116,6 +116,25 @@ class TestAssignVariable:
         assert assigned_fields["endpoint"] == _VALID_ENDPOINT
 
     @pytest.mark.asyncio
+    async def test_assign_variable_ignores_unrelated_empty_fields(self, engine):
+        """assign_variable validates only the selected assigner's declared dependencies."""
+        result = await engine.assign_variable(
+            _EXAMPLE_PROTOCOL,
+            var_name="endpoint",
+            dependent_data={
+                "seconds": 60,
+                "duration": "",
+                "endpoint": "",
+            },
+            env_vars={"ENDPOINT": _VALID_ENDPOINT},
+        )
+
+        assert result["success"] is True
+        assigned_fields = result["data"]["assigned_fields"]
+        assert assigned_fields["duration"] == "PT1M"
+        assert assigned_fields["endpoint"] == _VALID_ENDPOINT
+
+    @pytest.mark.asyncio
     async def test_timeout_returns_promptly_when_assigner_sleeps(self, engine):
         """assign_variable times out promptly when PROTOCOL_SLEEP_TIME exceeds timeout."""
         started = asyncio.get_running_loop().time()

@@ -83,11 +83,16 @@ export interface AimdRecorderMessages {
   assigner: {
     run: string
     running: string
+    cancel: string
   }
   file: {
     choose: string
+    selected: string
     clear: string
     open: string
+    download: string
+    preview: string
+    replace: string
     uploadFailed: string
   }
   dna: {
@@ -262,11 +267,16 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
   assigner: {
     run: "Run Assigner",
     running: "Running",
+    cancel: "Cancel",
   },
   file: {
     choose: "Choose file",
+    selected: "Selected file",
     clear: "Clear file",
     open: "Open file",
+    download: "Download",
+    preview: "Preview",
+    replace: "Replace file",
     uploadFailed: "File upload failed.",
   },
   dna: {
@@ -414,11 +424,16 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
   assigner: {
     run: "运行赋值器",
     running: "运行中",
+    cancel: "取消",
   },
   file: {
     choose: "选择文件",
+    selected: "已选择文件",
     clear: "清除文件",
     open: "打开文件",
+    download: "下载",
+    preview: "预览",
+    replace: "替换文件",
     uploadFailed: "文件上传失败。",
   },
   dna: {

@@ -20,6 +20,11 @@ import {
 } from "../locales"
 import type {
   AimdChoiceOptionExplanationMode,
+  AimdAssignerMap,
+  AimdAssignerRunner,
+  AimdServerAssignerMap,
+  AimdServerAssignerRunner,
+  AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
   AimdFieldState,
@@ -48,6 +53,16 @@ import {
   normalizeVarTypeName,
   normalizeDateTimeValueWithTimezone,
 } from "../composables/useVarHelpers"
+import {
+  applyAimdAssignedFieldsToRecord,
+  buildAimdAssignerDependentData,
+  extractAimdAssignedFields,
+  getAimdAssignerPayloadFieldKey,
+  isReadonlyAimdAssignerMode,
+  normalizeAimdAssignerMode,
+  resolveAimdAssigners,
+  type AimdResolvedAssigner,
+} from "../composables/useAssignerRunner"
 import {
   captureFocusSnapshot,
   restoreFocusSnapshot,
@@ -110,6 +125,15 @@ const props = withDefaults(defineProps<{
   fieldMeta?: Record<string, AimdFieldMeta>
 
   /**
+   * Parsed protocol assigners keyed by assigned field name.
+   * The recorder turns these into buttons, dependency payloads, runtime states,
+   * and record writes while the host supplies the execution hook.
+   */
+  serverAssigners?: AimdServerAssignerMap
+  /** @deprecated Use `serverAssigners` instead. */
+  assigners?: AimdAssignerMap
+
+  /**
    * Per-field runtime state keyed by "section:fieldName".
    * Drives loading / error / validationError styling.
    */
@@ -138,12 +162,21 @@ const props = withDefaults(defineProps<{
    * Resolves relative paths / Airalogy file IDs to displayable URLs.
    */
   resolveFile?: (src: string) => string | null
+  resolveFileInfo?: AimdFileInfoResolver
 
   /**
    * Uploads file-like var selections. Return the record value to store,
    * typically an Airalogy file ID or a structured file descriptor.
    */
   uploadFile?: AimdFileUploadHandler
+
+  /**
+   * Runs host-specific assigner execution. The recorder prepares dependencies
+   * and applies returned `assigned_fields`; this hook only performs the call.
+   */
+  runServerAssigner?: AimdServerAssignerRunner
+  /** @deprecated Use `runServerAssigner` instead. */
+  assignerRunner?: AimdAssignerRunner
 
   /**
    * Type-level plugins for custom var types.
@@ -163,12 +196,17 @@ const props = withDefaults(defineProps<{
   scaleGradeDisplayMode: "hidden",
   stepDetailDisplay: "auto",
   fieldMeta: undefined,
+  serverAssigners: undefined,
+  assigners: undefined,
   fieldState: undefined,
   wrapField: undefined,
   customRenderers: undefined,
   fieldAdapters: undefined,
   resolveFile: undefined,
+  resolveFileInfo: undefined,
   uploadFile: undefined,
+  runServerAssigner: undefined,
+  assignerRunner: undefined,
   typePlugins: undefined,
 })
 
@@ -216,10 +254,13 @@ let pendingFocusSnapshot: FocusSnapshot | null = null
 let pendingInlineBuildRequestId: number | null = null
 const timerNowMs = ref(Date.now())
 let protocolTimerTicker: ReturnType<typeof setInterval> | null = null
+const serverAssignerAbortControllers = new Map<string, AbortController>()
 
 const resolvedLocale = computed(() => resolveAimdRecorderLocale(props.locale))
 const resolvedMessages = computed(() => createAimdRecorderMessages(resolvedLocale.value, props.messages))
 const resolvedTypePlugins = computed(() => createAimdTypePlugins(props.typePlugins))
+const resolvedServerAssigners = computed(() => props.serverAssigners ?? props.assigners)
+const resolvedRunServerAssigner = computed(() => props.runServerAssigner ?? props.assignerRunner)
 
 const InlineNodesOutlet = defineComponent({
   name: "AimdRecorderInlineNodesOutlet",
@@ -250,14 +291,13 @@ function applyFieldAdapter<TFieldType extends "var" | "var_table" | "step" | "ch
     locale: resolvedLocale.value,
     messages: resolvedMessages.value,
     record: localRecord,
-    fieldMeta: props.fieldMeta,
-    fieldState: props.fieldState,
+    fieldMeta: effectiveFieldMeta.value,
+    fieldState: effectiveFieldState.value,
   })
 }
 
 function getAssignerPayloadFieldKey(fieldType: AssignableRecorderFieldType, fieldKey: string): string {
-  const prefix = `${fieldType}:`
-  return fieldKey.startsWith(prefix) ? fieldKey.slice(prefix.length) : fieldKey
+  return getAimdAssignerPayloadFieldKey(fieldType, fieldKey)
 }
 
 function getManualClientAssignerForField(
@@ -278,6 +318,7 @@ interface ResolvedAssignerControl {
   fieldKey: string
   payloadFieldKey: string
   clientAssigner?: AimdClientAssignerField
+  serverAssigner?: AimdResolvedAssigner
   state?: AimdFieldState
   loading: boolean
   disabled: boolean
@@ -289,24 +330,34 @@ function resolveAssignerControl(
   fieldType: AssignableRecorderFieldType,
   fieldKey: string,
 ): ResolvedAssignerControl | null {
-  const meta = props.fieldMeta?.[fieldKey]
+  const meta = effectiveFieldMeta.value[fieldKey]
   const payloadFieldKey = getAssignerPayloadFieldKey(fieldType, fieldKey)
-  const clientAssigner = meta?.assigner ? undefined : getManualClientAssignerForField(fieldType, payloadFieldKey)
-  if ((!meta?.assigner && !clientAssigner) || props.readonly) {
+  const serverAssigner = serverAssignerByFieldKey.value[fieldKey]
+    ?? serverAssignerByAssignedField.value[payloadFieldKey]
+  const clientAssigner = meta?.assigner || serverAssigner
+    ? undefined
+    : getManualClientAssignerForField(fieldType, payloadFieldKey)
+  if ((!meta?.assigner && !clientAssigner && !serverAssigner) || props.readonly) {
     return null
   }
 
-  const state = props.fieldState?.[fieldKey]
+  const state = effectiveFieldState.value[fieldKey]
   const loading = state?.loading === true
-  const disabled = loading || state?.disabled === true
-  const label = loading ? resolvedMessages.value.assigner.running : resolvedMessages.value.assigner.run
-  const titleTarget = clientAssigner?.id ?? payloadFieldKey
+  const canCancelServerRun = Boolean(serverAssigner && resolvedRunServerAssigner.value && loading)
+  const disabled = (loading && !canCancelServerRun) || state?.disabled === true
+  const label = canCancelServerRun
+    ? resolvedMessages.value.assigner.cancel
+    : loading
+      ? resolvedMessages.value.assigner.running
+      : resolvedMessages.value.assigner.run
+  const titleTarget = clientAssigner?.id ?? serverAssigner?.assignedField ?? payloadFieldKey
 
   return {
     fieldType,
     fieldKey,
     payloadFieldKey,
     clientAssigner,
+    serverAssigner,
     state,
     loading,
     disabled,
@@ -324,8 +375,24 @@ function renderAssignerButton(control: ResolvedAssignerControl, value: unknown):
     onClick: (event: MouseEvent) => {
       event.preventDefault()
       event.stopPropagation()
+      if (control.loading) {
+        if (control.serverAssigner && resolvedRunServerAssigner.value) {
+          cancelServerAssigner(control.fieldKey)
+        } else {
+          emit("assigner-cancel", {
+            section: control.fieldType,
+            fieldKey: control.payloadFieldKey,
+            value,
+          })
+        }
+        return
+      }
       if (control.clientAssigner) {
-        assignerRunner.triggerClientAssigner(control.clientAssigner.id)
+        clientAssignerRunner.triggerClientAssigner(control.clientAssigner.id)
+        return
+      }
+      if (control.serverAssigner && resolvedRunServerAssigner.value) {
+        void runServerAssigner(control.serverAssigner, control.fieldType, control.fieldKey)
         return
       }
       emit("assigner-request", {
@@ -420,6 +487,7 @@ const EMPTY_FIELDS: ExtractedAimdFields = {
 
 const extractedFields = ref<ExtractedAimdFields>(EMPTY_FIELDS)
 const clientAssigners = ref<AimdClientAssignerField[]>([])
+const internalAssignerFieldState = ref<Record<string, AimdFieldState>>({})
 const clientAssignerFieldDefinitions = computed<ClientAssignerFieldDefinitions>(() => {
   const definitions: ClientAssignerFieldDefinitions = {}
   for (const field of extractedFields.value.var_definitions ?? []) {
@@ -429,6 +497,55 @@ const clientAssignerFieldDefinitions = computed<ClientAssignerFieldDefinitions>(
     }
   }
   return definitions
+})
+const protocolAssignerEntries = computed(() => resolveAimdAssigners(resolvedServerAssigners.value, extractedFields.value))
+const serverAssignerByFieldKey = computed(() => (
+  Object.fromEntries(protocolAssignerEntries.value.map(entry => [entry.fieldKey, entry]))
+))
+const serverAssignerByAssignedField = computed(() => (
+  Object.fromEntries(protocolAssignerEntries.value.map(entry => [entry.assignedField, entry]))
+))
+const generatedAssignerFieldMeta = computed<Record<string, AimdFieldMeta>>(() => {
+  const meta: Record<string, AimdFieldMeta> = {}
+  for (const entry of protocolAssignerEntries.value) {
+    meta[entry.fieldKey] = {
+      assigner: { mode: normalizeAimdAssignerMode(entry.mode) },
+      disabled: isReadonlyAimdAssignerMode(entry.mode) || undefined,
+    }
+  }
+  return meta
+})
+const effectiveFieldMeta = computed<Record<string, AimdFieldMeta>>(() => {
+  const next: Record<string, AimdFieldMeta> = { ...generatedAssignerFieldMeta.value }
+  for (const [fieldKey, meta] of Object.entries(props.fieldMeta ?? {})) {
+    next[fieldKey] = {
+      ...next[fieldKey],
+      ...meta,
+      assigner: meta.assigner ?? next[fieldKey]?.assigner,
+      disabled: meta.disabled ?? next[fieldKey]?.disabled,
+    }
+  }
+  return next
+})
+const effectiveFieldState = computed<Record<string, AimdFieldState>>(() => {
+  const keys = new Set([
+    ...Object.keys(internalAssignerFieldState.value),
+    ...Object.keys(props.fieldState ?? {}),
+  ])
+  const next: Record<string, AimdFieldState> = {}
+
+  for (const key of keys) {
+    const internalState = internalAssignerFieldState.value[key]
+    const externalState = props.fieldState?.[key]
+    next[key] = {
+      ...internalState,
+      ...externalState,
+      loading: externalState?.loading ?? internalState?.loading,
+      error: externalState?.error ?? internalState?.error,
+    }
+  }
+
+  return next
 })
 const protocolEstimatedDurationMs = computed(() => getProtocolEstimatedDurationMs(extractedFields.value.step_hierarchy ?? []))
 const protocolRecordedDurationMs = computed(() => getProtocolRecordedDurationMs(localRecord.step, timerNowMs.value))
@@ -484,10 +601,74 @@ function scheduleInlineRebuild() {
 }
 
 function markRecordChanged(options?: { rebuild?: boolean, runClientAssigners?: boolean }) {
-  const assignerChanged = options?.runClientAssigners ? assignerRunner.applyCurrentClientAssigners() : false
+  const assignerChanged = options?.runClientAssigners ? clientAssignerRunner.applyCurrentClientAssigners() : false
   emitRecordUpdate()
   if (options?.rebuild || assignerChanged) {
     scheduleInlineRebuild()
+  }
+}
+
+function setInternalAssignerState(fieldKey: string, patch: AimdFieldState) {
+  internalAssignerFieldState.value = {
+    ...internalAssignerFieldState.value,
+    [fieldKey]: {
+      ...internalAssignerFieldState.value[fieldKey],
+      ...patch,
+    },
+  }
+  scheduleInlineRebuild()
+}
+
+function cancelServerAssigner(fieldKey: string) {
+  serverAssignerAbortControllers.get(fieldKey)?.abort()
+}
+
+async function runServerAssigner(
+  assigner: AimdResolvedAssigner,
+  fieldType: AssignableRecorderFieldType,
+  fieldKey: string,
+) {
+  const runner = resolvedRunServerAssigner.value
+  if (!runner) return
+
+  serverAssignerAbortControllers.get(fieldKey)?.abort()
+  const abortController = new AbortController()
+  serverAssignerAbortControllers.set(fieldKey, abortController)
+  setInternalAssignerState(fieldKey, { loading: true, error: undefined })
+
+  try {
+    const result = await runner({
+      section: fieldType,
+      fieldKey,
+      assignedField: assigner.assignedField,
+      dependentData: buildAimdAssignerDependentData(localRecord, assigner),
+      record: cloneRecordData(localRecord),
+      assigner: assigner.assigner,
+      signal: abortController.signal,
+    })
+    const assignedFields = extractAimdAssignedFields(result)
+    if (Object.keys(assignedFields).length > 0) {
+      applyAimdAssignedFieldsToRecord(localRecord, assignedFields)
+      markRecordChanged({ rebuild: true, runClientAssigners: true })
+    } else {
+      emitRecordUpdate()
+    }
+    if (serverAssignerAbortControllers.get(fieldKey) === abortController) {
+      setInternalAssignerState(fieldKey, { loading: false, error: undefined })
+    }
+  } catch (error) {
+    if (abortController.signal.aborted) {
+      if (serverAssignerAbortControllers.get(fieldKey) === abortController) {
+        setInternalAssignerState(fieldKey, { loading: false, error: undefined })
+      }
+      return
+    }
+    const message = error instanceof Error ? error.message : String(error)
+    setInternalAssignerState(fieldKey, { loading: false, error: message })
+  } finally {
+    if (serverAssignerAbortControllers.get(fieldKey) === abortController) {
+      serverAssignerAbortControllers.delete(fieldKey)
+    }
   }
 }
 
@@ -495,7 +676,7 @@ function markRecordChanged(options?: { rebuild?: boolean, runClientAssigners?: b
 // Composables
 // ---------------------------------------------------------------------------
 
-const assignerRunner = useClientAssignerRunner({
+const clientAssignerRunner = useClientAssignerRunner({
   readonly: () => props.readonly,
   clientAssigners,
   fieldDefinitions: () => clientAssignerFieldDefinitions.value,
@@ -518,8 +699,8 @@ const fieldRendering = useFieldRendering({
   readonly: () => props.readonly,
   currentUserName: () => props.currentUserName,
   now: () => props.now,
-  fieldMeta: () => props.fieldMeta,
-  fieldState: () => props.fieldState,
+  fieldMeta: () => effectiveFieldMeta.value,
+  fieldState: () => effectiveFieldState.value,
   typePlugins: () => resolvedTypePlugins.value,
   wrapField: () => props.wrapField,
 })
@@ -531,7 +712,7 @@ const fieldRendering = useFieldRendering({
 function renderInlineVar(node: AimdVarNode): VNode {
   const id = node.id
   const fieldKey = `var:${id}`
-  const meta = props.fieldMeta?.[fieldKey]
+  const meta = effectiveFieldMeta.value[fieldKey]
 
   // 1. Custom renderer override
   if (props.customRenderers?.var) {
@@ -556,7 +737,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
   function emitVarChange(value: unknown) {
     fieldRendering.clearVarInputDisplayOverride(id)
     localRecord.var[id] = value
-    markRecordChanged({ runClientAssigners: true })
+    markRecordChanged({ rebuild: inputKind === "file", runClientAssigners: true })
     emit("field-change", { section: "var", fieldKey: id, value })
   }
 
@@ -629,7 +810,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
       displayValue,
       extraClasses,
       placeholder,
-      fieldState: props.fieldState?.[fieldKey],
+      fieldState: effectiveFieldState.value[fieldKey],
       assignerControl: pluginAssignerControl
         ? renderAssignerButton(pluginAssignerControl, localRecord.var[id])
         : undefined,
@@ -639,6 +820,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
       assignerError: pluginAssignerControl?.state?.error,
       uploadFile: props.uploadFile,
       resolveFile: props.resolveFile,
+      resolveFileInfo: props.resolveFileInfo,
       emitChange: emitVarChange,
       emitBlur: emitVarBlur,
     })
@@ -671,6 +853,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
     assignerError: internalAssignerControl?.state?.error,
     uploadFile: props.uploadFile,
     resolveFile: props.resolveFile,
+    resolveFileInfo: props.resolveFileInfo,
     onChange: (payload: { id: string, value: unknown, type: string, inputKind: string }) => {
       emitVarChange(payload.value)
     },
@@ -689,7 +872,7 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
   const columns = getVarTableColumns(node)
   const rows = tableDragDrop.ensureVarTableRows(tableName, columns)
   const disabled = fieldRendering.isFieldDisabled(fieldKey)
-  const disabledColumns = columns.filter(column => !!props.fieldMeta?.[`var_table:${tableName}:${column}`]?.disabled)
+  const disabledColumns = columns.filter(column => !!effectiveFieldMeta.value[`var_table:${tableName}:${column}`]?.disabled)
 
   const vnode = h(AimdVarTableField, {
     node,
@@ -699,8 +882,8 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
     readonly: props.readonly,
     settlingRowKey: tableDragDrop.getSettlingVarTableRowKey(),
     messages: resolvedMessages.value,
-    fieldMeta: props.fieldMeta,
-    fieldState: props.fieldState,
+    fieldMeta: effectiveFieldMeta.value,
+    fieldState: effectiveFieldState.value,
     onCellInput: (payload: { tableName: string, column: string, rowIndex: number, value: string, row: Record<string, string> }) => {
       payload.row[payload.column] = payload.value
       markRecordChanged({ runClientAssigners: true })
@@ -1117,7 +1300,7 @@ async function parseAndBuild() {
     emit("fields-change", extracted)
 
     const defaultsChanged = ensureDefaultsFromFields(localRecord, extracted)
-    const assignerChanged = assignerRunner.applyCurrentClientAssigners()
+    const assignerChanged = clientAssignerRunner.applyCurrentClientAssigners()
     if (defaultsChanged || assignerChanged) {
       emitRecordUpdate()
     }
@@ -1151,7 +1334,7 @@ watch(
     syncingFromExternal = true
     applyIncomingRecord(localRecord, value)
     syncingFromExternal = false
-    const assignerChanged = assignerRunner.applyCurrentClientAssigners()
+    const assignerChanged = clientAssignerRunner.applyCurrentClientAssigners()
     if (assignerChanged) {
       emitRecordUpdate()
     }
@@ -1186,6 +1369,10 @@ watch(
     now: props.now,
     fieldMeta: props.fieldMeta,
     fieldState: props.fieldState,
+    serverAssigners: props.serverAssigners,
+    assigners: props.assigners,
+    runServerAssigner: props.runServerAssigner,
+    assignerRunner: props.assignerRunner,
     stepDetailDisplay: props.stepDetailDisplay,
     customRenderers: props.customRenderers,
     fieldAdapters: props.fieldAdapters,
@@ -1227,14 +1414,18 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  for (const controller of serverAssignerAbortControllers.values()) {
+    controller.abort()
+  }
+  serverAssignerAbortControllers.clear()
   if (protocolTimerTicker) {
     clearInterval(protocolTimerTicker)
   }
 })
 
 defineExpose({
-  runClientAssigner: assignerRunner.triggerClientAssigner,
-  runManualClientAssigners: assignerRunner.triggerManualClientAssigners,
+  runClientAssigner: clientAssignerRunner.triggerClientAssigner,
+  runManualClientAssigners: clientAssignerRunner.triggerManualClientAssigners,
 })
 </script>
 
@@ -1579,6 +1770,49 @@ defineExpose({
 	  color: #64748b;
 	}
 	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__id) { display: flex; flex: 1; align-items: center; padding: 0 10px 0 6px; font-size: 13px; font-weight: 500; color: #1565c0; white-space: nowrap; }
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__header-assigner-actions) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding-right: 6px;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__header-assigner-action),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__header-assigner-state) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__header-assigner-action .aimd-rec-assigner-field__button) {
+  width: 30px;
+  min-width: 30px;
+  height: 26px;
+  min-height: 26px;
+  border: 0 none;
+  border-radius: 6px;
+  margin: 0;
+  background: #eaf4ff;
+  color: #1976d2;
+  box-shadow: none;
+  font-size: 16px;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__header-assigner-action .aimd-rec-assigner-field__button:hover:not(:disabled)) {
+  background: #dbeafe;
+  color: #1565c0;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__header-assigner-action .aimd-rec-assigner-field__spinner) {
+  border-color: rgba(25, 118, 210, 0.25);
+  border-top-color: #1976d2;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__header-assigner-state .aimd-rec-assigner-field__status) {
+  font-size: 16px;
+}
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-markdown) {
   display: flex;
   flex-direction: column;
@@ -1666,12 +1900,13 @@ defineExpose({
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline__file-control) {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   width: 100%;
   min-width: 0;
   min-height: var(--rec-var-control-height);
-  padding: 0 8px;
+  padding: 8px;
   border-top: 1px solid var(--aimd-border-color, #90caf9);
   border-radius: 0 0 6px 6px;
   box-sizing: border-box;
@@ -1683,10 +1918,13 @@ defineExpose({
   display: flex;
   flex: 1 1 auto;
   min-width: 0;
-  height: 100%;
   min-height: var(--rec-var-control-height);
   align-items: center;
   gap: 8px;
+  padding: 0 8px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
   cursor: pointer;
 }
 
@@ -1745,44 +1983,183 @@ defineExpose({
   min-width: 0;
   overflow: hidden;
   color: var(--rec-text);
-  font-size: var(--rec-var-value-font-size);
-  font-weight: 400;
-  line-height: var(--rec-var-single-line-height);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-file-field__name--placeholder) {
   color: #94a3b8;
+  font-weight: 500;
 }
 
-.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__link),
-.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__clear) {
-  display: inline-flex;
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  box-sizing: border-box;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card:hover) {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card__header) {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card__identity) {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card__text) {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card__meta) {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card__actions) {
+  display: flex;
   flex: 0 0 auto;
   align-items: center;
+  gap: 4px;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card__action) {
+  position: relative;
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
   justify-content: center;
-  height: 24px;
+  padding: 0;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: #64748b;
-  font-size: 12px;
+  cursor: pointer;
+  font-size: 15px;
   line-height: 1;
   text-decoration: none;
 }
 
-.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__clear) {
-  width: 24px;
-  padding: 0;
-  cursor: pointer;
-  font-size: 18px;
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card__replace input) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__link:hover),
-.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__clear:hover) {
-  background: #f1f5f9;
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card__action:hover) {
+  background: #e2e8f0;
   color: #1f2937;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card__action--danger:hover) {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-card__action-label) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__preview) {
+  display: flex;
+  width: 100%;
+  min-height: 120px;
+  max-height: 280px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__preview img) {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__csv-preview) {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__csv-grid) {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__csv-row) {
+  display: table-row;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__csv-row--head) {
+  color: #0369a1;
+  font-weight: 700;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__csv-cell) {
+  display: table-cell;
+  max-width: 12ch;
+  overflow: hidden;
+  padding: 2px 6px;
+  border-top: 1px solid #e0f2fe;
+  color: #334155;
+  font-size: 11px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-file-field__csv-row:first-child .aimd-rec-file-field__csv-cell) {
+  border-top: 0;
 }
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-file-field__error) {
@@ -1793,6 +2170,10 @@ defineExpose({
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline--has-assigner-control) {
   overflow: hidden;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked--file.aimd-rec-inline--has-assigner-control:has(.aimd-field__metadata-host)) {
+  overflow: visible;
 }
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row) {

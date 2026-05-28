@@ -473,6 +473,16 @@ async function readStoredFile(fileIdValue) {
   }
 }
 
+async function readStoredFileMetadata(fileIdValue) {
+  const fileId = normalizeFileId(fileIdValue)
+  const metadataPath = storedFileMetaPath(fileId)
+  const filePath = storedFilePath(fileId)
+  if (!existsSync(metadataPath) || !existsSync(filePath)) {
+    throw new Error(`Unknown Airalogy file id: ${fileId}`)
+  }
+  return JSON.parse(await readFile(metadataPath, 'utf8'))
+}
+
 function collectAiralogyFileIds(value, result = new Set()) {
   if (typeof value === 'string' && /^airalogy\.id\.file\.[a-f0-9-]+$/i.test(value)) {
     result.add(value)
@@ -493,6 +503,39 @@ function collectAiralogyFileIds(value, result = new Set()) {
   }
 
   return result
+}
+
+function normalizeAssignerDependentValue(value) {
+  if (value === '') {
+    return undefined
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => normalizeAssignerDependentValue(item))
+      .filter((item) => item !== undefined)
+  }
+
+  if (isPlainObject(value)) {
+    const fileId = [value.id, value.file_id, value.fileId, value.src]
+      .find((item) => typeof item === 'string' && /^airalogy\.id\.file\.[a-f0-9-]+$/i.test(item))
+    if (fileId) {
+      return fileId
+    }
+
+    return Object.fromEntries(
+      Object.entries(value)
+        .map(([key, item]) => [key, normalizeAssignerDependentValue(item)])
+        .filter(([, item]) => item !== undefined),
+    )
+  }
+
+  return value
+}
+
+function normalizeAssignerDependentData(value) {
+  const normalized = normalizeAssignerDependentValue(value)
+  return isPlainObject(normalized) ? normalized : {}
 }
 
 async function buildFileBridgeInputs(value) {
@@ -616,7 +659,7 @@ async function callEngine(action, protocolDir, body, protocolId) {
       if (typeof body.varName !== 'string' || !body.varName.trim()) {
         throw new Error('varName is required')
       }
-      const dependentData = isPlainObject(body.dependentData) ? body.dependentData : {}
+      const dependentData = normalizeAssignerDependentData(body.dependentData)
       const fileBridge = await withFileBridge(options, dependentData)
       try {
         const result = await engine.assignVariable(
@@ -626,7 +669,7 @@ async function callEngine(action, protocolDir, body, protocolId) {
           envVars,
           fileBridge.options,
         )
-        return persistFileBridgeOutputs(result)
+        return await persistFileBridgeOutputs(result)
       } finally {
         void rm(fileBridge.outputDir, { recursive: true, force: true }).catch(() => undefined)
       }
@@ -734,6 +777,13 @@ async function handleApi(req, res) {
     if (req.method === 'POST' && pathname === '/api/files/upload') {
       const { file } = await loadMultipartBody(req)
       const metadata = await storeUploadedFile(file)
+      sendJson(res, 200, { ok: true, result: metadata })
+      return true
+    }
+
+    const fileMetadataMatch = pathname.match(/^\/api\/files\/(.+)\/metadata$/)
+    if (fileMetadataMatch && req.method === 'GET') {
+      const metadata = await readStoredFileMetadata(fileMetadataMatch[1])
       sendJson(res, 200, { ok: true, result: metadata })
       return true
     }

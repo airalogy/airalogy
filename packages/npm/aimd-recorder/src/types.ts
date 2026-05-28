@@ -67,6 +67,23 @@ export interface AimdSelectedFileValue {
   lastModified: number
 }
 
+export interface AimdResolvedFileInfo {
+  id?: string
+  name?: string
+  fileName?: string
+  file_name?: string
+  filename?: string
+  url?: string
+  src?: string
+  downloadUrl?: string
+  thumbnailUrl?: string
+  type?: string
+  contentType?: string
+  content_type?: string
+  mimeType?: string
+  size?: number
+}
+
 export interface AimdFileUploadContext {
   type: string
   normalizedType: string
@@ -81,11 +98,27 @@ export type AimdFileUploadHandler = (
   context: AimdFileUploadContext,
 ) => unknown | Promise<unknown>
 
+export interface AimdFileResolveContext {
+  type: string
+  normalizedType: string
+  fieldKey: string
+  node: AimdVarNode
+  fieldMeta?: AimdFieldMeta
+  kind: string
+}
+
+export type AimdFileInfoResolver = (
+  src: string,
+  context: AimdFileResolveContext,
+) => AimdResolvedFileInfo | string | null | undefined | Promise<AimdResolvedFileInfo | string | null | undefined>
+
 export type AimdVarInputKind = "text" | "number" | "checkbox" | "textarea" | "date" | "datetime" | "time" | "dna" | "code" | "file"
 export type AimdStepDetailDisplay = "auto" | "always"
 export type AimdChoiceOptionExplanationMode = "hidden" | "selected" | "submitted" | "graded"
 export type AimdScaleGradeDisplayMode = "hidden" | "completed" | "submitted" | "graded"
 export type AimdAssignerMode = "auto" | "auto_first" | "auto_force" | "manual" | "manual_readonly" | "auto_readonly"
+export type AimdServerAssignerMap = Record<string, AimdAssignerDefinition | unknown>
+export type AimdAssignerMap = AimdServerAssignerMap
 
 export function createEmptyProtocolRecordData(): AimdProtocolRecordData {
   return {
@@ -123,6 +156,30 @@ export interface AimdFieldState {
   validationError?: string     // validation error message
   disabled?: boolean           // dynamic disable
 }
+
+export interface AimdAssignerDefinition {
+  mode?: string
+  dependent_fields?: unknown
+  [key: string]: unknown
+}
+
+export interface AimdServerAssignerRunnerRequest {
+  section: Exclude<AimdRecorderFieldType, "quiz">
+  fieldKey: string
+  assignedField: string
+  dependentData: Record<string, unknown>
+  record: AimdProtocolRecordData
+  assigner: AimdAssignerDefinition
+  signal?: AbortSignal
+}
+
+export type AimdAssignerRunnerRequest = AimdServerAssignerRunnerRequest
+
+export type AimdServerAssignerRunner = (
+  request: AimdServerAssignerRunnerRequest,
+) => unknown | Promise<unknown>
+
+export type AimdAssignerRunner = AimdServerAssignerRunner
 
 /** Field event payload */
 export interface FieldEventPayload {
@@ -185,6 +242,7 @@ export interface AimdTypePluginRenderContext extends AimdTypePluginValueContext 
   assignerError?: string
   uploadFile?: AimdFileUploadHandler
   resolveFile?: (src: string) => string | null
+  resolveFileInfo?: AimdFileInfoResolver
   emitChange: (value: unknown) => void
   emitBlur: () => void
 }

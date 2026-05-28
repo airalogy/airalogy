@@ -144,6 +144,8 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 
+const AIRALOGY_FILE_ID_RE = /^airalogy\.id\.file\.[A-Za-z0-9_-]+$/i
+
 function getStringFromRecord(record: Record<string, unknown> | undefined, keys: string[]): string | undefined {
   if (!record) {
     return undefined
@@ -259,9 +261,32 @@ export function createSelectedFileValue(file: File): AimdSelectedFileValue {
   }
 }
 
+export function isAiralogyFileId(value: unknown): value is string {
+  return typeof value === "string" && AIRALOGY_FILE_ID_RE.test(value)
+}
+
+export function getFileValueId(value: unknown): string | undefined {
+  const normalized = unwrapStructuredValue(value)
+  if (typeof normalized === "string") {
+    return normalized.trim() || undefined
+  }
+  if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) {
+    return undefined
+  }
+  return getStringFromRecord(normalized as Record<string, unknown>, [
+    "id",
+    "file_id",
+    "fileId",
+    "src",
+  ])
+}
+
 export function getFileDisplayName(value: unknown): string {
   const normalized = unwrapStructuredValue(value)
   if (typeof normalized === "string") {
+    if (isAiralogyFileId(normalized)) {
+      return ""
+    }
     return normalized
   }
   if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) {
