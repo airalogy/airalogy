@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import {
   AimdRecorderEditor,
   createEmptyProtocolRecordData,
+  type AimdFieldMeta,
   type AimdFieldState,
   type AimdProtocolRecordData,
   type FieldEventPayload,
@@ -86,6 +87,12 @@ interface ApiEnvelope<T> {
   ok: boolean
   message?: string
   result?: T
+}
+
+interface ProtocolAssignerEntry {
+  assignedField: string
+  fieldKey: string
+  mode: string
 }
 
 const registry = ref<ProtocolRegistry | null>(null)
@@ -205,6 +212,53 @@ const parseAssigners = computed(() => {
   return Object.keys(assigners)
 })
 
+const parsedFieldNames = computed(() => {
+  const data = parseResult.value?.data
+  const fields = data && typeof data === 'object'
+    ? (data as Record<string, unknown>).fields
+    : undefined
+  const fieldMap = fields && typeof fields === 'object' && !Array.isArray(fields)
+    ? fields as Record<string, unknown>
+    : {}
+
+  return {
+    var: extractParsedFieldNameSet(fieldMap.var),
+    varTable: extractParsedFieldNameSet(fieldMap.var_table),
+    step: extractParsedFieldNameSet(fieldMap.step),
+    check: extractParsedFieldNameSet(fieldMap.check),
+  }
+})
+
+const protocolAssignerEntries = computed<ProtocolAssignerEntry[]>(() => {
+  const data = parseResult.value?.data
+  if (!data || typeof data !== 'object') return []
+
+  const assigners = (data as Record<string, unknown>).assigners
+  if (!assigners || typeof assigners !== 'object' || Array.isArray(assigners)) return []
+
+  return Object.entries(assigners as Record<string, unknown>).map(([assignedField, assigner]) => ({
+    assignedField,
+    fieldKey: assignedFieldToRecorderFieldKey(assignedField),
+    mode: getAssignerMode(assigner),
+  }))
+})
+
+const protocolFieldMeta = computed<Record<string, AimdFieldMeta>>(() => {
+  const meta: Record<string, AimdFieldMeta> = {}
+
+  for (const entry of protocolAssignerEntries.value) {
+    meta[entry.fieldKey] = {
+      ...meta[entry.fieldKey],
+      assigner: {
+        mode: normalizeRecorderAssignerMode(entry.mode),
+      },
+      disabled: isReadonlyAssignerMode(entry.mode) || undefined,
+    }
+  }
+
+  return meta
+})
+
 const currentVarsJson = computed(() => JSON.stringify(recordData.value.var, null, 2))
 
 const engineStatus = computed(() => {
@@ -238,7 +292,20 @@ const sandboxPayload = computed(() => {
   return payload
 })
 
-const fieldState = computed(() => fieldRuntimeState.value)
+const fieldState = computed(() => {
+  if (!engineBusy.value) {
+    return fieldRuntimeState.value
+  }
+
+  const nextState: Record<string, AimdFieldState> = { ...fieldRuntimeState.value }
+  for (const entry of protocolAssignerEntries.value) {
+    nextState[entry.fieldKey] = {
+      ...nextState[entry.fieldKey],
+      disabled: true,
+    }
+  }
+  return nextState
+})
 
 function formatMessage(template: string, values: Record<string, string | number>) {
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ''))
@@ -268,6 +335,61 @@ function sourceFileLanguage(pathValue: string) {
   if (lowerPath.endsWith('.md')) return 'markdown'
   if (lowerPath.endsWith('.yaml') || lowerPath.endsWith('.yml')) return 'yaml'
   return 'plaintext'
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function parsedFieldName(value: unknown) {
+  if (typeof value === 'string' && value.trim()) return value.trim()
+  if (!isObjectRecord(value)) return ''
+
+  const name = value.name ?? value.id
+  return typeof name === 'string' && name.trim() ? name.trim() : ''
+}
+
+function extractParsedFieldNameSet(value: unknown) {
+  if (!Array.isArray(value)) return new Set<string>()
+  return new Set(value.map(parsedFieldName).filter(Boolean))
+}
+
+function assignedFieldToRecorderFieldKey(assignedField: string) {
+  const normalized = assignedField.trim()
+  if (normalized.includes('.')) {
+    const [tableName, ...columnParts] = normalized.split('.')
+    return `var_table:${tableName}:${columnParts.join('.')}`
+  }
+
+  const names = parsedFieldNames.value
+  if (names.varTable.has(normalized)) return `var_table:${normalized}`
+  if (names.step.has(normalized)) return `step:${normalized}`
+  if (names.check.has(normalized)) return `check:${normalized}`
+  return `var:${normalized}`
+}
+
+function getAssignerMode(assigner: unknown) {
+  if (!isObjectRecord(assigner)) return 'manual'
+  const mode = assigner.mode
+  return typeof mode === 'string' && mode.trim() ? mode.trim() : 'manual'
+}
+
+function normalizeRecorderAssignerMode(mode: string): NonNullable<AimdFieldMeta['assigner']>['mode'] {
+  if (
+    mode === 'auto'
+    || mode === 'auto_first'
+    || mode === 'auto_force'
+    || mode === 'manual'
+    || mode === 'manual_readonly'
+    || mode === 'auto_readonly'
+  ) {
+    return mode
+  }
+  return 'manual'
+}
+
+function isReadonlyAssignerMode(mode: string) {
+  return mode === 'auto_readonly' || mode === 'manual_readonly'
 }
 
 function relativeProtocolPath(pathValue: string, protocolDir?: string) {
@@ -418,6 +540,7 @@ function resetProtocolState(resetSourceDrafts = false) {
   sourceContent.value = variant?.aimdPath ? sourceContentForPath(variant.aimdPath, variant.aimd) : ''
   resetRuntimeState()
   selectedSourcePath.value = variant?.aimdPath ?? sourceFiles.value[0]?.path ?? ''
+  void refreshProtocolMetadata()
 }
 
 function parseEnvVars() {
@@ -490,6 +613,18 @@ async function runParse() {
   }
 }
 
+async function refreshProtocolMetadata() {
+  if (!selectedProtocol.value?.engine_required || !engineAvailable.value) {
+    return
+  }
+
+  try {
+    await runParse()
+  } catch {
+    // The Engine panel keeps the localized status/error for the user.
+  }
+}
+
 function applyAssignedFields(result: unknown) {
   if (!result || typeof result !== 'object') {
     return
@@ -521,9 +656,10 @@ async function runAssign(target = assignerTarget.value) {
   }
 
   const fieldKey = target.trim()
+  const stateKey = assignedFieldToRecorderFieldKey(fieldKey)
   fieldRuntimeState.value = {
     ...fieldRuntimeState.value,
-    [fieldKey]: { ...fieldRuntimeState.value[fieldKey], loading: true, error: undefined },
+    [stateKey]: { ...fieldRuntimeState.value[stateKey], loading: true, error: undefined },
   }
 
   try {
@@ -536,13 +672,13 @@ async function runAssign(target = assignerTarget.value) {
     applyAssignedFields(result)
     fieldRuntimeState.value = {
       ...fieldRuntimeState.value,
-      [fieldKey]: { ...fieldRuntimeState.value[fieldKey], loading: false, error: undefined },
+      [stateKey]: { ...fieldRuntimeState.value[stateKey], loading: false, error: undefined },
     }
   } catch (err) {
     const message = err instanceof Error ? localizeErrorMessage(err.message) : String(err)
     fieldRuntimeState.value = {
       ...fieldRuntimeState.value,
-      [fieldKey]: { ...fieldRuntimeState.value[fieldKey], loading: false, error: message },
+      [stateKey]: { ...fieldRuntimeState.value[stateKey], loading: false, error: message },
     }
   }
 }
@@ -570,8 +706,9 @@ function applyValidationErrors(result: unknown) {
       const loc = (error as Record<string, unknown>).loc
       const fieldKey = Array.isArray(loc) ? String(loc[0]) : undefined
       if (!fieldKey) continue
-      nextState[fieldKey] = {
-        ...nextState[fieldKey],
+      const stateKey = assignedFieldToRecorderFieldKey(fieldKey)
+      nextState[stateKey] = {
+        ...nextState[stateKey],
         validationError: (error as Record<string, unknown>).msg
           ? String((error as Record<string, unknown>).msg)
           : messages.value.errors.invalidValue,
@@ -597,7 +734,6 @@ function handleAssignerRequest(payload: FieldEventPayload) {
   }
 
   assignerTarget.value = payload.fieldKey
-  activeTab.value = 'engine'
   void runAssign(payload.fieldKey)
 }
 
@@ -793,6 +929,7 @@ onMounted(() => {
             v-model="recordData"
             v-model:content="recordSourceContent"
             :locale="selectedLocale"
+            :field-meta="protocolFieldMeta"
             :field-state="fieldState"
             :show-record-data="true"
             :show-field-structure="false"

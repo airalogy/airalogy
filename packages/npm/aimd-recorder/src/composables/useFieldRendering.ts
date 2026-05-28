@@ -41,6 +41,10 @@ function getFieldMetaExamples(meta?: AimdFieldMeta): unknown[] {
   return singleExample === undefined || singleExample === null ? [] : [singleExample]
 }
 
+function isReadonlyAssignerMode(mode?: NonNullable<AimdFieldMeta["assigner"]>["mode"]): boolean {
+  return mode === "auto_force" || mode === "auto_readonly" || mode === "manual_readonly"
+}
+
 // ---------------------------------------------------------------------------
 // Composable
 // ---------------------------------------------------------------------------
@@ -67,7 +71,7 @@ export function useFieldRendering(options: FieldRenderingOptions) {
     if (options.readonly()) return true
     const meta = options.fieldMeta()?.[fieldKey]
     const state = options.fieldState()?.[fieldKey]
-    return !!(meta?.disabled || state?.disabled || meta?.assigner?.mode === "auto_force")
+    return !!(meta?.disabled || state?.disabled || isReadonlyAssignerMode(meta?.assigner?.mode))
   }
 
   // ── resolveNowDate ─────────────────────────────────────────────────────

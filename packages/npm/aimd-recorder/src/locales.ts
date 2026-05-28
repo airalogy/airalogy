@@ -80,6 +80,10 @@ export interface AimdRecorderMessages {
     deleteRow: string
     addRow: string
   }
+  assigner: {
+    run: string
+    running: string
+  }
   dna: {
     editMode: string
     interactiveMode: string
@@ -249,6 +253,10 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     deleteRow: "Delete",
     addRow: "Add row",
   },
+  assigner: {
+    run: "Run Assigner",
+    running: "Running",
+  },
   dna: {
     editMode: "Edit mode",
     interactiveMode: "Interactive",
@@ -390,6 +398,10 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     dragReorder: "拖拽调整行顺序",
     deleteRow: "删除",
     addRow: "添加行",
+  },
+  assigner: {
+    run: "运行赋值器",
+    running: "运行中",
   },
   dna: {
     editMode: "编辑模式",

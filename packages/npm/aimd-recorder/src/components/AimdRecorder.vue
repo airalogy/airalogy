@@ -23,6 +23,7 @@ import type {
   AimdFieldMeta,
   AimdFieldState,
   AimdRecorderFieldAdapters,
+  AimdRecorderFieldType,
   AimdScaleGradeDisplayMode,
   AimdTypePlugin,
   AimdProtocolRecordData,
@@ -224,6 +225,8 @@ const InlineNodesOutlet = defineComponent({
   },
 })
 
+type AssignableRecorderFieldType = Exclude<AimdRecorderFieldType, "quiz">
+
 function applyFieldAdapter<TFieldType extends "var" | "var_table" | "step" | "check" | "quiz">(
   fieldType: TFieldType,
   fieldKey: string,
@@ -241,6 +244,78 @@ function applyFieldAdapter<TFieldType extends "var" | "var_table" | "step" | "ch
     fieldMeta: props.fieldMeta,
     fieldState: props.fieldState,
   })
+}
+
+function getAssignerPayloadFieldKey(fieldType: AssignableRecorderFieldType, fieldKey: string): string {
+  const prefix = `${fieldType}:`
+  return fieldKey.startsWith(prefix) ? fieldKey.slice(prefix.length) : fieldKey
+}
+
+function getManualClientAssignerForField(
+  fieldType: AssignableRecorderFieldType,
+  payloadFieldKey: string,
+): AimdClientAssignerField | undefined {
+  if (fieldType !== "var") {
+    return undefined
+  }
+
+  return clientAssigners.value.find(assigner => (
+    assigner.mode === "manual" && assigner.assigned_fields.includes(payloadFieldKey)
+  ))
+}
+
+function withAssignerControl(
+  fieldType: AssignableRecorderFieldType,
+  fieldKey: string,
+  value: unknown,
+  defaultVNode: VNode,
+): VNode {
+  const meta = props.fieldMeta?.[fieldKey]
+  const payloadFieldKey = getAssignerPayloadFieldKey(fieldType, fieldKey)
+  const clientAssigner = meta?.assigner ? undefined : getManualClientAssignerForField(fieldType, payloadFieldKey)
+  if ((!meta?.assigner && !clientAssigner) || props.readonly) {
+    return defaultVNode
+  }
+
+  const state = props.fieldState?.[fieldKey]
+  const loading = state?.loading === true
+  const disabled = loading || state?.disabled === true
+  const tag = fieldType === "var" ? "span" : "div"
+  const titleTarget = clientAssigner?.id ?? payloadFieldKey
+
+  return h(tag, {
+    class: [
+      "aimd-rec-assigner-field",
+      `aimd-rec-assigner-field--${fieldType}`,
+      loading ? "aimd-rec-assigner-field--loading" : undefined,
+      state?.error ? "aimd-rec-assigner-field--error" : undefined,
+    ],
+    "data-rec-assigner-key": fieldKey,
+  }, [
+    h("span", { class: "aimd-rec-assigner-field__control" }, [defaultVNode]),
+    h("button", {
+      type: "button",
+      class: "aimd-rec-assigner-field__button",
+      disabled,
+      onClick: (event: MouseEvent) => {
+        event.preventDefault()
+        event.stopPropagation()
+        if (clientAssigner) {
+          assignerRunner.triggerClientAssigner(clientAssigner.id)
+          return
+        }
+        emit("assigner-request", {
+          section: fieldType,
+          fieldKey: payloadFieldKey,
+          value,
+        })
+      },
+      title: `${resolvedMessages.value.assigner.run}: ${titleTarget}`,
+    }, loading ? resolvedMessages.value.assigner.running : resolvedMessages.value.assigner.run),
+    state?.error
+      ? h("span", { class: "aimd-rec-assigner-field__error" }, state.error)
+      : null,
+  ])
 }
 
 const EMPTY_FIELDS: ExtractedAimdFields = {
@@ -376,7 +451,10 @@ function renderInlineVar(node: AimdVarNode): VNode {
   // 1. Custom renderer override
   if (props.customRenderers?.var) {
     const custom = props.customRenderers.var(node, {} as any, [])
-    if (custom) return applyFieldAdapter("var", fieldKey, node, localRecord.var[id], custom as VNode)
+    if (custom) {
+      const assignerVNode = withAssignerControl("var", fieldKey, localRecord.var[id], custom as VNode)
+      return applyFieldAdapter("var", fieldKey, node, localRecord.var[id], assignerVNode)
+    }
   }
 
   const type = node.definition?.type || "str"
@@ -463,7 +541,8 @@ function renderInlineVar(node: AimdVarNode): VNode {
     })
 
     if (pluginVNode) {
-      return applyFieldAdapter("var", fieldKey, node, localRecord.var[id], pluginVNode)
+      const assignerVNode = withAssignerControl("var", fieldKey, localRecord.var[id], pluginVNode)
+      return applyFieldAdapter("var", fieldKey, node, localRecord.var[id], assignerVNode)
     }
   }
 
@@ -484,7 +563,8 @@ function renderInlineVar(node: AimdVarNode): VNode {
     onBlur: () => emitVarBlur(),
   })
 
-  return applyFieldAdapter("var", fieldKey, node, localRecord.var[id], vnode)
+  const assignerVNode = withAssignerControl("var", fieldKey, localRecord.var[id], vnode)
+  return applyFieldAdapter("var", fieldKey, node, localRecord.var[id], assignerVNode)
 }
 
 function renderInlineVarTable(node: AimdVarTableNode): VNode {
@@ -571,7 +651,8 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
     },
   })
 
-  return applyFieldAdapter("var_table", fieldKey, node, rows, vnode)
+  const assignerVNode = withAssignerControl("var_table", fieldKey, rows, vnode)
+  return applyFieldAdapter("var_table", fieldKey, node, rows, assignerVNode)
 }
 
 function isGroupedStepBodyNode(node: unknown): node is VNode {
@@ -773,7 +854,8 @@ function renderInlineStep(node: AimdStepNode, bodyNodes: VNodeChild[] = []): VNo
     },
   })
 
-  return applyFieldAdapter("step", fieldKey, node, state, vnode)
+  const assignerVNode = withAssignerControl("step", fieldKey, state, vnode)
+  return applyFieldAdapter("step", fieldKey, node, state, assignerVNode)
 }
 
 function renderInlineCheck(node: AimdCheckNode, bodyNodes: VNodeChild[] = []): VNode {
@@ -812,7 +894,8 @@ function renderInlineCheck(node: AimdCheckNode, bodyNodes: VNodeChild[] = []): V
     },
   })
 
-  return applyFieldAdapter("check", fieldKey, node, state, vnode)
+  const assignerVNode = withAssignerControl("check", fieldKey, state, vnode)
+  return applyFieldAdapter("check", fieldKey, node, state, assignerVNode)
 }
 
 function renderInlineQuiz(node: AimdQuizNode): VNode {
@@ -1143,6 +1226,52 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.01em;
   text-transform: lowercase;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field) {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  vertical-align: middle;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field--var_table),
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field--step),
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field--check) {
+  display: flex;
+  align-items: flex-start;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__control) {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__button) {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #2f855a;
+  border-radius: 7px;
+  background: #e6f4ea;
+  color: #276749;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__button:disabled) {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-assigner-field__error) {
+  min-width: 0;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 /* ── Field colours ──────────────────────────────────────────────────────── */

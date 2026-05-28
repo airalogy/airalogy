@@ -63,6 +63,7 @@ export type AimdVarInputKind = "text" | "number" | "checkbox" | "textarea" | "da
 export type AimdStepDetailDisplay = "auto" | "always"
 export type AimdChoiceOptionExplanationMode = "hidden" | "selected" | "submitted" | "graded"
 export type AimdScaleGradeDisplayMode = "hidden" | "completed" | "submitted" | "graded"
+export type AimdAssignerMode = "auto" | "auto_first" | "auto_force" | "manual" | "manual_readonly" | "auto_readonly"
 
 export function createEmptyProtocolRecordData(): AimdProtocolRecordData {
   return {
@@ -89,7 +90,7 @@ export interface AimdFieldMeta {
   enumOptions?: Array<{ label: string; value: unknown }>
   disabled?: boolean
   placeholder?: string
-  assigner?: { mode: 'manual' | 'auto_first' | 'auto_force' }
+  assigner?: { mode: AimdAssignerMode }
 }
 
 /** Field runtime state — app updates dynamically via prop */
