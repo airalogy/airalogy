@@ -6,7 +6,7 @@ const demoRoot = import.meta.env.DEV
   : withBase('/demo')
 
 const demoPages = [
-  { label: '案例', path: '/examples', desc: '查看仓库内 AIMD 场景案例' },
+  { label: '案例', path: '/examples', desc: '查看仓库内 AIMD 和协议示例' },
   { label: '完整工作流', path: '/full', desc: '编辑、渲染、记录一体化页面' },
   { label: 'Core 解析器', path: '/core', desc: '查看 AST 与字段提取结果' },
   { label: 'Editor 编辑器', path: '/editor', desc: 'AIMD 编写与插入交互' },

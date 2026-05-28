@@ -1,0 +1,156 @@
+{
+  "schema_version": "1.0.0",
+  "source_repository": "https://github.com/airalogy/protocols",
+  "examples": [
+    {
+      "id": "meeting-notes",
+      "category": "productivity",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ],
+      "title": {
+        "en-US": "Meeting Notes",
+        "zh-CN": "会议记录"
+      },
+      "description": {
+        "en-US": "A general-purpose meeting notes template for everyday meetings across teams and projects.",
+        "zh-CN": "通用的日常会议记录模板，适用于各种团队和项目。"
+      },
+      "protocol_dir": {
+        "en-US": "meeting-notes/en-US",
+        "zh-CN": "meeting-notes/zh-CN"
+      },
+      "entry": {
+        "en-US": "meeting-notes/en-US/protocol.aimd",
+        "zh-CN": "meeting-notes/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "en-US": "meeting-notes/en-US/protocol.toml",
+        "zh-CN": "meeting-notes/zh-CN/protocol.toml"
+      },
+      "engine_required": false,
+      "tags": [
+        "meeting",
+        "notes",
+        "collaboration",
+        "productivity"
+      ]
+    },
+    {
+      "id": "cuaac-kinetics",
+      "category": "chemistry",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ],
+      "title": {
+        "en-US": "Click Reaction Kinetics (CuAAC)",
+        "zh-CN": "点击化学反应动力学（CuAAC）"
+      },
+      "description": {
+        "en-US": "A chemistry protocol for CuAAC reaction design, kinetic data upload, parameter calculation, plot generation, and report drafting.",
+        "zh-CN": "以 CuAAC 点击反应为例，展示化学反应动力学实验设计、数据上传、参数计算、绘图和报告生成。"
+      },
+      "protocol_dir": {
+        "en-US": "cuaac-kinetics/en-US",
+        "zh-CN": "cuaac-kinetics/zh-CN"
+      },
+      "entry": {
+        "en-US": "cuaac-kinetics/en-US/protocol.aimd",
+        "zh-CN": "cuaac-kinetics/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "en-US": "cuaac-kinetics/en-US/protocol.toml",
+        "zh-CN": "cuaac-kinetics/zh-CN/protocol.toml"
+      },
+      "assigner": {
+        "en-US": "cuaac-kinetics/en-US/assigner.py",
+        "zh-CN": "cuaac-kinetics/zh-CN/assigner.py"
+      },
+      "sample_data": {
+        "zh-CN": [
+          "cuaac-kinetics/zh-CN/kinetics-demo.csv"
+        ]
+      },
+      "engine_required": true,
+      "tags": [
+        "chemistry",
+        "kinetics",
+        "CuAAC",
+        "assigner",
+        "report"
+      ]
+    },
+    {
+      "id": "drug-response-ic50",
+      "category": "biomedicine",
+      "languages": [
+        "zh-CN"
+      ],
+      "title": {
+        "en-US": "Drug Response IC50 Analysis",
+        "zh-CN": "抗肿瘤候选药物细胞活性剂量-反应分析"
+      },
+      "description": {
+        "en-US": "A biomedical protocol for dose-response data upload, IC50 estimation, quality control, curve plotting, and structured report generation.",
+        "zh-CN": "用于标准化记录细胞活性实验、上传剂量-反应数据、自动估算 IC50、生成图表与实验报告。"
+      },
+      "protocol_dir": {
+        "zh-CN": "drug-response-ic50/zh-CN"
+      },
+      "entry": {
+        "zh-CN": "drug-response-ic50/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "zh-CN": "drug-response-ic50/zh-CN/protocol.toml"
+      },
+      "assigner": {
+        "zh-CN": "drug-response-ic50/zh-CN/assigner.py"
+      },
+      "sample_data": {
+        "zh-CN": [
+          "drug-response-ic50/zh-CN/dose-response-demo.csv"
+        ]
+      },
+      "engine_required": true,
+      "tags": [
+        "biomedicine",
+        "pharmacology",
+        "IC50",
+        "dose-response",
+        "assigner"
+      ]
+    },
+    {
+      "id": "diary",
+      "category": "personal",
+      "languages": [
+        "en-US"
+      ],
+      "title": {
+        "en-US": "Diary",
+        "zh-CN": "日记"
+      },
+      "description": {
+        "en-US": "A compact Airalogy Protocol for keeping a structured diary.",
+        "zh-CN": "一个用于结构化记录日记的轻量 Airalogy Protocol。"
+      },
+      "protocol_dir": {
+        "en-US": "diary/en-US"
+      },
+      "entry": {
+        "en-US": "diary/en-US/protocol.aimd"
+      },
+      "toml": {
+        "en-US": "diary/en-US/protocol.toml"
+      },
+      "engine_required": false,
+      "tags": [
+        "diary",
+        "personal",
+        "notes"
+      ]
+    }
+  ]
+}

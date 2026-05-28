@@ -1,0 +1,21 @@
+# AIMD Multi-Hop Image Display Test
+
+This protocol verifies that user-provided images render correctly when they flow through multiple upstream/downstream Airalogy Markdown (AIMD) fields.
+
+## 1 Upstream AIMD #1
+
+In the field below, write a few lines of text and upload at least one image (you may upload multiple images). The editor will insert the correct Airalogy Markdown image reference automatically.
+
+{{var|upstream_aimd_1: AiralogyMarkdown, description="Upstream AIMD #1. Add some text and upload at least one image (the editor inserts the image reference automatically)."}}
+
+## 2 Upstream AIMD #2
+
+In the field below, add more text and optionally upload one or more additional images (or reference the same image again) to simulate a second upstream step:
+
+{{var|upstream_aimd_2: AiralogyMarkdown, description="Upstream AIMD #2. Add more text; optionally upload more images or reference the same image."}}
+
+## 3 Downstream AIMD (auto-assembled; do not edit)
+
+This field is automatically assembled from upstream AIMD #1 and #2. It should display all embedded images correctly.
+
+{{var|downstream_aimd: AiralogyMarkdown, description="Auto-assembled AIMD composed from upstream_aimd_1 and upstream_aimd_2."}}

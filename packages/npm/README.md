@@ -15,9 +15,9 @@ This directory contains the publishable npm packages in the Airalogy monorepo:
 | `@airalogy/aimd-recorder` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Faimd-recorder?logo=npm&color=cb3837)](https://www.npmjs.com/package/@airalogy/aimd-recorder) | [README](./aimd-recorder/README.md) · [Site](https://airalogy.github.io/airalogy/aimd/en/packages/aimd-recorder/) | Vue UI components and styles for structured AIMD recording |
 | `@airalogy/airalogy-engine` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Fairalogy-engine?logo=npm&color=cb3837)](https://www.npmjs.com/package/@airalogy/airalogy-engine) | [README](./airalogy-engine/README.md) · [Site](https://airalogy.github.io/airalogy/airalogy-engine/) | Node.js API for the Airalogy protocol execution sandbox |
 
-## AIMD Examples
+## Examples
 
-Scenario examples live under [examples/](../../examples/aimd/) and are registered in the machine-readable [examples/index.json](../../examples/aimd/index.json). You can preview, edit, and fill these examples on the [Demo examples page](https://airalogy.github.io/airalogy/aimd/demo/#/examples).
+AIMD scenario examples live under [examples/aimd](../../examples/aimd/) and are registered in [examples/aimd/index.json](../../examples/aimd/index.json). Complete Airalogy Protocol examples live under [examples/protocols](../../examples/protocols/) and are registered in [examples/protocols/index.json](../../examples/protocols/index.json). You can preview, edit, and fill their AIMD portions on the [Demo examples page](https://airalogy.github.io/airalogy/aimd/demo/#/examples).
 
 ## Development
 
@@ -50,7 +50,7 @@ pnpm dev:demo
 
 Visit http://localhost:5188 to see the demo, which includes:
 
-- **Examples**: Browse repository AIMD scenario examples and fill them in the recorder
+- **Examples**: Browse repository AIMD scenario examples and official protocol examples, then fill them in the recorder
 - **Core Parser**: Live AIMD Markdown parsing with AST and extracted fields
 - **Editor**: Monaco editor token definitions and theme config preview
 - **Renderer**: Live HTML / Vue VNode rendering preview

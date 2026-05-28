@@ -1,0 +1,27 @@
+# Document Conversion to Markdown Test
+
+This protocol is a test fixture to validate document conversion to Markdown.
+
+## DOCX
+
+Upload a `.docx` file and convert it to Markdown.
+
+DOCX file: {{var|docx_file_id: FileIdDOCX, description="Upload a .docx file"}}
+
+DOCX source filename (auto): {{var|docx_source_filename: str, description="Resolved source filename for the DOCX conversion"}}
+
+DOCX converted Markdown (auto): {{var|docx_markdown_text: AiralogyMarkdown, description="Converted Markdown content for the DOCX document"}}
+
+DOCX warnings (auto): {{var|docx_warnings: list[str], description="Non-fatal DOCX conversion warnings, if any"}}
+
+## PDF
+
+Upload a `.pdf` file and convert it to Markdown.
+
+PDF file: {{var|pdf_file_id: FileIdPDF, description="Upload a .pdf file"}}
+
+PDF source filename (auto): {{var|pdf_source_filename: str, description="Resolved source filename for the PDF conversion"}}
+
+PDF converted Markdown (auto): {{var|pdf_markdown_text: AiralogyMarkdown, description="Converted Markdown content for the PDF document"}}
+
+PDF warnings (auto): {{var|pdf_warnings: list[str], description="Non-fatal PDF conversion warnings, if any"}}

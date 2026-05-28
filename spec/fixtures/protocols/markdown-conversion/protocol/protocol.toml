@@ -1,0 +1,14 @@
+[airalogy_protocol]
+id = "test_markdown_conversion"
+version = "0.0.1"
+name = "Document Conversion to Markdown Test"
+description = "Verify that user-uploaded PDF/DOCX documents can be converted to Markdown."
+authors = [
+    { name = "YANG Zijie", email = "yangzijie@westlake.edu.cn", airalogy_user_id = "airalogy.id.user.yangzijie" },
+]
+maintainers = [
+    { name = "YANG Zijie", email = "yangzijie@westlake.edu.cn", airalogy_user_id = "airalogy.id.user.yangzijie" },
+]
+disciplines = ["Airalogy"]
+keywords = ["airalogy", "markdown", "convert", "pdf", "docx", "assigner", "test"]
+license = "Apache-2.0"

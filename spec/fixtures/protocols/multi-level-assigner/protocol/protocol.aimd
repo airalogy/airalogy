@@ -1,0 +1,612 @@
+# Multi-level Assigner Trigger Test
+
+This protocol is a test fixture for validating assigner trigger behavior across different `mode`s, using multiple independent lines (field names are prefixed for readability, e.g. `a*`, `b*`, `c*`).
+
+Covered modes:
+
+- `auto`: triggers automatically when dependencies change (multi-hop chain)
+- `manual`: runs only when the user clicks Assign (middle node)
+- `auto_first`: triggers automatically once, then stops auto-refreshing
+
+Special case covered:
+
+- Long-running assigner simulation: uses `time.sleep()` inside an `auto` assigner to emulate slow work and observe downstream behavior/timestamps.
+- Downstream `manual`/`auto` assigners that depend on the slow assigner, each with start/end timestamps to verify trigger order.
+
+## Line A: multi-hop `auto` chain
+
+Relationships:
+
+Assigner A1 (auto):
+
+- `a3 = a1 + a2`
+
+Assigner A2 (auto):
+
+- `a4 = a3 * 3`
+
+Assigner A3 (auto):
+
+- `a5 = a4^2`
+
+```mermaid
+flowchart LR
+  a1([a1]) --> a3{{a3}}
+  a2([a2]) --> a3
+  a3 --> a4{{a4}}
+  a4 --> a5{{a5}}
+  linkStyle 0,1 stroke:#1f77b4,stroke-width:2px
+  linkStyle 2 stroke:#ff7f0e,stroke-width:2px
+  linkStyle 3 stroke:#2ca02c,stroke-width:2px
+```
+
+Inputs:
+
+- `a1`: {{var|a1: int = 3, description="Line A input 1"}}
+- `a2`: {{var|a2: int = 4, description="Line A input 2"}}
+
+Computed (auto):
+
+- `a3`: {{var|a3: int, description="auto: a3 = a1 + a2"}}
+- `a4`: {{var|a4: int, description="auto: a4 = a3 * 3"}}
+- `a5`: {{var|a5: int, description="auto: a5 = a4^2"}}
+
+Expected behavior:
+
+- When `a1` or `a2` changes, `a3` auto-updates.
+- Then `a4` auto-updates due to `a3` change.
+- Then `a5` auto-updates due to `a4` change.
+- If any hop does not trigger, it indicates a multi-hop dependency propagation issue.
+
+## Line B: `manual` middle node + downstream slow `auto` + dependent `manual`/`auto`
+
+Relationships:
+
+Assigner B1 (manual):
+
+- `b5 = b1 * b2 + b3`
+
+Assigner B2 (auto + sleep):
+
+- `b6 = b5 * 2`
+- `b7 = slow assigner start time (UTC ISO)`
+- `b8 = slow assigner end time (UTC ISO)`
+
+Assigner B3 (manual):
+
+- `b9 = b5 + b6`
+- `b10 = downstream start time (UTC ISO)`
+- `b11 = downstream end time (UTC ISO)`
+
+Assigner B4 (auto):
+
+- `b12 = b5 * b6`
+- `b13 = downstream start time (UTC ISO)`
+- `b14 = downstream end time (UTC ISO)`
+
+Delay control:
+
+- `b4` controls the sleep duration in seconds (clamped to `[0, 60]`)
+
+```mermaid
+flowchart LR
+  b1([b1]) --> b5{{b5}}
+  b2([b2]) --> b5
+  b3([b3]) --> b5
+
+  b5 --> b6{{b6}}
+  b4([b4]) --> b6
+  b5 --> b7{{b7}}
+  b4 --> b7
+  b5 --> b8{{b8}}
+  b4 --> b8
+
+  b5 --> b9{{b9}}
+  b6 --> b9
+  b5 --> b10{{b10}}
+  b6 --> b10
+  b5 --> b11{{b11}}
+  b6 --> b11
+
+  b5 --> b12{{b12}}
+  b6 --> b12
+  b5 --> b13{{b13}}
+  b6 --> b13
+  b5 --> b14{{b14}}
+  b6 --> b14
+  linkStyle 0,1,2 stroke:#1f77b4,stroke-width:2px
+  linkStyle 3,4,5,6,7,8 stroke:#ff7f0e,stroke-width:2px
+  linkStyle 9,10,11,12,13,14 stroke:#2ca02c,stroke-width:2px
+  linkStyle 15,16,17,18,19,20 stroke:#d62728,stroke-width:2px
+```
+
+Inputs:
+
+- `b1`: {{var|b1: int = 2, description="Line B input 1"}}
+- `b2`: {{var|b2: int = 5, description="Line B input 2"}}
+- `b3`: {{var|b3: int = 10, description="Line B manual offset"}}
+- `b4`: {{var|b4: int = 10, ge=0, le=60, description="Line B delay seconds"}}
+
+Computed:
+
+- `b5` (manual): {{var|b5: int, description="manual: b5 = b1 * b2 + b3"}}
+- `b6` (slow auto): {{var|b6: int, description="auto+sleep: b6 = b5 * 2"}}
+- `b7` started_at (auto): {{var|b7: str, description="auto: slow assigner start time (UTC ISO)"}}
+- `b8` finished_at (auto): {{var|b8: str, description="auto: slow assigner end time (UTC ISO)"}}
+- `b9` (manual): {{var|b9: int, description="manual: b9 = b5 + b6"}}
+- `b10` started_at (manual): {{var|b10: str, description="manual: downstream assigner start time (UTC ISO)"}}
+- `b11` finished_at (manual): {{var|b11: str, description="manual: downstream assigner end time (UTC ISO)"}}
+- `b12` (auto): {{var|b12: int, description="auto: b12 = b5 * b6"}}
+- `b13` started_at (auto): {{var|b13: str, description="auto: downstream assigner start time (UTC ISO)"}}
+- `b14` finished_at (auto): {{var|b14: str, description="auto: downstream assigner end time (UTC ISO)"}}
+
+Expected behavior:
+
+- Changing `b1`/`b2`/`b3` does NOT auto-update `b5` (because it is `manual`).
+- Clicking Assign for the manual assigner updates `b5`.
+- After `b5` updates, downstream `b6`/`b7`/`b8` should auto-trigger.
+- After `b6` finishes, downstream `b12`/`b13`/`b14` should auto-trigger.
+- The downstream manual `b9`/`b10`/`b11` should NOT auto-trigger; it runs only when manually assigned after `b5` and `b6` are ready.
+- The difference between `b8` and `b7` should be approximately `b4` seconds (clamped), which helps spot slow-assigner scheduling/timeout issues.
+- The differences between `b11`/`b10` and `b14`/`b13` should be small (no sleep), confirming downstream runtime capture.
+
+## Line C: `auto_first` one-shot
+
+Relationships:
+
+Assigner C1 (auto_first):
+
+- `c3 = c1 + c2`
+
+```mermaid
+flowchart LR
+  c1([c1]) --> c3{{c3}}
+  c2([c2]) --> c3
+  linkStyle 0,1 stroke:#1f77b4,stroke-width:2px
+```
+
+Inputs:
+
+- `c1`: {{var|c1: int = 1, description="Line C input 1"}}
+- `c2`: {{var|c2: int = 2, description="Line C input 2"}}
+
+Computed (auto_first):
+
+- `c3`: {{var|c3: int, description="auto_first: one-shot sum generated once"}}
+
+Expected behavior:
+
+- `c3` is generated once when `c1` and `c2` are first ready.
+- Later changes to `c1`/`c2` should NOT auto-refresh `c3`.
+- If it keeps auto-refreshing, `auto_first` is behaving like `auto` (potential bug/regression).
+
+## Line D: multi-hop `auto` chain with missing defaults (should NOT auto-run on open)
+
+Relationships:
+
+Assigner D1 (auto):
+
+- `d3 = d1 + d2`
+
+Assigner D2 (auto):
+
+- `d4 = d3 * 3`
+
+Assigner D3 (auto):
+
+- `d5 = d4^2`
+
+```mermaid
+flowchart LR
+  d1([d1]) --> d3{{d3}}
+  d2([d2]) --> d3
+  d3 --> d4{{d4}}
+  d4 --> d5{{d5}}
+  linkStyle 0,1 stroke:#1f77b4,stroke-width:2px
+  linkStyle 2 stroke:#ff7f0e,stroke-width:2px
+  linkStyle 3 stroke:#2ca02c,stroke-width:2px
+```
+
+Inputs (intentionally incomplete at start):
+
+- `d1`: {{var|d1: int, description="Line D input 1 (no default on purpose)"}}
+- `d2`: {{var|d2: int = 4, description="Line D input 2"}}
+
+Computed (auto):
+
+- `d3`: {{var|d3: int, description="auto: d3 = d1 + d2"}}
+- `d4`: {{var|d4: int, description="auto: d4 = d3 * 3"}}
+- `d5`: {{var|d5: int, description="auto: d5 = d4^2"}}
+
+Expected behavior:
+
+- On protocol open, because `d1` is missing, `d3`/`d4`/`d5` should not be computed yet.
+- After you fill `d1`, the chain should start and auto-propagate `d3` → `d4` → `d5`.
+- If it computes with an empty `d1`, it indicates “missing value” handling is incorrect.
+
+## Line E: `auto_first` with missing defaults (should run once when ready)
+
+Relationships:
+
+Assigner E1 (auto_first):
+
+- `e3 = e1 + e2`
+
+```mermaid
+flowchart LR
+  e1([e1]) --> e3{{e3}}
+  e2([e2]) --> e3
+  linkStyle 0,1 stroke:#1f77b4,stroke-width:2px
+```
+
+Inputs (intentionally incomplete at start):
+
+- `e1`: {{var|e1: int, description="Line E input 1 (no default on purpose)"}}
+- `e2`: {{var|e2: int = 2, description="Line E input 2"}}
+
+Computed (auto_first):
+
+- `e3`: {{var|e3: int, description="auto_first: one-shot sum generated once when inputs become ready"}}
+
+Expected behavior:
+
+- On protocol open, because `e1` is missing, `e3` should not be generated yet.
+- After you fill `e1`, `e3` should generate exactly once.
+- Later changes to `e1`/`e2` should NOT auto-refresh `e3` unless manually triggered.
+
+## Line F: large multi-level `auto` graph (all defaults)
+
+Relationships:
+
+Assigner F1 (auto):
+
+- `f6 = f1 + f2`
+
+Assigner F2 (auto):
+
+- `f7 = f2 * f3`
+
+Assigner F3 (auto):
+
+- `f8 = f4 - f5`
+
+Assigner F4 (auto):
+
+- `f9 = f6 * f7`
+
+Assigner F5 (auto):
+
+- `f10 = f9 + f8`
+
+Assigner F6 (auto):
+
+- `f11 = f10 * 2`
+
+Assigner F7 (auto):
+
+- `f12 = f11 + f6`
+
+Assigner F8 (auto):
+
+- `f13 = f12 + f7`
+
+Assigner F9 (auto):
+
+- `f14 = f13 + f8`
+
+Assigner F10 (auto):
+
+- `f15 = f14 - f1`
+
+```mermaid
+flowchart LR
+  f1([f1]) --> f6{{f6}}
+  f2([f2]) --> f6
+
+  f2 --> f7{{f7}}
+  f3([f3]) --> f7
+
+  f4([f4]) --> f8{{f8}}
+  f5([f5]) --> f8
+
+  f6 --> f9{{f9}}
+  f7 --> f9
+
+  f9 --> f10{{f10}}
+  f8 --> f10
+
+  f10 --> f11{{f11}}
+
+  f11 --> f12{{f12}}
+  f6 --> f12
+
+  f12 --> f13{{f13}}
+  f7 --> f13
+
+  f13 --> f14{{f14}}
+  f8 --> f14
+
+  f14 --> f15{{f15}}
+  f1 --> f15
+  linkStyle 0,1 stroke:#1f77b4,stroke-width:2px
+  linkStyle 2,3 stroke:#ff7f0e,stroke-width:2px
+  linkStyle 4,5 stroke:#2ca02c,stroke-width:2px
+  linkStyle 6,7 stroke:#d62728,stroke-width:2px
+  linkStyle 8,9 stroke:#9467bd,stroke-width:2px
+  linkStyle 10 stroke:#8c564b,stroke-width:2px
+  linkStyle 11,12 stroke:#e377c2,stroke-width:2px
+  linkStyle 13,14 stroke:#7f7f7f,stroke-width:2px
+  linkStyle 15,16 stroke:#bcbd22,stroke-width:2px
+  linkStyle 17,18 stroke:#17becf,stroke-width:2px
+```
+
+Inputs (all have defaults so the chain runs on open):
+
+- `f1`: {{var|f1: int = 3, description="Line F input 1"}}
+- `f2`: {{var|f2: int = 4, description="Line F input 2"}}
+- `f3`: {{var|f3: int = 5, description="Line F input 3"}}
+- `f4`: {{var|f4: int = 20, description="Line F input 4"}}
+- `f5`: {{var|f5: int = 7, description="Line F input 5"}}
+
+Computed (auto):
+
+Note: the expected values below assume the initial default inputs; changing inputs will change these results.
+
+- `f6`: {{var|f6: int, description="auto: f6 = f1 + f2"}} (expected 7)
+- `f7`: {{var|f7: int, description="auto: f7 = f2 * f3"}} (expected 20)
+- `f8`: {{var|f8: int, description="auto: f8 = f4 - f5"}} (expected 13)
+- `f9`: {{var|f9: int, description="auto: f9 = f6 * f7"}} (expected 140)
+- `f10`: {{var|f10: int, description="auto: f10 = f9 + f8"}} (expected 153)
+- `f11`: {{var|f11: int, description="auto: f11 = f10 * 2"}} (expected 306)
+- `f12`: {{var|f12: int, description="auto: f12 = f11 + f6"}} (expected 313)
+- `f13`: {{var|f13: int, description="auto: f13 = f12 + f7"}} (expected 333)
+- `f14`: {{var|f14: int, description="auto: f14 = f13 + f8"}} (expected 346)
+- `f15`: {{var|f15: int, description="auto: f15 = f14 - f1"}} (expected 343)
+
+Expected behavior:
+
+- On protocol open, all `f6`–`f15` should compute automatically since inputs are ready.
+- Changing any input should re-trigger the dependent chain; for example, changing `f3` should update `f7` → `f9` → `f10` → `f11` → `f12` → `f13` → `f14` → `f15` (if `f3=10`, then `f7=40`, `f9=280`, `f10=293`, `f11=586`, `f12=593`, `f13=633`, `f14=646`, `f15=643`).
+
+## Line G: multi-level fan-out with multi-field assigners
+
+Relationships:
+
+Assigner G1 (auto):
+
+- `g5 = g1 + g2`
+- `g6 = g1 * g2`
+
+Assigner G2 (auto):
+
+- `g7 = g2 + g3`
+- `g8 = g2 * g3`
+
+Assigner G3 (auto):
+
+- `g9 = g3 + g4`
+- `g10 = g3 * g4`
+
+Assigner G4 (auto):
+
+- `g11 = g5 + g7 + g9`
+- `g12 = g5 * g7 + g9`
+
+Assigner G5 (auto):
+
+- `g13 = g6 + g8 + g10`
+- `g14 = g6 * g8 + g10`
+
+Assigner G6 (auto):
+
+- `g15 = g11 + g13`
+- `g16 = g12 + g14`
+- `g17 = g11 + g12 + g13 + g14`
+
+Assigner G7 (auto):
+
+- `g18 = g15 + g16`
+- `g19 = g17 - g15`
+
+Assigner G8 (auto):
+
+- `g20 = g18 + g19`
+
+```mermaid
+flowchart LR
+  g1([g1]) --> g5{{g5}}
+  g2([g2]) --> g5
+  g1 --> g6{{g6}}
+  g2 --> g6
+
+  g2 --> g7{{g7}}
+  g3([g3]) --> g7
+  g2 --> g8{{g8}}
+  g3 --> g8
+
+  g3 --> g9{{g9}}
+  g4([g4]) --> g9
+  g3 --> g10{{g10}}
+  g4 --> g10
+
+  g5 --> g11{{g11}}
+  g7 --> g11
+  g9 --> g11
+
+  g5 --> g12{{g12}}
+  g7 --> g12
+  g9 --> g12
+
+  g6 --> g13{{g13}}
+  g8 --> g13
+  g10 --> g13
+
+  g6 --> g14{{g14}}
+  g8 --> g14
+  g10 --> g14
+
+  g11 --> g15{{g15}}
+  g13 --> g15
+
+  g12 --> g16{{g16}}
+  g14 --> g16
+
+  g11 --> g17{{g17}}
+  g12 --> g17
+  g13 --> g17
+  g14 --> g17
+
+  g15 --> g18{{g18}}
+  g16 --> g18
+
+  g17 --> g19{{g19}}
+  g15 --> g19
+
+  g18 --> g20{{g20}}
+  g19 --> g20
+  linkStyle 0,1,2,3 stroke:#1f77b4,stroke-width:2px
+  linkStyle 4,5,6,7 stroke:#ff7f0e,stroke-width:2px
+  linkStyle 8,9,10,11 stroke:#2ca02c,stroke-width:2px
+  linkStyle 12,13,14,15,16,17 stroke:#d62728,stroke-width:2px
+  linkStyle 18,19,20,21,22,23 stroke:#9467bd,stroke-width:2px
+  linkStyle 24,25,26,27,28,29,30,31 stroke:#8c564b,stroke-width:2px
+  linkStyle 32,33,34,35 stroke:#e377c2,stroke-width:2px
+  linkStyle 36,37 stroke:#17becf,stroke-width:2px
+```
+
+Inputs (all have defaults so the chain runs on open):
+
+- `g1`: {{var|g1: int = 2, description="Line G input 1"}}
+- `g2`: {{var|g2: int = 3, description="Line G input 2"}}
+- `g3`: {{var|g3: int = 5, description="Line G input 3"}}
+- `g4`: {{var|g4: int = 7, description="Line G input 4"}}
+
+Computed (auto):
+
+Note: the expected values below assume the initial default inputs; changing inputs will change these results.
+
+- `g5`: {{var|g5: int, description="auto: g5 = g1 + g2"}} (expected 5)
+- `g6`: {{var|g6: int, description="auto: g6 = g1 * g2"}} (expected 6)
+- `g7`: {{var|g7: int, description="auto: g7 = g2 + g3"}} (expected 8)
+- `g8`: {{var|g8: int, description="auto: g8 = g2 * g3"}} (expected 15)
+- `g9`: {{var|g9: int, description="auto: g9 = g3 + g4"}} (expected 12)
+- `g10`: {{var|g10: int, description="auto: g10 = g3 * g4"}} (expected 35)
+- `g11`: {{var|g11: int, description="auto: g11 = g5 + g7 + g9"}} (expected 25)
+- `g12`: {{var|g12: int, description="auto: g12 = g5 * g7 + g9"}} (expected 52)
+- `g13`: {{var|g13: int, description="auto: g13 = g6 + g8 + g10"}} (expected 56)
+- `g14`: {{var|g14: int, description="auto: g14 = g6 * g8 + g10"}} (expected 125)
+- `g15`: {{var|g15: int, description="auto: g15 = g11 + g13"}} (expected 81)
+- `g16`: {{var|g16: int, description="auto: g16 = g12 + g14"}} (expected 177)
+- `g17`: {{var|g17: int, description="auto: g17 = g11 + g12 + g13 + g14"}} (expected 258)
+- `g18`: {{var|g18: int, description="auto: g18 = g15 + g16"}} (expected 258)
+- `g19`: {{var|g19: int, description="auto: g19 = g17 - g15"}} (expected 177)
+- `g20`: {{var|g20: int, description="auto: g20 = g18 + g19"}} (expected 435)
+
+Expected behavior:
+
+- On protocol open, the chain should compute automatically since inputs are ready.
+- Each assigner writes multiple fields; downstream should trigger once per assigner batch, not once per field.
+- Changing `g2` should fan out through `g5`/`g6` and `g7`/`g8`, then cascade into `g11`–`g20`.
+
+## Line H: complex string assembly with fan-out/fan-in + delays
+
+Relationships:
+
+Assigner H1 (auto + delay):
+
+- `h9 = h1 + "-" + h2`
+- `h10 = upper(h2) + "_" + h3`
+- `h11 = h4 + ":" + h5`
+- Delay control: `h6`
+
+Assigner H2 (auto + delay):
+
+- `h12 = h9 + "|" + h10`
+- `h13 = "[" + h12 + "]<" + h11 + ">"`
+- Delay control: `h7`
+
+Assigner H3 (auto + delay):
+
+- `h14 = h13[0:5]`
+- `h15 = h13[5:10]`
+- `h16 = h13[10:15]`
+- `h17 = h13[15:]`
+- Delay control: `h8`
+
+Assigner H4 (auto):
+
+- `h18 = h14 + h15 + h16 + h17`
+- `h19 = "len=" + len(h18)`
+
+```mermaid
+flowchart LR
+  h1([h1]) --> h9{{h9}}
+  h2([h2]) --> h9
+  h2 --> h10{{h10}}
+  h3([h3]) --> h10
+  h4([h4]) --> h11{{h11}}
+  h5([h5]) --> h11
+  h6([h6]) --> h9
+  h6 --> h10
+  h6 --> h11
+
+  h9 --> h12{{h12}}
+  h10 --> h12
+  h9 --> h13{{h13}}
+  h10 --> h13
+  h11 --> h13
+  h7([h7]) --> h12
+  h7 --> h13
+
+  h13 --> h14{{h14}}
+  h13 --> h15{{h15}}
+  h13 --> h16{{h16}}
+  h13 --> h17{{h17}}
+  h8([h8]) --> h14
+  h8 --> h15
+  h8 --> h16
+  h8 --> h17
+
+  h14 --> h18{{h18}}
+  h15 --> h18
+  h16 --> h18
+  h17 --> h18
+
+  h18 --> h19{{h19}}
+  linkStyle 0,1,2,3,4,5,6,7,8 stroke:#1f77b4,stroke-width:2px
+  linkStyle 9,10,11,12,13,14,15 stroke:#ff7f0e,stroke-width:2px
+  linkStyle 16,17,18,19,20,21,22,23 stroke:#2ca02c,stroke-width:2px
+  linkStyle 24,25,26,27,28 stroke:#d62728,stroke-width:2px
+```
+
+Inputs (all have defaults so the chain runs on open):
+
+- `h1`: {{var|h1: str = "alpha", description="Line H base string 1"}}
+- `h2`: {{var|h2: str = "beta", description="Line H base string 2"}}
+- `h3`: {{var|h3: str = "gamma", description="Line H base string 3"}}
+- `h4`: {{var|h4: str = "delta", description="Line H base string 4"}}
+- `h5`: {{var|h5: str = "epsilon", description="Line H base string 5"}}
+- `h6`: {{var|h6: int = 0, ge=0, le=5, description="Line H delay seconds for piece builder"}}
+- `h7`: {{var|h7: int = 0, ge=0, le=5, description="Line H delay seconds for joiner"}}
+- `h8`: {{var|h8: int = 0, ge=0, le=5, description="Line H delay seconds for splitter"}}
+
+Computed (auto):
+
+- `h9`: {{var|h9: str, description="auto: h9 = h1 + '-' + h2"}}
+- `h10`: {{var|h10: str, description="auto: h10 = upper(h2) + '_' + h3"}}
+- `h11`: {{var|h11: str, description="auto: h11 = h4 + ':' + h5"}}
+- `h12`: {{var|h12: str, description="auto: h12 = h9 + '|' + h10"}}
+- `h13`: {{var|h13: str, description="auto: h13 = '[' + h12 + ']<' + h11 + '>'"}}
+- `h14`: {{var|h14: str, description="auto: h14 = h13[0:5]"}}
+- `h15`: {{var|h15: str, description="auto: h15 = h13[5:10]"}}
+- `h16`: {{var|h16: str, description="auto: h16 = h13[10:15]"}}
+- `h17`: {{var|h17: str, description="auto: h17 = h13[15:]"}}
+- `h18`: {{var|h18: str, description="auto: h18 = h14 + h15 + h16 + h17"}}
+- `h19`: {{var|h19: str, description="auto: h19 = 'len=' + len(h18)"}}
+
+Expected behavior:
+
+- On protocol open, the string chain should compute automatically since inputs are ready.
+- Setting `h6`/`h7`/`h8` > 0 should slow the piece builder, joiner, and splitter stages respectively.
+- The splitter assigns `h14`–`h17` in one assigner call, while `h18` depends on all four; if the platform does not batch these updates, you may see multiple downstream triggers.
+- `h18` should match `h13`, and `h19` should report the length of `h18`.

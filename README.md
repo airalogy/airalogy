@@ -15,6 +15,8 @@ Airalogy is the monorepo for the Airalogy protocol ecosystem:
 - `packages/npm/aimd-*`: TypeScript AIMD parser, renderer, editor, and recorder packages.
 - `packages/npm/airalogy-engine`: Node.js protocol execution sandbox package.
 - `packages/runtime/airalogy-engine-image`: sandbox image definition used by engine packages.
+- `examples/aimd`: standalone AIMD examples for browser preview and recorder demos.
+- `examples/protocols`: complete official Airalogy Protocol examples migrated from the former standalone `airalogy/protocols` repository.
 - `spec/fixtures`: shared protocol fixtures for cross-implementation compatibility.
 
 ## Packages
@@ -60,6 +62,7 @@ pnpm test
 - Airalogy Python package docs: `docs/airalogy`
 - AIMD npm package docs: `docs/aimd`
 - Airalogy Engine docs: `docs/airalogy-engine`
+- Official protocol examples: `examples/protocols`
 
 Published docs are assembled into one GitHub Pages site:
 

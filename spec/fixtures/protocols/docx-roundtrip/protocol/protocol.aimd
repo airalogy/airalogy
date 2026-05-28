@@ -1,0 +1,24 @@
+# DOCX Read & Export Minimal Test
+
+This protocol minimally verifies:
+
+- Uploading a DOCX and extracting text
+- Applying a visibly noticeable transformation
+- Exporting the processed text to DOCX and PDF
+
+## Upload
+
+DOCX file: {{var|source_docx: FileIdDOCX, description="Upload a .docx file"}}
+
+## Extraction
+
+Extracted text (auto): {{var|extracted_text: AiralogyMarkdown, description="Text extracted from DOCX"}}
+
+## Processing
+
+Processed text (auto): {{var|processed_text: AiralogyMarkdown, description="Visibly transformed text"}}
+
+## Export
+
+Processed DOCX (auto): {{var|output_docx: FileIdDOCX, description="Generated .docx from processed text"}}
+Processed PDF (auto): {{var|output_pdf: FileIdPDF, description="Generated .pdf from processed text"}}

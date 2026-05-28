@@ -6,7 +6,7 @@ const demoRoot = import.meta.env.DEV
   : withBase('/demo')
 
 const demoPages = [
-  { label: 'Examples', path: '/examples', desc: 'Repository AIMD scenario examples' },
+  { label: 'Examples', path: '/examples', desc: 'Repository AIMD and protocol examples' },
   { label: 'Full Workflow', path: '/full', desc: 'Editor + render + record in one page' },
   { label: 'Core Parser', path: '/core', desc: 'AST and extracted AIMD fields' },
   { label: 'Editor', path: '/editor', desc: 'AIMD authoring experience' },

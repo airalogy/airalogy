@@ -1,0 +1,87 @@
+# 通过 Airalogy Protocol 研究候选抗肿瘤药物的细胞活性
+
+## 说明
+
+本协议以生物医药研发中常见的细胞活性剂量-反应实验为例，展示 Airalogy Protocol 如何把实验设计、原始数据上传、自动计算、可视化和报告生成串联成一个可复用的研究流程。
+
+示例场景：研究某个候选抗肿瘤小分子在肿瘤细胞模型中的体外活性。实验人员上传 CCK-8 细胞活性读数数据后，协议自动完成归一化细胞活性计算、IC50 估算、剂量-反应曲线绘制和质控判定，并生成一份结构化实验报告。
+
+## 研究基本信息
+
+记录人：{{var|record_recorder: UserName}}
+记录时间：{{var|record_time: CurrentTime}}
+研究编号：{{var|study_id: str = "BIO-DR-XXXXXXXX"}}
+项目名称：{{var|project_name: str = "候选抗肿瘤药物体外活性评估"}}
+适应症方向：{{var|therapeutic_area: str = "肿瘤药理 / 精准医学"}}
+候选药物：{{var|compound_name: str = "Candidate-A"}}
+阳性对照：{{var|positive_control: str = "Doxorubicin"}}
+
+## 实验模型与条件
+
+细胞或模型名称：{{var|cell_model: str = "A549 肺腺癌细胞"}}
+实验方法：{{var|assay_type: str = "CCK-8 细胞活性检测"}}
+处理时间（h）：{{var|incubation_h: float = 72.0, gt = 0}}
+接种密度（cells/well）：{{var|seeding_density: int = 3000, gt = 0}}
+培养基条件：{{var|culture_condition: str = "RPMI 1640 + 10% FBS"}}
+Vehicle 对照平均信号：{{var|vehicle_control_mean: float = 100000.0, gt = 0}}
+空白孔平均信号：{{var|blank_mean: float = 500.0, ge=0}}
+
+## 数据上传
+
+请上传剂量-反应实验数据（CSV 格式）：
+
+{{var|dose_response_file: FileIdCSV}}
+
+<details>
+<summary>CSV 格式要求和示例</summary>
+
+必须包含以下列：
+
+| concentration_um | signal_mean | signal_sd | n |
+|-----------------:|------------:|----------:|--:|
+| 0.001            | 98000       | 2600      | 3 |
+| 0.003            | 95500       | 2400      | 3 |
+| 0.01             | 90000       | 2500      | 3 |
+| ...              | ...         | ...       | ... |
+
+字段说明：
+
+- `concentration_um`：候选药物浓度，单位为 μM，需大于 0。
+- `signal_mean`：该剂量组的平均读数，例如吸光度、荧光或发光强度。
+- `signal_sd`：该剂量组读数标准差；可选，但建议提供，用于质控和误差线。
+- `n`：重复孔数量；可选。
+
+</details>
+
+## 自动计算结果
+
+剂量点数量：{{var|point_count: int}}
+最低归一化细胞活性（%）：{{var|min_viability_pct: float}}
+最高抑制率（%）：{{var|max_inhibition_pct: float}}
+估算 IC50（μM）：{{var|ic50_um: float}}
+log10(IC50)：{{var|log_ic50: float}}
+IC50 是否落在实验浓度范围内：{{var|ic50_in_range: bool}}
+平均 log-dose 抑制面积 AUC（%）：{{var|auc_inhibition: float}}
+最大重复孔 CV（%）：{{var|max_cv_pct: float}}
+质控通过：{{var|qc_pass: bool}}
+
+<details>
+<summary>质控标准</summary>
+
+满足以下条件时，判定为 QC Pass：
+
+- 至少包含 6 个有效剂量点；
+- Vehicle 对照信号大于空白孔信号；
+- 剂量-反应曲线跨过 50% 细胞活性，因此 IC50 可在实验浓度范围内估算；
+- 若提供 `signal_sd`，最大重复孔 CV 不超过 20%。
+
+</details>
+
+## 自动绘图
+
+剂量-反应曲线：
+{{var|chart_dose_response: FileIdSVG}}
+
+## 自动生成报告
+
+{{var|report: AiralogyMarkdown}}

@@ -2,6 +2,12 @@ import { ref, type Ref } from 'vue'
 import sampleContentDefault from './sampleContent.aimd?raw'
 import clinicalInformationRecordEn from '../../../../examples/aimd/clinical-information-record/protocol.en-US.aimd?raw'
 import clinicalInformationRecordZh from '../../../../examples/aimd/clinical-information-record/protocol.zh-CN.aimd?raw'
+import meetingNotesEn from '../../../../examples/protocols/meeting-notes/en-US/protocol.aimd?raw'
+import meetingNotesZh from '../../../../examples/protocols/meeting-notes/zh-CN/protocol.aimd?raw'
+import cuaacKineticsEn from '../../../../examples/protocols/cuaac-kinetics/en-US/protocol.aimd?raw'
+import cuaacKineticsZh from '../../../../examples/protocols/cuaac-kinetics/zh-CN/protocol.aimd?raw'
+import drugResponseIc50Zh from '../../../../examples/protocols/drug-response-ic50/zh-CN/protocol.aimd?raw'
+import diaryEn from '../../../../examples/protocols/diary/en-US/protocol.aimd?raw'
 import type { DemoLocale } from './demoI18n'
 
 export const SAMPLE_AIMD = sampleContentDefault
@@ -11,7 +17,7 @@ type LocalizedDemoValue<T> = Partial<Record<DemoLocale, T>>
 
 export interface DemoExample {
   id: string
-  kind: 'example' | 'case'
+  kind: 'example' | 'case' | 'protocol'
   source: LocalizedDemoValue<string>
   title: Record<DemoLocale, string>
   description: Record<DemoLocale, string>
@@ -64,6 +70,90 @@ export const DEMO_EXAMPLES: DemoExample[] = [
     },
     locales: ['en-US', 'zh-CN'],
     tags: ['clinical', 'case', 'record'],
+  },
+  {
+    id: 'meeting-notes',
+    kind: 'protocol',
+    source: {
+      'en-US': 'examples/protocols/meeting-notes/en-US/protocol.aimd',
+      'zh-CN': 'examples/protocols/meeting-notes/zh-CN/protocol.aimd',
+    },
+    title: {
+      'en-US': 'Meeting Notes',
+      'zh-CN': '会议记录',
+    },
+    description: {
+      'en-US': 'Official Airalogy Protocol for everyday meeting notes across teams and projects.',
+      'zh-CN': '适用于团队和项目日常会议记录的官方 Airalogy Protocol。',
+    },
+    content: {
+      'en-US': meetingNotesEn,
+      'zh-CN': meetingNotesZh,
+    },
+    locales: ['en-US', 'zh-CN'],
+    tags: ['protocol', 'meeting', 'notes'],
+  },
+  {
+    id: 'cuaac-kinetics',
+    kind: 'protocol',
+    source: {
+      'en-US': 'examples/protocols/cuaac-kinetics/en-US/protocol.aimd',
+      'zh-CN': 'examples/protocols/cuaac-kinetics/zh-CN/protocol.aimd',
+    },
+    title: {
+      'en-US': 'Click Reaction Kinetics (CuAAC)',
+      'zh-CN': '点击化学反应动力学（CuAAC）',
+    },
+    description: {
+      'en-US': 'Official protocol for kinetic data upload, parameter calculation, plotting, and report drafting.',
+      'zh-CN': '用于动力学数据上传、参数计算、绘图和报告生成的官方协议。',
+    },
+    content: {
+      'en-US': cuaacKineticsEn,
+      'zh-CN': cuaacKineticsZh,
+    },
+    locales: ['en-US', 'zh-CN'],
+    tags: ['protocol', 'chemistry', 'kinetics', 'assigner'],
+  },
+  {
+    id: 'drug-response-ic50',
+    kind: 'protocol',
+    source: {
+      'zh-CN': 'examples/protocols/drug-response-ic50/zh-CN/protocol.aimd',
+    },
+    title: {
+      'en-US': 'Drug Response IC50 Analysis',
+      'zh-CN': '抗肿瘤候选药物细胞活性剂量-反应分析',
+    },
+    description: {
+      'en-US': 'Official protocol for dose-response upload, IC50 estimation, QC, curve plotting, and report generation.',
+      'zh-CN': '用于剂量-反应数据上传、IC50 估算、质控、曲线绘制和报告生成的官方协议。',
+    },
+    content: {
+      'zh-CN': drugResponseIc50Zh,
+    },
+    locales: ['zh-CN'],
+    tags: ['protocol', 'biomedicine', 'IC50', 'assigner'],
+  },
+  {
+    id: 'diary',
+    kind: 'protocol',
+    source: {
+      'en-US': 'examples/protocols/diary/en-US/protocol.aimd',
+    },
+    title: {
+      'en-US': 'Diary',
+      'zh-CN': '日记',
+    },
+    description: {
+      'en-US': 'Official compact protocol for keeping a structured diary.',
+      'zh-CN': '用于结构化记录日记的轻量官方协议。',
+    },
+    content: {
+      'en-US': diaryEn,
+    },
+    locales: ['en-US'],
+    tags: ['protocol', 'diary', 'notes'],
   },
 ]
 

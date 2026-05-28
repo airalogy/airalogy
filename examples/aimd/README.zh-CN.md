@@ -1,6 +1,8 @@
 # AIMD 案例
 
-这个目录用于管理面向不同场景的 AIMD 案例。案例用于展示 AIMD 在真实业务场景中的组织方式，也可以作为用户改造自己协议的起点。
+这个目录用于管理面向不同场景的独立 AIMD 案例。案例用于展示 AIMD 在真实业务场景中的组织方式，也可以作为用户改造自己协议的起点。
+
+包含 `protocol.toml`、可选 `assigner.py` 和可选示例数据的完整 Airalogy Protocol 示例位于 [`examples/protocols`](../protocols/)。
 
 在线预览和填写入口：[Demo 案例页](https://airalogy.github.io/airalogy/aimd/demo/#/examples)。
 

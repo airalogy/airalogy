@@ -1,0 +1,29 @@
+# Airalogy Markdown Image Reading Test
+
+This protocol checks whether the AI can read images embedded in Airalogy Markdown.
+
+## 1. Paste Airalogy Markdown Content
+
+Include at least one image using an Airalogy file ID, e.g.:
+
+```aimd
+![Cat](airalogy.id.file.xxxx-xxxx.png)
+```
+
+{{var|aimd_content: AiralogyMarkdown, description="Airalogy Markdown text that may include images with Airalogy file IDs"}}
+
+## 2. Model & API Key
+
+Qwen API Key (kept local, not stored): {{var|qwen_api_key: IgnoreStr, description="Qwen API key for this test; not persisted"}}
+
+Model (default: qwen3-vl-flash): {{var|model: str = "qwen3-vl-flash", description="Qwen model to use, e.g., qwen3-vl-flash or qwen3-vl-plus"}}
+
+## 3. Auto-Extracted Image Info (do not edit)
+
+Image IDs (auto): {{var|image_ids: list[str], description="Extracted Airalogy image file IDs"}}
+
+Image URLs (auto): {{var|image_urls: list[str], description="Temporary URLs for extracted images"}}
+
+## 4. AI Visual Understanding (auto)
+
+AI Description: {{var|ai_description: str, description="AI-generated summary of images and context"}}

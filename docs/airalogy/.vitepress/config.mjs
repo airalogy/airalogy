@@ -13,6 +13,10 @@ const githubLink = 'https://github.com/airalogy/airalogy'
 
 const enRootSidebar = [
   {
+    text: 'Examples',
+    link: '/en/examples'
+  },
+  {
     text: 'Syntax',
     link: '/en/syntax/',
     collapsed: true,
@@ -33,6 +37,10 @@ const enRootSidebar = [
 ]
 
 const zhRootSidebar = [
+  {
+    text: '示例',
+    link: '/zh/examples'
+  },
   {
     text: '语法',
     link: '/zh/syntax/',
@@ -80,6 +88,7 @@ export default withMermaid(defineConfig({
       themeConfig: {
         nav: [
           { text: 'Home', link: '/en/' },
+          { text: 'Examples', link: '/en/examples' },
           { text: 'Syntax', link: '/en/syntax/' },
           { text: 'APIs', link: '/en/apis/' },
           { text: 'Data Structure', link: '/en/data-structure/' }
@@ -94,6 +103,7 @@ export default withMermaid(defineConfig({
       themeConfig: {
         nav: [
           { text: '首页', link: '/zh/' },
+          { text: '示例', link: '/zh/examples' },
           { text: '语法', link: '/zh/syntax/' },
           { text: 'API', link: '/zh/apis/' },
           { text: '数据结构', link: '/zh/data-structure/' }

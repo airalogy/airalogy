@@ -1,0 +1,28 @@
+# 会议记录
+
+会议标题: {{var|title: str}}
+会议开始时间: {{var|start_time: CurrentTime}}
+会议结束时间: {{var|end_time: CurrentTime}}
+主会议地点: {{var|location: str}}
+参会人：
+{{var|attendees: list[Attendee],
+    title="参会人列表",
+    description="每行记录一位参会人的姓名和参会地点/方式",
+    subvars=[
+        var(
+            attendee_name: str,
+            title="姓名",
+            description="参会人的姓名"
+        ),
+        var(
+            attendee_location: str,
+            title="参会地",
+            description="参会地点或参会方式"
+        )
+    ]
+}}
+记录人: {{var|recorder: str}}
+
+## 会议内容
+
+{{var|content: AiralogyMarkdown}}

@@ -30,9 +30,13 @@ function getDescription(example: DemoExample): string {
 }
 
 function getBadge(example: DemoExample): string {
-  return example.kind === 'case'
-    ? messages.value.examples.caseBadge
-    : messages.value.examples.exampleBadge
+  if (example.kind === 'protocol') {
+    return messages.value.examples.protocolBadge
+  }
+  if (example.kind === 'case') {
+    return messages.value.examples.caseBadge
+  }
+  return messages.value.examples.exampleBadge
 }
 </script>
 

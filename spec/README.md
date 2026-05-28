@@ -9,5 +9,7 @@ validated by the relevant implementation packages.
 
 - `fixtures/`: concrete protocol directories with `protocol.aimd`, optional `protocol.toml`,
   and expected machine-readable outputs.
+- `fixtures/protocols/`: complete Airalogy Protocol fixtures migrated from the former
+  standalone `airalogy/protocols` repository for regression and compatibility coverage.
 - `contract-tests/`: reserved for cross-package orchestration that does not naturally belong
   to a single package test suite.

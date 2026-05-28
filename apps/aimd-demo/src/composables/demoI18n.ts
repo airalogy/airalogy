@@ -71,6 +71,7 @@ export interface DemoMessages {
     resetCurrent: string
     exampleBadge: string
     caseBadge: string
+    protocolBadge: string
   }
   pages: {
     full: {
@@ -190,6 +191,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       resetCurrent: 'Reset Current',
       exampleBadge: 'Example',
       caseBadge: 'Case',
+      protocolBadge: 'Protocol',
     },
     pages: {
       full: {
@@ -228,7 +230,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       },
       examples: {
         title: 'AIMD Examples',
-        desc: 'Load repository cases and demo examples into the recorder to inspect their structure, form UI, and collected record data.',
+        desc: 'Load repository cases, official protocols, and demo examples into the recorder to inspect their structure, form UI, and collected record data.',
         workbenchTitle: 'Case Workbench',
       },
       tutorial: {
@@ -307,6 +309,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       resetCurrent: '重置当前示例',
       exampleBadge: '示例',
       caseBadge: '案例',
+      protocolBadge: '协议',
     },
     pages: {
       full: {
@@ -345,7 +348,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       },
       examples: {
         title: 'AIMD 案例',
-        desc: '把仓库中的案例和 demo 示例直接载入记录器，快速查看结构、表单界面和收集到的数据。',
+        desc: '把仓库中的案例、官方协议和 demo 示例直接载入记录器，快速查看结构、表单界面和收集到的数据。',
         workbenchTitle: '案例工作台',
       },
       tutorial: {

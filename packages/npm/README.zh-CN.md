@@ -15,9 +15,9 @@
 | `@airalogy/aimd-recorder` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Faimd-recorder?logo=npm&color=cb3837)](https://www.npmjs.com/package/@airalogy/aimd-recorder) | [README](./aimd-recorder/README.zh-CN.md) · [站点](https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-recorder/) | 面向结构化 AIMD 记录的 Vue UI 组件与样式 |
 | `@airalogy/airalogy-engine` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Fairalogy-engine?logo=npm&color=cb3837)](https://www.npmjs.com/package/@airalogy/airalogy-engine) | [README](./airalogy-engine/README.md) · [站点](https://airalogy.github.io/airalogy/airalogy-engine/) | Airalogy 协议执行沙箱的 Node.js API |
 
-## AIMD 案例
+## 案例
 
-场景案例集中放在 [examples/](../../examples/aimd/)，并通过 [examples/index.json](../../examples/aimd/index.json) 提供机器可读清单。用户可以在 [Demo 案例页](https://airalogy.github.io/airalogy/aimd/demo/#/examples) 中直接预览、编辑和填写这些案例。
+AIMD 场景案例放在 [examples/aimd](../../examples/aimd/)，并通过 [examples/aimd/index.json](../../examples/aimd/index.json) 提供机器可读清单。完整 Airalogy Protocol 示例放在 [examples/protocols](../../examples/protocols/)，并通过 [examples/protocols/index.json](../../examples/protocols/index.json) 提供机器可读清单。用户可以在 [Demo 案例页](https://airalogy.github.io/airalogy/aimd/demo/#/examples) 中直接预览、编辑和填写这些协议的 AIMD 部分。
 
 ## 开发
 
@@ -50,7 +50,7 @@ pnpm dev:demo
 
 访问 http://localhost:5188 查看 Demo，包含以下页面：
 
-- **案例**：浏览仓库内 AIMD 场景案例并在记录器中填写
+- **案例**：浏览仓库内 AIMD 场景案例和官方协议示例，并在记录器中填写
 - **Core 解析器**：实时解析 AIMD Markdown，查看 AST 和提取的字段
 - **Editor 编辑器**：Monaco 编辑器 Token 定义和主题配置预览
 - **Renderer 渲染器**：AIMD 渲染为 HTML / Vue VNodes 的实时预览

@@ -1,6 +1,8 @@
 # AIMD Examples
 
-This directory manages AIMD examples for different scenarios. Examples show how AIMD can be organized in practical workflows and can also be used as starting points for custom protocols.
+This directory manages standalone AIMD examples for different scenarios. Examples show how AIMD can be organized in practical workflows and can also be used as starting points for custom protocols.
+
+Complete Airalogy Protocol examples with `protocol.toml`, optional `assigner.py`, and optional sample data live in [`examples/protocols`](../protocols/).
 
 Preview and fill examples online on the [Demo examples page](https://airalogy.github.io/airalogy/aimd/demo/#/examples).
 

@@ -1,0 +1,28 @@
+# Meeting Notes
+
+Meeting title: {{var|title: str}}
+Start time: {{var|start_time: CurrentTime}}
+End time: {{var|end_time: CurrentTime}}
+Main location: {{var|location: str}}
+Attendees:
+{{var|attendees: list[Attendee],
+    title="Attendee List",
+    description="Each row records one attendee's name and location/mode",
+    subvars=[
+        var(
+            attendee_name: str,
+            title="Name",
+            description="Attendee's name"
+        ),
+        var(
+            attendee_location: str,
+            title="Location",
+            description="Meeting location or attendance mode"
+        )
+    ]
+}}
+Recorder: {{var|recorder: str}}
+
+## Notes
+
+{{var|content: AiralogyMarkdown}}

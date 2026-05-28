@@ -6,6 +6,8 @@ from airalogy.markdown import parse_aimd
 
 MONOREPO_ROOT = Path(__file__).resolve().parents[4]
 BASIC_FIXTURE = MONOREPO_ROOT / "spec/fixtures/basic-protocol"
+PROTOCOL_EXAMPLES_ROOT = MONOREPO_ROOT / "examples/protocols"
+PROTOCOL_FIXTURES_ROOT = MONOREPO_ROOT / "spec/fixtures/protocols"
 
 
 def field_name(field):
@@ -23,3 +25,26 @@ def test_basic_protocol_fixture_fields_match_python_parser():
     assert [field_name(field) for field in parsed["templates"]["var"]] == expected["var"]
     assert [field_name(field) for field in parsed["templates"]["step"]] == expected["step"]
     assert [field_name(field) for field in parsed["templates"]["check"]] == expected["check"]
+
+
+def test_protocol_example_registry_entries_parse_with_python_parser():
+    registry = json.loads(
+        PROTOCOL_EXAMPLES_ROOT.joinpath("index.json").read_text(encoding="utf-8")
+    )
+
+    for example in registry["examples"]:
+        for locale, entry in example["entry"].items():
+            aimd_path = PROTOCOL_EXAMPLES_ROOT / entry
+            toml_path = PROTOCOL_EXAMPLES_ROOT / example["toml"][locale]
+
+            assert aimd_path.exists(), f"Missing AIMD entry for {example['id']} {locale}"
+            assert toml_path.exists(), f"Missing TOML entry for {example['id']} {locale}"
+            parse_aimd(aimd_path.read_text(encoding="utf-8"))
+
+
+def test_protocol_fixtures_parse_with_python_parser():
+    aimd_paths = sorted(PROTOCOL_FIXTURES_ROOT.glob("*/protocol/protocol.aimd"))
+
+    assert aimd_paths
+    for aimd_path in aimd_paths:
+        parse_aimd(aimd_path.read_text(encoding="utf-8"))

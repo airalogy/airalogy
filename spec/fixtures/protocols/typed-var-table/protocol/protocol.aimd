@@ -1,0 +1,45 @@
+# Typed Var Table Test Protocol
+
+This AIMD-only protocol demonstrates the new inline typing sugar for Var Tables, including full metadata and the short `subvars` form without a separate `model.py`.
+
+## Student Records: verbose form (typed with field metadata)
+
+{{var|students: list[Student],
+    title="Student Records",
+    description="Capture each student's name, age, and enrollment status",
+    subvars=[
+        var(
+            name: str = "ZHANG San",
+            title="Name",
+            description="Full student name",
+            max_length=50
+        ),
+        var(
+            age: int = 18,
+            title="Age",
+            description="Age in years",
+            ge=0
+        ),
+        var(
+            enrolled: bool = True,
+            title="Enrolled",
+            description="Whether the student is currently enrolled"
+        )
+    ]
+}}
+
+## Course Scores: short form (implicit main type; no extra subvar metadata)
+
+{{var|course_scores,
+    title="Course Scores",
+    description="Log each course name, score, and pass flag without per-subvar metadata",
+    subvars=[
+        course_name: str = "Physics",
+        score: float = 90.0,
+        passed: bool = True
+    ]
+}}
+
+## Minimal Table: ids only (no types or metadata)
+
+{{var|quick_table, subvars=[col_a, col_b, col_c]}}

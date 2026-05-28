@@ -1,0 +1,13 @@
+[airalogy_protocol]
+id = "diary"
+version = "0.0.2"
+name = "Diary"
+description = "An Airalogy Protocol for keeping a diary."
+authors = [
+    {name = "Airalogy"}
+]
+maintainers = [
+    {name = "Airalogy"}
+]
+keywords = ["diary"]
+license = "Apache-2.0"
