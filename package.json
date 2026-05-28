@@ -35,6 +35,7 @@
     "docs:aimd:preview": "pnpm -C docs/aimd docs:preview",
     "lock:python": "UV_CACHE_DIR=.uv-cache uv --directory packages/pypi/airalogy lock && UV_CACHE_DIR=.uv-cache uv --directory packages/pypi/airalogy-engine lock",
     "release:npm": "node scripts/release/publish-npm-packages.mjs",
+    "setup:githooks": "git config core.hooksPath .githooks",
     "sync:python-versions": "node scripts/release/sync-python-versions.mjs",
     "test": "pnpm test:npm",
     "test:aimd": "pnpm --filter '@airalogy/aimd-*' -r --if-present test",

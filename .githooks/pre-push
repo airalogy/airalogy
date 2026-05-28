@@ -7,5 +7,19 @@ if ! command -v pnpm >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "pre-push: running pnpm test"
-pnpm test
+echo "pre-push: running pnpm type-check"
+pnpm type-check
+
+echo "pre-push: running pnpm test:aimd"
+pnpm test:aimd
+
+if [ "${AIRALOGY_PRE_PUSH_ENGINE_TESTS:-0}" = "1" ]; then
+  echo "pre-push: running pnpm test:engine-node"
+  pnpm test:engine-node
+else
+  echo "pre-push: skipping pnpm test:engine-node"
+  echo "pre-push: set AIRALOGY_PRE_PUSH_ENGINE_TESTS=1 to include BoxLite sandbox tests"
+fi
+
+echo "pre-push: running pnpm test:vitest"
+pnpm test:vitest
