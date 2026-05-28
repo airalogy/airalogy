@@ -456,6 +456,63 @@ describe('AimdRecorder assigner controls', () => {
     expect(latestRecord?.var?.ic50).toBe(12.5)
   })
 
+  it('shows server assigner business failures inside built-in markdown fields', async () => {
+    currentVarNode = {
+      ...pluginVarNode,
+      raw: '{{var|report: AiralogyMarkdown}}',
+      definition: {
+        name: 'report',
+        type: 'AiralogyMarkdown',
+      },
+    }
+    currentFields = {
+      ...fields,
+      var: ['report'],
+      var_definitions: [{ name: 'report', type: 'AiralogyMarkdown' }],
+    }
+    const runServerAssigner = vi.fn(async () => ({
+      data: {
+        success: false,
+        error_message: 'Missing dependent field: final_conv_pct',
+      },
+    }))
+
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: '{{var|report: AiralogyMarkdown}}',
+        locale: 'en-US',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+        serverAssigners: {
+          report: {
+            mode: 'manual',
+            dependent_fields: ['final_conv_pct'],
+          },
+        },
+        runServerAssigner,
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+    await flushPromises()
+    await nextTick()
+    await vi.dynamicImportSettled()
+    await nextTick()
+
+    const button = wrapper.find('.aimd-rec-assigner-field__button')
+    expect(button.exists()).toBe(true)
+
+    await button.trigger('click')
+    await flushPromises()
+    await nextTick()
+    await flushPromises()
+    await nextTick()
+
+    expect(runServerAssigner).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('.aimd-rec-inline__assigner-error').text()).toBe('Missing dependent field: final_conv_pct')
+    expect(wrapper.find('.aimd-rec-assigner-field__status--error').exists()).toBe(true)
+  })
+
   it('mounts assigner controls inside type-plugin variable fields that support inline assigners', async () => {
     currentVarNode = pluginVarNode
     currentFields = {

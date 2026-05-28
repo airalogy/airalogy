@@ -56,6 +56,7 @@ import {
 import {
   applyAimdAssignedFieldsToRecord,
   buildAimdAssignerDependentData,
+  extractAimdAssignerErrorMessage,
   extractAimdAssignedFields,
   getAimdAssignerPayloadFieldKey,
   isReadonlyAimdAssignerMode,
@@ -707,6 +708,10 @@ async function runServerAssigner(
       assigner: assigner.assigner,
       signal: abortController.signal,
     })
+    const errorMessage = extractAimdAssignerErrorMessage(result)
+    if (errorMessage) {
+      throw new Error(errorMessage)
+    }
     const assignedFields = extractAimdAssignedFields(result)
     const returnedStateKeys = getReturnedServerAssignerStateKeys(assignedFields, fieldKey)
     if (Object.keys(assignedFields).length > 0) {

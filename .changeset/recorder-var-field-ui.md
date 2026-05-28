@@ -14,6 +14,8 @@ Add a local file bridge for sandboxed engine runs so assigners can read uploaded
 
 Move generic assigner UI orchestration into `@airalogy/aimd-recorder` through a `serverAssigners` metadata prop and `runServerAssigner` hook, letting host apps provide only the execution transport while the recorder handles dependency filtering, loading/error state, and `assigned_fields` record updates.
 
+Surface server assigner business failures returned as `success: false` / `error_message` through the shared recorder assigner state, so built-in plugin fields such as `AiralogyMarkdown` show the same inline error UI as regular var fields.
+
 Limit engine assigner validation to each assigner's declared `dependent_fields`, so unrelated empty output fields in a record do not fail Pydantic validation before the selected assigner runs.
 
 Validate local engine rootfs directories as OCI layouts and export the generated rootfs with Docker Buildx OCI output, preventing incomplete rootfs directories from being treated as runnable sandboxes. The local rootfs build now installs the workspace `airalogy` Python package and includes that source in the rootfs fingerprint.

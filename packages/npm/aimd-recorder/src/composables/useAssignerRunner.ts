@@ -33,6 +33,55 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value)
 }
 
+function getStringProperty(record: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === "string" && value.trim()) {
+      return value.trim()
+    }
+  }
+  return undefined
+}
+
+function getNestedErrorMessage(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+  if (!isObjectRecord(value)) {
+    return undefined
+  }
+  return getStringProperty(value, [
+    "error_message",
+    "errorMessage",
+    "message",
+    "detail",
+    "reason",
+  ])
+}
+
+function collectAssignerResultCandidates(result: unknown): unknown[] {
+  const candidates: unknown[] = [result]
+  const appendNested = (value: unknown) => {
+    if (!isObjectRecord(value)) return
+    candidates.push(value.data)
+    candidates.push(value.result)
+    if (isObjectRecord(value.data)) {
+      candidates.push(value.data.result)
+    }
+    if (isObjectRecord(value.result)) {
+      candidates.push(value.result.data)
+    }
+  }
+
+  appendNested(result)
+  if (isObjectRecord(result)) {
+    appendNested(result.data)
+    appendNested(result.result)
+  }
+
+  return candidates
+}
+
 function parsedFieldName(value: unknown): string {
   if (typeof value === "string" && value.trim()) return value.trim()
   if (!isObjectRecord(value)) return ""
@@ -199,14 +248,7 @@ export function buildAimdAssignerDependentData(
 }
 
 export function extractAimdAssignedFields(result: unknown): Record<string, unknown> {
-  const candidates: unknown[] = [result]
-  if (isObjectRecord(result)) {
-    candidates.push(result.data)
-    candidates.push(result.result)
-    if (isObjectRecord(result.result)) {
-      candidates.push(result.result.data)
-    }
-  }
+  const candidates = collectAssignerResultCandidates(result)
 
   for (const candidate of candidates) {
     if (!isObjectRecord(candidate)) continue
@@ -217,6 +259,39 @@ export function extractAimdAssignedFields(result: unknown): Record<string, unkno
   }
 
   return {}
+}
+
+export function extractAimdAssignerErrorMessage(result: unknown): string | undefined {
+  const candidates = collectAssignerResultCandidates(result)
+
+  for (const candidate of candidates) {
+    if (!isObjectRecord(candidate)) continue
+
+    const success = candidate.success
+    const status = candidate.status
+    const failed = success === false
+      || success === "false"
+      || status === "error"
+      || status === "failed"
+
+    if (!failed) {
+      continue
+    }
+
+    return getStringProperty(candidate, [
+      "error_message",
+      "errorMessage",
+      "message",
+      "detail",
+      "reason",
+      "output",
+    ])
+      ?? getNestedErrorMessage(candidate.error)
+      ?? getNestedErrorMessage(candidate.exception)
+      ?? "Assigner failed"
+  }
+
+  return undefined
 }
 
 export function applyAimdAssignedFieldsToRecord(
