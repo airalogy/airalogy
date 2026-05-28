@@ -230,7 +230,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       },
       examples: {
         title: 'AIMD Examples',
-        desc: 'Load repository cases, official protocols, and demo examples into the recorder to inspect their structure, form UI, and collected record data.',
+        desc: 'Load repository AIMD cases, official protocol AIMD sources, and demo examples into the recorder to inspect their structure, form UI, and collected record data.',
         workbenchTitle: 'Case Workbench',
       },
       tutorial: {
@@ -348,7 +348,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       },
       examples: {
         title: 'AIMD 案例',
-        desc: '把仓库中的案例、官方协议和 demo 示例直接载入记录器，快速查看结构、表单界面和收集到的数据。',
+        desc: '把仓库中的 AIMD 案例、官方协议 AIMD 源码和 demo 示例直接载入记录器，快速查看结构、表单界面和收集到的数据。',
         workbenchTitle: '案例工作台',
       },
       tutorial: {

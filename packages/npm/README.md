@@ -42,15 +42,15 @@ pnpm --filter @airalogy/aimd-renderer dev
 pnpm --filter @airalogy/aimd-recorder dev
 ```
 
-Start the Demo dev server (visually test all packages):
+Start the Airalogy Markdown Demo dev server (visually test all AIMD packages):
 
 ```bash
 pnpm dev:demo
 ```
 
-Visit http://localhost:5188 to see the demo, which includes:
+Visit http://localhost:5188 to see the Airalogy Markdown Demo, which includes:
 
-- **Examples**: Browse repository AIMD scenario examples and official protocol examples, then fill them in the recorder
+- **Examples**: Browse repository AIMD scenario examples and official protocol AIMD previews, then fill them in the recorder
 - **Core Parser**: Live AIMD Markdown parsing with AST and extracted fields
 - **Editor**: Monaco editor token definitions and theme config preview
 - **Renderer**: Live HTML / Vue VNode rendering preview
@@ -63,7 +63,7 @@ Docs are hosted under `docs/aimd/` with bilingual structure:
 - English: `docs/aimd/en/`
 - Chinese: `docs/aimd/zh/`
 - Organized by package: `docs/aimd/{en|zh}/packages/*`
-- Embedded demo page: `docs/aimd/{en|zh}/demo.md`
+- Embedded Airalogy Markdown Demo page: `docs/aimd/{en|zh}/demo.md`
 
 Run docs locally:
 
@@ -77,7 +77,7 @@ Build docs:
 pnpm docs:aimd:build
 ```
 
-`pnpm docs:aimd:build` packages both docs and demo assets (mounted under `/demo/` in the docs site).
+`pnpm docs:aimd:build` packages both docs and Airalogy Markdown Demo assets (mounted under `/demo/` in the docs site).
 
 Type-check all packages:
 

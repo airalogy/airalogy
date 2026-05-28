@@ -9,7 +9,7 @@ This site organizes docs by package:
 
 Interactive demo:
 
-- [`Embedded Demo`](/en/demo)
+- [`Airalogy Markdown Demo`](/en/demo)
 
 Guides and reference:
 

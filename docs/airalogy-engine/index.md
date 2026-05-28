@@ -15,6 +15,7 @@ and protocol executor behavior.
 | Node.js API | [`packages/npm/airalogy-engine`](https://github.com/airalogy/airalogy/tree/main/packages/npm/airalogy-engine) | [npm](https://www.npmjs.com/package/@airalogy/airalogy-engine) |
 | Sandbox image | [`packages/runtime/airalogy-engine-image`](https://github.com/airalogy/airalogy/tree/main/packages/runtime/airalogy-engine-image) | Local Docker/OCI rootfs |
 | Example protocol | [`examples/airalogy-engine`](https://github.com/airalogy/airalogy/tree/main/examples/airalogy-engine) | Repository example |
+| Protocol demo | [`apps/protocol-demo`](https://github.com/airalogy/airalogy/tree/main/apps/protocol-demo) | Local demo service |
 
 ## Monorepo Layout
 
@@ -27,6 +28,8 @@ packages/
     └── protocol_requirements.txt
 
 examples/airalogy-engine/        # Example protocol package
+examples/protocols/              # Official protocol examples
+apps/protocol-demo/              # Local engine-backed demo
 ```
 
 ## Sandbox Image
@@ -77,6 +80,17 @@ const result = await parseProtocol("./protocol", {
   rootfsPath: "./airalogy-engine-image",
 });
 ```
+
+## Protocol Demo
+
+Run the local demo service from the repository root:
+
+```bash
+pnpm dev:protocol-demo
+```
+
+The demo loads `examples/protocols`, shows the AIMD recorder surface, and calls
+the Node.js engine package for `parse`, `validate`, and `assign` operations.
 
 ## Tests
 

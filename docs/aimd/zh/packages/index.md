@@ -9,7 +9,7 @@
 
 交互式演示：
 
-- [`内嵌 Demo`](/zh/demo)
+- [`Airalogy Markdown Demo`](/zh/demo)
 
 指南与参考：
 

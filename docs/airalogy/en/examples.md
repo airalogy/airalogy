@@ -2,7 +2,13 @@
 
 Official Airalogy Protocol examples live in the monorepo under [`examples/protocols`](https://github.com/airalogy/airalogy/tree/main/examples/protocols). They were migrated from the former standalone `airalogy/protocols` repository so protocol examples, parser behavior, engine packages, and docs can evolve together.
 
-You can preview and fill the AIMD portions on the [AIMD demo examples page](https://airalogy.github.io/airalogy/aimd/demo/#/examples). Protocols with `assigner.py` require Airalogy Engine for automatic calculation, file processing, and report generation.
+You can preview and fill the AIMD portions on the [Airalogy Markdown Demo examples page](https://airalogy.github.io/airalogy/aimd/demo/#/examples). For engine-backed parsing, variable validation, and assigner execution, run the local Airalogy Protocol Demo:
+
+```bash
+pnpm dev:protocol-demo
+```
+
+Protocols with `assigner.py` require Airalogy Engine for automatic calculation, file processing, and report generation.
 
 ## Current Examples
 
@@ -19,4 +25,5 @@ You can preview and fill the AIMD portions on the [AIMD demo examples page](http
 - `examples/protocols/<example>/<locale>/protocol.aimd`: AIMD source loaded by docs and demo apps.
 - `examples/protocols/<example>/<locale>/protocol.toml`: protocol metadata.
 - `examples/protocols/<example>/<locale>/assigner.py`: optional engine-side assigner code.
+- `apps/protocol-demo`: local demo service that loads these protocol packages and calls `@airalogy/airalogy-engine`.
 - `spec/fixtures/protocols`: protocol fixtures reserved for regression and compatibility tests.

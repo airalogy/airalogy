@@ -6,7 +6,7 @@ const demoRoot = import.meta.env.DEV
   : withBase('/demo')
 
 const demoPages = [
-  { label: '案例', path: '/examples', desc: '查看仓库内 AIMD 和协议示例' },
+  { label: '案例', path: '/examples', desc: '查看仓库内 AIMD 案例和协议 AIMD 预览' },
   { label: '完整工作流', path: '/full', desc: '编辑、渲染、记录一体化页面' },
   { label: 'Core 解析器', path: '/core', desc: '查看 AST 与字段提取结果' },
   { label: 'Editor 编辑器', path: '/editor', desc: 'AIMD 编写与插入交互' },
@@ -17,13 +17,13 @@ const demoPages = [
 const linkTo = path => `${demoRoot}/#${path}`
 </script>
 
-# Demo
+# Airalogy Markdown Demo
 
-为避免文档页面过于拥挤，演示页改为单独打开。
+为避免文档页面过于拥挤，Airalogy Markdown Demo 改为单独打开。案例页里的 Protocol 条目用于预览和填写 `protocol.aimd` 源码；需要 engine 执行 assigner 的完整演示应放在更高一层的 Airalogy Protocol Demo。
 
 <div class="aimd-demo-actions">
   <a :href="linkTo('/full')" class="aimd-demo-button" target="_blank" rel="noreferrer">
-    打开完整 Demo
+    打开 Airalogy Markdown Demo
   </a>
 </div>
 
@@ -45,6 +45,7 @@ const linkTo = path => `${demoRoot}/#${path}`
 
 - 文档站：`pnpm docs:dev`
 - Demo：`pnpm dev:demo`
+- Protocol Demo：`pnpm dev:protocol-demo`
 
 <style scoped>
 .aimd-demo-actions {
@@ -77,7 +78,7 @@ const linkTo = path => `${demoRoot}/#${path}`
   display: block;
   padding: 10px 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fff;
   text-decoration: none;
 }

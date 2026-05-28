@@ -42,15 +42,15 @@ pnpm --filter @airalogy/aimd-renderer dev
 pnpm --filter @airalogy/aimd-recorder dev
 ```
 
-启动 Demo 开发服务器（可视化测试所有包功能）：
+启动 Airalogy Markdown Demo 开发服务器（可视化测试所有 AIMD 包功能）：
 
 ```bash
 pnpm dev:demo
 ```
 
-访问 http://localhost:5188 查看 Demo，包含以下页面：
+访问 http://localhost:5188 查看 Airalogy Markdown Demo，包含以下页面：
 
-- **案例**：浏览仓库内 AIMD 场景案例和官方协议示例，并在记录器中填写
+- **案例**：浏览仓库内 AIMD 场景案例和官方协议 AIMD 预览，并在记录器中填写
 - **Core 解析器**：实时解析 AIMD Markdown，查看 AST 和提取的字段
 - **Editor 编辑器**：Monaco 编辑器 Token 定义和主题配置预览
 - **Renderer 渲染器**：AIMD 渲染为 HTML / Vue VNodes 的实时预览
@@ -63,7 +63,7 @@ pnpm dev:demo
 - 英文：`docs/aimd/en/`
 - 中文：`docs/aimd/zh/`
 - 按包划分：`docs/aimd/{en|zh}/packages/*`
-- 内嵌 Demo 页面：`docs/aimd/{en|zh}/demo.md`
+- 内嵌 Airalogy Markdown Demo 页面：`docs/aimd/{en|zh}/demo.md`
 
 本地启动文档站：
 
@@ -77,7 +77,7 @@ pnpm docs:aimd:dev
 pnpm docs:aimd:build
 ```
 
-`pnpm docs:aimd:build` 会同时打包文档站与 demo 静态资源（在文档站下挂载到 `/demo/`）。
+`pnpm docs:aimd:build` 会同时打包文档站与 Airalogy Markdown Demo 静态资源（在文档站下挂载到 `/demo/`）。
 
 全量类型检查：
 

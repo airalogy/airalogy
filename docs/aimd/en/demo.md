@@ -6,7 +6,7 @@ const demoRoot = import.meta.env.DEV
   : withBase('/demo')
 
 const demoPages = [
-  { label: 'Examples', path: '/examples', desc: 'Repository AIMD and protocol examples' },
+  { label: 'Examples', path: '/examples', desc: 'Repository AIMD examples and protocol AIMD previews' },
   { label: 'Full Workflow', path: '/full', desc: 'Editor + render + record in one page' },
   { label: 'Core Parser', path: '/core', desc: 'AST and extracted AIMD fields' },
   { label: 'Editor', path: '/editor', desc: 'AIMD authoring experience' },
@@ -17,13 +17,13 @@ const demoPages = [
 const linkTo = path => `${demoRoot}/#${path}`
 </script>
 
-# Demo
+# Airalogy Markdown Demo
 
-Use the demo in a separate page for a cleaner reading experience.
+Use the Airalogy Markdown Demo in a separate page for a cleaner reading experience. Protocol entries on the examples page preview and fill the `protocol.aimd` source; engine-backed assigner execution belongs in the higher-level Airalogy Protocol demo.
 
 <div class="aimd-demo-actions">
   <a :href="linkTo('/full')" class="aimd-demo-button" target="_blank" rel="noreferrer">
-    Open Full Demo
+    Open Airalogy Markdown Demo
   </a>
 </div>
 
@@ -45,6 +45,7 @@ In local development:
 
 - `pnpm docs:dev` for docs
 - `pnpm dev:demo` for demo app
+- `pnpm dev:protocol-demo` for engine-backed Protocol demo
 
 <style scoped>
 .aimd-demo-actions {
@@ -77,7 +78,7 @@ In local development:
   display: block;
   padding: 10px 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fff;
   text-decoration: none;
 }

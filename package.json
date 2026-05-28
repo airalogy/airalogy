@@ -16,6 +16,8 @@
     "check:python-versions": "node scripts/release/sync-python-versions.mjs --check",
     "dev": "pnpm --filter './packages/npm/*' -r --parallel --if-present dev",
     "dev:demo": "pnpm --filter @airalogy/aimd-demo dev",
+    "dev:protocol-demo": "pnpm --filter @airalogy/protocol-demo dev",
+    "build:protocol-demo": "pnpm --filter @airalogy/protocol-demo build",
     "docs:home:dev": "pnpm -C docs/home docs:dev",
     "docs:home:build": "pnpm -C docs/home docs:build",
     "docs:home:preview": "pnpm -C docs/home docs:preview",
