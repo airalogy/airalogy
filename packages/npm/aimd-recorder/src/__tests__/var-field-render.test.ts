@@ -52,6 +52,22 @@ describe('AimdVarField render behavior', () => {
     expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-table-cell-input\) \{[\s\S]*?font-style: normal;/)
   })
 
+  it('clips plain stacked var controls so rounded corners render cleanly', () => {
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked\) \{[\s\S]*?overflow: hidden;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked:has\(\.aimd-field__metadata-host\)\) \{[\s\S]*?overflow: visible;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--has-assigner-control\) \{[\s\S]*?overflow: hidden;/)
+  })
+
+  it('normalizes stacked var value typography across native control types', () => {
+    expect(recorderSource).toContain('--rec-body-font-size: 14px;')
+    expect(recorderSource).toContain('--rec-var-value-font-size: var(--rec-body-font-size);')
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content \{[\s\S]*?font-size: var\(--rec-body-font-size\);/)
+    expect(source).toContain('aimd-rec-inline__value-control aimd-rec-inline__input aimd-rec-inline__input--stacked')
+    expect(source).toContain('aimd-rec-inline__value-control aimd-rec-inline__textarea aimd-rec-inline__textarea--stacked')
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked \.aimd-rec-inline__value-control\) \{[\s\S]*?font: inherit;[\s\S]*?font-size: var\(--rec-var-value-font-size\);/)
+    expect(recorderSource).toContain('.aimd-rec-inline__value-control::-webkit-datetime-edit')
+  })
+
   it('styles metadata examples as distinct chips', () => {
     expect(styles).toContain('.aimd-field__metadata-examples')
     expect(styles).toContain('.aimd-field__metadata-example')

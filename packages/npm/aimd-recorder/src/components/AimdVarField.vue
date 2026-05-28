@@ -212,7 +212,7 @@ export default defineComponent({
           renderVarLabel(),
           renderControlRow(h("select", {
             "data-rec-focus-key": `var:${id}`,
-            class: "aimd-rec-inline__input aimd-rec-inline__input--stacked aimd-rec-inline__select",
+            class: "aimd-rec-inline__value-control aimd-rec-inline__input aimd-rec-inline__input--stacked aimd-rec-inline__select",
             disabled,
             value: props.value,
             onChange: (e: Event) => onVarChange((e.target as HTMLSelectElement).value),
@@ -263,7 +263,7 @@ export default defineComponent({
         return renderStackedVar(
           h("textarea", {
             "data-rec-focus-key": `var:${id}`,
-            class: "aimd-rec-inline__textarea aimd-rec-inline__textarea--stacked",
+            class: "aimd-rec-inline__value-control aimd-rec-inline__textarea aimd-rec-inline__textarea--stacked",
             disabled,
             placeholder,
             value: displayValue,
@@ -293,7 +293,7 @@ export default defineComponent({
         return renderStackedVar(
           h("textarea", {
             "data-rec-focus-key": `var:${id}`,
-            class: "aimd-rec-inline__textarea aimd-rec-inline__textarea--stacked aimd-rec-inline__textarea--stacked-text",
+            class: "aimd-rec-inline__value-control aimd-rec-inline__textarea aimd-rec-inline__textarea--stacked aimd-rec-inline__textarea--stacked-text",
             rows: 1,
             disabled,
             placeholder,
@@ -335,7 +335,7 @@ export default defineComponent({
       return renderStackedVar(
         h("input", {
           "data-rec-focus-key": `var:${id}`,
-          class: "aimd-rec-inline__input aimd-rec-inline__input--stacked",
+          class: "aimd-rec-inline__value-control aimd-rec-inline__input aimd-rec-inline__input--stacked",
           type: htmlInputType,
           inputmode: inputKind === "number" ? (isIntegerInput ? "numeric" : "decimal") : undefined,
           min: nativeNumericAttrs.min,

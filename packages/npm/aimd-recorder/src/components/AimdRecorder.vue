@@ -1261,9 +1261,11 @@ defineExpose({
   --rec-border: #e3e8ef;
   --rec-focus: #2f6fed;
   --rec-error: #e03050;
+  --rec-body-font-size: 14px;
   --rec-var-control-height: 30px;
-  --rec-var-single-line-height: 1.2;
-  --rec-var-text-wrap-line-height: 1.35;
+  --rec-var-value-font-size: var(--rec-body-font-size);
+  --rec-var-single-line-height: 1.4;
+  --rec-var-text-wrap-line-height: 1.4;
 }
 
 .aimd-protocol-recorder__error {
@@ -1309,6 +1311,7 @@ defineExpose({
   background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   color: var(--rec-text);
+  font-size: var(--rec-body-font-size);
   line-height: 1.7;
 }
 
@@ -1520,9 +1523,13 @@ defineExpose({
   max-width: 100%;
   border: 1px solid var(--aimd-border-color, #90caf9);
   border-radius: 8px;
-  overflow: visible;
+  overflow: hidden;
   box-shadow: none;
   background: #f7fbff;
+}
+/* Metadata popovers need to escape the compact field; plain fields clip child backgrounds so corners stay clean. */
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked:has(.aimd-field__metadata-host)) {
+  overflow: visible;
 }
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked--textarea) { min-width: 0; }
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked--checkbox) { width: fit-content; min-width: 0; }
@@ -1582,9 +1589,11 @@ defineExpose({
   width: 100%;
   min-width: 0;
   height: var(--rec-var-control-height);
-  font-family: inherit;
-  font-size: inherit;
+  font: inherit;
+  font-size: var(--rec-var-value-font-size);
+  font-weight: 400;
   line-height: var(--rec-var-single-line-height);
+  color: var(--rec-text);
   border: 0 none;
   border-top: 1px solid var(--aimd-border-color, #90caf9);
   border-radius: 0 0 6px 6px;
@@ -1598,9 +1607,11 @@ defineExpose({
   width: 100%;
   min-width: 0;
   min-height: 82px;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
+  font: inherit;
+  font-size: var(--rec-var-value-font-size);
+  font-weight: 400;
+  line-height: var(--rec-var-text-wrap-line-height);
+  color: var(--rec-text);
   border: 0 none;
   border-top: 1px solid var(--aimd-border-color, #90caf9);
   border-radius: 0 0 6px 6px;
@@ -1614,9 +1625,11 @@ defineExpose({
   width: 100%;
   min-width: 0;
   min-height: var(--rec-var-control-height);
-  font-family: inherit;
-  font-size: inherit;
+  font: inherit;
+  font-size: var(--rec-var-value-font-size);
+  font-weight: 400;
   line-height: var(--rec-var-text-wrap-line-height);
+  color: var(--rec-text);
   border: 0 none;
   border-top: 1px solid var(--aimd-border-color, #90caf9);
   border-radius: 0 0 6px 6px;
@@ -2113,6 +2126,26 @@ defineExpose({
   box-shadow: none;
   font-family: inherit;
   outline: none;
+}
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-rec-inline__value-control) {
+  font: inherit;
+  font-size: var(--rec-var-value-font-size);
+  font-weight: 400;
+  color: var(--rec-text);
+  letter-spacing: 0;
+}
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__value-control::-webkit-datetime-edit),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__value-control::-webkit-datetime-edit-fields-wrapper),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__value-control::-webkit-datetime-edit-text),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__value-control::-webkit-datetime-edit-year-field),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__value-control::-webkit-datetime-edit-month-field),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__value-control::-webkit-datetime-edit-day-field),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__value-control::-webkit-datetime-edit-hour-field),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__value-control::-webkit-datetime-edit-minute-field),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__value-control::-webkit-datetime-edit-second-field),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__value-control::-webkit-datetime-edit-ampm-field) {
+  font: inherit;
+  line-height: inherit;
 }
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__input.aimd-rec-inline__input--stacked),
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline__control-row .aimd-rec-inline__textarea.aimd-rec-inline__textarea--stacked) {
