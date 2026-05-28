@@ -1,5 +1,14 @@
 import { BoxliteError, JsBoxlite } from "@boxlite-ai/boxlite";
-import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +21,8 @@ const WORKING_DIR = "/home/airalogy/protocols";
 const SANDBOX_LOG_FILE = "protocol_debug.log";
 const CLEANUP_GRACE_MS = 1_000;
 const DEFAULT_IMAGE = "numbcoder/airalogy-engine:0.1";
+const FILE_BRIDGE_INPUT_DIR = `${WORKING_DIR}/.airalogy-file-bridge/inputs`;
+const FILE_BRIDGE_OUTPUT_DIR = `${WORKING_DIR}/.airalogy-file-bridge/outputs`;
 const backgroundCleanupTasks = new Set<Promise<void>>();
 
 export interface ProtocolResult {
@@ -19,6 +30,28 @@ export interface ProtocolResult {
   message?: string;
   data?: Record<string, unknown>;
   output?: string;
+  files?: SandboxFileBridgeOutput[];
+}
+
+export interface SandboxFileBridgeInput {
+  id: string;
+  path: string;
+  fileName?: string;
+  contentType?: string;
+}
+
+export interface SandboxFileBridgeOutput {
+  id: string;
+  path: string;
+  file_name?: string;
+  name?: string;
+  content_type?: string;
+  size?: number;
+}
+
+export interface SandboxFileBridgeOptions {
+  inputs?: SandboxFileBridgeInput[];
+  outputDir?: string;
 }
 
 export interface SandboxOptions {
@@ -29,6 +62,7 @@ export interface SandboxOptions {
   cpus?: number;
   debug?: boolean;
   logFile?: string;
+  fileBridge?: SandboxFileBridgeOptions;
 }
 
 type EnvVars = Record<string, string>;
@@ -61,6 +95,7 @@ function isSandboxOptions(value: EnvVars | SandboxOptions | undefined): value is
     "cpus",
     "debug",
     "logFile",
+    "fileBridge",
   ].some((key) => key in value);
 }
 
@@ -82,6 +117,133 @@ function resolveEnvAndOptions(
     envVars: envVarsOrOptions,
     options: options ?? {},
   };
+}
+
+function safeFileBridgeName(id: string): string {
+  return id.replace(/[^A-Za-z0-9_.-]/g, "_");
+}
+
+function isFileBridgeInput(value: SandboxFileBridgeInput): boolean {
+  return (
+    typeof value.id === "string" &&
+    value.id.length > 0 &&
+    typeof value.path === "string" &&
+    value.path.length > 0
+  );
+}
+
+function resolveFileBridgeInputs(inputs: SandboxFileBridgeInput[] | undefined): SandboxFileBridgeInput[] {
+  if (!Array.isArray(inputs)) {
+    return [];
+  }
+
+  return inputs.filter(isFileBridgeInput).map((input) => {
+    const absPath = path.resolve(input.path);
+    if (!existsSync(absPath) || !statSync(absPath).isFile()) {
+      throw new Error(`fileBridge input must be a file: ${input.path}`);
+    }
+
+    return {
+      ...input,
+      path: absPath,
+    };
+  });
+}
+
+function isOciRootfsPath(rootfsPath: string): boolean {
+  return (
+    existsSync(rootfsPath) &&
+    statSync(rootfsPath).isDirectory() &&
+    existsSync(path.join(rootfsPath, "oci-layout"))
+  );
+}
+
+async function execMkdir(box: any, dir: string): Promise<void> {
+  const execution = await box.exec("mkdir", ["-p", dir], undefined, false);
+  const result = await execution.wait();
+  if (result.exitCode !== 0) {
+    throw new Error(`Failed to create sandbox directory: ${dir}`);
+  }
+}
+
+function buildFileBridgeMap(inputs: SandboxFileBridgeInput[]): Record<string, Record<string, string>> {
+  const fileMap: Record<string, Record<string, string>> = {};
+  for (const input of inputs) {
+    const sandboxFileName = `${safeFileBridgeName(input.id)}.bin`;
+    const sandboxPath = `${FILE_BRIDGE_INPUT_DIR}/${sandboxFileName}`;
+    fileMap[input.id] = {
+      path: sandboxPath,
+    };
+    if (input.fileName) {
+      fileMap[input.id].file_name = input.fileName;
+    }
+    if (input.contentType) {
+      fileMap[input.id].content_type = input.contentType;
+    }
+  }
+
+  return fileMap;
+}
+
+async function prepareFileBridge(
+  box: any,
+  inputs: SandboxFileBridgeInput[],
+): Promise<void> {
+  await execMkdir(box, FILE_BRIDGE_INPUT_DIR);
+  await execMkdir(box, FILE_BRIDGE_OUTPUT_DIR);
+
+  for (const input of inputs) {
+    const sandboxFileName = `${safeFileBridgeName(input.id)}.bin`;
+    const sandboxPath = `${FILE_BRIDGE_INPUT_DIR}/${sandboxFileName}`;
+    await box.copyIn(input.path, sandboxPath, {
+      includeParent: false,
+      overwrite: true,
+      followSymlinks: false,
+    });
+  }
+}
+
+async function copyOutFileBridgeOutputs(
+  box: any,
+  outputDir: string | undefined,
+): Promise<SandboxFileBridgeOutput[]> {
+  const hostOutputDir = outputDir ? path.resolve(outputDir) : mkdtempSync(path.join(os.tmpdir(), "airalogy-file-bridge-"));
+  mkdirSync(hostOutputDir, { recursive: true });
+
+  try {
+    await box.copyOut(`${FILE_BRIDGE_OUTPUT_DIR}/`, hostOutputDir, {
+      recursive: true,
+      includeParent: false,
+    });
+  } catch {
+    return [];
+  }
+
+  const outputs: SandboxFileBridgeOutput[] = [];
+  for (const entry of readdirSync(hostOutputDir)) {
+    if (!entry.endsWith(".json")) {
+      continue;
+    }
+
+    const metadataPath = path.join(hostOutputDir, entry);
+    const metadata = JSON.parse(readFileSync(metadataPath, "utf8")) as Record<string, unknown>;
+    const id = typeof metadata.id === "string" ? metadata.id : entry.slice(0, -".json".length);
+    const filePath = path.join(hostOutputDir, `${id}.bin`);
+    if (!existsSync(filePath)) {
+      continue;
+    }
+
+    outputs.push({
+      id,
+      path: filePath,
+      file_name: typeof metadata.file_name === "string" ? metadata.file_name : undefined,
+      name: typeof metadata.name === "string" ? metadata.name : undefined,
+      content_type: typeof metadata.content_type === "string" ? metadata.content_type : undefined,
+      size: typeof metadata.size === "number" ? metadata.size : undefined,
+    });
+  }
+
+  return outputs;
 }
 
 function trackBackgroundCleanup(task: Promise<void>): void {
@@ -285,6 +447,7 @@ async function executeInSandbox(
     cpus = 1,
     debug = false,
     logFile = SANDBOX_LOG_FILE,
+    fileBridge,
   } = options;
 
   const resolvedImage = image ?? (rootfsPath ? undefined : DEFAULT_IMAGE);
@@ -299,14 +462,20 @@ async function executeInSandbox(
 
   if (rootfsPath !== undefined) {
     const absRootfs = path.resolve(rootfsPath);
-    if (!existsSync(absRootfs) || !statSync(absRootfs).isDirectory()) {
-      throw new Error(`rootfs_path must be a directory: ${rootfsPath}`);
+    if (!isOciRootfsPath(absRootfs)) {
+      throw new Error(`rootfs_path must be an OCI layout directory: ${rootfsPath}`);
     }
   }
 
+  const fileBridgeInputs = resolveFileBridgeInputs(fileBridge?.inputs);
+  const fileBridgeEnabled = fileBridge !== undefined;
   const sandboxEnv: EnvVars = { ...(envVars ?? {}) };
   if (debug) {
     sandboxEnv.PROTOCOL_DEBUG = "1";
+  }
+  if (fileBridgeEnabled) {
+    sandboxEnv.AIRALOGY_LOCAL_FILE_MAP_JSON = JSON.stringify(buildFileBridgeMap(fileBridgeInputs));
+    sandboxEnv.AIRALOGY_LOCAL_FILE_OUTPUT_DIR = FILE_BRIDGE_OUTPUT_DIR;
   }
 
   const boxOptions: RuntimeBoxOptions = {
@@ -334,6 +503,9 @@ async function executeInSandbox(
     box = await runtime.create(boxOptions, undefined);
     await box.copyIn(EXECUTOR_PATH, `${WORKING_DIR}/`, { includeParent: false });
     await copyProtocolIntoBox(box, absProtocolPath);
+    if (fileBridgeEnabled) {
+      await prepareFileBridge(box, fileBridgeInputs);
+    }
 
     const execOutcome = await execCommandWithTimeout(
       box,
@@ -390,6 +562,15 @@ async function executeInSandbox(
     }
   } finally {
     if (box !== undefined) {
+      if (fileBridgeEnabled && !timedOut) {
+        const files = await copyOutFileBridgeOutputs(box, fileBridge?.outputDir);
+        if (files.length > 0 && result !== undefined) {
+          result = {
+            ...result,
+            files: [...(result.files ?? []), ...files],
+          };
+        }
+      }
       if (debug) {
         await copyOutLog(box, logFile);
       }

@@ -625,6 +625,20 @@ async function runEngineAction<T>(action: EngineAction, fn: () => Promise<ApiEnv
   try {
     const response = await fn()
     lastEngineResult.value = response.result
+    if (
+      response.result
+      && typeof response.result === 'object'
+      && 'success' in response.result
+      && (response.result as { success?: unknown }).success === false
+    ) {
+      const result = response.result as Record<string, unknown>
+      const message = typeof result.message === 'string'
+        ? result.message
+        : typeof result.output === 'string' && result.output.trim()
+          ? result.output.trim()
+          : 'Engine action failed'
+      throw new Error(message)
+    }
     engineStatusState.value = { type: 'complete', action }
     return response.result
   } catch (err) {

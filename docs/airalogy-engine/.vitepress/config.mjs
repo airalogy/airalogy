@@ -29,23 +29,57 @@ export default defineConfig({
   lang: 'en-US',
   description: 'Airalogy protocol execution sandbox documentation',
   base,
+  locales: {
+    en: {
+      label: 'English',
+      lang: 'en-US',
+      link: '/en/',
+      themeConfig: {
+        nav: [
+          { text: 'Home', link: '/en/' },
+          { text: 'Python Package', link: 'https://github.com/airalogy/airalogy/tree/main/packages/pypi/airalogy-engine' },
+          { text: 'Node.js Package', link: 'https://github.com/airalogy/airalogy/tree/main/packages/npm/airalogy-engine' },
+        ],
+        sidebar: {
+          '/en/': [
+            {
+              text: 'Airalogy Engine',
+              items: [
+                { text: 'Overview', link: '/en/' },
+              ],
+            },
+          ],
+        },
+      },
+    },
+    zh: {
+      label: '简体中文',
+      lang: 'zh-CN',
+      link: '/zh/',
+      themeConfig: {
+        nav: [
+          { text: '首页', link: '/zh/' },
+          { text: 'Python 包', link: 'https://github.com/airalogy/airalogy/tree/main/packages/pypi/airalogy-engine' },
+          { text: 'Node.js 包', link: 'https://github.com/airalogy/airalogy/tree/main/packages/npm/airalogy-engine' },
+        ],
+        sidebar: {
+          '/zh/': [
+            {
+              text: 'Airalogy Engine',
+              items: [
+                { text: '概览', link: '/zh/' },
+              ],
+            },
+          ],
+        },
+      },
+    },
+  },
   themeConfig: {
     search: {
       provider: 'local',
     },
-    nav: [
-      { text: 'Home', link: '/' },
-      { text: 'Python Package', link: 'https://github.com/airalogy/airalogy/tree/main/packages/pypi/airalogy-engine' },
-      { text: 'Node.js Package', link: 'https://github.com/airalogy/airalogy/tree/main/packages/npm/airalogy-engine' },
-    ],
-    sidebar: [
-      {
-        text: 'Airalogy Engine',
-        items: [
-          { text: 'Overview', link: '/' },
-        ],
-      },
-    ],
+    siteTitle: false,
     socialLinks: [
       { icon: 'github', link: githubLink },
     ],

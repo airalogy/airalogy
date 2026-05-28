@@ -19,7 +19,8 @@ const DEFAULT_ROOTFS_PATH = path.join(
   "packages/runtime/airalogy-engine-image/airalogy-engine-image",
 );
 const RUN_SANDBOX_TESTS =
-  process.env.AIRALOGY_ENGINE_RUN_SANDBOX_TESTS === "1" || fs.existsSync(DEFAULT_ROOTFS_PATH);
+  process.env.AIRALOGY_ENGINE_RUN_SANDBOX_TESTS === "1" ||
+  fs.existsSync(path.join(DEFAULT_ROOTFS_PATH, "oci-layout"));
 const itSandbox = RUN_SANDBOX_TESTS ? it : it.skip;
 const describeSandbox = RUN_SANDBOX_TESTS ? describe : describe.skip;
 const DEFAULT_IMAGE = "numbcoder/airalogy-engine:0.1";
@@ -37,14 +38,15 @@ const ASSIGN_DEBUG_LINES = [
 ];
 
 let envProtocolPath: string;
+let fileBridgeProtocolPath: string;
 
 function sandboxKwargs(): SandboxOptions {
-  const defaultMode = fs.existsSync(DEFAULT_ROOTFS_PATH) ? "rootfs" : "image";
+  const defaultMode = fs.existsSync(path.join(DEFAULT_ROOTFS_PATH, "oci-layout")) ? "rootfs" : "image";
   const mode = process.env.SANDBOX_MODE ?? defaultMode;
 
   if (mode === "rootfs") {
     const rootfsPath = process.env.ROOTFS_PATH ?? DEFAULT_ROOTFS_PATH;
-    if (!fs.existsSync(rootfsPath)) {
+    if (!fs.existsSync(path.join(rootfsPath, "oci-layout"))) {
       throw new Error(`Local rootfs not found at ${rootfsPath}`);
     }
     return { rootfsPath };
@@ -130,13 +132,77 @@ function writeEnvProtocol(protocolPath: string): void {
   );
 }
 
+function writeFileBridgeProtocol(protocolPath: string): void {
+  writeProtocolToml(protocolPath, "file_bridge_protocol", "File Bridge Protocol");
+
+  fs.writeFileSync(
+    path.join(protocolPath, "protocol.aimd"),
+    [
+      "## File Bridge Protocol AIMD example",
+      "",
+      "输入文件：{{var|input_file}}",
+      "字节数：{{var|bytes_len}}",
+      "输出文件：{{var|generated_file}}",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  fs.writeFileSync(
+    path.join(protocolPath, "model.py"),
+    [
+      "from pydantic import BaseModel",
+      "",
+      "class VarModel(BaseModel):",
+      "    input_file: str",
+      "    bytes_len: int | None = None",
+      "    generated_file: str | None = None",
+    ].join("\n"),
+    "utf8",
+  );
+
+  fs.writeFileSync(
+    path.join(protocolPath, "assigner.py"),
+    [
+      "import json",
+      "import os",
+      "import pathlib",
+      "import uuid",
+      "",
+      "from airalogy.assigner import AssignerResult, assigner",
+      "",
+      "@assigner(",
+      '    assigned_fields=["bytes_len", "generated_file"],',
+      '    dependent_fields=["input_file"],',
+      '    mode="auto",',
+      ")",
+      "def read_bridged_file(dependent_fields: dict) -> AssignerResult:",
+      '    file_id = dependent_fields["input_file"]',
+      '    file_map = json.loads(os.environ["AIRALOGY_LOCAL_FILE_MAP_JSON"])',
+      '    data = pathlib.Path(file_map[file_id]["path"]).read_bytes()',
+      '    out_dir = pathlib.Path(os.environ["AIRALOGY_LOCAL_FILE_OUTPUT_DIR"])',
+      '    out_dir.mkdir(parents=True, exist_ok=True)',
+      '    out_id = f"airalogy.id.file.{uuid.uuid4()}"',
+      '    metadata = {"id": out_id, "file_name": "summary.txt", "name": "summary.txt", "content_type": "text/plain", "size": len(data)}',
+      '    (out_dir / f"{out_id}.bin").write_bytes(data)',
+      '    (out_dir / f"{out_id}.json").write_text(json.dumps(metadata), encoding="utf8")',
+      '    return AssignerResult(assigned_fields={"bytes_len": len(data), "generated_file": out_id})',
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+}
+
 beforeAll(() => {
   envProtocolPath = fs.mkdtempSync(path.join(os.tmpdir(), "airalogy-env-protocol-"));
   writeEnvProtocol(envProtocolPath);
+  fileBridgeProtocolPath = fs.mkdtempSync(path.join(os.tmpdir(), "airalogy-file-bridge-protocol-"));
+  writeFileBridgeProtocol(fileBridgeProtocolPath);
 });
 
 afterAll(() => {
   fs.rmSync(envProtocolPath, { recursive: true, force: true });
+  fs.rmSync(fileBridgeProtocolPath, { recursive: true, force: true });
 });
 
 describe("parseProtocol", () => {
@@ -217,7 +283,7 @@ describe("parseProtocol", () => {
   it("throws for an invalid rootfs directory", async () => {
     await expect(
       parseProtocol(EXAMPLE_PROTOCOL, { rootfsPath: "/tmp/nonexistent_rootfs_dir_12345" }),
-    ).rejects.toThrow("rootfs_path must be a directory");
+    ).rejects.toThrow("rootfs_path must be an OCI layout directory");
   });
 });
 
@@ -284,6 +350,46 @@ describeSandbox("assignVariable", () => {
     expect(result.success).toBe(true);
     const assignedFields = result.data?.assigned_fields as Record<string, unknown>;
     expect(assignedFields.duration).toBe("PT1M");
+  }, 120_000);
+
+  it("bridges local input and output files into sandboxed assigners", async () => {
+    const fileId = "airalogy.id.file.22222222-2222-2222-2222-222222222222";
+    const inputFile = path.join(os.tmpdir(), `airalogy-bridge-input-${Date.now()}.csv`);
+    const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "airalogy-bridge-output-"));
+    const inputContent = "x,y\n1,2\n";
+
+    try {
+      fs.writeFileSync(inputFile, inputContent, "utf8");
+      const result = await assignVariable(
+        fileBridgeProtocolPath,
+        "bytes_len",
+        { input_file: fileId },
+        {
+          ...sandboxKwargs(),
+          fileBridge: {
+            inputs: [{
+              id: fileId,
+              path: inputFile,
+              fileName: "input.csv",
+              contentType: "text/csv",
+            }],
+            outputDir,
+          },
+        },
+      );
+
+      expect(result.success).toBe(true);
+      const assignedFields = result.data?.assigned_fields as Record<string, unknown>;
+      expect(assignedFields.bytes_len).toBe(Buffer.byteLength(inputContent));
+      expect(typeof assignedFields.generated_file).toBe("string");
+      expect(result.files?.[0]?.id).toBe(assignedFields.generated_file);
+      expect(fs.readFileSync(path.join(outputDir, `${assignedFields.generated_file}.bin`), "utf8")).toBe(
+        inputContent,
+      );
+    } finally {
+      fs.rmSync(inputFile, { force: true });
+      fs.rmSync(outputDir, { recursive: true, force: true });
+    }
   }, 120_000);
 
   it("copies partial debug logs after killing a timed-out guest process", async () => {

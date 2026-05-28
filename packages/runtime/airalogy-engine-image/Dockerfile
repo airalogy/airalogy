@@ -2,10 +2,12 @@ FROM python:3.13.12-slim AS builder
 
 WORKDIR /builder
 
-COPY protocol_requirements.txt ./
+COPY packages/runtime/airalogy-engine-image/protocol_requirements.txt ./
 
 # Install requirements
 RUN pip install --no-cache-dir -r protocol_requirements.txt
+COPY packages/pypi/airalogy ./packages/pypi/airalogy
+RUN pip install --no-cache-dir './packages/pypi/airalogy[markitdown]'
 
 # run stage
 FROM python:3.13.12-slim

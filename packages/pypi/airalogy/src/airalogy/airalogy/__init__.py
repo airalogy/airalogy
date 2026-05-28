@@ -1,9 +1,17 @@
 import base64
+import json
+import mimetypes
 import os
+import uuid
 import warnings
-from typing import Optional
+from pathlib import Path
+from typing import Any, Optional
 
 import httpx
+
+
+LOCAL_FILE_MAP_ENV = "AIRALOGY_LOCAL_FILE_MAP_JSON"
+LOCAL_FILE_OUTPUT_DIR_ENV = "AIRALOGY_LOCAL_FILE_OUTPUT_DIR"
 
 
 class Airalogy:
@@ -57,6 +65,51 @@ class Airalogy:
             raise ValueError("AIRALOGY_PROTOCOL_ID is not set")
         return self._airalogy_protocol_id
 
+    def _local_file_map(self) -> dict[str, Any]:
+        raw_map = os.environ.get(LOCAL_FILE_MAP_ENV)
+        if not raw_map:
+            return {}
+        try:
+            parsed = json.loads(raw_map)
+        except json.JSONDecodeError as err:
+            raise ValueError(f"{LOCAL_FILE_MAP_ENV} is not valid JSON") from err
+        if not isinstance(parsed, dict):
+            raise ValueError(f"{LOCAL_FILE_MAP_ENV} must be a JSON object")
+        return parsed
+
+    def _local_file_path(self, file_id: str) -> Path | None:
+        entry = self._local_file_map().get(file_id)
+        if isinstance(entry, str):
+            return Path(entry)
+        if isinstance(entry, dict) and isinstance(entry.get("path"), str):
+            return Path(entry["path"])
+        return None
+
+    def _upload_file_bytes_to_local_bridge(
+        self,
+        file_name: str,
+        file_bytes: bytes,
+        output_dir: str,
+    ) -> dict[str, object]:
+        target_dir = Path(output_dir)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        file_id = f"airalogy.id.file.{uuid.uuid4()}"
+        normalized_file_name = Path(file_name).name or "upload.bin"
+        content_type = mimetypes.guess_type(normalized_file_name)[0] or "application/octet-stream"
+        metadata = {
+            "id": file_id,
+            "file_name": normalized_file_name,
+            "name": normalized_file_name,
+            "content_type": content_type,
+            "size": len(file_bytes),
+        }
+        (target_dir / f"{file_id}.bin").write_bytes(file_bytes)
+        (target_dir / f"{file_id}.json").write_text(
+            json.dumps(metadata, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return metadata
+
     def download_file_bytes(self, file_id: str) -> bytes:
         """
         Download an Airalogy File in bytes format from Airalogy Platform.
@@ -70,6 +123,9 @@ class Airalogy:
         Raises:
             Exception: If the download fails.
         """
+        local_file_path = self._local_file_path(file_id)
+        if local_file_path is not None:
+            return local_file_path.read_bytes()
 
         res = httpx.get(
             f"{self._airalogy_base_url}/airalogy/download/{file_id}",
@@ -127,7 +183,7 @@ class Airalogy:
         response_data = res.json()
         return response_data["url"]
 
-    def upload_file_bytes(self, file_name: str, file_bytes: bytes) -> dict[str, str]:
+    def upload_file_bytes(self, file_name: str, file_bytes: bytes) -> dict[str, object]:
         """
         Upload a file in bytes format to the Airalogy service.
 
@@ -143,6 +199,13 @@ class Airalogy:
         Raises:
             Exception: If the upload fails.
         """
+        local_output_dir = os.environ.get(LOCAL_FILE_OUTPUT_DIR_ENV)
+        if local_output_dir:
+            return self._upload_file_bytes_to_local_bridge(
+                file_name=file_name,
+                file_bytes=file_bytes,
+                output_dir=local_output_dir,
+            )
 
         res = httpx.post(
             f"{self._airalogy_base_url}/airalogy/upload",
@@ -155,7 +218,7 @@ class Airalogy:
 
         return res.json()
 
-    def upload_file_base64(self, file_name: str, file_base64: str) -> dict[str, str]:
+    def upload_file_base64(self, file_name: str, file_base64: str) -> dict[str, object]:
         """
         Uploads base64 encoded content to the Airalogy service.
 

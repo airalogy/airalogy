@@ -2,6 +2,8 @@
 
 [![npm version](https://img.shields.io/npm/v/%40airalogy%2Fairalogy-engine?label=npm)](https://www.npmjs.com/package/@airalogy/airalogy-engine)
 
+Chinese README: [README.zh-CN.md](README.zh-CN.md)
+
 Airalogy protocol execution sandbox for Node.js/TypeScript. Run protocol packages (`parse`, `assign`, `validate`) inside a secure [BoxLite](https://github.com/boxlite-ai/boxlite) sandbox.
 
 ## Installation
@@ -29,6 +31,16 @@ In this monorepo, build and export the image locally for faster, offline executi
 ```bash
 pnpm build:engine-rootfs
 ```
+
+#### What is an OCI rootfs?
+
+OCI stands for Open Container Initiative. Here "OCI rootfs" means an OCI
+image layout directory, which is a standard local directory format for container
+images, not a traditional unpacked Linux root filesystem and not a
+Docker-specific format. A valid directory contains `oci-layout`, `index.json`,
+and `blobs/sha256/...`; BoxLite mounts that image layout as the sandbox
+filesystem. If the directory exists but lacks `oci-layout`, rebuild it with
+`pnpm build:engine-rootfs:force`.
 
 Then use `rootfsPath`:
 

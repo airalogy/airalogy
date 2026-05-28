@@ -35,6 +35,14 @@ runtime dependency changes with:
 pnpm build:engine-rootfs:force
 ```
 
+OCI stands for Open Container Initiative. The exported rootfs is an OCI
+image layout directory, which is a standard local directory format for container
+images, not a traditional unpacked Linux filesystem and not a Docker-specific
+format. It contains `oci-layout`, `index.json`, and `blobs/sha256/...` entries,
+which BoxLite can mount as the sandbox filesystem. If the directory exists but
+does not contain `oci-layout`, treat it as an incomplete build and rebuild it
+with `pnpm build:engine-rootfs:force`.
+
 Pass the exported rootfs directory to either engine package.
 
 ## Tests

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -14,6 +14,7 @@ const requirementsPath = path.join(runtimeDir, 'protocol_requirements.txt')
 const defaultRootfsDir = path.join(runtimeDir, 'airalogy-engine-image')
 const defaultTarPath = path.join(runtimeDir, 'airalogy-engine-image.tar')
 const manifestName = '.airalogy-rootfs.json'
+const localPythonPackageDir = path.join(repoRoot, 'packages/pypi/airalogy')
 
 function parseArgs(argv) {
   const options = {
@@ -104,7 +105,44 @@ async function hashSources() {
     hash.update(await readFile(filePath))
     hash.update('\0')
   }
+  await hashDirectory(hash, localPythonPackageDir)
   return hash.digest('hex')
+}
+
+async function hashDirectory(hash, directory) {
+  const entries = await readdir(directory, { withFileTypes: true })
+  entries.sort((a, b) => a.name.localeCompare(b.name))
+
+  for (const entry of entries) {
+    if (
+      entry.name === '__pycache__' ||
+      entry.name === '.pytest_cache' ||
+      entry.name === '.venv' ||
+      entry.name === 'dist' ||
+      entry.name.endsWith('.egg-info')
+    ) {
+      continue
+    }
+
+    const entryPath = path.join(directory, entry.name)
+    const relativePath = path.relative(repoRoot, entryPath)
+    if (entry.isDirectory()) {
+      hash.update(`${relativePath}/`)
+      hash.update('\0')
+      await hashDirectory(hash, entryPath)
+      continue
+    }
+
+    if (entry.isFile()) {
+      const entryStat = await stat(entryPath)
+      hash.update(relativePath)
+      hash.update('\0')
+      hash.update(String(entryStat.size))
+      hash.update('\0')
+      hash.update(await readFile(entryPath))
+      hash.update('\0')
+    }
+  }
 }
 
 async function readManifest(rootfsDir) {
@@ -136,7 +174,7 @@ async function main() {
 
   if (existsSync(rootfsDir) && !options.force) {
     const manifest = await readManifest(rootfsDir)
-    if (!existsSync(path.join(rootfsDir, 'manifest.json'))) {
+    if (!existsSync(path.join(rootfsDir, 'oci-layout'))) {
       throw new Error(
         `Airalogy Engine rootfs directory exists but is incomplete: ${rootfsDir}\n` +
         'Rebuild it with: pnpm build:engine-rootfs -- --force',
@@ -154,6 +192,9 @@ async function main() {
   if (!checkCommand('docker', ['--version'])) {
     throw new Error('Docker is required to build the Airalogy Engine rootfs.')
   }
+  if (!checkCommand('docker', ['buildx', 'version'])) {
+    throw new Error('Docker Buildx is required to build the Airalogy Engine rootfs.')
+  }
 
   if (options.force) {
     await rm(rootfsDir, { recursive: true, force: true })
@@ -163,8 +204,17 @@ async function main() {
   await mkdir(path.dirname(rootfsDir), { recursive: true })
   await mkdir(rootfsDir, { recursive: true })
 
-  run('docker', ['build', '-t', options.image, '.'], { cwd: runtimeDir })
-  run('docker', ['save', '-o', tarPath, options.image], { cwd: runtimeDir })
+  run('docker', [
+    'buildx',
+    'build',
+    '-f',
+    dockerfilePath,
+    '-t',
+    options.image,
+    '--output',
+    `type=oci,dest=${tarPath}`,
+    '.',
+  ])
   run('tar', ['-xf', tarPath, '-C', rootfsDir], { cwd: runtimeDir })
   await rm(tarPath, { force: true })
 

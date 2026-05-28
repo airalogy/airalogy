@@ -194,6 +194,10 @@ function booleanOption(value, fallback = false) {
   return fallback
 }
 
+function isRootfsAvailable(rootfsPath = defaultRootfsPath) {
+  return existsSync(path.join(rootfsPath, 'oci-layout'))
+}
+
 function resolveSandboxOptions(input) {
   const sandbox = isPlainObject(input) ? input : {}
   const mode = stringOption(sandbox.mode) ?? process.env.SANDBOX_MODE
@@ -225,7 +229,7 @@ function resolveSandboxOptions(input) {
     options.logFile = logFile
   }
 
-  if (rootfsPath || mode === 'rootfs' || existsSync(defaultRootfsPath)) {
+  if (rootfsPath || mode === 'rootfs' || isRootfsAvailable()) {
     options.rootfsPath = rootfsPath ?? defaultRootfsPath
   } else if (mode === 'image' || image) {
     options.image = image ?? defaultImage
@@ -469,6 +473,97 @@ async function readStoredFile(fileIdValue) {
   }
 }
 
+function collectAiralogyFileIds(value, result = new Set()) {
+  if (typeof value === 'string' && /^airalogy\.id\.file\.[a-f0-9-]+$/i.test(value)) {
+    result.add(value)
+    return result
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectAiralogyFileIds(item, result)
+    }
+    return result
+  }
+
+  if (isPlainObject(value)) {
+    for (const item of Object.values(value)) {
+      collectAiralogyFileIds(item, result)
+    }
+  }
+
+  return result
+}
+
+async function buildFileBridgeInputs(value) {
+  const inputs = []
+
+  for (const fileId of collectAiralogyFileIds(value)) {
+    const metadataPath = storedFileMetaPath(fileId)
+    const filePath = storedFilePath(fileId)
+    if (!existsSync(metadataPath) || !existsSync(filePath)) {
+      continue
+    }
+
+    const metadata = JSON.parse(await readFile(metadataPath, 'utf8'))
+    inputs.push({
+      id: fileId,
+      path: filePath,
+      fileName: metadata.file_name ?? metadata.name,
+      contentType: metadata.content_type,
+    })
+  }
+
+  return inputs
+}
+
+async function withFileBridge(options, values) {
+  await mkdir(fileStoreRoot, { recursive: true })
+  const outputDir = await mkdtemp(path.join(draftRoot, 'file-bridge-output-'))
+  return {
+    outputDir,
+    options: {
+      ...options,
+      fileBridge: {
+        ...(options.fileBridge ?? {}),
+        inputs: await buildFileBridgeInputs(values),
+        outputDir,
+      },
+    },
+  }
+}
+
+async function persistFileBridgeOutputs(result) {
+  if (!result || !Array.isArray(result.files)) {
+    return result
+  }
+
+  await mkdir(fileStoreRoot, { recursive: true })
+  const files = []
+  for (const file of result.files) {
+    if (!isPlainObject(file) || typeof file.id !== 'string' || typeof file.path !== 'string') {
+      continue
+    }
+
+    const fileId = normalizeFileId(file.id)
+    const content = await readFile(file.path)
+    const metadataPath = path.join(path.dirname(file.path), `${fileId}.json`)
+    const metadata = existsSync(metadataPath)
+      ? JSON.parse(await readFile(metadataPath, 'utf8'))
+      : { ...file }
+    delete metadata.path
+
+    await writeFile(storedFilePath(fileId), content)
+    await writeFile(storedFileMetaPath(fileId), JSON.stringify(metadata, null, 2), 'utf8')
+    files.push(metadata)
+  }
+
+  return {
+    ...result,
+    files,
+  }
+}
+
 function fileDownloadHeaders(metadata) {
   const fileName = String(metadata.file_name ?? metadata.name ?? 'download.bin').replace(/"/g, '')
   return {
@@ -522,7 +617,19 @@ async function callEngine(action, protocolDir, body, protocolId) {
         throw new Error('varName is required')
       }
       const dependentData = isPlainObject(body.dependentData) ? body.dependentData : {}
-      return engine.assignVariable(protocolDir, body.varName.trim(), dependentData, envVars, options)
+      const fileBridge = await withFileBridge(options, dependentData)
+      try {
+        const result = await engine.assignVariable(
+          protocolDir,
+          body.varName.trim(),
+          dependentData,
+          envVars,
+          fileBridge.options,
+        )
+        return persistFileBridgeOutputs(result)
+      } finally {
+        void rm(fileBridge.outputDir, { recursive: true, force: true }).catch(() => undefined)
+      }
     }
 
     if (action === 'validate') {
@@ -555,10 +662,10 @@ async function healthPayload() {
     protocolRoot,
     rootfs: {
       path: defaultRootfsPath,
-      exists: existsSync(defaultRootfsPath),
+      exists: isRootfsAvailable(),
     },
     image: process.env.SANDBOX_IMAGE ?? defaultImage,
-    mode: process.env.SANDBOX_MODE ?? (existsSync(defaultRootfsPath) ? 'rootfs' : 'unconfigured'),
+    mode: process.env.SANDBOX_MODE ?? (isRootfsAvailable() ? 'rootfs' : 'unconfigured'),
   }
 }
 
