@@ -13,6 +13,7 @@ import {
   useDemoMessages,
 } from './composables/demoI18n'
 import ProtocolSourceBrowser from './components/ProtocolSourceBrowser.vue'
+import airalogyLogoMarkUrl from './assets/airalogy-logo-mark.svg'
 import '@airalogy/aimd-recorder/styles'
 
 type LocaleMap<T> = Record<string, T | undefined>
@@ -563,8 +564,11 @@ onMounted(() => {
   <div class="app-shell">
     <header class="topbar">
       <div class="brand-block">
-        <h1>{{ messages.app.title }}</h1>
-        <span class="brand-subtitle">{{ messages.app.subtitle }}</span>
+        <img class="brand-logo" :src="airalogyLogoMarkUrl" alt="" aria-hidden="true" />
+        <div class="brand-copy">
+          <h1>{{ messages.app.title }}</h1>
+          <span class="brand-subtitle">{{ messages.app.subtitle }}</span>
+        </div>
       </div>
       <div class="topbar-controls">
         <label class="ui-locale-select">
@@ -800,6 +804,20 @@ onMounted(() => {
 }
 
 .brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-logo {
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+}
+
+.brand-copy {
   display: flex;
   align-items: baseline;
   gap: 14px;
@@ -1183,11 +1201,16 @@ button:disabled {
 
 @media (max-width: 720px) {
   .topbar,
-  .brand-block,
   .topbar-controls,
   .protocol-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .brand-copy {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
   }
 
   .ui-locale-select,
