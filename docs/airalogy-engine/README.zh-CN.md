@@ -28,6 +28,10 @@ examples/airalogy-engine/        # 示例协议包
 pnpm build:engine-rootfs
 ```
 
+构建本地 rootfs 需要 Docker daemon 处于运行状态。在 macOS 上，请从“应用程序”启动 Docker Desktop，或运行 `open -a Docker`，然后等待 `docker info` 成功后再执行 `pnpm build:engine-rootfs` 或 `pnpm build:engine-rootfs:force`。如果使用 Colima、Rancher Desktop 或其他 Docker 兼容运行时，请先启动对应运行时，并确保 Docker context 指向它。
+
+构建脚本需要导出 OCI layout，因此会自动创建并使用 `docker-container` driver 的 Buildx builder。Docker 默认的 `docker` driver 不能导出 `type=oci`。如果需要使用不同的 builder 名称，可以传入 `--builder <name>`，或设置 `AIRALOGY_ENGINE_BUILDX_BUILDER`。
+
 这会在默认路径创建 rootfs：`packages/runtime/airalogy-engine-image/airalogy-engine-image`。如果 runtime 依赖发生变化，可以重新构建：
 
 ```bash

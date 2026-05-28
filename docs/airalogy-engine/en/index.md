@@ -5,6 +5,12 @@
 
 Airalogy Engine runs protocol packages (`parse`, `assign`, `validate`) inside a BoxLite sandbox. The Python and Node.js packages share the same sandbox image and protocol executor behavior.
 
+## Design Rationale
+
+Airalogy Engine separates the protocol runtime into four layers: Docker/BuildKit builds the sandbox environment, OCI image layout stores that environment as a standard portable artifact, BoxLite mounts the artifact and executes protocol code in isolation, and the Engine API exposes stable `image`, `rootfsPath`, and file bridge abstractions to host applications.
+
+This design avoids depending on the host Python environment and avoids requiring Docker daemon access during normal protocol execution after the local rootfs has been built. It also keeps the runtime boundary explicit: future CI pipelines, hosted services, or alternative sandbox runtimes can reuse the same OCI artifact and Engine-level API without changing protocol packages or recorder integrations.
+
 ## Packages
 
 | Package | Source | Registry |
@@ -37,6 +43,10 @@ Build the shared sandbox image from the runtime package:
 ```bash
 pnpm build:engine-rootfs
 ```
+
+Building the local rootfs requires a running Docker daemon. On macOS, start Docker Desktop from Applications or run `open -a Docker`, then wait until `docker info` succeeds before running `pnpm build:engine-rootfs` or `pnpm build:engine-rootfs:force`. If you use Colima, Rancher Desktop, or another Docker-compatible runtime, start that runtime and make sure your Docker context points to it.
+
+The build script exports an OCI layout, so it automatically creates and uses a Buildx builder with the `docker-container` driver. Docker's default `docker` driver cannot export `type=oci`. If you need a different builder name, pass `--builder <name>` or set `AIRALOGY_ENGINE_BUILDX_BUILDER`.
 
 This creates the default rootfs at `packages/runtime/airalogy-engine-image/airalogy-engine-image`. Rebuild it after runtime dependency changes with:
 

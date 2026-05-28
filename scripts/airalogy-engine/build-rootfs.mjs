@@ -15,6 +15,7 @@ const defaultRootfsDir = path.join(runtimeDir, 'airalogy-engine-image')
 const defaultTarPath = path.join(runtimeDir, 'airalogy-engine-image.tar')
 const manifestName = '.airalogy-rootfs.json'
 const localPythonPackageDir = path.join(repoRoot, 'packages/pypi/airalogy')
+const defaultBuildxBuilder = 'airalogy-engine-oci'
 
 function parseArgs(argv) {
   const options = {
@@ -22,6 +23,7 @@ function parseArgs(argv) {
     image: process.env.AIRALOGY_ENGINE_IMAGE_TAG || 'airalogy-engine:latest',
     rootfsDir: process.env.ROOTFS_PATH || defaultRootfsDir,
     tarPath: defaultTarPath,
+    builder: process.env.AIRALOGY_ENGINE_BUILDX_BUILDER || defaultBuildxBuilder,
   }
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -36,6 +38,8 @@ function parseArgs(argv) {
       options.rootfsDir = path.resolve(requireValue(argv, ++index, arg))
     } else if (arg === '--tar') {
       options.tarPath = path.resolve(requireValue(argv, ++index, arg))
+    } else if (arg === '--builder') {
+      options.builder = requireValue(argv, ++index, arg)
     } else if (arg === '--help' || arg === '-h') {
       printHelp()
       process.exit(0)
@@ -67,6 +71,7 @@ Options:
   --image <tag>    Docker image tag to build and export.
   --rootfs <path>  Output rootfs directory. Defaults to packages/runtime/airalogy-engine-image/airalogy-engine-image.
   --tar <path>     Temporary Docker image archive path.
+  --builder <name> Buildx builder name for OCI export. Defaults to ${defaultBuildxBuilder}.
 `)
 }
 
@@ -95,6 +100,40 @@ function checkCommand(command, args) {
   })
 
   return result.status === 0
+}
+
+function commandOutput(command, args) {
+  return spawnSync(command, args, {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: process.env,
+  })
+}
+
+function ensureOciBuildxBuilder(builder) {
+  const inspect = commandOutput('docker', ['buildx', 'inspect', builder])
+  if (inspect.status === 0) {
+    const output = `${inspect.stdout}\n${inspect.stderr}`
+    if (!output.includes('Driver: docker-container')) {
+      throw new Error(
+        `Buildx builder "${builder}" already exists but is not using the docker-container driver.\n` +
+        'Use a different builder name with --builder or AIRALOGY_ENGINE_BUILDX_BUILDER.',
+      )
+    }
+    run('docker', ['buildx', 'inspect', builder, '--bootstrap'])
+    return
+  }
+
+  run('docker', [
+    'buildx',
+    'create',
+    '--name',
+    builder,
+    '--driver',
+    'docker-container',
+  ])
+  run('docker', ['buildx', 'inspect', builder, '--bootstrap'])
 }
 
 async function hashSources() {
@@ -195,6 +234,16 @@ async function main() {
   if (!checkCommand('docker', ['buildx', 'version'])) {
     throw new Error('Docker Buildx is required to build the Airalogy Engine rootfs.')
   }
+  if (!checkCommand('docker', ['info'])) {
+    throw new Error(
+      [
+        'Docker daemon is not running or not reachable.',
+        'Start Docker Desktop (macOS: open -a Docker) and wait until `docker info` succeeds.',
+        'If you use Colima, Rancher Desktop, or another Docker-compatible runtime, start it and select the matching Docker context before rebuilding the rootfs.',
+      ].join('\n'),
+    )
+  }
+  ensureOciBuildxBuilder(options.builder)
 
   if (options.force) {
     await rm(rootfsDir, { recursive: true, force: true })
@@ -207,6 +256,8 @@ async function main() {
   run('docker', [
     'buildx',
     'build',
+    '--builder',
+    options.builder,
     '-f',
     dockerfilePath,
     '-t',

@@ -5,6 +5,12 @@
 
 Airalogy Engine 在 BoxLite sandbox 中运行协议包的 `parse`、`assign` 和 `validate` 操作。Python 包和 Node.js 包共享同一套 sandbox 镜像和协议执行器行为。
 
+## 设计逻辑
+
+Airalogy Engine 把协议运行时拆成四层：Docker/BuildKit 负责构建 sandbox 环境，OCI image layout 把这个环境保存成标准、可迁移的 artifact，BoxLite 挂载这个 artifact 并隔离执行协议代码，Engine API 则向宿主应用暴露稳定的 `image`、`rootfsPath` 和 file bridge 抽象。
+
+这种设计避免依赖宿主机 Python 环境，也避免在本地 rootfs 构建完成后仍要求正常协议执行必须访问 Docker daemon。它还让运行边界保持清晰：未来无论是 CI 构建、托管服务，还是替换底层 sandbox runtime，都可以复用同一个 OCI artifact 和 Engine 层 API，而不需要改协议包或 recorder 集成。
+
 ## 包
 
 | 包 | 源码 | Registry |
@@ -37,6 +43,10 @@ apps/protocol-demo/              # 基于本地 engine 的 demo
 ```bash
 pnpm build:engine-rootfs
 ```
+
+构建本地 rootfs 需要 Docker daemon 处于运行状态。在 macOS 上，请从“应用程序”启动 Docker Desktop，或运行 `open -a Docker`，然后等待 `docker info` 成功后再执行 `pnpm build:engine-rootfs` 或 `pnpm build:engine-rootfs:force`。如果使用 Colima、Rancher Desktop 或其他 Docker 兼容运行时，请先启动对应运行时，并确保 Docker context 指向它。
+
+构建脚本需要导出 OCI layout，因此会自动创建并使用 `docker-container` driver 的 Buildx builder。Docker 默认的 `docker` driver 不能导出 `type=oci`。如果需要使用不同的 builder 名称，可以传入 `--builder <name>`，或设置 `AIRALOGY_ENGINE_BUILDX_BUILDER`。
 
 这会在默认路径创建 rootfs：`packages/runtime/airalogy-engine-image/airalogy-engine-image`。如果 runtime 依赖发生变化，可以重新构建：
 
