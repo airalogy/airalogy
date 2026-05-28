@@ -2,7 +2,7 @@
 
 `examples/aimd/` 目录用于收纳面向不同业务场景的独立 AIMD 案例。案例用于展示 AIMD 在真实流程中的组织方式，也可以由用户复制后改造成自己的 protocol。
 
-完整 Airalogy Protocol 示例位于 `examples/protocols/`。这些示例包含 `protocol.toml`，并可能包含 `assigner.py` 和示例数据，用于需要 engine 支持的流程。
+完整 Airalogy Protocol 示例位于 `examples/protocols/`。这些示例包含 `protocol.toml`，并可能包含 `assigner.py` 和示例数据，用于需要引擎（Engine）支持的流程。
 
 可以在 [Demo 案例页](/demo/#/examples) 中直接切换、编辑和填写这些案例。
 

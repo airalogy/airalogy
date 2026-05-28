@@ -6,8 +6,10 @@ import meetingNotesEn from '../../../../examples/protocols/meeting-notes/en-US/p
 import meetingNotesZh from '../../../../examples/protocols/meeting-notes/zh-CN/protocol.aimd?raw'
 import cuaacKineticsEn from '../../../../examples/protocols/cuaac-kinetics/en-US/protocol.aimd?raw'
 import cuaacKineticsZh from '../../../../examples/protocols/cuaac-kinetics/zh-CN/protocol.aimd?raw'
+import drugResponseIc50En from '../../../../examples/protocols/drug-response-ic50/en-US/protocol.aimd?raw'
 import drugResponseIc50Zh from '../../../../examples/protocols/drug-response-ic50/zh-CN/protocol.aimd?raw'
 import diaryEn from '../../../../examples/protocols/diary/en-US/protocol.aimd?raw'
+import diaryZh from '../../../../examples/protocols/diary/zh-CN/protocol.aimd?raw'
 import type { DemoLocale } from './demoI18n'
 
 export const SAMPLE_AIMD = sampleContentDefault
@@ -119,6 +121,7 @@ export const DEMO_EXAMPLES: DemoExample[] = [
     id: 'drug-response-ic50',
     kind: 'protocol',
     source: {
+      'en-US': 'examples/protocols/drug-response-ic50/en-US/protocol.aimd',
       'zh-CN': 'examples/protocols/drug-response-ic50/zh-CN/protocol.aimd',
     },
     title: {
@@ -130,9 +133,10 @@ export const DEMO_EXAMPLES: DemoExample[] = [
       'zh-CN': '用于剂量-反应数据上传、IC50 估算、质控、曲线绘制和报告生成的官方协议。',
     },
     content: {
+      'en-US': drugResponseIc50En,
       'zh-CN': drugResponseIc50Zh,
     },
-    locales: ['zh-CN'],
+    locales: ['en-US', 'zh-CN'],
     tags: ['protocol', 'biomedicine', 'IC50', 'assigner'],
   },
   {
@@ -140,6 +144,7 @@ export const DEMO_EXAMPLES: DemoExample[] = [
     kind: 'protocol',
     source: {
       'en-US': 'examples/protocols/diary/en-US/protocol.aimd',
+      'zh-CN': 'examples/protocols/diary/zh-CN/protocol.aimd',
     },
     title: {
       'en-US': 'Diary',
@@ -151,8 +156,9 @@ export const DEMO_EXAMPLES: DemoExample[] = [
     },
     content: {
       'en-US': diaryEn,
+      'zh-CN': diaryZh,
     },
-    locales: ['en-US'],
+    locales: ['en-US', 'zh-CN'],
     tags: ['protocol', 'diary', 'notes'],
   },
 ]

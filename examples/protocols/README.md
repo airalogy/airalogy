@@ -10,8 +10,8 @@ Preview and fill the AIMD portions in the [AIMD demo examples page](https://aira
 | --- | --- | --- | --- | --- |
 | `meeting-notes` | Meeting notes | `en-US`, `zh-CN` | No | General-purpose meeting notes template for teams and projects. |
 | `cuaac-kinetics` | Click reaction kinetics | `en-US`, `zh-CN` | Yes | CuAAC kinetic data upload, parameter calculation, plots, and report drafting. |
-| `drug-response-ic50` | Drug response IC50 analysis | `zh-CN` | Yes | Dose-response upload, IC50 estimation, QC, curve plotting, and report generation. |
-| `diary` | Diary | `en-US` | No | Compact structured diary protocol. |
+| `drug-response-ic50` | Drug response IC50 analysis | `en-US`, `zh-CN` | Yes | Dose-response upload, IC50 estimation, QC, curve plotting, and report generation. |
+| `diary` | Diary | `en-US`, `zh-CN` | No | Compact structured diary protocol. |
 
 The machine-readable registry is [index.json](./index.json).
 

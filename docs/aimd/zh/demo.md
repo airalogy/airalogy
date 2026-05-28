@@ -19,7 +19,7 @@ const linkTo = path => `${demoRoot}/#${path}`
 
 # Airalogy Markdown Demo
 
-为避免文档页面过于拥挤，Airalogy Markdown Demo 改为单独打开。案例页里的 Protocol 条目用于预览和填写 `protocol.aimd` 源码；需要 engine 执行 assigner 的完整演示应放在更高一层的 Airalogy Protocol Demo。
+为避免文档页面过于拥挤，Airalogy Markdown Demo 改为单独打开。案例页里的 Protocol 条目用于预览和填写 `protocol.aimd` 源码；需要引擎（Engine）执行赋值器（Assigner）的完整演示应放在更高一层的 Airalogy Protocol Demo。
 
 <div class="aimd-demo-actions">
   <a :href="linkTo('/full')" class="aimd-demo-button" target="_blank" rel="noreferrer">

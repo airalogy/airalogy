@@ -69,6 +69,9 @@
         "zh-CN": "cuaac-kinetics/zh-CN/assigner.py"
       },
       "sample_data": {
+        "en-US": [
+          "cuaac-kinetics/en-US/kinetics-demo.csv"
+        ],
         "zh-CN": [
           "cuaac-kinetics/zh-CN/kinetics-demo.csv"
         ]
@@ -86,6 +89,7 @@
       "id": "drug-response-ic50",
       "category": "biomedicine",
       "languages": [
+        "en-US",
         "zh-CN"
       ],
       "title": {
@@ -97,18 +101,25 @@
         "zh-CN": "用于标准化记录细胞活性实验、上传剂量-反应数据、自动估算 IC50、生成图表与实验报告。"
       },
       "protocol_dir": {
+        "en-US": "drug-response-ic50/en-US",
         "zh-CN": "drug-response-ic50/zh-CN"
       },
       "entry": {
+        "en-US": "drug-response-ic50/en-US/protocol.aimd",
         "zh-CN": "drug-response-ic50/zh-CN/protocol.aimd"
       },
       "toml": {
+        "en-US": "drug-response-ic50/en-US/protocol.toml",
         "zh-CN": "drug-response-ic50/zh-CN/protocol.toml"
       },
       "assigner": {
+        "en-US": "drug-response-ic50/en-US/assigner.py",
         "zh-CN": "drug-response-ic50/zh-CN/assigner.py"
       },
       "sample_data": {
+        "en-US": [
+          "drug-response-ic50/en-US/dose-response-demo.csv"
+        ],
         "zh-CN": [
           "drug-response-ic50/zh-CN/dose-response-demo.csv"
         ]
@@ -126,7 +137,8 @@
       "id": "diary",
       "category": "personal",
       "languages": [
-        "en-US"
+        "en-US",
+        "zh-CN"
       ],
       "title": {
         "en-US": "Diary",
@@ -137,13 +149,16 @@
         "zh-CN": "一个用于结构化记录日记的轻量 Airalogy Protocol。"
       },
       "protocol_dir": {
-        "en-US": "diary/en-US"
+        "en-US": "diary/en-US",
+        "zh-CN": "diary/zh-CN"
       },
       "entry": {
-        "en-US": "diary/en-US/protocol.aimd"
+        "en-US": "diary/en-US/protocol.aimd",
+        "zh-CN": "diary/zh-CN/protocol.aimd"
       },
       "toml": {
-        "en-US": "diary/en-US/protocol.toml"
+        "en-US": "diary/en-US/protocol.toml",
+        "zh-CN": "diary/zh-CN/protocol.toml"
       },
       "engine_required": false,
       "tags": [

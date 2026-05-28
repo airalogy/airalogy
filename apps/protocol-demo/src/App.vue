@@ -7,9 +7,20 @@ import {
   type AimdProtocolRecordData,
   type FieldEventPayload,
 } from '@airalogy/aimd-recorder'
+import {
+  normalizeDemoLocale,
+  useDemoLocale,
+  useDemoMessages,
+} from './composables/demoI18n'
 import '@airalogy/aimd-recorder/styles'
 
 type LocaleMap<T> = Record<string, T | undefined>
+type EngineAction = 'parse' | 'assign' | 'validate'
+type EngineStatusState =
+  | { type: 'idle' }
+  | { type: 'running' | 'complete', action: EngineAction }
+  | { type: 'selectAssignerTarget' }
+  | { type: 'message', message: string }
 
 interface ProtocolVariant {
   locale: string
@@ -65,6 +76,8 @@ interface ApiEnvelope<T> {
 
 const registry = ref<ProtocolRegistry | null>(null)
 const health = ref<HealthPayload | null>(null)
+const { locale: uiLocale } = useDemoLocale()
+const messages = useDemoMessages()
 const selectedProtocolId = ref('')
 const selectedLocale = ref('')
 const activeTab = ref<'record' | 'source' | 'engine'>('record')
@@ -75,7 +88,7 @@ const recorderKey = ref(0)
 const loading = ref(true)
 const loadError = ref('')
 const engineBusy = ref(false)
-const engineStatus = ref('')
+const engineStatusState = ref<EngineStatusState>({ type: 'idle' })
 const lastEngineResult = ref<unknown>(null)
 const parseResult = ref<Record<string, unknown> | null>(null)
 const assignerTarget = ref('')
@@ -107,7 +120,7 @@ const selectedVariant = computed(() => {
 
 const protocolTitle = computed(() => {
   const protocol = selectedProtocol.value
-  if (!protocol) return 'Airalogy Protocol Demo'
+  if (!protocol) return messages.value.app.title
   return protocol.title[selectedLocale.value] ?? protocol.title['en-US'] ?? protocol.id
 })
 
@@ -117,17 +130,16 @@ const protocolDescription = computed(() => {
   return protocol.description[selectedLocale.value] ?? protocol.description['en-US'] ?? ''
 })
 
-const runtimeLabel = computed(() => (
-  selectedProtocol.value?.engine_required ? 'Engine' : 'Static'
-))
+const runtimeLabel = computed(() => runtimeKindLabel(selectedProtocol.value?.engine_required))
 
 const engineAvailable = computed(() => health.value?.engine.available === true)
 
 const engineSummary = computed(() => {
-  if (!health.value) return 'Checking'
-  if (!health.value.engine.available) return 'Engine unavailable'
-  if (health.value.mode === 'unconfigured') return 'sandbox not configured'
-  return `${health.value.mode}${health.value.rootfs.exists ? ' / local rootfs' : ' / image'}`
+  const text = messages.value.runtime
+  if (!health.value) return text.checking
+  if (!health.value.engine.available) return text.unavailable
+  if (health.value.mode === 'unconfigured') return text.sandboxNotConfigured
+  return `${health.value.mode}${health.value.rootfs.exists ? ` / ${text.localRootfs}` : ` / ${text.image}`}`
 })
 
 const sourceTabs = computed(() => {
@@ -140,7 +152,7 @@ const sourceTabs = computed(() => {
     tabs.push({ key: 'assigner', label: 'assigner.py' })
   }
   if ((selectedVariant.value?.sampleData.length ?? 0) > 0) {
-    tabs.push({ key: 'sample', label: 'sample data' })
+    tabs.push({ key: 'sample', label: messages.value.sourceTabs.sampleData })
   }
 
   return tabs
@@ -180,6 +192,19 @@ const parseAssigners = computed(() => {
 
 const currentVarsJson = computed(() => JSON.stringify(recordData.value.var, null, 2))
 
+const engineStatus = computed(() => {
+  const status = engineStatusState.value
+  if (status.type === 'idle') return ''
+  if (status.type === 'message') return status.message
+  if (status.type === 'selectAssignerTarget') return messages.value.engine.status.selectAssignerTarget
+
+  const action = messages.value.engine.actions[status.action]
+  const template = status.type === 'running'
+    ? messages.value.engine.status.running
+    : messages.value.engine.status.complete
+  return formatMessage(template, { action })
+})
+
 const sandboxPayload = computed(() => {
   const payload: Record<string, unknown> = {
     timeout: sandboxTimeout.value,
@@ -200,6 +225,45 @@ const sandboxPayload = computed(() => {
 
 const fieldState = computed(() => fieldRuntimeState.value)
 
+function formatMessage(template: string, values: Record<string, string | number>) {
+  return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ''))
+}
+
+function runtimeKindLabel(engineRequired?: boolean) {
+  return engineRequired ? messages.value.runtime.engine : messages.value.runtime.static
+}
+
+function categoryLabel(category?: string) {
+  if (!category) return ''
+  return messages.value.categories[category] ?? category
+}
+
+function protocolLocaleLabel(locale: string) {
+  const normalized = normalizeDemoLocale(locale)
+  return `${messages.value.app.localeNames[normalized]} (${locale})`
+}
+
+function bestProtocolLocale(protocol: ProtocolExample | undefined, preferredLocale: string) {
+  if (!protocol) return ''
+  const normalizedPreferred = normalizeDemoLocale(preferredLocale)
+  return protocol.languages.find((locale) => normalizeDemoLocale(locale) === normalizedPreferred)
+    ?? protocol.languages[0]
+    ?? ''
+}
+
+function localizeErrorMessage(message: string) {
+  const errors = messages.value.errors
+  if (message.includes('Local Airalogy Engine rootfs not found')) return errors.rootfsNotFound
+  if (message === 'varName is required') return errors.varNameRequired
+  if (message === 'Request body is too large') return errors.bodyTooLarge
+  if (message === 'Env vars must be a JSON object') return errors.envVarsObject
+  if (message === 'No protocol selected') return errors.noProtocolSelected
+  if (message.startsWith('Unknown protocol example')) return errors.unknownProtocol
+  if (message.includes('does not provide locale')) return errors.unsupportedLocale
+  if (message.includes('has no protocol directory')) return errors.missingProtocolDir
+  return message
+}
+
 async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...init,
@@ -211,7 +275,8 @@ async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   const payload = await response.json()
 
   if (!response.ok || payload.ok === false) {
-    throw new Error(payload.message ?? `Request failed: ${response.status}`)
+    const fallback = formatMessage(messages.value.errors.requestFailed, { status: response.status })
+    throw new Error(localizeErrorMessage(payload.message ?? fallback))
   }
 
   return payload as T
@@ -222,7 +287,7 @@ function resetProtocolState() {
   sourceContent.value = variant?.aimd ?? ''
   recordData.value = createEmptyProtocolRecordData()
   fieldRuntimeState.value = {}
-  engineStatus.value = ''
+  engineStatusState.value = { type: 'idle' }
   lastEngineResult.value = null
   parseResult.value = null
   activeSourceTab.value = 'aimd'
@@ -235,9 +300,14 @@ function parseEnvVars() {
     return undefined
   }
 
-  const parsed = JSON.parse(trimmed)
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(trimmed)
+  } catch {
+    throw new Error(messages.value.errors.envVarsInvalidJson)
+  }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('Env vars must be a JSON object')
+    throw new Error(messages.value.errors.envVarsObject)
   }
 
   return parsed
@@ -247,7 +317,7 @@ async function postEngine<T>(action: 'parse' | 'assign' | 'validate', body: Reco
   const protocol = selectedProtocol.value
   const variant = selectedVariant.value
   if (!protocol || !variant) {
-    throw new Error('No protocol selected')
+    throw new Error(messages.value.errors.noProtocolSelected)
   }
 
   return apiJson<ApiEnvelope<T>>(
@@ -263,19 +333,19 @@ async function postEngine<T>(action: 'parse' | 'assign' | 'validate', body: Reco
   )
 }
 
-async function runEngineAction<T>(label: string, fn: () => Promise<ApiEnvelope<T>>) {
+async function runEngineAction<T>(action: EngineAction, fn: () => Promise<ApiEnvelope<T>>) {
   engineBusy.value = true
-  engineStatus.value = `${label} running`
+  engineStatusState.value = { type: 'running', action }
 
   try {
     const response = await fn()
     lastEngineResult.value = response.result
-    engineStatus.value = `${label} complete`
+    engineStatusState.value = { type: 'complete', action }
     return response.result
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
+    const message = err instanceof Error ? localizeErrorMessage(err.message) : String(err)
     lastEngineResult.value = { success: false, message }
-    engineStatus.value = message
+    engineStatusState.value = { type: 'message', message }
     throw err
   } finally {
     engineBusy.value = false
@@ -283,7 +353,7 @@ async function runEngineAction<T>(label: string, fn: () => Promise<ApiEnvelope<T
 }
 
 async function runParse() {
-  const result = await runEngineAction<Record<string, unknown>>('Parse', () => (
+  const result = await runEngineAction<Record<string, unknown>>('parse', () => (
     postEngine('parse', {})
   ))
   parseResult.value = result ?? null
@@ -319,7 +389,7 @@ function applyAssignedFields(result: unknown) {
 
 async function runAssign(target = assignerTarget.value) {
   if (!target.trim()) {
-    engineStatus.value = 'Select an assigner target'
+    engineStatusState.value = { type: 'selectAssignerTarget' }
     return
   }
 
@@ -330,7 +400,7 @@ async function runAssign(target = assignerTarget.value) {
   }
 
   try {
-    const result = await runEngineAction<unknown>('Assign', () => (
+    const result = await runEngineAction<unknown>('assign', () => (
       postEngine('assign', {
         varName: fieldKey,
         dependentData: recordData.value.var,
@@ -342,7 +412,7 @@ async function runAssign(target = assignerTarget.value) {
       [fieldKey]: { ...fieldRuntimeState.value[fieldKey], loading: false, error: undefined },
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
+    const message = err instanceof Error ? localizeErrorMessage(err.message) : String(err)
     fieldRuntimeState.value = {
       ...fieldRuntimeState.value,
       [fieldKey]: { ...fieldRuntimeState.value[fieldKey], loading: false, error: message },
@@ -377,7 +447,7 @@ function applyValidationErrors(result: unknown) {
         ...nextState[fieldKey],
         validationError: (error as Record<string, unknown>).msg
           ? String((error as Record<string, unknown>).msg)
-          : 'Invalid value',
+          : messages.value.errors.invalidValue,
       }
     }
   }
@@ -386,7 +456,7 @@ function applyValidationErrors(result: unknown) {
 }
 
 async function runValidate() {
-  const result = await runEngineAction<unknown>('Validate', () => (
+  const result = await runEngineAction<unknown>('validate', () => (
     postEngine('validate', {
       vars: recordData.value.var,
     })
@@ -416,12 +486,12 @@ async function loadDemo() {
     health.value = nextHealth
     registry.value = nextRegistry
     selectedProtocolId.value = nextRegistry.examples[0]?.id ?? ''
-    selectedLocale.value = nextRegistry.examples[0]?.languages[0] ?? ''
+    selectedLocale.value = bestProtocolLocale(nextRegistry.examples[0], uiLocale.value)
     sandboxMode.value = nextHealth.mode === 'image' ? 'image' : 'auto'
     sandboxRootfsPath.value = nextHealth.rootfs.exists ? nextHealth.rootfs.path : ''
     sandboxImage.value = nextHealth.mode === 'image' ? nextHealth.image : ''
   } catch (err) {
-    loadError.value = err instanceof Error ? err.message : String(err)
+    loadError.value = err instanceof Error ? localizeErrorMessage(err.message) : String(err)
   } finally {
     loading.value = false
   }
@@ -430,7 +500,7 @@ async function loadDemo() {
 watch(selectedProtocol, (protocol) => {
   if (!protocol) return
   if (!protocol.languages.includes(selectedLocale.value)) {
-    selectedLocale.value = protocol.languages[0]
+    selectedLocale.value = bestProtocolLocale(protocol, selectedLocale.value)
   }
 })
 
@@ -453,17 +523,26 @@ onMounted(() => {
   <div class="app-shell">
     <header class="topbar">
       <div class="brand-block">
-        <h1>Airalogy Protocol Demo</h1>
-        <span class="brand-subtitle">@airalogy/airalogy-engine + official protocol examples</span>
+        <h1>{{ messages.app.title }}</h1>
+        <span class="brand-subtitle">{{ messages.app.subtitle }}</span>
       </div>
-      <div class="runtime-block">
-        <span :class="['runtime-dot', { ok: engineAvailable }]"></span>
-        <span>{{ engineSummary }}</span>
+      <div class="topbar-controls">
+        <label class="ui-locale-select">
+          <span>{{ messages.app.languageLabel }}</span>
+          <select v-model="uiLocale">
+            <option value="zh-CN">{{ messages.app.localeNames['zh-CN'] }}</option>
+            <option value="en-US">{{ messages.app.localeNames['en-US'] }}</option>
+          </select>
+        </label>
+        <div class="runtime-block">
+          <span :class="['runtime-dot', { ok: engineAvailable }]"></span>
+          <span>{{ engineSummary }}</span>
+        </div>
       </div>
     </header>
 
     <main v-if="loading" class="loading-view">
-      Loading protocol registry
+      {{ messages.loading.registry }}
     </main>
 
     <main v-else-if="loadError" class="loading-view error-view">
@@ -472,7 +551,7 @@ onMounted(() => {
 
     <main v-else class="workspace">
       <aside class="protocol-list">
-        <div class="section-label">Protocols</div>
+        <div class="section-label">{{ messages.common.protocols }}</div>
         <button
           v-for="protocol in protocols"
           :key="protocol.id"
@@ -484,7 +563,7 @@ onMounted(() => {
             {{ protocol.title[selectedLocale] ?? protocol.title['en-US'] ?? protocol.id }}
           </span>
           <span class="protocol-option__meta">
-            {{ protocol.id }} / {{ protocol.engine_required ? 'engine' : 'static' }}
+            {{ protocol.id }} / {{ runtimeKindLabel(protocol.engine_required) }}
           </span>
         </button>
       </aside>
@@ -492,19 +571,19 @@ onMounted(() => {
       <section class="protocol-workbench">
         <div class="protocol-header">
           <div>
-            <div class="eyebrow">{{ selectedProtocol?.category }} / {{ runtimeLabel }}</div>
+            <div class="eyebrow">{{ categoryLabel(selectedProtocol?.category) }} / {{ runtimeLabel }}</div>
             <h2>{{ protocolTitle }}</h2>
             <p>{{ protocolDescription }}</p>
           </div>
           <label class="locale-select">
-            <span>Locale</span>
+            <span>{{ messages.app.protocolLanguageLabel }}</span>
             <select v-model="selectedLocale">
               <option
                 v-for="locale in selectedProtocol?.languages ?? []"
                 :key="locale"
                 :value="locale"
               >
-                {{ locale }}
+                {{ protocolLocaleLabel(locale) }}
               </option>
             </select>
           </label>
@@ -512,15 +591,15 @@ onMounted(() => {
 
         <div class="metadata-row">
           <div>
-            <span class="meta-label">Protocol dir</span>
+            <span class="meta-label">{{ messages.common.protocolDir }}</span>
             <span class="meta-value">{{ selectedVariant?.protocolDir }}</span>
           </div>
           <div>
-            <span class="meta-label">Assigner</span>
-            <span class="meta-value">{{ selectedVariant?.assignerPath ?? 'none' }}</span>
+            <span class="meta-label">{{ messages.common.assigner }}</span>
+            <span class="meta-value">{{ selectedVariant?.assignerPath ?? messages.common.none }}</span>
           </div>
           <div>
-            <span class="meta-label">Sample files</span>
+            <span class="meta-label">{{ messages.common.sampleFiles }}</span>
             <span class="meta-value">{{ selectedVariant?.sampleData.length ?? 0 }}</span>
           </div>
         </div>
@@ -531,28 +610,30 @@ onMounted(() => {
             type="button"
             @click="activeTab = 'record'"
           >
-            Record
+            {{ messages.tabs.record }}
           </button>
           <button
             :class="{ active: activeTab === 'source' }"
             type="button"
             @click="activeTab = 'source'"
           >
-            Source
+            {{ messages.tabs.source }}
           </button>
           <button
             :class="{ active: activeTab === 'engine' }"
             type="button"
             @click="activeTab = 'engine'"
           >
-            Engine
+            {{ messages.tabs.engine }}
           </button>
         </nav>
 
         <section v-if="activeTab === 'record'" class="record-panel">
           <div class="record-toolbar">
-            <button type="button" @click="resetProtocolState">Reset</button>
-            <button type="button" :disabled="engineBusy" @click="runValidate">Validate Vars</button>
+            <button type="button" @click="resetProtocolState">{{ messages.record.reset }}</button>
+            <button type="button" :disabled="engineBusy" @click="runValidate">
+              {{ messages.record.validateVars }}
+            </button>
           </div>
           <AimdRecorderEditor
             :key="recorderKey"
@@ -568,8 +649,8 @@ onMounted(() => {
             :recorder-min-height="520"
             :editor-props="{ readonly: true }"
             editor-title="protocol.aimd"
-            recorder-title="Record"
-            record-data-title="Record JSON"
+            :recorder-title="messages.record.recorderTitle"
+            :record-data-title="messages.record.recordDataTitle"
             @assigner-request="handleAssignerRequest"
           />
         </section>
@@ -593,47 +674,51 @@ onMounted(() => {
         <section v-else class="engine-panel">
           <div class="engine-controls">
             <div class="engine-control-group">
-              <button type="button" :disabled="engineBusy" @click="runParse">Parse Protocol</button>
-              <button type="button" :disabled="engineBusy" @click="runValidate">Validate Vars</button>
+              <button type="button" :disabled="engineBusy" @click="runParse">
+                {{ messages.engine.actions.parse }}
+              </button>
+              <button type="button" :disabled="engineBusy" @click="runValidate">
+                {{ messages.engine.actions.validate }}
+              </button>
               <button type="button" :disabled="engineBusy || !assignerTarget.trim()" @click="runAssign()">
-                Run Assigner
+                {{ messages.engine.actions.assign }}
               </button>
             </div>
 
             <div class="engine-form-grid">
               <label>
-                <span>Assigner target</span>
+                <span>{{ messages.engine.labels.assignerTarget }}</span>
                 <select v-if="parseAssigners.length > 0" v-model="assignerTarget">
                   <option v-for="name in parseAssigners" :key="name" :value="name">
                     {{ name }}
                   </option>
                 </select>
-                <input v-else v-model="assignerTarget" placeholder="var field name" />
+                <input v-else v-model="assignerTarget" :placeholder="messages.common.varFieldName" />
               </label>
               <label>
-                <span>Sandbox mode</span>
+                <span>{{ messages.engine.labels.sandboxMode }}</span>
                 <select v-model="sandboxMode">
-                  <option value="auto">auto</option>
-                  <option value="rootfs">rootfs</option>
-                  <option value="image">image</option>
+                  <option value="auto">{{ messages.engine.modes.auto }}</option>
+                  <option value="rootfs">{{ messages.engine.modes.rootfs }}</option>
+                  <option value="image">{{ messages.engine.modes.image }}</option>
                 </select>
               </label>
               <label>
-                <span>Timeout</span>
+                <span>{{ messages.engine.labels.timeout }}</span>
                 <input v-model.number="sandboxTimeout" min="1" max="600" type="number" />
               </label>
               <label>
-                <span>Rootfs path</span>
-                <input v-model="sandboxRootfsPath" placeholder="optional" />
+                <span>{{ messages.engine.labels.rootfsPath }}</span>
+                <input v-model="sandboxRootfsPath" :placeholder="messages.common.optional" />
               </label>
               <label>
-                <span>Image</span>
+                <span>{{ messages.engine.labels.image }}</span>
                 <input v-model="sandboxImage" placeholder="numbcoder/airalogy-engine:0.1" />
               </label>
             </div>
 
             <label class="env-editor">
-              <span>Env vars JSON</span>
+              <span>{{ messages.engine.labels.envVarsJson }}</span>
               <textarea v-model="envVarsJson" spellcheck="false"></textarea>
             </label>
           </div>
@@ -641,13 +726,13 @@ onMounted(() => {
           <div class="engine-output-grid">
             <section>
               <div class="panel-head">
-                <span>Current vars</span>
+                <span>{{ messages.engine.labels.currentVars }}</span>
               </div>
               <pre class="json-view"><code>{{ currentVarsJson }}</code></pre>
             </section>
             <section>
               <div class="panel-head">
-                <span>Engine result</span>
+                <span>{{ messages.engine.labels.engineResult }}</span>
                 <span>{{ engineStatus }}</span>
               </div>
               <pre class="json-view"><code>{{ JSON.stringify(lastEngineResult, null, 2) }}</code></pre>
@@ -703,6 +788,27 @@ onMounted(() => {
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.topbar-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ui-locale-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #627d98;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ui-locale-select select {
+  width: auto;
+  min-width: 96px;
 }
 
 .runtime-block {
@@ -1058,9 +1164,15 @@ button:disabled {
 @media (max-width: 720px) {
   .topbar,
   .brand-block,
+  .topbar-controls,
   .protocol-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .ui-locale-select,
+  .runtime-block {
+    justify-content: space-between;
   }
 
   .brand-subtitle {

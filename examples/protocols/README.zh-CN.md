@@ -2,16 +2,16 @@
 
 这个目录存放官方可运行的 Airalogy Protocol 示例，内容迁移自原独立仓库 `airalogy/protocols`。
 
-可以在 [AIMD Demo 案例页](https://airalogy.github.io/airalogy/aimd/demo/#/examples) 中预览和填写这些协议的 AIMD 部分。包含 `assigner.py` 的示例需要 Airalogy Engine 运行时来执行自动计算、文件处理和报告生成。
+可以在 [AIMD Demo 案例页](https://airalogy.github.io/airalogy/aimd/demo/#/examples) 中预览和填写这些协议的 AIMD 部分。包含 `assigner.py` 的示例需要 Airalogy 引擎（Airalogy Engine）运行时来执行自动计算、文件处理和报告生成。
 
 ## 示例清单
 
-| ID | 场景 | 语言 | Engine | 说明 |
+| ID | 场景 | 语言 | 引擎 | 说明 |
 | --- | --- | --- | --- | --- |
 | `meeting-notes` | 会议记录 | `en-US`, `zh-CN` | 否 | 适用于团队和项目的通用会议记录模板。 |
 | `cuaac-kinetics` | 点击化学反应动力学 | `en-US`, `zh-CN` | 是 | CuAAC 动力学数据上传、参数计算、绘图和报告生成。 |
-| `drug-response-ic50` | 药物剂量-反应 IC50 分析 | `zh-CN` | 是 | 剂量-反应数据上传、IC50 估算、质控、曲线绘制和报告生成。 |
-| `diary` | 日记 | `en-US` | 否 | 轻量的结构化日记协议。 |
+| `drug-response-ic50` | 药物剂量-反应 IC50 分析 | `en-US`, `zh-CN` | 是 | 剂量-反应数据上传、IC50 估算、质控、曲线绘制和报告生成。 |
+| `diary` | 日记 | `en-US`, `zh-CN` | 否 | 轻量的结构化日记协议。 |
 
 机器可读清单位于 [index.json](./index.json)。
 

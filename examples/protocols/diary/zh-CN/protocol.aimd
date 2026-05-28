@@ -1,0 +1,9 @@
+# 日记
+
+记录人：{{var|name: UserName}}
+
+记录时间：{{var|time: CurrentTime}}
+
+内容：
+
+{{var|content: AiralogyMarkdown}}
