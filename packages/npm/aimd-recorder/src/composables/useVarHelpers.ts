@@ -791,6 +791,21 @@ function getVarControlExtraWidth(inputKind: VarInputKind): number {
   }
 }
 
+function getFileControlMinWidth(input: HTMLElement | null): number {
+  if (!input?.classList.contains("aimd-rec-inline__file-control")) {
+    return 0
+  }
+
+  switch (input.dataset.fileKind) {
+    case "image":
+      return 360
+    case "csv":
+      return 280
+    default:
+      return 220
+  }
+}
+
 export function calculateVarStackWidth(name: string, inputKind: VarInputKind): string {
   const labelChars = Math.max(name.length + 7, 10)
   const approximateCharWidth = 8
@@ -967,9 +982,9 @@ export function applyVarStackWidth(target: HTMLElement, inputKind: VarInputKind)
 
   const labelWidth = measureVarLabelWidth(wrapper)
 
-  const minWidthPx = getVarControlMinWidth(inputKind)
   let controlWidth = 0
   const input = wrapper.querySelector(".aimd-rec-inline__input--stacked, .aimd-rec-inline__textarea--stacked-text, .aimd-rec-inline__file-control") as HTMLElement | null
+  const minWidthPx = Math.max(getVarControlMinWidth(inputKind), getFileControlMinWidth(input))
   if (input) {
     controlWidth = measureSingleLineControlWidth(input) + getVarControlExtraWidth(inputKind)
   }

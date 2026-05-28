@@ -608,19 +608,80 @@ function markRecordChanged(options?: { rebuild?: boolean, runClientAssigners?: b
   }
 }
 
-function setInternalAssignerState(fieldKey: string, patch: AimdFieldState) {
-  internalAssignerFieldState.value = {
-    ...internalAssignerFieldState.value,
-    [fieldKey]: {
-      ...internalAssignerFieldState.value[fieldKey],
+function setInternalAssignerStates(fieldKeys: Iterable<string>, patch: AimdFieldState) {
+  const nextState = { ...internalAssignerFieldState.value }
+  let changed = false
+
+  for (const fieldKey of fieldKeys) {
+    if (!fieldKey) continue
+    nextState[fieldKey] = {
+      ...nextState[fieldKey],
       ...patch,
-    },
+    }
+    changed = true
   }
+
+  if (!changed) {
+    return
+  }
+
+  internalAssignerFieldState.value = nextState
   scheduleInlineRebuild()
+}
+
+function setInternalAssignerState(fieldKey: string, patch: AimdFieldState) {
+  setInternalAssignerStates([fieldKey], patch)
 }
 
 function cancelServerAssigner(fieldKey: string) {
   serverAssignerAbortControllers.get(fieldKey)?.abort()
+}
+
+function getAssignedFieldStateKey(assignedField: string): string {
+  const normalizedField = assignedField.trim()
+  if (!normalizedField) {
+    return ""
+  }
+  const mappedAssigner = serverAssignerByAssignedField.value[normalizedField]
+  if (mappedAssigner) {
+    return mappedAssigner.fieldKey
+  }
+  if (normalizedField.includes(".")) {
+    const [tableName, ...columnParts] = normalizedField.split(".")
+    return `var_table:${tableName}:${columnParts.join(".")}`
+  }
+  return `var:${normalizedField}`
+}
+
+function getDeclaredServerAssignerStateKeys(assigner: AimdResolvedAssigner, fallbackFieldKey: string): string[] {
+  const declaredFields = Array.isArray(assigner.assigner.assigned_fields)
+    ? assigner.assigner.assigned_fields
+    : Array.isArray((assigner.assigner as { assignedFields?: unknown }).assignedFields)
+      ? (assigner.assigner as { assignedFields: unknown[] }).assignedFields
+      : []
+  const stateKeys = new Set<string>([fallbackFieldKey])
+  for (const field of declaredFields) {
+    if (typeof field !== "string") continue
+    const stateKey = getAssignedFieldStateKey(field)
+    if (stateKey) {
+      stateKeys.add(stateKey)
+    }
+  }
+  return [...stateKeys]
+}
+
+function getReturnedServerAssignerStateKeys(
+  assignedFields: Record<string, unknown>,
+  fallbackFieldKey: string,
+): string[] {
+  const stateKeys = new Set<string>([fallbackFieldKey])
+  for (const field of Object.keys(assignedFields)) {
+    const stateKey = getAssignedFieldStateKey(field)
+    if (stateKey) {
+      stateKeys.add(stateKey)
+    }
+  }
+  return [...stateKeys]
 }
 
 async function runServerAssigner(
@@ -634,7 +695,7 @@ async function runServerAssigner(
   serverAssignerAbortControllers.get(fieldKey)?.abort()
   const abortController = new AbortController()
   serverAssignerAbortControllers.set(fieldKey, abortController)
-  setInternalAssignerState(fieldKey, { loading: true, error: undefined })
+  setInternalAssignerStates(getDeclaredServerAssignerStateKeys(assigner, fieldKey), { loading: true, error: undefined })
 
   try {
     const result = await runner({
@@ -647,6 +708,7 @@ async function runServerAssigner(
       signal: abortController.signal,
     })
     const assignedFields = extractAimdAssignedFields(result)
+    const returnedStateKeys = getReturnedServerAssignerStateKeys(assignedFields, fieldKey)
     if (Object.keys(assignedFields).length > 0) {
       applyAimdAssignedFieldsToRecord(localRecord, assignedFields)
       markRecordChanged({ rebuild: true, runClientAssigners: true })
@@ -654,17 +716,17 @@ async function runServerAssigner(
       emitRecordUpdate()
     }
     if (serverAssignerAbortControllers.get(fieldKey) === abortController) {
-      setInternalAssignerState(fieldKey, { loading: false, error: undefined })
+      setInternalAssignerStates(returnedStateKeys, { loading: false, error: undefined })
     }
   } catch (error) {
     if (abortController.signal.aborted) {
       if (serverAssignerAbortControllers.get(fieldKey) === abortController) {
-        setInternalAssignerState(fieldKey, { loading: false, error: undefined })
+        setInternalAssignerStates(getDeclaredServerAssignerStateKeys(assigner, fieldKey), { loading: false, error: undefined })
       }
       return
     }
     const message = error instanceof Error ? error.message : String(error)
-    setInternalAssignerState(fieldKey, { loading: false, error: message })
+    setInternalAssignerStates(getDeclaredServerAssignerStateKeys(assigner, fieldKey), { loading: false, error: message })
   } finally {
     if (serverAssignerAbortControllers.get(fieldKey) === abortController) {
       serverAssignerAbortControllers.delete(fieldKey)
@@ -2111,6 +2173,11 @@ defineExpose({
   background: #fff;
 }
 
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__file-control[data-file-kind="image"] .aimd-rec-file-field__preview) {
+  min-height: 190px;
+  max-height: 420px;
+}
+
 .aimd-protocol-recorder__content :deep(.aimd-rec-file-field__preview img) {
   display: block;
   width: auto;
@@ -2118,6 +2185,10 @@ defineExpose({
   max-width: 100%;
   max-height: 260px;
   object-fit: contain;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline__file-control[data-file-kind="image"] .aimd-rec-file-field__preview img) {
+  max-height: 390px;
 }
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-file-field__csv-preview) {

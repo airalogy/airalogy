@@ -89,17 +89,19 @@ const fields = {
 describe('AimdRecorder assigner controls', () => {
   let currentFields: any = fields
   let currentVarNode: any = varNode
+  let currentVarNodes: any[] | null = null
 
   beforeEach(() => {
     currentFields = fields
     currentVarNode = varNode
+    currentVarNodes = null
     mocks.parseAndExtract.mockImplementation(() => currentFields)
     mocks.renderToVue.mockImplementation(async (
       _content: string,
       options: { aimdRenderers: { var: (node: unknown) => unknown } },
     ) => ({
       fields: currentFields,
-      nodes: [options.aimdRenderers.var(currentVarNode)],
+      nodes: (currentVarNodes ?? [currentVarNode]).map(node => options.aimdRenderers.var(node)),
     }))
   })
 
@@ -192,6 +194,88 @@ describe('AimdRecorder assigner controls', () => {
     const updates = wrapper.emitted('update:modelValue') ?? []
     const latestRecord = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
     expect(latestRecord?.var?.ic50).toBe(42)
+  })
+
+  it('marks all returned assigned fields as done after a shared server assigner run', async () => {
+    const finalConvNode = {
+      ...varNode,
+      id: 'final_conv_pct',
+      name: 'final_conv_pct',
+      label: 'final_conv_pct',
+      raw: '{{var|final_conv_pct: float}}',
+      definition: {
+        name: 'final_conv_pct',
+        type: 'float',
+      },
+    }
+    const rateNode = {
+      ...varNode,
+      id: 'k_obs',
+      name: 'k_obs',
+      label: 'k_obs',
+      raw: '{{var|k_obs: float}}',
+      definition: {
+        name: 'k_obs',
+        type: 'float',
+      },
+    }
+    currentVarNodes = [finalConvNode, rateNode]
+    currentFields = {
+      ...fields,
+      var: ['final_conv_pct', 'k_obs'],
+      var_definitions: [
+        { name: 'final_conv_pct', type: 'float' },
+        { name: 'k_obs', type: 'float' },
+      ],
+    }
+    const sharedAssigner = {
+      mode: 'manual',
+      dependent_fields: ['kinetics_file'],
+    }
+    const runServerAssigner = vi.fn(async () => ({
+      data: {
+        assigned_fields: {
+          final_conv_pct: 96.5,
+          k_obs: 0.125,
+        },
+      },
+    }))
+
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: '{{var|final_conv_pct: float}}{{var|k_obs: float}}',
+        locale: 'en-US',
+        modelValue: {
+          var: {
+            kinetics_file: 'airalogy.id.file.csv',
+          },
+          step: {},
+          check: {},
+          quiz: {},
+        },
+        serverAssigners: {
+          final_conv_pct: sharedAssigner,
+          k_obs: sharedAssigner,
+        },
+        runServerAssigner,
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    const buttons = wrapper.findAll('.aimd-rec-assigner-field__button')
+    expect(buttons).toHaveLength(2)
+    await buttons[0].trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(runServerAssigner).toHaveBeenCalledTimes(1)
+    const updates = wrapper.emitted('update:modelValue') ?? []
+    const latestRecord = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    expect(latestRecord?.var?.final_conv_pct).toBe(96.5)
+    expect(latestRecord?.var?.k_obs).toBe(0.125)
+    expect(wrapper.findAll('.aimd-rec-assigner-field__status--done')).toHaveLength(2)
   })
 
   it('falls back to assigner-request for parsed assigners without a runner', async () => {

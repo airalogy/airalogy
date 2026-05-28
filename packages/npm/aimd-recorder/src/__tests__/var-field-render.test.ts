@@ -14,6 +14,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const source = readFileSync(resolve(__dirname, '../components/AimdVarField.vue'), 'utf8')
 const recorderSource = readFileSync(resolve(__dirname, '../components/AimdRecorder.vue'), 'utf8')
+const varHelpersSource = readFileSync(resolve(__dirname, '../composables/useVarHelpers.ts'), 'utf8')
 const styles = readFileSync(resolve(__dirname, '../styles/aimd.css'), 'utf8')
 
 describe('AimdVarField render behavior', () => {
@@ -234,6 +235,10 @@ describe('AimdVarField render behavior', () => {
     expect(preview.exists()).toBe(true)
     expect(preview.attributes('src')).toBe(`/api/files/${fileId}`)
     expect(wrapper.text()).not.toContain(fileId)
+    expect((wrapper.find('.aimd-rec-inline--var-stacked').element as HTMLElement).style.width).toBe('360px')
+    expect(varHelpersSource).toContain('case "image":')
+    expect(varHelpersSource).toContain('return 360')
+    expect(recorderSource).toContain('.aimd-rec-inline__file-control[data-file-kind="image"] .aimd-rec-file-field__preview')
   })
 
   it('uses host-resolved file metadata for file cards', async () => {
