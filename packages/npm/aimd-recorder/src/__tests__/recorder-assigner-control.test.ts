@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick } from 'vue'
+import type { AimdTypePluginRenderContext } from '../types'
 
 const mocks = vi.hoisted(() => ({
   parseAndExtract: vi.fn(),
@@ -263,7 +264,7 @@ describe('AimdRecorder assigner controls', () => {
           type: 'ReportDoc',
           inputKind: 'textarea',
           supportsInlineAssignerControl: true,
-          renderField: context => h('div', {
+          renderField: (context: AimdTypePluginRenderContext) => h('div', {
             class: 'custom-inline-assigner-field',
           }, [
             h('span', { class: 'custom-inline-assigner-action' }, [
