@@ -2404,6 +2404,7 @@ defineExpose({
   border: 0;
   border-radius: 0;
   font-size: 13px;
+  font-style: normal;
   line-height: 1.35;
   outline: none;
   box-sizing: border-box;

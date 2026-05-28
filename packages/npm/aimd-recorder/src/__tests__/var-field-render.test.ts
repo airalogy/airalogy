@@ -12,6 +12,7 @@ import { createAimdRecorderMessages } from '../locales'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const source = readFileSync(resolve(__dirname, '../components/AimdVarField.vue'), 'utf8')
+const recorderSource = readFileSync(resolve(__dirname, '../components/AimdRecorder.vue'), 'utf8')
 const styles = readFileSync(resolve(__dirname, '../styles/aimd.css'), 'utf8')
 
 describe('AimdVarField render behavior', () => {
@@ -45,6 +46,10 @@ describe('AimdVarField render behavior', () => {
     expect(styles).toMatch(/\.aimd-field--var-table \.aimd-field__table-preview \{[\s\S]*?overflow: visible;/)
     expect(styles).toMatch(/\.aimd-field--var-table \.aimd-field__table-preview th \{[\s\S]*?overflow: visible;/)
     expect(styles).toContain('.aimd-field--var-table .aimd-field__table-preview th:has(.aimd-field__metadata-host:hover)')
+  })
+
+  it('renders editable table cell values without inherited italic preview styling', () => {
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-table-cell-input\) \{[\s\S]*?font-style: normal;/)
   })
 
   it('styles metadata examples as distinct chips', () => {
