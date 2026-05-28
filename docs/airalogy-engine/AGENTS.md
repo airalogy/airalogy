@@ -5,8 +5,7 @@
 - Shared sandbox image: `packages/runtime/airalogy-engine-image`
 - Example protocol: `examples/airalogy-engine`
 
-Both packages wrap the same `protocol_executor.py` behavior and expose parse, assign, and validate
-operations through BoxLite.
+Both packages wrap the same `protocol_executor.py` behavior and expose parse, assign, and validate operations through BoxLite.
 
 Use rootfs mode for local deterministic tests after building the image:
 
@@ -15,3 +14,5 @@ pnpm build:engine-rootfs
 ```
 
 Then pass `packages/runtime/airalogy-engine-image/airalogy-engine-image` as the rootfs path.
+
+For user-facing Markdown docs and README files in this documentation package, keep prose paragraphs as single logical lines. Do not hard-wrap normal text by column width. Use blank lines to separate paragraphs, and reserve manual line breaks for lists, tables, code blocks, command continuations, and intentional Markdown line breaks.

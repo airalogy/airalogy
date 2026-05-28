@@ -20,5 +20,4 @@ The `airalogy-engine` documentation is split by language:
 - Chinese: `/zh/`
 - Language landing page: `docs/airalogy-engine/index.md`
 
-Update both language versions when changing public behavior, setup instructions,
-runtime constraints, or troubleshooting guidance.
+Update both language versions when changing public behavior, setup instructions, runtime constraints, or troubleshooting guidance.

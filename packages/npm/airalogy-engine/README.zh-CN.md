@@ -4,9 +4,7 @@
 
 英文 README：[README.md](README.md)
 
-Airalogy 协议执行 sandbox 的 Node.js/TypeScript 包。它在安全的
-[BoxLite](https://github.com/boxlite-ai/boxlite) sandbox 中运行协议包的
-`parse`、`assign` 和 `validate` 操作。
+Airalogy 协议执行 sandbox 的 Node.js/TypeScript 包。它在安全的 [BoxLite](https://github.com/boxlite-ai/boxlite) sandbox 中运行协议包的 `parse`、`assign` 和 `validate` 操作。
 
 ## 安装
 
@@ -16,8 +14,7 @@ pnpm add @airalogy/airalogy-engine
 
 ## Sandbox 镜像
 
-Engine 会在 BoxLite sandbox 中运行协议代码。可以使用远程 Docker 镜像，也可以
-使用本地 OCI rootfs 目录。
+Engine 会在 BoxLite sandbox 中运行协议代码。可以使用远程 Docker 镜像，也可以使用本地 OCI rootfs 目录。
 
 ### 远程镜像
 
@@ -37,12 +34,7 @@ pnpm build:engine-rootfs
 
 #### 什么是 OCI rootfs？
 
-OCI 是 Open Container Initiative 的缩写。这里的 "OCI rootfs" 指 OCI
-image layout 目录，也就是 Open Container Initiative 定义的容器镜像本地目录
-格式；它不是传统的 Linux 根文件系统解包目录，也不是 Docker 专有格式。有效
-目录应包含 `oci-layout`、`index.json` 和 `blobs/sha256/...`；BoxLite 会把
-这个镜像布局挂载为 sandbox 文件系统。如果目录存在但没有 `oci-layout`，说明
-构建不完整，请运行 `pnpm build:engine-rootfs:force` 重新构建。
+OCI 是 Open Container Initiative 的缩写。这里的 "OCI rootfs" 指 OCI image layout 目录，也就是 Open Container Initiative 定义的容器镜像本地目录格式；它不是传统的 Linux 根文件系统解包目录，也不是 Docker 专有格式。有效目录应包含 `oci-layout`、`index.json` 和 `blobs/sha256/...`；BoxLite 会把这个镜像布局挂载为 sandbox 文件系统。如果目录存在但没有 `oci-layout`，说明构建不完整，请运行 `pnpm build:engine-rootfs:force` 重新构建。
 
 然后传入 `rootfsPath`：
 
@@ -52,8 +44,7 @@ const result = await parseProtocol(protocolPath, undefined, {
 });
 ```
 
-> 如果没有提供 `image` 或 `rootfsPath`，engine 会回退到默认远程镜像
-> `numbcoder/airalogy-engine:0.1`。
+> 如果没有提供 `image` 或 `rootfsPath`，engine 会回退到默认远程镜像 `numbcoder/airalogy-engine:0.1`。
 
 ## 使用
 

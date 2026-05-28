@@ -34,13 +34,7 @@ pnpm build:engine-rootfs
 
 #### What is an OCI rootfs?
 
-OCI stands for Open Container Initiative. Here "OCI rootfs" means an OCI
-image layout directory, which is a standard local directory format for container
-images, not a traditional unpacked Linux root filesystem and not a
-Docker-specific format. A valid directory contains `oci-layout`, `index.json`,
-and `blobs/sha256/...`; BoxLite mounts that image layout as the sandbox
-filesystem. If the directory exists but lacks `oci-layout`, rebuild it with
-`pnpm build:engine-rootfs:force`.
+OCI stands for Open Container Initiative. Here "OCI rootfs" means an OCI image layout directory, which is a standard local directory format for container images, not a traditional unpacked Linux root filesystem and not a Docker-specific format. A valid directory contains `oci-layout`, `index.json`, and `blobs/sha256/...`; BoxLite mounts that image layout as the sandbox filesystem. If the directory exists but lacks `oci-layout`, rebuild it with `pnpm build:engine-rootfs:force`.
 
 Then use `rootfsPath`:
 
