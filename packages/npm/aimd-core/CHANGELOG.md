@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.8.0
+
+### Minor Changes
+
+- e73eefa: Preserve AIMD `title`, `description`, and `example`/`examples` metadata for `var` and `var_table` fields, with default renderer and recorder labels showing titles and keeping description/example details behind hover/focus popovers.
+- 5732108: Add the generic `CodeStr` code-string type to `airalogy.types` so AIMD fields such as `{{var|script: CodeStr}}` generate valid Python models while recorder UIs can present them as plain code editors.
+
+  Allow AIMD var-table defaults to contain multiline object-list values, expose those defaults through extracted field metadata, and initialize recorder var-table rows from those defaults without overwriting user-entered rows.
+
+  Run auto server assigners when their dependencies become available, and mount server assigner controls inside built-in `AiralogyMarkdown` fields that support inline assigner actions.
+
+  Add a rendered preview mode to the built-in recorder `AiralogyMarkdown` field, including Mermaid code block rendering for generated Markdown outputs.
+
+### Patch Changes
+
+- 47532f6: Parse AIMD `Literal[...]` and `enum=[...]` var definitions into enum metadata, and render recorder `var` and `var_table` enum fields as select controls while preserving non-string option values.
+
 ## 2.7.0
 
 ### Minor Changes

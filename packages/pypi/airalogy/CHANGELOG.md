@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## 0.11.0
+
+### Minor Changes
+
+- 5732108: Add the generic `CodeStr` code-string type to `airalogy.types` so AIMD fields such as `{{var|script: CodeStr}}` generate valid Python models while recorder UIs can present them as plain code editors.
+
+  Allow AIMD var-table defaults to contain multiline object-list values, expose those defaults through extracted field metadata, and initialize recorder var-table rows from those defaults without overwriting user-entered rows.
+
+  Run auto server assigners when their dependencies become available, and mount server assigner controls inside built-in `AiralogyMarkdown` fields that support inline assigner actions.
+
+  Add a rendered preview mode to the built-in recorder `AiralogyMarkdown` field, including Mermaid code block rendering for generated Markdown outputs.
+
+### Patch Changes
+
+- 5f318e1: Refine recorder var-field presentation by normalizing value typography across text, numeric, date/time, and select controls, clipping plain stacked-field corners consistently, and keeping table-cell input text upright.
+
+  Add built-in file-like var controls for CSV, image, audio, video, and document types, including native file pickers, accept-type inference, serializable local file metadata, reusable file-card previews, and `uploadFile`/`resolveFileInfo` hooks so host apps can return Airalogy file IDs while the recorder renders filenames, sizes, download links, image previews, and compact CSV previews.
+
+  Allow the Python `Airalogy` client to be configured with an explicit `base_url` while preserving environment-variable defaults, so local demos and self-hosted Airalogy-compatible services can use the same file APIs as hosted Airalogy. `AIRALOGY_BASE_URL` is the preferred environment variable; `AIRALOGY_ENDPOINT` remains supported as a deprecated fallback.
+
+  Add a local file bridge for sandboxed engine runs so assigners can read uploaded Airalogy file IDs and write generated file outputs without requiring the sandbox to reach the host demo server over HTTP.
+
+  Move generic assigner UI orchestration into `@airalogy/aimd-recorder` through a `serverAssigners` metadata prop and `runServerAssigner` hook, letting host apps provide only the execution transport while the recorder handles dependency filtering, loading/error state, and `assigned_fields` record updates.
+
+  Surface server assigner business failures returned as `success: false` / `error_message` through the shared recorder assigner state, so built-in plugin fields such as `AiralogyMarkdown` show the same inline error UI as regular var fields.
+
+  Limit engine assigner validation to each assigner's declared `dependent_fields`, so unrelated empty output fields in a record do not fail Pydantic validation before the selected assigner runs.
+
+  Validate local engine rootfs directories as OCI layouts and export the generated rootfs with Docker Buildx OCI output, preventing incomplete rootfs directories from being treated as runnable sandboxes. The local rootfs build now installs the workspace `airalogy` Python package and includes that source in the rootfs fingerprint.
+
 ## 0.10.0 (20260507)
 
 ### Features
@@ -164,7 +194,7 @@
 ### Features
 
 - Add new code-string types: `JsonStr`, `TomlStr`, `YamlStr`.
-- Add support for Python standard library types in `ModelGenerator`, including `datetime`, `date`, `time`, `timedelta`, `Decimal`, `UUID`, `Path`, `PurePath`, `IPv4Address`, and `IPv6Address`. 
+- Add support for Python standard library types in `ModelGenerator`, including `datetime`, `date`, `time`, `timedelta`, `Decimal`, `UUID`, `Path`, `PurePath`, `IPv4Address`, and `IPv6Address`.
 
 ### Fixes
 
