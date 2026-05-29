@@ -18,6 +18,7 @@ pnpm dev:protocol-demo:full
 | `cuaac-kinetics` | 点击化学反应动力学 | 引擎 | CuAAC 动力学数据上传、参数计算、绘图和报告生成。 |
 | `field-water-sample-observation` | 野外水样观测与环境扰动分析 | 静态 | 野外水样采集、当天气象场地记录、水化学与生化环境判读、季风和极端降雨扰动分析。 |
 | `literature-review-assistant` | AI 辅助文献调研与证据综述 | 引擎 | 配置 OpenAI 兼容联网大模型，完成候选文献初筛、人工证据提取、质量评价和综述草稿生成。 |
+| `stock-fundamental-analysis-assistant` | AI 辅助股票基本面分析 | 引擎 | 输入股票代码和公司名称，配置 OpenAI 兼容联网大模型，整理公开财报、业务分部、财务质量、估值比较、风险清单和研究报告草稿。 |
 | `fiber-endface-process` | 光纤端面微纳结构器件工艺路线 | 静态 | 光纤端面微纳结构器件的课题拆解、工艺路线设计、工艺窗口和表征计划记录。 |
 | `fiber-endface-sensing-calibration` | 光纤端面传感标定分析 | 引擎 | 标定数据上传、灵敏度拟合、检测限估计、质控判定、绘图和报告生成。 |
 | `drug-response-ic50` | 药物剂量-反应 IC50 分析 | 引擎 | 剂量-反应数据上传、IC50 估算、质控、曲线绘制和报告生成。 |

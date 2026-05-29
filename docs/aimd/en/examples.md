@@ -20,6 +20,7 @@ Open the [Demo examples page](/demo/#/examples) to switch, edit, and fill these 
 | `cuaac-kinetics` | Click reaction kinetics | CuAAC kinetic data upload, automatic calculation, plots, and report drafting. |
 | `field-water-sample-observation` | Field water sample observation and disturbance analysis | Field water sampling, same-day weather and site records, water chemistry and biogeochemical interpretation, monsoon and extreme rainfall disturbance analysis. |
 | `literature-review-assistant` | AI-assisted literature review and evidence synthesis | Configure an OpenAI-compatible web-search model, screen candidate sources, extract evidence, appraise quality, and draft a review. |
+| `stock-fundamental-analysis-assistant` | AI-assisted stock fundamental analysis | Enter a stock ticker and company name, configure an OpenAI-compatible web-search model, and organize public filings, business segments, financial quality, valuation comparisons, risks, and a research report draft. |
 | `fiber-endface-process` | Fiber endface micro/nano fabrication workflow | Topic decomposition, process-route design, process window recording, and characterization planning for fiber endface devices. |
 | `fiber-endface-sensing-calibration` | Fiber endface sensing calibration | Calibration data upload, sensitivity fitting, LOD estimation, QC, plotting, and report generation. |
 | `drug-response-ic50` | Drug response IC50 analysis | Dose-response upload, IC50 estimation, QC, curve plotting, and report generation. |

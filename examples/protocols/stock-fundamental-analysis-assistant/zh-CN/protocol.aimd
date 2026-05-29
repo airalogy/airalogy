@@ -1,0 +1,226 @@
+# AI 辅助股票基本面分析
+
+## 协议说明
+
+本协议用于把股票基本面研究拆成可复核的流程：先输入股票代码、公司名称、交易市场和分析目的，再配置 OpenAI 兼容联网大模型，检索公司公告、财报、投资者关系材料和权威金融数据来源，随后人工补充关键财务指标、业务分部、同业估值和风险证据，最后生成基本面研究报告草稿。本协议只用于研究辅助和信息整理，不构成投资建议、买卖推荐或收益承诺。
+
+## Step 1：定义分析对象
+
+{{step|define_stock_target, check=True}} 明确股票代码、公司名称、交易市场、分析目的和研究口径；同名公司、ADR、港股和 A 股代码必须区分清楚。
+
+记录人：{{var|record_recorder: UserName, title = "记录人"}}
+
+记录时间：{{var|record_time: CurrentTime, title = "记录时间"}}
+
+项目名称：{{var|project_name: str = "股票基本面分析", title = "项目名称"}}
+
+分析编号：{{var|analysis_id: str = "FA-YYYYMMDD-TICKER", title = "分析编号", description = "建议包含日期和股票代码"}}
+
+股票代码：{{var|stock_symbol: str = "BABA", title = "股票代码", description = "例如 BABA、0700.HK、600519.SH、AAPL"}}
+
+公司名称：{{var|company_name: str = "阿里巴巴集团", title = "公司名称"}}
+
+交易市场：{{var|exchange_market: Literal["A股", "港股", "美股", "其他"] = "美股", title = "交易市场"}}
+
+报价货币：{{var|quote_currency: str = "USD", title = "报价货币"}}
+
+分析目的：{{var|analysis_purpose: Literal["长期基本面研究", "财报更新解读", "估值复盘", "竞品比较", "投资备忘录"] = "长期基本面研究", title = "分析目的"}}
+
+分析期限视角：{{var|investment_horizon: Literal["短期事件跟踪", "中期经营变化", "长期基本面", "待定"] = "长期基本面", title = "分析期限视角"}}
+
+关注问题：{{var|core_analysis_questions: AiralogyMarkdown = "1. 公司收入增长、利润率、现金流和资本回报是否体现可持续竞争力？ 2. 当前估值相对历史、同业和增长质量是否合理？ 3. 最大风险来自行业周期、监管、竞争、资产负债表还是治理结构？", title = "关注问题", description = "建议写成 2-4 个可回答的问题"}}
+
+## Step 2：配置联网大模型
+
+{{step|configure_llm_search, check=True}} 填写 OpenAI 兼容接口参数。API Key 使用 `IgnoreStr`，可传入 Assigner 运行，但保存记录时会被置空，避免密钥进入持久化记录。
+
+模型服务：{{var|llm_provider: Literal["Qwen DashScope/OpenAI 兼容", "其他 OpenAI 兼容服务"] = "Qwen DashScope/OpenAI 兼容", title = "模型服务"}}
+
+Base URL：{{var|llm_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1", title = "Base URL", description = "OpenAI 兼容接口根地址；Qwen 中国站通常为 https://dashscope.aliyuncs.com/compatible-mode/v1"}}
+
+模型名称：{{var|llm_model: str = "qwen3.6-flash", title = "模型名称", description = "例如 qwen3.6-flash、qwen3.6-plus 或其他 OpenAI 兼容模型名"}}
+
+API Key：{{var|llm_api_key: IgnoreStr = "", title = "API Key", description = "使用 IgnoreStr：运行时传给 Assigner，但保存 Airalogy Record 时不会持久化。请不要把真实 key 写进 protocol 文件或 README。"}}
+
+启用联网搜索：{{var|enable_web_search: bool = True, title = "启用联网搜索"}}
+
+强制搜索：{{var|force_web_search: bool = True, title = "强制搜索", description = "如果开启，Assigner 会在 search_options 中传入 forced_search=true，减少模型只凭内部知识回答的概率"}}
+
+搜索策略：{{var|search_strategy: Literal["turbo", "max", "agent", "agent_max"] = "max", title = "搜索策略", description = "turbo 更快；max 更全面；agent/agent_max 更适合复杂多轮检索但成本和耗时可能更高"}}
+
+搜索时效性：{{var|search_freshness_days: Literal["不限制", "7", "30", "180", "365"] = "不限制", title = "搜索时效性", description = "仅部分模型和搜索策略支持；选择数字时表示限制最近多少天的来源"}}
+
+温度：{{var|llm_temperature: float = 0.2, title = "温度", ge = 0, le = 2}}
+
+最大输出 token：{{var|llm_max_tokens: int = 4096, title = "最大输出 token", ge = 512, le = 65536}}
+
+额外请求体 JSON：{{var|llm_extra_body_json: JsonStr = "{}", title = "额外请求体 JSON", description = "可填入 OpenAI 兼容服务支持的额外参数，例如 enable_thinking=false；会覆盖或补充默认请求体"}}
+
+<details>
+<summary>Qwen OpenAI 兼容联网搜索参数示例</summary>
+
+Qwen/DashScope 的 OpenAI 兼容 Chat Completions 调用会把联网搜索参数作为请求体额外字段传入。兼容模式可以启用基础联网搜索，但通常不会返回独立的 search source 数组，因此本协议要求模型在回答中列出可核验的公告、财报、交易所、SEC、港交所、巨潮资讯、公司投资者关系页面或金融数据 URL，并在后续步骤人工复核。
+
+```json
+{
+  "model": "qwen3.6-flash",
+  "messages": [
+    { "role": "user", "content": "检索 BABA 最近财报、年报和基本面风险。" }
+  ],
+  "enable_search": true,
+  "search_options": {
+    "search_strategy": "max",
+    "forced_search": true
+  }
+}
+```
+
+</details>
+
+## Step 3：定义数据来源与口径
+
+{{step|define_data_scope, check=True}} 指定财务数据口径、优先来源、时间范围和同业比较对象；模型输出必须能追溯到公开来源。
+
+财务口径：{{var|financial_period_scope: Literal["最近年报", "最近季报", "最近十二个月 TTM", "近三年", "近五年", "自定义"] = "近三年", title = "财务口径"}}
+
+自定义口径说明：{{var|custom_financial_scope_note: str = "优先查看最近年报、最近季报和过去三年趋势；若公司处于周期拐点或重大重组阶段，需要补充更长时间序列。", title = "自定义口径说明"}}
+
+优先数据来源：{{var|preferred_financial_sources: AiralogyMarkdown = "优先使用公司年报、季报、投资者关系材料、交易所公告、SEC/EDGAR、港交所披露易、巨潮资讯、公司官网、审计财务报表和主流金融数据页面。模型给出的价格、估值倍数和财务数值必须标记日期和来源；无法核验的数据不得进入最终结论。", title = "优先数据来源"}}
+
+同业公司：{{var|peer_companies: str = "腾讯控股、京东、拼多多、亚马逊、MercadoLibre", title = "同业公司", description = "用逗号分隔，可混合公司名称和股票代码"}}
+
+数据新鲜度要求：{{var|data_freshness_requirement: str = "优先使用最近一个交易日或最近披露期的数据；如果搜索来源日期不明确，必须标记为待复核。", title = "数据新鲜度要求"}}
+
+研究约束与偏好：{{var|analysis_constraints: AiralogyMarkdown = "不做短线价格预测，不给买卖点；重点分析商业模式、财务质量、增长驱动、估值区间、风险因素和需要继续核验的数据。", title = "研究约束与偏好"}}
+
+## Step 4：运行模型基本面初筛
+
+{{step|run_ai_fundamental_research, check=True}} 运行 Assigner，让模型基于股票代码、公司名称和数据口径做联网初筛。模型输出只能作为研究线索，必须人工核验公告、财报、日期和财务数值。
+
+模型分析补充提示：{{var|ai_research_prompt: AiralogyMarkdown = "请优先检索公司最新年报、季报、投资者关系材料和权威金融数据页面；输出必须区分事实、模型推断和待核验线索。重点关注收入结构、利润率、现金流、资产负债表、资本回报、竞争优势、行业格局、估值倍数、监管和治理风险。", title = "模型分析补充提示"}}
+
+模型调用状态：{{var|llm_execution_note: AiralogyMarkdown = "", title = "模型调用状态"}}
+
+AI 来源核验清单：{{var|ai_source_checklist: AiralogyMarkdown = "", title = "AI 来源核验清单"}}
+
+AI 公司基本面概览：{{var|ai_company_profile: AiralogyMarkdown = "", title = "AI 公司基本面概览"}}
+
+AI 财务质量初筛：{{var|ai_financial_quality_snapshot: AiralogyMarkdown = "", title = "AI 财务质量初筛"}}
+
+AI 估值与同业初筛：{{var|ai_valuation_snapshot: AiralogyMarkdown = "", title = "AI 估值与同业初筛"}}
+
+AI 风险清单：{{var|ai_risk_watchlist: AiralogyMarkdown = "", title = "AI 风险清单"}}
+
+## Step 5：补充关键财务指标
+
+{{step|enter_financial_metrics, check=True}} 将已核验的财务指标填入表格；每个数值必须有期间、口径和来源备注，不确定的数值留空或标记待复核。
+
+关键财务指标：
+
+{{var|financial_metrics: list[FinancialMetric],
+    title = "关键财务指标",
+    description = "每行记录一个期间的核心财务指标，单位可在备注中说明",
+    subvars = [
+        var(period: str, title = "期间"),
+        var(revenue: float = 0.0, title = "收入", ge = 0),
+        var(revenue_growth_yoy_pct: float = 0.0, title = "收入同比增长（%）"),
+        var(gross_margin_pct: float = 0.0, title = "毛利率（%）"),
+        var(operating_margin_pct: float = 0.0, title = "经营利润率（%）"),
+        var(net_margin_pct: float = 0.0, title = "净利率（%）"),
+        var(roe_pct: float = 0.0, title = "ROE（%）"),
+        var(debt_to_asset_pct: float = 0.0, title = "资产负债率（%）"),
+        var(operating_cash_flow: float = 0.0, title = "经营现金流"),
+        var(free_cash_flow: float = 0.0, title = "自由现金流"),
+        var(eps: float = 0.0, title = "EPS"),
+        var(source_note: str, title = "来源和口径备注")
+    ]
+}}
+
+## Step 6：拆解商业模式与竞争力
+
+{{step|analyze_business_segments, check=True}} 拆分业务分部、增长驱动、盈利质量和竞争优势；不要只用总收入解释公司质量。
+
+业务分部：
+
+{{var|business_segments: list[BusinessSegment],
+    title = "业务分部",
+    subvars = [
+        var(segment_name: str, title = "业务分部"),
+        var(revenue_share: str, title = "收入占比或规模"),
+        var(margin_profile: str, title = "利润率特征"),
+        var(growth_driver: str, title = "增长驱动"),
+        var(competitive_position: str, title = "竞争地位"),
+        var(risk_note: str, title = "风险备注")
+    ]
+}}
+
+护城河与竞争优势：{{var|moat_assessment: AiralogyMarkdown = "", title = "护城河与竞争优势", description = "例如网络效应、品牌、成本优势、规模经济、切换成本、监管牌照、数据优势"}}
+
+管理层与治理观察：{{var|management_governance_note: AiralogyMarkdown = "", title = "管理层与治理观察"}}
+
+## Step 7：估值与同业比较
+
+{{step|compare_valuation_and_peers, check=True}} 将估值放在增长质量、利润率、资产负债表、行业周期和同业比较中解释；估值倍数必须标记日期。
+
+同业估值比较：
+
+{{var|valuation_comparables: list[ValuationComparable],
+    title = "同业估值比较",
+    subvars = [
+        var(company: str, title = "公司"),
+        var(ticker: str, title = "股票代码"),
+        var(market_cap: str, title = "市值"),
+        var(pe_ttm: float = 0.0, title = "PE TTM"),
+        var(ps_ttm: float = 0.0, title = "PS TTM"),
+        var(ev_ebitda: float = 0.0, title = "EV/EBITDA"),
+        var(revenue_growth_pct: float = 0.0, title = "收入增长（%）"),
+        var(profitability_note: str, title = "盈利质量备注"),
+        var(source_date_note: str, title = "来源日期备注")
+    ]
+}}
+
+估值口径说明：{{var|valuation_method_note: AiralogyMarkdown = "优先使用 PE、PS、EV/EBITDA、自由现金流收益率、历史估值区间和同业比较；对于周期股、金融股、平台公司或高成长公司，需要说明为什么选择该估值口径。", title = "估值口径说明"}}
+
+## Step 8：生成基本面报告草稿
+
+{{step|draft_stock_fundamental_report, check=True}} 基于 AI 初筛、人工核验数据、财务指标、业务分部、同业比较和风险证据生成研究报告草稿。报告必须保留不确定性，不得输出确定性收益预测或直接买卖建议。
+
+报告综合重点：{{var|report_focus: AiralogyMarkdown = "形成一份供内部研究使用的基本面备忘录，重点说明商业质量、财务质量、估值合理性、主要风险、需要继续核验的来源和下一步跟踪指标。", title = "报告综合重点"}}
+
+投资结论口径：{{var|conclusion_style: Literal["研究备忘录", "中性分析", "多空对照", "风险优先", "财报点评"] = "中性分析", title = "投资结论口径"}}
+
+基本面评分（0-100）：{{var|fundamental_score: int = 0, title = "基本面评分", ge = 0, le = 100}}
+
+基本面评分解释：{{var|fundamental_score_rationale: AiralogyMarkdown = "", title = "基本面评分解释"}}
+
+核心投资逻辑：{{var|investment_thesis: AiralogyMarkdown = "", title = "核心投资逻辑"}}
+
+反方观点：{{var|bear_case: AiralogyMarkdown = "", title = "反方观点"}}
+
+基本面研究报告：{{var|stock_fundamental_report: AiralogyMarkdown = "", title = "基本面研究报告"}}
+
+后续跟踪计划：{{var|monitoring_plan: AiralogyMarkdown = "", title = "后续跟踪计划"}}
+
+## Step 9：人工复核与定稿
+
+{{step|final_review, check=True}} 人工复核所有来源、财务数字、估值日期和模型推断；删除无法核验的信息，并明确结论只是研究判断，不是投资建议。
+
+研究状态：{{var|research_status: Literal["仅观察", "继续研究", "纳入候选池", "排除", "待补充数据"] = "待补充数据", title = "研究状态"}}
+
+人工修订说明：{{var|manual_revision_notes: AiralogyMarkdown = "", title = "人工修订说明"}}
+
+最终基本面备忘录：{{var|final_fundamental_memo: AiralogyMarkdown = "", title = "最终基本面备忘录"}}
+
+## 质量控制
+
+{{check|not_investment_advice}} 报告必须声明仅用于研究辅助，不构成投资建议、买卖推荐或收益承诺。
+
+{{check|source_verification}} 所有关键财务数据、估值倍数和重大风险都必须有可核验来源、日期和口径说明。
+
+{{check|no_unverified_model_data}} 模型生成但无法核验的数据不得进入最终备忘录，只能保留为待复核线索。
+
+{{check|ticker_identity_check}} 确认股票代码、交易市场、公司名称、ADR/港股/A 股实体和报价货币一致。
+
+{{check|financial_metric_consistency}} 收入、利润率、现金流、EPS、估值倍数必须使用一致期间和币种，跨市场比较需说明汇率或口径差异。
+
+{{check|risk_balance}} 最终报告必须同时呈现核心投资逻辑和反方观点，避免只保留支持性证据。

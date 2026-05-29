@@ -152,6 +152,43 @@
       ]
     },
     {
+      "id": "stock-fundamental-analysis-assistant",
+      "category": "finance",
+      "languages": [
+        "zh-CN"
+      ],
+      "title": {
+        "zh-CN": "AI 辅助股票基本面分析"
+      },
+      "description": {
+        "zh-CN": "用于输入股票代码和公司名称，配置 OpenAI 兼容联网大模型，整理公开财报、业务分部、财务质量、估值比较、风险清单和基本面研究报告草稿的协议。"
+      },
+      "protocol_dir": {
+        "zh-CN": "stock-fundamental-analysis-assistant/zh-CN"
+      },
+      "entry": {
+        "zh-CN": "stock-fundamental-analysis-assistant/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "zh-CN": "stock-fundamental-analysis-assistant/zh-CN/protocol.toml"
+      },
+      "assigner": {
+        "zh-CN": "stock-fundamental-analysis-assistant/zh-CN/assigner.py"
+      },
+      "engine_required": true,
+      "tags": [
+        "finance",
+        "stock-analysis",
+        "fundamental-analysis",
+        "financial-statements",
+        "valuation",
+        "AI",
+        "Qwen",
+        "OpenAI-compatible",
+        "assigner"
+      ]
+    },
+    {
       "id": "fiber-endface-process",
       "category": "photonics",
       "languages": [

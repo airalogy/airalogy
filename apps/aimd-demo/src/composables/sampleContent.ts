@@ -8,6 +8,7 @@ import cuaacKineticsEn from '../../../../examples/protocols/cuaac-kinetics/en-US
 import cuaacKineticsZh from '../../../../examples/protocols/cuaac-kinetics/zh-CN/protocol.aimd?raw'
 import fieldWaterSampleObservationZh from '../../../../examples/protocols/field-water-sample-observation/zh-CN/protocol.aimd?raw'
 import literatureReviewAssistantZh from '../../../../examples/protocols/literature-review-assistant/zh-CN/protocol.aimd?raw'
+import stockFundamentalAnalysisAssistantZh from '../../../../examples/protocols/stock-fundamental-analysis-assistant/zh-CN/protocol.aimd?raw'
 import drugResponseIc50En from '../../../../examples/protocols/drug-response-ic50/en-US/protocol.aimd?raw'
 import drugResponseIc50Zh from '../../../../examples/protocols/drug-response-ic50/zh-CN/protocol.aimd?raw'
 import diaryEn from '../../../../examples/protocols/diary/en-US/protocol.aimd?raw'
@@ -158,6 +159,26 @@ export const DEMO_EXAMPLES: DemoExample[] = [
     },
     locales: ['zh-CN'],
     tags: ['protocol', 'research', 'literature-review', 'AI', 'assigner'],
+  },
+  {
+    id: 'stock-fundamental-analysis-assistant',
+    kind: 'protocol',
+    source: {
+      'zh-CN': 'examples/protocols/stock-fundamental-analysis-assistant/zh-CN/protocol.aimd',
+    },
+    title: {
+      'en-US': 'AI-assisted stock fundamental analysis',
+      'zh-CN': 'AI 辅助股票基本面分析',
+    },
+    description: {
+      'en-US': 'Protocol for entering a ticker and company name, configuring an OpenAI-compatible web-search model, and drafting a fundamental research memo from public filings, financial quality, valuation, and risk evidence.',
+      'zh-CN': '用于输入股票代码和公司名称，配置 OpenAI 兼容联网大模型，整理公开财报、财务质量、估值比较、风险证据并生成基本面研究报告草稿。',
+    },
+    content: {
+      'zh-CN': stockFundamentalAnalysisAssistantZh,
+    },
+    locales: ['zh-CN'],
+    tags: ['protocol', 'finance', 'stock-analysis', 'fundamental-analysis', 'AI', 'assigner'],
   },
   {
     id: 'drug-response-ic50',

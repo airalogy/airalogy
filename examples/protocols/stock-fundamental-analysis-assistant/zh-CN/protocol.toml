@@ -1,0 +1,14 @@
+[airalogy_protocol]
+id = "stock_fundamental_analysis_assistant_zh"
+version = "0.1.0"
+name = "AI 辅助股票基本面分析"
+description = "面向股票代码和公司名称的基本面研究协议，支持配置 OpenAI 兼容联网大模型，整理公开财报、业务分部、财务质量、估值比较、风险清单和研究报告草稿。"
+authors = [
+    { name = "Airalogy" },
+]
+maintainers = [
+    { name = "Airalogy" },
+]
+disciplines = ["finance", "equity research", "fundamental analysis", "AI-assisted research"]
+keywords = ["股票分析", "基本面分析", "财报", "估值", "AI", "Qwen", "OpenAI compatible", "联网搜索", "assigner"]
+license = "Apache-2.0"
