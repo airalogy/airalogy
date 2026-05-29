@@ -325,9 +325,10 @@ watch(
 
 <style scoped>
 .aimd-markdown-field {
-  width: min(100%, 1040px);
+  width: 100%;
   min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
   border-color: #d8e1ee;
   background: #fff;
 }

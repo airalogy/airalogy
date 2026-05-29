@@ -80,6 +80,13 @@ describe('AimdVarField render behavior', () => {
     expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-code-block--wrap \.aimd-code-block__line-code\) \{[\s\S]*?text-indent: calc\(-1 \* var\(--aimd-code-wrap-indent, 0ch\)\);/)
   })
 
+  it('lets block recorder fields fill the available panel width', () => {
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-markdown\) \{[\s\S]*?width: 100%;[\s\S]*?box-sizing: border-box;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--step\) \{[\s\S]*?width: 100%;[\s\S]*?box-sizing: border-box;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--check\) \{[\s\S]*?width: 100%;/)
+    expect(recorderSource).not.toContain('width: min(100%, 1040px);')
+  })
+
   it('renders file-like vars with a native file picker control', async () => {
     const node: AimdVarNode = {
       type: 'aimd',

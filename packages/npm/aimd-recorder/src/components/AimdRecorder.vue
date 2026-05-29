@@ -2109,17 +2109,19 @@ defineExpose({
   flex-direction: column;
   align-items: stretch;
   gap: 0;
-  width: min(100%, 1040px);
+  width: 100%;
   max-width: 100%;
   margin: 12px 0;
   vertical-align: top;
+  box-sizing: border-box;
 }
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked--code) {
-  width: min(100%, 980px);
+  width: 100%;
   min-width: min(420px, 100%);
   max-width: 100%;
   margin: 12px 0;
   vertical-align: top;
+  box-sizing: border-box;
 }
 
 /* ── Stacked input controls ─────────────────────────────────────────────── */
@@ -2607,7 +2609,7 @@ defineExpose({
   flex-direction: column;
   align-items: stretch;
   gap: 10px;
-  width: min(100%, 1040px);
+  width: 100%;
   max-width: 100%;
   margin: 10px 0;
   padding: 10px 12px;
@@ -2727,7 +2729,7 @@ defineExpose({
   flex-direction: column;
   align-items: stretch;
   gap: 12px;
-  width: min(100%, 1040px);
+  width: 100%;
   max-width: 100%;
   margin: 16px 0;
   padding: 14px 16px 16px;
@@ -2736,6 +2738,7 @@ defineExpose({
   background: #fff;
   box-shadow: none;
   color: var(--rec-text);
+  box-sizing: border-box;
 }
 .aimd-protocol-recorder__content :deep(.aimd-step-field__main) {
   display: flex;

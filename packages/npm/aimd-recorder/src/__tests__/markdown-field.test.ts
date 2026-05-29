@@ -94,6 +94,11 @@ describe('AimdMarkdownField', () => {
     expect(source).toMatch(/aimd-markdown-field__editor/)
   })
 
+  it('fills the available recorder width as a block field', () => {
+    expect(source).toMatch(/\.aimd-markdown-field \{[\s\S]*?width: 100%;[\s\S]*?box-sizing: border-box;/)
+    expect(source).not.toContain('width: min(100%, 1040px);')
+  })
+
   it('can switch AiralogyMarkdown output into rendered preview mode', () => {
     expect(source).toMatch(/renderToVue/)
     expect(source).toMatch(/createMermaidRenderer/)
