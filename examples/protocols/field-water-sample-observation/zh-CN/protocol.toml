@@ -1,0 +1,14 @@
+[airalogy_protocol]
+id = "field_water_sample_observation_zh"
+version = "0.1.0"
+name = "野外水样观测与环境扰动分析"
+description = "面向野外水样采集、当天气象场地记录、水化学与生化环境判读、季风和极端降雨扰动分析的 Airalogy Protocol 示例。"
+authors = [
+    { name = "Airalogy" },
+]
+maintainers = [
+    { name = "Airalogy" },
+]
+disciplines = ["environmental science", "water quality", "hydrology", "biogeochemistry"]
+keywords = ["野外水样", "水质监测", "季风", "极端降雨", "碱性反应", "生化环境", "脆弱性分析"]
+license = "Apache-2.0"

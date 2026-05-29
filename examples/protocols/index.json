@@ -86,6 +86,37 @@
       ]
     },
     {
+      "id": "field-water-sample-observation",
+      "category": "environment",
+      "languages": [
+        "zh-CN"
+      ],
+      "title": {
+        "zh-CN": "野外水样观测与环境扰动分析"
+      },
+      "description": {
+        "zh-CN": "面向野外水样采集、当天气象场地记录、水化学与生化环境判读、季风和极端降雨扰动分析的协议。"
+      },
+      "protocol_dir": {
+        "zh-CN": "field-water-sample-observation/zh-CN"
+      },
+      "entry": {
+        "zh-CN": "field-water-sample-observation/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "zh-CN": "field-water-sample-observation/zh-CN/protocol.toml"
+      },
+      "engine_required": false,
+      "tags": [
+        "environment",
+        "water-quality",
+        "field-sampling",
+        "monsoon",
+        "extreme-rainfall",
+        "biogeochemistry"
+      ]
+    },
+    {
       "id": "fiber-endface-process",
       "category": "photonics",
       "languages": [

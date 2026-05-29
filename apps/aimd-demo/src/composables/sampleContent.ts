@@ -6,6 +6,7 @@ import meetingNotesEn from '../../../../examples/protocols/meeting-notes/en-US/p
 import meetingNotesZh from '../../../../examples/protocols/meeting-notes/zh-CN/protocol.aimd?raw'
 import cuaacKineticsEn from '../../../../examples/protocols/cuaac-kinetics/en-US/protocol.aimd?raw'
 import cuaacKineticsZh from '../../../../examples/protocols/cuaac-kinetics/zh-CN/protocol.aimd?raw'
+import fieldWaterSampleObservationZh from '../../../../examples/protocols/field-water-sample-observation/zh-CN/protocol.aimd?raw'
 import drugResponseIc50En from '../../../../examples/protocols/drug-response-ic50/en-US/protocol.aimd?raw'
 import drugResponseIc50Zh from '../../../../examples/protocols/drug-response-ic50/zh-CN/protocol.aimd?raw'
 import diaryEn from '../../../../examples/protocols/diary/en-US/protocol.aimd?raw'
@@ -116,6 +117,26 @@ export const DEMO_EXAMPLES: DemoExample[] = [
     },
     locales: ['en-US', 'zh-CN'],
     tags: ['protocol', 'chemistry', 'kinetics', 'assigner'],
+  },
+  {
+    id: 'field-water-sample-observation',
+    kind: 'protocol',
+    source: {
+      'zh-CN': 'examples/protocols/field-water-sample-observation/zh-CN/protocol.aimd',
+    },
+    title: {
+      'en-US': 'Field water sample observation',
+      'zh-CN': '野外水样观测与环境扰动分析',
+    },
+    description: {
+      'en-US': 'Protocol for field water sampling, weather and site records, biogeochemical interpretation, monsoon and extreme rainfall disturbance analysis.',
+      'zh-CN': '用于野外水样采集、当天气象场地记录、水化学与生化环境判读、季风和极端降雨扰动分析。',
+    },
+    content: {
+      'zh-CN': fieldWaterSampleObservationZh,
+    },
+    locales: ['zh-CN'],
+    tags: ['protocol', 'environment', 'water-quality', 'monsoon', 'rainfall'],
   },
   {
     id: 'drug-response-ic50',

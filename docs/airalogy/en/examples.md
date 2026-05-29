@@ -16,6 +16,7 @@ Protocols with `assigner.py` require Airalogy Engine for automatic calculation, 
 | --- | --- | --- | --- |
 | `meeting-notes` | Meeting notes | Static | General-purpose meeting notes protocol for teams and projects. |
 | `cuaac-kinetics` | Click reaction kinetics | Engine | CuAAC kinetic data upload, parameter calculation, plots, and report drafting. |
+| `field-water-sample-observation` | Field water sample observation and disturbance analysis | Static | Field water sampling, same-day weather and site records, water chemistry and biogeochemical interpretation, monsoon and extreme rainfall disturbance analysis. |
 | `fiber-endface-process` | Fiber endface micro/nano fabrication workflow | Static | Topic decomposition, process-route design, process window recording, and characterization planning for fiber endface devices. |
 | `fiber-endface-sensing-calibration` | Fiber endface sensing calibration | Engine | Calibration data upload, sensitivity fitting, LOD estimation, QC, plotting, and report generation. |
 | `drug-response-ic50` | Drug response IC50 analysis | Engine | Dose-response upload, IC50 estimation, QC, curve plotting, and report generation. |
