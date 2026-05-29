@@ -108,6 +108,18 @@ export function getAimdAssignerDependentFields(assigner: unknown): string[] {
     .filter(Boolean)
 }
 
+export function getAimdAssignerAssignedFields(assigner: unknown): string[] {
+  if (!isObjectRecord(assigner)) return []
+  const fields = Array.isArray(assigner.assigned_fields)
+    ? assigner.assigned_fields
+    : Array.isArray(assigner.assignedFields)
+      ? assigner.assignedFields
+      : []
+  return fields
+    .map(field => (typeof field === "string" ? field.trim() : ""))
+    .filter(Boolean)
+}
+
 export function getAimdAssignerMode(assigner: unknown): string {
   if (!isObjectRecord(assigner)) return "manual"
   const mode = assigner.mode
@@ -167,20 +179,24 @@ export function resolveAimdAssigners(
 
   const fieldNameSets = getAimdAssignerFieldNameSets(fields)
   return Object.entries(assigners)
-    .map(([assignedField, assigner]) => {
-      const normalizedAssignedField = assignedField.trim()
-      if (!normalizedAssignedField) return null
+    .flatMap(([assignedField, assigner]) => {
+      const normalizedEntryField = assignedField.trim()
+      if (!normalizedEntryField) return []
       const definition = isObjectRecord(assigner) ? assigner : {}
       const mode = getAimdAssignerMode(definition)
-      return {
+      const dependentFields = getAimdAssignerDependentFields(definition)
+      const assignedFields = new Set([
+        normalizedEntryField,
+        ...getAimdAssignerAssignedFields(definition),
+      ])
+      return [...assignedFields].map((normalizedAssignedField) => ({
         assignedField: normalizedAssignedField,
         fieldKey: getAimdAssignerFieldKey(normalizedAssignedField, fieldNameSets),
         mode,
-        dependentFields: getAimdAssignerDependentFields(definition),
+        dependentFields,
         assigner: definition,
-      } satisfies AimdResolvedAssigner
+      } satisfies AimdResolvedAssigner))
     })
-    .filter((entry): entry is AimdResolvedAssigner => entry !== null)
 }
 
 export function normalizeAimdAssignerDependentValue(value: unknown): unknown {

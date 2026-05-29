@@ -10,3 +10,5 @@ Allow the recorder workbench source and recording panels to be resized, and let 
 Make block recorder fields such as AiralogyMarkdown, step, and check cards fill the available recorder panel width.
 
 Make CodeStr, PyStr, and AiralogyMarkdown recorder editors start at a compact one-line height and grow with their content.
+
+Show manual Assigner controls on every field declared in a shared server assigner's assigned_fields list.

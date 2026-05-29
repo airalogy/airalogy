@@ -577,6 +577,14 @@ def _try_upload_svg(svg_code: str) -> str:
 @assigner(
     assigned_fields=[
         "graph_generation_note",
+        "graph_summary",
+        "inferred_edges",
+        "adjacency_list",
+        "graph_visual_legend",
+        "graph_mermaid_preview",
+        "graph_svg_file",
+        "graph_diagnostics",
+        "graph_review_recommendations",
     ],
     dependent_fields=[
         "site_csv_file",
@@ -671,6 +679,10 @@ def _existing_or_generated_edges(dependent_fields: dict[str, Any]) -> tuple[list
 @assigner(
     assigned_fields=[
         "print_parameter_summary",
+        "print_nodes",
+        "print_edges",
+        "openscad_parameter_block",
+        "print_risk_note",
     ],
     dependent_fields=[
         "site_csv_file",

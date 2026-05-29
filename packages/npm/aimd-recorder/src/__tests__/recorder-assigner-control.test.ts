@@ -181,7 +181,8 @@ describe('AimdRecorder assigner controls', () => {
     await nextTick()
 
     expect(runServerAssigner).toHaveBeenCalledTimes(1)
-    expect(runServerAssigner.mock.calls[0]?.[0]).toMatchObject({
+    const [request] = (runServerAssigner.mock.calls[0] ?? []) as unknown as [AimdAssignerRunnerRequest]
+    expect(request).toMatchObject({
       section: 'var',
       fieldKey: 'var:ic50',
       assignedField: 'ic50',
@@ -239,7 +240,8 @@ describe('AimdRecorder assigner controls', () => {
     await nextTick()
 
     expect(runServerAssigner).toHaveBeenCalledTimes(1)
-    expect(runServerAssigner.mock.calls[0]?.[0]).toMatchObject({
+    const [request] = (runServerAssigner.mock.calls[0] ?? []) as unknown as [AimdAssignerRunnerRequest]
+    expect(request).toMatchObject({
       section: 'var',
       fieldKey: 'var:ic50',
       assignedField: 'ic50',
@@ -289,7 +291,7 @@ describe('AimdRecorder assigner controls', () => {
       mode: 'manual',
       dependent_fields: ['kinetics_file'],
     }
-    const runServerAssigner = vi.fn(async () => ({
+    const runServerAssigner = vi.fn(async (_request: AimdAssignerRunnerRequest) => ({
       data: {
         assigned_fields: {
           final_conv_pct: 96.5,
@@ -332,6 +334,95 @@ describe('AimdRecorder assigner controls', () => {
     const latestRecord = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
     expect(latestRecord?.var?.final_conv_pct).toBe(96.5)
     expect(latestRecord?.var?.k_obs).toBe(0.125)
+    expect(wrapper.findAll('.aimd-rec-assigner-field__status--done')).toHaveLength(2)
+  })
+
+  it('mounts shared server assigner controls on every declared assigned field', async () => {
+    const finalConvNode = {
+      ...varNode,
+      id: 'final_conv_pct',
+      name: 'final_conv_pct',
+      label: 'final_conv_pct',
+      raw: '{{var|final_conv_pct: float}}',
+      definition: {
+        name: 'final_conv_pct',
+        type: 'float',
+      },
+    }
+    const rateNode = {
+      ...varNode,
+      id: 'k_obs',
+      name: 'k_obs',
+      label: 'k_obs',
+      raw: '{{var|k_obs: float}}',
+      definition: {
+        name: 'k_obs',
+        type: 'float',
+      },
+    }
+    currentVarNodes = [finalConvNode, rateNode]
+    currentFields = {
+      ...fields,
+      var: ['final_conv_pct', 'k_obs'],
+      var_definitions: [
+        { name: 'final_conv_pct', type: 'float' },
+        { name: 'k_obs', type: 'float' },
+      ],
+    }
+    const runServerAssigner = vi.fn(async () => ({
+      data: {
+        assigned_fields: {
+          final_conv_pct: 96.5,
+          k_obs: 0.125,
+        },
+      },
+    }))
+
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: '{{var|final_conv_pct: float}}{{var|k_obs: float}}',
+        locale: 'en-US',
+        modelValue: {
+          var: {
+            kinetics_file: 'airalogy.id.file.csv',
+          },
+          step: {},
+          check: {},
+          quiz: {},
+        },
+        serverAssigners: {
+          final_conv_pct: {
+            mode: 'manual',
+            dependent_fields: ['kinetics_file'],
+            assigned_fields: ['final_conv_pct', 'k_obs'],
+          },
+        },
+        runServerAssigner,
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    const buttons = wrapper.findAll('.aimd-rec-assigner-field__button')
+    expect(buttons).toHaveLength(2)
+    expect(buttons[0].attributes('aria-label')).toContain('final_conv_pct')
+    expect(buttons[1].attributes('aria-label')).toContain('k_obs')
+
+    await buttons[1].trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(runServerAssigner).toHaveBeenCalledTimes(1)
+    const [request] = (runServerAssigner.mock.calls[0] ?? []) as unknown as [AimdAssignerRunnerRequest]
+    expect(request).toMatchObject({
+      section: 'var',
+      fieldKey: 'var:k_obs',
+      assignedField: 'k_obs',
+      dependentData: {
+        kinetics_file: 'airalogy.id.file.csv',
+      },
+    })
     expect(wrapper.findAll('.aimd-rec-assigner-field__status--done')).toHaveLength(2)
   })
 
