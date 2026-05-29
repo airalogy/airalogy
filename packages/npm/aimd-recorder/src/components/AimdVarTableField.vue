@@ -33,6 +33,12 @@ function renderTrashIcon(): VNode {
   ])
 }
 
+function renderRowNumber(rowIndex: number): VNode {
+  return h("span", {
+    class: "aimd-rec-inline-table__row-number",
+  }, String(rowIndex + 1))
+}
+
 function estimateDisplayWidth(value: unknown): number {
   const text = String(value ?? "")
   let width = 0
@@ -193,7 +199,7 @@ export default defineComponent({
     function estimateTableWidthPx(columns: string[], rows: Record<string, string>[], getDisplayLabel: (column: string) => string): number {
       const CHARACTER_PX = 8.2
       const CELL_HORIZONTAL_PADDING_PX = 24
-      const dragColumnPx = 44
+      const dragColumnPx = 58
       const actionColumnPx = 64
 
       const contentColumnsPx = columns.reduce((total, column) => {
@@ -440,19 +446,22 @@ export default defineComponent({
           onDrop: (event: DragEvent) => emit("drag-drop", { tableName, rowIndex, columns, event }),
         }, [
           h("div", { class: "aimd-rec-card__toolbar" }, [
-            h("span", {
-              class: [
-                "aimd-rec-inline-table__drag-handle",
-                props.readonly ? "aimd-rec-inline-table__drag-handle--disabled" : "",
-              ],
-              title: props.readonly ? messages.table.dragDisabled : messages.table.dragReorder,
-              draggable: !props.readonly,
-              onDragstart: (event: DragEvent) => emit("drag-start", { tableName, rowIndex, event }),
-              onDragend: () => emit("drag-end"),
-            }, Array.from({ length: 6 }, (_, dotIndex) => h("span", {
-              key: `${rowKey}-card-drag-dot-${dotIndex}`,
-              class: "aimd-rec-inline-table__drag-dot",
-            }))),
+            h("span", { class: "aimd-rec-card__row-meta" }, [
+              renderRowNumber(rowIndex),
+              h("span", {
+                class: [
+                  "aimd-rec-inline-table__drag-handle",
+                  props.readonly ? "aimd-rec-inline-table__drag-handle--disabled" : "",
+                ],
+                title: props.readonly ? messages.table.dragDisabled : messages.table.dragReorder,
+                draggable: !props.readonly,
+                onDragstart: (event: DragEvent) => emit("drag-start", { tableName, rowIndex, event }),
+                onDragend: () => emit("drag-end"),
+              }, Array.from({ length: 6 }, (_, dotIndex) => h("span", {
+                key: `${rowKey}-card-drag-dot-${dotIndex}`,
+                class: "aimd-rec-inline-table__drag-dot",
+              }))),
+            ]),
             h("button", {
               type: "button",
               class: "aimd-rec-inline-table__icon-btn aimd-rec-inline-table__icon-btn--visible",
@@ -576,7 +585,9 @@ export default defineComponent({
                 ]),
                 h("thead", [
                   h("tr", [
-                    h("th", { class: "aimd-rec-inline-table__drag-head" }, ""),
+                    h("th", { class: "aimd-rec-inline-table__drag-head" }, [
+                      h("span", { class: "aimd-rec-inline-table__row-head-label" }, "#"),
+                    ]),
                     ...columns.map(column => h("th", {
                       class: [
                         "aimd-rec-inline-table__column-head",
@@ -604,19 +615,22 @@ export default defineComponent({
                     onDrop: (event: DragEvent) => emit("drag-drop", { tableName, rowIndex, columns, event }),
                   }, [
                     h("td", { class: "aimd-rec-inline-table__drag-cell" }, [
-                      h("span", {
-                        class: [
-                          "aimd-rec-inline-table__drag-handle",
-                          props.readonly ? "aimd-rec-inline-table__drag-handle--disabled" : "",
-                        ],
-                        title: props.readonly ? messages.table.dragDisabled : messages.table.dragReorder,
-                        draggable: !props.readonly,
-                        onDragstart: (event: DragEvent) => emit("drag-start", { tableName, rowIndex, event }),
-                        onDragend: () => emit("drag-end"),
-                      }, Array.from({ length: 6 }, (_, dotIndex) => h("span", {
-                        key: `${rowKey}-drag-dot-${dotIndex}`,
-                        class: "aimd-rec-inline-table__drag-dot",
-                      }))),
+                      h("span", { class: "aimd-rec-inline-table__row-control" }, [
+                        renderRowNumber(rowIndex),
+                        h("span", {
+                          class: [
+                            "aimd-rec-inline-table__drag-handle",
+                            props.readonly ? "aimd-rec-inline-table__drag-handle--disabled" : "",
+                          ],
+                          title: props.readonly ? messages.table.dragDisabled : messages.table.dragReorder,
+                          draggable: !props.readonly,
+                          onDragstart: (event: DragEvent) => emit("drag-start", { tableName, rowIndex, event }),
+                          onDragend: () => emit("drag-end"),
+                        }, Array.from({ length: 6 }, (_, dotIndex) => h("span", {
+                          key: `${rowKey}-drag-dot-${dotIndex}`,
+                          class: "aimd-rec-inline-table__drag-dot",
+                        }))),
+                      ]),
                     ]),
                     ...columns.map(column => h("td", {
                       key: `${tableName}-${rowIndex}-${column}`,

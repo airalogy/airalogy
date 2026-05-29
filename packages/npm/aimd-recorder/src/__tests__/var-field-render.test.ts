@@ -15,6 +15,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const source = readFileSync(resolve(__dirname, '../components/AimdVarField.vue'), 'utf8')
 const codeFieldSource = readFileSync(resolve(__dirname, '../components/AimdCodeField.vue'), 'utf8')
+const varTableSource = readFileSync(resolve(__dirname, '../components/AimdVarTableField.vue'), 'utf8')
 const recorderSource = readFileSync(resolve(__dirname, '../components/AimdRecorder.vue'), 'utf8')
 const varHelpersSource = readFileSync(resolve(__dirname, '../composables/useVarHelpers.ts'), 'utf8')
 const styles = readFileSync(resolve(__dirname, '../styles/aimd.css'), 'utf8')
@@ -62,6 +63,22 @@ describe('AimdVarField render behavior', () => {
 
   it('renders editable table cell values without inherited italic preview styling', () => {
     expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-table-cell-input\) \{[\s\S]*?font-style: normal;/)
+  })
+
+  it('keeps card-style table rows compact in dense recorder layouts', () => {
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-card-list\) \{[\s\S]*?gap: 8px;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-card\) \{[\s\S]*?padding: 7px 10px 9px;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-card__field\) \{[\s\S]*?padding-top: 6px;[\s\S]*?margin-top: 6px;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-card__input\) \{[\s\S]*?height: 30px;/)
+    expect(recorderSource).toContain('.aimd-rec-card .aimd-rec-inline-table__drag-handle')
+  })
+
+  it('shows visible row numbers for table and card var_table layouts', () => {
+    expect(varTableSource).toContain('function renderRowNumber')
+    expect(varTableSource).toContain('aimd-rec-inline-table__row-control')
+    expect(varTableSource).toContain('aimd-rec-card__row-meta')
+    expect(varTableSource).toContain('aimd-rec-inline-table__row-head-label')
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline-table__row-number\) \{[\s\S]*?font-variant-numeric: tabular-nums;/)
   })
 
   it('clips plain stacked var controls so rounded corners render cleanly', () => {
@@ -583,6 +600,53 @@ describe('AimdVarField render behavior', () => {
     expect(wrapper.findAll('.aimd-field__metadata-popover').some(popover => popover.text().includes('S-001'))).toBe(true)
     expect(wrapper.find('.aimd-field__metadata-popover').exists()).toBe(true)
     expect((wrapper.find('input').element as HTMLInputElement).placeholder).toBe('S-001')
+  })
+
+  it('renders table row numbers without adding data columns', () => {
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      callback(0)
+      return 1
+    })
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+
+    const node: AimdVarTableNode = {
+      type: 'aimd',
+      fieldType: 'var_table',
+      scope: 'var_table',
+      id: 'samples',
+      raw: '{{var_table|samples}}',
+      columns: ['sample_id'],
+      definition: {
+        id: 'samples',
+        subvars: {
+          sample_id: {
+            id: 'sample_id',
+            type: 'str',
+          },
+        },
+      },
+    }
+
+    const wrapper = mount(AimdVarTableField, {
+      props: {
+        node,
+        rows: [{ sample_id: 'A' }, { sample_id: 'B' }],
+        columns: ['sample_id'],
+        disabled: false,
+        readonly: false,
+        settlingRowKey: null,
+        messages: createAimdRecorderMessages('en-US'),
+      },
+    })
+
+    expect(wrapper.find('.aimd-rec-inline-table__row-head-label').text()).toBe('#')
+    expect(wrapper.findAll('.aimd-rec-inline-table__row-number').map(number => number.text())).toEqual(['1', '2'])
+    expect(wrapper.findAll('.aimd-rec-inline-table__value-cell')).toHaveLength(2)
   })
 
   it('places table assigner actions in the table header', () => {
