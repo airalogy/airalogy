@@ -6,6 +6,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AimdVarNode, AimdVarTableNode } from '@airalogy/aimd-core/types'
 
+import AimdRecorder from '../components/AimdRecorder.vue'
 import AimdVarField from '../components/AimdVarField.vue'
 import AimdVarTableField from '../components/AimdVarTableField.vue'
 import { createAimdRecorderMessages } from '../locales'
@@ -461,6 +462,33 @@ describe('AimdVarField render behavior', () => {
     expect((wrapper.find('input, textarea').element as HTMLInputElement | HTMLTextAreaElement).placeholder).toBe('runtime-example')
   })
 
+  it('renders parsed Literal vars as select fields in AimdRecorder', async () => {
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: 'Review type: {{var|review_type: Literal["quick", "scoping"] = "scoping", title = "Review type"}}',
+        locale: 'en-US',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    await vi.dynamicImportSettled()
+    await wrapper.vm.$nextTick()
+
+    const select = wrapper.find('select[data-rec-focus-key="var:review_type"]')
+    expect(select.exists()).toBe(true)
+    expect(select.findAll('option').map(option => option.text())).toEqual(['quick', 'scoping'])
+    expect((select.element as HTMLSelectElement).value).toBe('1')
+
+    await select.setValue('0')
+    await flushPromises()
+
+    const updates = wrapper.emitted('update:modelValue') ?? []
+    const latest = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    expect(latest?.var?.review_type).toBe('quick')
+  })
+
   it('renders AIMD var_table and column metadata', () => {
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
@@ -596,5 +624,66 @@ describe('AimdVarField render behavior', () => {
     })
 
     expect((wrapperWithPlaceholder.find('input').element as HTMLInputElement).placeholder).toBe('Runtime sample')
+  })
+
+  it('renders var_table enum metadata as select cells', async () => {
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      callback(0)
+      return 1
+    })
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+
+    const node: AimdVarTableNode = {
+      type: 'aimd',
+      fieldType: 'var_table',
+      scope: 'var_table',
+      id: 'screening',
+      raw: '{{var_table|screening}}',
+      columns: ['decision'],
+      definition: {
+        id: 'screening',
+        subvars: {
+          decision: {
+            id: 'decision',
+            type: 'Literal["include", "exclude"]',
+            enum: ['include', 'exclude'],
+            kwargs: {
+              title: 'Decision',
+            },
+          },
+        },
+      },
+    }
+
+    const wrapper = mount(AimdVarTableField, {
+      props: {
+        node,
+        rows: [{ decision: 'exclude' }],
+        columns: ['decision'],
+        disabled: false,
+        readonly: false,
+        settlingRowKey: null,
+        messages: createAimdRecorderMessages('en-US'),
+      },
+    })
+
+    const select = wrapper.find('select[data-rec-focus-key="var_table:screening:0:decision"]')
+    expect(select.exists()).toBe(true)
+    expect((select.element as HTMLSelectElement).value).toBe('1')
+
+    await select.setValue('0')
+
+    const cellUpdates = wrapper.emitted('cell-input') ?? []
+    expect(cellUpdates[cellUpdates.length - 1]?.[0]).toMatchObject({
+      tableName: 'screening',
+      column: 'decision',
+      rowIndex: 0,
+      value: 'include',
+    })
   })
 })

@@ -11,6 +11,7 @@ import type {
   AimdVarTableNode,
   ExtractedAimdFields,
 } from "@airalogy/aimd-core/types"
+import { getAimdFieldEnumValues } from "@airalogy/aimd-core/utils"
 import { parseAndExtract, renderToVue } from "@airalogy/aimd-renderer"
 import type { AimdComponentRenderer } from "@airalogy/aimd-renderer"
 import type { AimdRecorderMessagesInput } from "../locales"
@@ -508,6 +509,53 @@ const serverAssignerByFieldKey = computed(() => (
 const serverAssignerByAssignedField = computed(() => (
   Object.fromEntries(protocolAssignerEntries.value.map(entry => [entry.assignedField, entry]))
 ))
+
+function createEnumOptions(values: unknown[]): NonNullable<AimdFieldMeta["enumOptions"]> {
+  return values.map(value => ({
+    label: String(value),
+    value,
+  }))
+}
+
+function mergeFieldMeta(
+  target: Record<string, AimdFieldMeta>,
+  fieldKey: string,
+  meta: AimdFieldMeta,
+) {
+  target[fieldKey] = {
+    ...target[fieldKey],
+    ...meta,
+    assigner: meta.assigner ?? target[fieldKey]?.assigner,
+    disabled: meta.disabled ?? target[fieldKey]?.disabled,
+  }
+}
+
+const generatedEnumFieldMeta = computed<Record<string, AimdFieldMeta>>(() => {
+  const meta: Record<string, AimdFieldMeta> = {}
+
+  for (const field of extractedFields.value.var_definitions ?? []) {
+    const enumValues = getAimdFieldEnumValues(field)
+    if (enumValues.length > 0) {
+      mergeFieldMeta(meta, `var:${field.id}`, {
+        enumOptions: createEnumOptions(enumValues),
+      })
+    }
+  }
+
+  for (const table of extractedFields.value.var_table ?? []) {
+    for (const subvar of table.subvars ?? []) {
+      const enumValues = getAimdFieldEnumValues(subvar)
+      if (enumValues.length > 0) {
+        mergeFieldMeta(meta, `var_table:${table.id}:${subvar.id}`, {
+          enumOptions: createEnumOptions(enumValues),
+        })
+      }
+    }
+  }
+
+  return meta
+})
+
 const generatedAssignerFieldMeta = computed<Record<string, AimdFieldMeta>>(() => {
   const meta: Record<string, AimdFieldMeta> = {}
   for (const entry of protocolAssignerEntries.value) {
@@ -519,14 +567,15 @@ const generatedAssignerFieldMeta = computed<Record<string, AimdFieldMeta>>(() =>
   return meta
 })
 const effectiveFieldMeta = computed<Record<string, AimdFieldMeta>>(() => {
-  const next: Record<string, AimdFieldMeta> = { ...generatedAssignerFieldMeta.value }
+  const next: Record<string, AimdFieldMeta> = {}
+  for (const [fieldKey, meta] of Object.entries(generatedEnumFieldMeta.value)) {
+    mergeFieldMeta(next, fieldKey, meta)
+  }
+  for (const [fieldKey, meta] of Object.entries(generatedAssignerFieldMeta.value)) {
+    mergeFieldMeta(next, fieldKey, meta)
+  }
   for (const [fieldKey, meta] of Object.entries(props.fieldMeta ?? {})) {
-    next[fieldKey] = {
-      ...next[fieldKey],
-      ...meta,
-      assigner: meta.assigner ?? next[fieldKey]?.assigner,
-      disabled: meta.disabled ?? next[fieldKey]?.disabled,
-    }
+    mergeFieldMeta(next, fieldKey, meta)
   }
   return next
 })
@@ -896,7 +945,14 @@ const fieldRendering = useFieldRendering({
 function renderInlineVar(node: AimdVarNode): VNode {
   const id = node.id
   const fieldKey = `var:${id}`
-  const meta = effectiveFieldMeta.value[fieldKey]
+  const baseMeta = effectiveFieldMeta.value[fieldKey]
+  const nodeEnumValues = getAimdFieldEnumValues(node.definition)
+  const meta = nodeEnumValues.length > 0 && !baseMeta?.enumOptions
+    ? {
+        ...(baseMeta ?? {}),
+        enumOptions: createEnumOptions(nodeEnumValues),
+      }
+    : baseMeta
 
   // 1. Custom renderer override
   if (props.customRenderers?.var) {
@@ -2493,6 +2549,7 @@ defineExpose({
 
 /* ── Select ─────────────────────────────────────────────────────────────── */
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline__select) { appearance: auto; cursor: pointer; height: var(--rec-var-control-height); padding: 0 8px; background: #fff; }
+.aimd-protocol-recorder__content :deep(.aimd-rec-enum-select) { appearance: auto; cursor: pointer; }
 
 /* ── Step / check ───────────────────────────────────────────────────────── */
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline--step),

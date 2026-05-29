@@ -32,6 +32,8 @@ import {
   getFileValueId,
   getFileDisplayName,
   getFileInputConfig,
+  getVarEnumSelectValue,
+  getVarEnumValueFromSelectValue,
   type NumericInputAttributes,
 } from "../composables/useVarHelpers"
 
@@ -544,6 +546,7 @@ export default defineComponent({
       // Enum select (from fieldMeta override)
       const enumOptions = meta?.enumOptions ?? []
       if (enumOptions.length) {
+        const selectedEnumValue = getVarEnumSelectValue(enumOptions, props.value)
         return h("span", {
           class: [
             "aimd-rec-inline aimd-rec-inline--var-stacked aimd-field-wrapper",
@@ -556,10 +559,18 @@ export default defineComponent({
             "data-rec-focus-key": `var:${id}`,
             class: "aimd-rec-inline__value-control aimd-rec-inline__input aimd-rec-inline__input--stacked aimd-rec-inline__select",
             disabled,
-            value: props.value,
-            onChange: (e: Event) => onVarChange((e.target as HTMLSelectElement).value),
+            value: selectedEnumValue,
+            onChange: (e: Event) => {
+              const value = getVarEnumValueFromSelectValue(enumOptions, (e.target as HTMLSelectElement).value)
+              emit("change", { id, value, type, inputKind })
+            },
             onBlur: onVarBlur,
-          }, enumOptions.map(opt => h("option", { key: String(opt.value), value: opt.value }, opt.label)))),
+          }, [
+            selectedEnumValue === ""
+              ? h("option", { value: "" }, placeholder ?? "")
+              : null,
+            ...enumOptions.map((opt, index) => h("option", { key: `${index}:${String(opt.value)}`, value: String(index) }, opt.label)),
+          ])),
           renderAssignerError(),
         ])
       }

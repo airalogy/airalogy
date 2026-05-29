@@ -192,6 +192,8 @@ export interface AimdSubvar {
   type?: AimdVarType
   /** Default value */
   default?: unknown
+  /** Enumerated values parsed from Literal[...] or enum=[...] metadata */
+  enum?: unknown[]
   /** Display title */
   title?: string
   /** Description/tooltip */
@@ -269,6 +271,8 @@ export interface AimdVarField {
   type?: AimdVarType
   /** Default value */
   default?: unknown
+  /** Enumerated values parsed from Literal[...] or enum=[...] metadata */
+  enum?: unknown[]
   /** Display title */
   title?: string
   /** Description */

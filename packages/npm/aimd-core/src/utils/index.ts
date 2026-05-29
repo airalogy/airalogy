@@ -18,6 +18,7 @@ export {
   formatAimdExamples,
   getAimdFieldDescription,
   getAimdFieldDisplayLabel,
+  getAimdFieldEnumValues,
   getAimdFieldExamples,
   getAimdFieldTitle,
   resolveAimdFieldMetadata,

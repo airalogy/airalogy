@@ -10,6 +10,7 @@ export {
   isNumericVarType,
   parseDurationToMs,
   parseStepTimerMode,
+  parseVarEnumValues,
   parseVarDefinition,
   validateVarDefaultType,
   validateVarDefinition,

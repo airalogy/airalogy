@@ -180,6 +180,51 @@ export function parseKeyValueParams(content: string): Record<string, unknown> {
   return params
 }
 
+function isSupportedEnumValue(value: unknown): boolean {
+  return typeof value === "string"
+    || typeof value === "number"
+    || typeof value === "boolean"
+    || value === null
+}
+
+function normalizeEnumValues(values: unknown): unknown[] {
+  if (!Array.isArray(values)) {
+    return []
+  }
+  return values.filter(isSupportedEnumValue)
+}
+
+function parseLiteralEnumValues(type: string | undefined): unknown[] {
+  const match = type?.trim().match(/^(?:(?:typing|typing_extensions)\.)?Literal\s*\[([\s\S]*)\]$/)
+  if (!match) {
+    return []
+  }
+
+  return normalizeEnumValues(
+    splitTopLevelCommaSegments(match[1]).map(parseKeyValueLiteral),
+  )
+}
+
+export function parseVarEnumValues(
+  type: string | undefined,
+  kwargs?: Record<string, unknown>,
+): unknown[] {
+  const explicitEnum = normalizeEnumValues(kwargs?.enum)
+  if (explicitEnum.length > 0) {
+    return explicitEnum
+  }
+
+  return parseLiteralEnumValues(type)
+}
+
+function applyVarEnumMetadata(def: AimdVarDefinition): AimdVarDefinition {
+  const enumValues = parseVarEnumValues(def.type, def.kwargs)
+  if (enumValues.length > 0) {
+    def.enum = enumValues
+  }
+  return def
+}
+
 function findMatchingBracketIndex(content: string, openIndex: number): number {
   let quote: "\"" | "'" | null = null
   let escaped = false
@@ -589,13 +634,13 @@ function parseSimpleVarDef(content: string): AimdVarDefinition {
       if (Object.keys(kvParams).length > 0) {
         result.kwargs = kvParams
       }
-      return result
+      return applyVarEnumMetadata(result)
     }
     const result: AimdVarDefinition = { id: mainPart.split(/\s/)[0].trim() }
     if (Object.keys(kvParams).length > 0) {
       result.kwargs = kvParams
     }
-    return result
+    return applyVarEnumMetadata(result)
   }
 
   const colonIndex = mainPart.indexOf(":")
@@ -627,7 +672,7 @@ function parseSimpleVarDef(content: string): AimdVarDefinition {
     result.kwargs = kvParams
   }
 
-  return result
+  return applyVarEnumMetadata(result)
 }
 
 /**

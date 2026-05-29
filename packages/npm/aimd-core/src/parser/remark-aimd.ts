@@ -36,6 +36,7 @@ import {
 } from "./inline-template-protection"
 import {
   getAimdFieldDescription,
+  getAimdFieldEnumValues,
   getAimdFieldExamples,
   getAimdFieldTitle,
 } from "../utils/field-metadata"
@@ -198,6 +199,10 @@ function createExtractedVarField(node: AimdVarNode): AimdVarField {
   }
   if (def && Object.prototype.hasOwnProperty.call(def, "default")) {
     field.default = def.default
+  }
+  const enumValues = getAimdFieldEnumValues(def)
+  if (enumValues.length > 0) {
+    field.enum = enumValues
   }
 
   const title = getAimdFieldTitle(def)
@@ -441,17 +446,20 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
                     const title = getAimdFieldTitle(subDef)
                     const description = getAimdFieldDescription(subDef)
                     const examples = getAimdFieldExamples(subDef)
-                    return subDef
-                      ? {
-                          id: name,
-                          type: subDef.type,
-                          default: subDef.default,
-                          title: title || name,
-                          description,
-                          examples: examples.length > 0 ? examples : undefined,
-                          kwargs: subDef.kwargs,
-                        }
-                      : { id: name }
+                    const enumValues = getAimdFieldEnumValues(subDef)
+                    if (!subDef) {
+                      return { id: name }
+                    }
+                    return {
+                      id: name,
+                      type: subDef.type,
+                      default: subDef.default,
+                      ...(enumValues.length > 0 ? { enum: enumValues } : {}),
+                      title: title || name,
+                      description,
+                      examples: examples.length > 0 ? examples : undefined,
+                      kwargs: subDef.kwargs,
+                    }
                   })
                   const title = getAimdFieldTitle(def)
                   const description = getAimdFieldDescription(def)

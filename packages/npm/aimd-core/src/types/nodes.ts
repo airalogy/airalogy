@@ -94,6 +94,8 @@ export interface AimdVarDefinition {
   default?: unknown
   /** Original AIMD default literal, preserved for UI display when lexical form matters. */
   defaultRaw?: string
+  /** Enumerated values parsed from Literal[...] or enum=[...] metadata. */
+  enum?: unknown[]
   required?: boolean
   subvars?: Record<string, AimdVarDefinition>
   /** Additional kwargs like pattern, title, description, examples, etc. */

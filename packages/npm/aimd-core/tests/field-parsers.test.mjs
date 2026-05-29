@@ -182,6 +182,21 @@ test('var: preserves display metadata and list examples', () => {
   assert.deepEqual(fields.var_definitions?.[0]?.examples, ['2026-05-26', '2026-05-27'])
 })
 
+test('var: parses Literal values as enum metadata', () => {
+  const { tree, fields } = parseAimd('{{var|review_type: Literal["quick", "scoping", "systematic"] = "scoping", title = "Review type"}}')
+  const node = findAimdNode(tree)
+  assert.deepEqual(node?.definition?.enum, ['quick', 'scoping', 'systematic'])
+  assert.deepEqual(fields.var_definitions?.[0]?.enum, ['quick', 'scoping', 'systematic'])
+  assert.equal(fields.var_definitions?.[0]?.type, 'Literal["quick", "scoping", "systematic"]')
+})
+
+test('var: parses enum kwarg as enum metadata', () => {
+  const { tree, fields } = parseAimd('{{var|priority: str = "medium", enum = ["low", "medium", "high"]}}')
+  const node = findAimdNode(tree)
+  assert.deepEqual(node?.definition?.enum, ['low', 'medium', 'high'])
+  assert.deepEqual(fields.var_definitions?.[0]?.enum, ['low', 'medium', 'high'])
+})
+
 // ── parseVarDefinition: subvars ──────────────────────────────────────────────
 
 test('var_table: with simple subvars', () => {
@@ -205,6 +220,13 @@ test('var_table: subvars with defaults', () => {
   const node = findAimdNode(tree)
   assert.equal(node?.definition?.subvars?.count?.default, 0)
   assert.equal(node?.definition?.subvars?.name?.default, '')
+})
+
+test('var_table: subvars keep enum metadata', () => {
+  const { tree, fields } = parseAimd('{{var_table|screening, subvars=[decision: Literal["include", "exclude", "review"] = "review"]}}')
+  const node = findAimdNode(tree)
+  assert.deepEqual(node?.definition?.subvars?.decision?.enum, ['include', 'exclude', 'review'])
+  assert.deepEqual(fields.var_table?.[0]?.subvars?.[0]?.enum, ['include', 'exclude', 'review'])
 })
 
 test('var_table: multiline nested var() subvars keep full child definitions', () => {

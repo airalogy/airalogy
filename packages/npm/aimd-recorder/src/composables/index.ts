@@ -51,6 +51,8 @@ export {
   getFileInputConfig,
   isFileLikeVarType,
   createSelectedFileValue,
+  getVarEnumSelectValue,
+  getVarEnumValueFromSelectValue,
   getVarInputDisplayValue,
   parseVarInputValue,
   calculateVarStackWidth,
@@ -59,7 +61,7 @@ export {
   syncAutoWrapTextareaHeight,
   applyVarStackWidth,
 } from './useVarHelpers'
-export type { FileInputConfig, FileInputDisplayKind, VarInputKind } from './useVarHelpers'
+export type { AimdVarEnumOption, FileInputConfig, FileInputDisplayKind, VarInputKind } from './useVarHelpers'
 
 export {
   AIMD_DNA_SEQUENCE_FORMAT,

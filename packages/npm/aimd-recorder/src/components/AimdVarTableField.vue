@@ -5,6 +5,7 @@ import {
   formatAimdExampleValue,
   getAimdFieldDescription,
   getAimdFieldDisplayLabel,
+  getAimdFieldEnumValues,
   getAimdFieldExamples,
   getAimdFieldTitle,
 } from "@airalogy/aimd-core/utils"
@@ -12,6 +13,7 @@ import type { AimdFieldMeta, AimdFieldState } from "../types"
 import type { AimdRecorderMessages } from "../locales"
 import { getAimdRecorderScopeLabel } from "../locales"
 import { getVarTableColumns, getVarTableRowKey } from "../composables/useVarTableDragDrop"
+import { getVarEnumSelectValue, getVarEnumValueFromSelectValue } from "../composables/useVarHelpers"
 
 function renderTrashIcon(): VNode {
   return h("svg", {
@@ -64,6 +66,13 @@ function resolveColumnSizingKind(column: string, displayLabel = column): ColumnS
 
 function normalizeMetaString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined
+}
+
+function createEnumOptions(values: unknown[]): NonNullable<AimdFieldMeta["enumOptions"]> {
+  return values.map(value => ({
+    label: String(value),
+    value,
+  }))
 }
 
 function getFieldMetaExamples(meta?: AimdFieldMeta): unknown[] {
@@ -276,7 +285,15 @@ export default defineComponent({
     }
 
     function getColumnMeta(column: string): AimdFieldMeta | undefined {
-      return props.fieldMeta?.[`var_table:${props.node.id}:${column}`]
+      const meta = props.fieldMeta?.[`var_table:${props.node.id}:${column}`]
+      const enumValues = getAimdFieldEnumValues(getColumnDefinition(column))
+      if (enumValues.length > 0 && !meta?.enumOptions) {
+        return {
+          ...(meta ?? {}),
+          enumOptions: createEnumOptions(enumValues),
+        }
+      }
+      return meta
     }
 
     function getMetadataHelp(definition?: AimdVarDefinition, meta?: AimdFieldMeta): FieldMetadataHelp {
@@ -310,6 +327,78 @@ export default defineComponent({
       }
 
       return ""
+    }
+
+    function renderCellControl(
+      tableName: string,
+      column: string,
+      rowIndex: number,
+      row: Record<string, string>,
+      className: string | string[],
+    ): VNode {
+      const enumOptions = getColumnMeta(column)?.enumOptions ?? []
+      const focusKey = `var_table:${tableName}:${rowIndex}:${column}`
+      const disabled = isColumnDisabled(column)
+      const placeholder = getColumnPlaceholder(column)
+
+      if (enumOptions.length > 0) {
+        const selectedEnumValue = getVarEnumSelectValue(enumOptions, row[column])
+        return h("select", {
+          "data-rec-focus-key": focusKey,
+          class: [className, "aimd-rec-enum-select"],
+          disabled,
+          value: selectedEnumValue,
+          onChange: (event: Event) => {
+            emit("cell-input", {
+              tableName,
+              column,
+              rowIndex,
+              value: getVarEnumValueFromSelectValue(enumOptions, (event.target as HTMLSelectElement).value),
+              row,
+            })
+          },
+          onBlur: () => emit("cell-blur", { tableName, column }),
+        }, [
+          selectedEnumValue === ""
+            ? h("option", { value: "" }, placeholder)
+            : null,
+          ...enumOptions.map((option, optionIndex) => h("option", {
+            key: `${optionIndex}:${String(option.value)}`,
+            value: String(optionIndex),
+          }, option.label)),
+        ])
+      }
+
+      return h("input", {
+        "data-rec-focus-key": focusKey,
+        class: className,
+        disabled,
+        placeholder,
+        value: row[column] ?? "",
+        onInput: (event: Event) => {
+          emit("cell-input", {
+            tableName,
+            column,
+            rowIndex,
+            value: (event.target as HTMLInputElement).value,
+            row,
+          })
+        },
+        onPaste: (event: ClipboardEvent) => {
+          const text = event.clipboardData?.getData("text/plain") ?? ""
+          if (!text || (!text.includes("\t") && !/[\r\n]/.test(text))) {
+            return
+          }
+          event.preventDefault()
+          emit("cell-paste", {
+            tableName,
+            column,
+            rowIndex,
+            text,
+          })
+        },
+        onBlur: () => emit("cell-blur", { tableName, column }),
+      })
     }
 
     function renderMetadataLabel(id: string, definition: AimdVarDefinition | undefined, className: string, meta?: AimdFieldMeta): VNode {
@@ -373,36 +462,7 @@ export default defineComponent({
           titleColumn
             ? h("div", { class: "aimd-rec-card__field aimd-rec-card__field--title" }, [
                 renderMetadataLabel(titleColumn, getColumnDefinition(titleColumn), "aimd-rec-card__label", getColumnMeta(titleColumn)),
-                h("input", {
-                  "data-rec-focus-key": `var_table:${tableName}:${rowIndex}:${titleColumn}`,
-                  class: "aimd-rec-card__input",
-                  disabled: isColumnDisabled(titleColumn),
-                  placeholder: getColumnPlaceholder(titleColumn),
-                  value: row[titleColumn] ?? "",
-                  onInput: (event: Event) => {
-                    emit("cell-input", {
-                      tableName,
-                      column: titleColumn,
-                      rowIndex,
-                      value: (event.target as HTMLInputElement).value,
-                      row,
-                    })
-                  },
-                  onPaste: (event: ClipboardEvent) => {
-                    const text = event.clipboardData?.getData("text/plain") ?? ""
-                    if (!text || (!text.includes("\t") && !/[\r\n]/.test(text))) {
-                      return
-                    }
-                    event.preventDefault()
-                    emit("cell-paste", {
-                      tableName,
-                      column: titleColumn,
-                      rowIndex,
-                      text,
-                    })
-                  },
-                  onBlur: () => emit("cell-blur", { tableName, column: titleColumn }),
-                }),
+                renderCellControl(tableName, titleColumn, rowIndex, row, "aimd-rec-card__input"),
               ])
             : null,
           h("div", { class: "aimd-rec-card__body" }, detailColumns.map((column) => {
@@ -416,36 +476,7 @@ export default defineComponent({
               class: "aimd-rec-card__field",
             }, [
               renderMetadataLabel(column, getColumnDefinition(column), "aimd-rec-card__label", getColumnMeta(column)),
-              h("input", {
-                "data-rec-focus-key": `var_table:${tableName}:${rowIndex}:${column}`,
-                class: inputClass,
-                disabled: isColumnDisabled(column),
-                placeholder: getColumnPlaceholder(column),
-                value: row[column] ?? "",
-                onInput: (event: Event) => {
-                  emit("cell-input", {
-                    tableName,
-                    column,
-                    rowIndex,
-                    value: (event.target as HTMLInputElement).value,
-                    row,
-                  })
-                },
-                onPaste: (event: ClipboardEvent) => {
-                  const text = event.clipboardData?.getData("text/plain") ?? ""
-                  if (!text || (!text.includes("\t") && !/[\r\n]/.test(text))) {
-                    return
-                  }
-                  event.preventDefault()
-                  emit("cell-paste", {
-                    tableName,
-                    column,
-                    rowIndex,
-                    text,
-                  })
-                },
-                onBlur: () => emit("cell-blur", { tableName, column }),
-              }),
+              renderCellControl(tableName, column, rowIndex, row, inputClass),
             ])
           })),
         ])
@@ -593,36 +624,7 @@ export default defineComponent({
                               "aimd-rec-table-cell-input",
                               `aimd-rec-table-cell-input--${sizingKind}`,
                             ]
-                        return h("input", {
-                          "data-rec-focus-key": `var_table:${tableName}:${rowIndex}:${column}`,
-                          class: cellClass,
-                          disabled: isColumnDisabled(column),
-                          placeholder: getColumnPlaceholder(column),
-                          value: row[column] ?? "",
-                          onInput: (event: Event) => {
-                            emit("cell-input", {
-                              tableName,
-                              column,
-                              rowIndex,
-                              value: (event.target as HTMLInputElement).value,
-                              row,
-                            })
-                          },
-                          onPaste: (event: ClipboardEvent) => {
-                            const text = event.clipboardData?.getData("text/plain") ?? ""
-                            if (!text || (!text.includes("\t") && !/[\r\n]/.test(text))) {
-                              return
-                            }
-                            event.preventDefault()
-                            emit("cell-paste", {
-                              tableName,
-                              column,
-                              rowIndex,
-                              text,
-                            })
-                          },
-                          onBlur: () => emit("cell-blur", { tableName, column }),
-                        })
+                        return renderCellControl(tableName, column, rowIndex, row, cellClass)
                       })(),
                     ])),
                     h("td", { class: "aimd-rec-inline-table__action-cell" }, [

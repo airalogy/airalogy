@@ -37,6 +37,8 @@ export interface VarInputValueOptions extends VarInputKindOptions {
   nodeFieldKey?: string
 }
 
+export type AimdVarEnumOption = NonNullable<AimdFieldMeta["enumOptions"]>[number]
+
 export interface AimdNumericFieldConstraints {
   gt?: number
   ge?: number
@@ -309,6 +311,30 @@ export function getFileDisplayName(value: unknown): string {
 
 function normalizeMetaString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined
+}
+
+export function getVarEnumSelectValue(options: AimdVarEnumOption[], value: unknown): string {
+  const normalized = unwrapStructuredValue(value)
+  const exactIndex = options.findIndex(option => Object.is(option.value, normalized))
+  if (exactIndex >= 0) {
+    return String(exactIndex)
+  }
+
+  if (normalized !== undefined && normalized !== null) {
+    const stringIndex = options.findIndex(option => String(option.value) === String(normalized))
+    if (stringIndex >= 0) {
+      return String(stringIndex)
+    }
+  }
+
+  return ""
+}
+
+export function getVarEnumValueFromSelectValue(options: AimdVarEnumOption[], selectValue: string): unknown {
+  const index = Number.parseInt(selectValue, 10)
+  return Number.isInteger(index) && index >= 0 && index < options.length
+    ? options[index].value
+    : ""
 }
 
 function resolveOverrideInputKind(inputType: string | undefined, codeLanguage: string | undefined): VarInputKind | undefined {

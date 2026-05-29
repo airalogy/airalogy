@@ -20,6 +20,20 @@ function normalizeExamples(value: unknown): unknown[] {
   return [value]
 }
 
+function isSupportedEnumValue(value: unknown): boolean {
+  return typeof value === "string"
+    || typeof value === "number"
+    || typeof value === "boolean"
+    || value === null
+}
+
+function normalizeEnumValues(value: unknown): unknown[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.filter(isSupportedEnumValue)
+}
+
 export function getAimdFieldTitle(definition?: Pick<AimdVarDefinition, "kwargs">): string | undefined {
   return normalizeString(definition?.kwargs?.title)
 }
@@ -40,6 +54,14 @@ export function getAimdFieldExamples(definition?: Pick<AimdVarDefinition, "kwarg
   }
 
   return normalizeExamples(kwargs.example)
+}
+
+export function getAimdFieldEnumValues(definition?: Pick<AimdVarDefinition, "enum" | "kwargs">): unknown[] {
+  const parsedEnum = normalizeEnumValues(definition?.enum)
+  if (parsedEnum.length > 0) {
+    return parsedEnum
+  }
+  return normalizeEnumValues(definition?.kwargs?.enum)
 }
 
 export function resolveAimdFieldMetadata(definition?: Pick<AimdVarDefinition, "kwargs">): AimdResolvedFieldMetadata {
