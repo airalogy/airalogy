@@ -3344,14 +3344,15 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: #64748b;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 2px;
+  border-radius: 0;
+  background: transparent;
+  color: #94a3b8;
   font-size: 11px;
-  font-weight: 700;
+  font-style: normal;
+  font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   box-sizing: border-box;
@@ -3510,10 +3511,9 @@ defineExpose({
 }
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-card .aimd-rec-inline-table__row-number) {
-  min-width: 20px;
-  height: 20px;
-  background: #eef6f0;
-  color: #476b52;
+  min-width: 18px;
+  height: 18px;
+  color: #8aa193;
 }
 
 .aimd-protocol-recorder__content :deep(.aimd-rec-card .aimd-rec-inline-table__drag-dot) {

@@ -79,6 +79,7 @@ describe('AimdVarField render behavior', () => {
     expect(varTableSource).toContain('aimd-rec-card__row-meta')
     expect(varTableSource).toContain('aimd-rec-inline-table__row-head-label')
     expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline-table__row-number\) \{[\s\S]*?font-variant-numeric: tabular-nums;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline-table__row-number\) \{[\s\S]*?background: transparent;[\s\S]*?font-style: normal;/)
   })
 
   it('clips plain stacked var controls so rounded corners render cleanly', () => {
