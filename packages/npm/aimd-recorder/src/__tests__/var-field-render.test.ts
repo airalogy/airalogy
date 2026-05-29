@@ -14,6 +14,7 @@ import { createAimdRecorderMessages } from '../locales'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const source = readFileSync(resolve(__dirname, '../components/AimdVarField.vue'), 'utf8')
+const codeFieldSource = readFileSync(resolve(__dirname, '../components/AimdCodeField.vue'), 'utf8')
 const recorderSource = readFileSync(resolve(__dirname, '../components/AimdRecorder.vue'), 'utf8')
 const varHelpersSource = readFileSync(resolve(__dirname, '../composables/useVarHelpers.ts'), 'utf8')
 const styles = readFileSync(resolve(__dirname, '../styles/aimd.css'), 'utf8')
@@ -43,6 +44,14 @@ describe('AimdVarField render behavior', () => {
     expect(source).toMatch(/if \(inputKind === "code"\)/)
     expect(source).toMatch(/language: codeLanguage/)
     expect(source).toMatch(/"aimd-rec-inline--var-stacked--code"/)
+  })
+
+  it('starts CodeStr and PyStr editors at a compact content-driven height', () => {
+    expect(codeFieldSource).toMatch(/const CODE_FIELD_MIN_HEIGHT = CODE_FIELD_LINE_HEIGHT \+ CODE_FIELD_VERTICAL_PADDING/)
+    expect(codeFieldSource).toMatch(/const editorHeight = ref\(estimateCodeFieldHeight\(draftValue\.value\)\)/)
+    expect(codeFieldSource).toMatch(/monacoEditor\.onDidContentSizeChange\(\(event\) => \{[\s\S]*?setEditorHeight\(event\.contentHeight\)/)
+    expect(codeFieldSource).toContain('--aimd-code-field-editor-height')
+    expect(codeFieldSource).not.toContain('min-height: 240px;')
   })
 
   it('keeps table metadata popovers from being clipped by table bounds', () => {

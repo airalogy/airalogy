@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineComponent, h, ref, shallowRef, watch, type PropType, type VNode } from 'vue'
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, shallowRef, watch, type PropType, type VNode } from 'vue'
 import { AimdEditor } from '@airalogy/aimd-editor/vue'
 import { createMermaidRenderer, renderToVue } from '@airalogy/aimd-renderer'
 import type { AimdRecorderMessages } from '../locales'
@@ -28,6 +28,18 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'blur'): void
 }>()
+
+type MonacoLikeEditor = {
+  getContentHeight?: () => number
+  layout?: (dimension?: { width: number; height: number }) => void
+  onDidContentSizeChange?: (listener: (event: { contentHeight: number }) => void) => { dispose: () => void }
+}
+
+const MARKDOWN_EDITOR_LINE_HEIGHT = 21
+const MARKDOWN_EDITOR_VERTICAL_PADDING = 24
+const MARKDOWN_EDITOR_MIN_HEIGHT = MARKDOWN_EDITOR_LINE_HEIGHT + MARKDOWN_EDITOR_VERTICAL_PADDING
+const MARKDOWN_EDITOR_MAX_HEIGHT = 560
+const MARKDOWN_EDITOR_ESTIMATED_CHARS_PER_LINE = 96
 
 function normalizeMarkdownModelValue(value: unknown): string {
   if (typeof value === 'string') {
@@ -115,9 +127,15 @@ const { preRenderer: codeBlockPreRenderer } = useCodeBlockRendering(() => {
 const fieldRootRef = ref<HTMLElement | null>(null)
 const draftValue = ref(normalizeMarkdownModelValue(props.modelValue))
 const viewMode = ref<'preview' | 'source'>(draftValue.value.trim() ? 'preview' : 'source')
+const markdownEditorHeight = ref(estimateMarkdownEditorHeight(draftValue.value))
+const markdownFieldStyle = computed(() => ({
+  '--aimd-markdown-field-editor-height': `${markdownEditorHeight.value}px`,
+}))
 const previewNodes = shallowRef<VNode[]>([])
 const previewRenderFailed = ref(false)
 let previewRenderRequestId = 0
+let markdownEditor: MonacoLikeEditor | null = null
+let markdownContentSizeDisposable: { dispose: () => void } | null = null
 const RenderVNode = defineComponent({
   name: 'RenderVNode',
   props: {
@@ -147,6 +165,64 @@ const previewLabel = computed(() => (isZhLocale(props.locale) ? '预览' : 'Prev
 const sourceLabel = computed(() => (isZhLocale(props.locale) ? '源码' : 'Source'))
 const emptyPreviewLabel = computed(() => (isZhLocale(props.locale) ? '暂无内容' : 'No content'))
 const previewToolbarLabel = computed(() => (isZhLocale(props.locale) ? 'Markdown 显示模式' : 'Markdown view mode'))
+const markdownMonacoOptions = computed(() => ({
+  minimap: { enabled: false },
+  lineHeight: MARKDOWN_EDITOR_LINE_HEIGHT,
+  padding: { top: 12, bottom: 12 },
+  scrollbar: { vertical: 'auto', horizontal: 'auto' },
+}))
+
+function clampMarkdownEditorHeight(height: number): number {
+  return Math.max(MARKDOWN_EDITOR_MIN_HEIGHT, Math.min(MARKDOWN_EDITOR_MAX_HEIGHT, Math.ceil(height)))
+}
+
+function estimateVisualLineCount(value: string): number {
+  const lines = value.replace(/\r\n?/g, '\n').split('\n')
+  return lines.reduce((total, line) => {
+    const length = Array.from(line).length
+    return total + Math.max(1, Math.ceil(length / MARKDOWN_EDITOR_ESTIMATED_CHARS_PER_LINE))
+  }, 0)
+}
+
+function estimateMarkdownEditorHeight(value: string): number {
+  return clampMarkdownEditorHeight((estimateVisualLineCount(value) * MARKDOWN_EDITOR_LINE_HEIGHT) + MARKDOWN_EDITOR_VERTICAL_PADDING)
+}
+
+function layoutMarkdownEditor() {
+  if (!markdownEditor?.layout) {
+    return
+  }
+
+  const editorContainer = fieldRootRef.value?.querySelector('.aimd-editor-container') as HTMLElement | null
+  const width = editorContainer?.clientWidth ?? 0
+  if (width > 0) {
+    markdownEditor.layout({ width, height: markdownEditorHeight.value })
+    return
+  }
+
+  markdownEditor.layout()
+}
+
+function setMarkdownEditorHeight(height: number) {
+  const nextHeight = clampMarkdownEditorHeight(height)
+  if (nextHeight === markdownEditorHeight.value) {
+    return
+  }
+
+  markdownEditorHeight.value = nextHeight
+  void nextTick(layoutMarkdownEditor)
+}
+
+function syncEstimatedMarkdownEditorHeight(value = draftValue.value) {
+  setMarkdownEditorHeight(estimateMarkdownEditorHeight(value))
+}
+
+function syncMeasuredMarkdownEditorHeight() {
+  const contentHeight = markdownEditor?.getContentHeight?.()
+  if (typeof contentHeight === 'number' && Number.isFinite(contentHeight)) {
+    setMarkdownEditorHeight(contentHeight)
+  }
+}
 
 async function renderPreview() {
   const currentContent = draftValue.value.trim()
@@ -196,12 +272,26 @@ function switchToSource() {
 }
 
 function emitDraftValue(markdown: string) {
+  syncEstimatedMarkdownEditorHeight(markdown)
   if (markdown === draftValue.value) {
     return
   }
 
   draftValue.value = markdown
   emit('update:modelValue', markdown)
+}
+
+function handleMarkdownEditorReady(editor: { monaco?: MonacoLikeEditor }) {
+  if (!editor.monaco) {
+    return
+  }
+
+  markdownContentSizeDisposable?.dispose()
+  markdownEditor = editor.monaco
+  markdownContentSizeDisposable = markdownEditor.onDidContentSizeChange?.((event) => {
+    setMarkdownEditorHeight(event.contentHeight)
+  }) ?? null
+  syncMeasuredMarkdownEditorHeight()
 }
 
 function emitBlurIfLeavingField(event: FocusEvent) {
@@ -222,9 +312,14 @@ watch(() => props.modelValue, (value) => {
 
   const hadValue = hasValue.value
   draftValue.value = nextValue
+  syncEstimatedMarkdownEditorHeight(nextValue)
   if (!hadValue && nextValue.trim()) {
     viewMode.value = 'preview'
   }
+})
+
+onBeforeUnmount(() => {
+  markdownContentSizeDisposable?.dispose()
 })
 
 watch(
@@ -244,6 +339,7 @@ watch(
       'aimd-markdown-field--disabled': disabled,
       'aimd-markdown-field--has-assigner-control': assignerControl || assignerStatus,
     }"
+    :style="markdownFieldStyle"
     @focusout="emitBlurIfLeavingField"
   >
     <span class="aimd-field aimd-field--no-style aimd-field__label">
@@ -314,10 +410,11 @@ watch(
         :show-aimd-toolbar="true"
         :enable-block-handle="!disabled"
         :keep-inactive-editors-mounted="false"
-        :min-height="360"
+        :min-height="markdownEditorHeight"
         :readonly="disabled"
-        :monaco-options="{ minimap: { enabled: false } }"
+        :monaco-options="markdownMonacoOptions"
         @update:model-value="emitDraftValue"
+        @ready="handleMarkdownEditorReady"
       />
     </div>
   </div>
@@ -452,7 +549,7 @@ watch(
 
 .aimd-markdown-field__preview-shell {
   min-width: 0;
-  min-height: 120px;
+  min-height: var(--aimd-markdown-field-editor-height);
   padding: 14px 18px;
   background: #fff;
   color: #334155;
@@ -632,13 +729,13 @@ watch(
 
 .aimd-markdown-field__editor-shell :deep(.aimd-editor-panel) {
   min-width: 0;
+  min-height: var(--aimd-markdown-field-editor-height) !important;
 }
 
 .aimd-markdown-field__editor-shell :deep(.aimd-editor-source-mode),
 .aimd-markdown-field__editor-shell :deep(.aimd-editor-wysiwyg-mode) {
-  height: auto !important;
-  min-height: 360px;
-  overflow-y: visible !important;
+  height: var(--aimd-markdown-field-editor-height) !important;
+  min-height: var(--aimd-markdown-field-editor-height);
   background: #fff;
   border-radius: 0 0 8px 8px;
 }
@@ -648,15 +745,16 @@ watch(
 }
 
 .aimd-markdown-field__editor-shell :deep(.aimd-editor-container) {
-  min-height: 360px;
+  height: var(--aimd-markdown-field-editor-height);
+  min-height: var(--aimd-markdown-field-editor-height);
 }
 
 .aimd-markdown-field__editor-shell :deep(.milkdown) {
-  min-height: 360px;
+  min-height: var(--aimd-markdown-field-editor-height);
 }
 
 .aimd-markdown-field__editor-shell :deep(.milkdown-editor-content) {
-  min-height: 360px;
+  min-height: var(--aimd-markdown-field-editor-height);
   padding: 14px 16px 18px;
   box-sizing: border-box;
 }
