@@ -1,5 +1,66 @@
 # Changelog
 
+## 1.18.0
+
+### Minor Changes
+
+- e73eefa: Preserve AIMD `title`, `description`, and `example`/`examples` metadata for `var` and `var_table` fields, with default renderer and recorder labels showing titles and keeping description/example details behind hover/focus popovers.
+- 5732108: Add the generic `CodeStr` code-string type to `airalogy.types` so AIMD fields such as `{{var|script: CodeStr}}` generate valid Python models while recorder UIs can present them as plain code editors.
+
+  Allow AIMD var-table defaults to contain multiline object-list values, expose those defaults through extracted field metadata, and initialize recorder var-table rows from those defaults without overwriting user-entered rows.
+
+  Run auto server assigners when their dependencies become available, and mount server assigner controls inside built-in `AiralogyMarkdown` fields that support inline assigner actions.
+
+  Add a rendered preview mode to the built-in recorder `AiralogyMarkdown` field, including Mermaid code block rendering for generated Markdown outputs.
+
+- 5f318e1: Refine recorder var-field presentation by normalizing value typography across text, numeric, date/time, and select controls, clipping plain stacked-field corners consistently, and keeping table-cell input text upright.
+
+  Add built-in file-like var controls for CSV, image, audio, video, and document types, including native file pickers, accept-type inference, serializable local file metadata, reusable file-card previews, and `uploadFile`/`resolveFileInfo` hooks so host apps can return Airalogy file IDs while the recorder renders filenames, sizes, download links, image previews, and compact CSV previews.
+
+  Allow the Python `Airalogy` client to be configured with an explicit `base_url` while preserving environment-variable defaults, so local demos and self-hosted Airalogy-compatible services can use the same file APIs as hosted Airalogy. `AIRALOGY_BASE_URL` is the preferred environment variable; `AIRALOGY_ENDPOINT` remains supported as a deprecated fallback.
+
+  Add a local file bridge for sandboxed engine runs so assigners can read uploaded Airalogy file IDs and write generated file outputs without requiring the sandbox to reach the host demo server over HTTP.
+
+  Move generic assigner UI orchestration into `@airalogy/aimd-recorder` through a `serverAssigners` metadata prop and `runServerAssigner` hook, letting host apps provide only the execution transport while the recorder handles dependency filtering, loading/error state, and `assigned_fields` record updates.
+
+  Surface server assigner business failures returned as `success: false` / `error_message` through the shared recorder assigner state, so built-in plugin fields such as `AiralogyMarkdown` show the same inline error UI as regular var fields.
+
+  Limit engine assigner validation to each assigner's declared `dependent_fields`, so unrelated empty output fields in a record do not fail Pydantic validation before the selected assigner runs.
+
+  Validate local engine rootfs directories as OCI layouts and export the generated rootfs with Docker Buildx OCI output, preventing incomplete rootfs directories from being treated as runnable sandboxes. The local rootfs build now installs the workspace `airalogy` Python package and includes that source in the rootfs fingerprint.
+
+### Patch Changes
+
+- 47532f6: Parse AIMD `Literal[...]` and `enum=[...]` var definitions into enum metadata, and render recorder `var` and `var_table` enum fields as select controls while preserving non-string option values.
+- ede7afd: Render markdown code blocks with reusable Shiki-backed Vue code block rendering, including line numbers and soft wrapping that keeps wrapped lines aligned with the code column.
+
+  Allow the recorder workbench source and recording panels to be resized, and let users collapse the source panel when they need more room for the recorder.
+
+  Make block recorder fields such as AiralogyMarkdown, step, and check cards fill the available recorder panel width.
+
+  Make CodeStr, PyStr, and AiralogyMarkdown recorder editors start at a compact one-line height and grow with their content.
+
+  Show manual Assigner controls on every field declared in a shared server assigner's assigned_fields list.
+
+  Place var table Assigner controls in the table header so assigned table fields keep their full-width card layout.
+
+  Place CodeStr and PyStr Assigner controls in the field header instead of an external side button.
+
+  Use the shared compact Monaco auto-height behavior for note, markdown, and code editors.
+
+  Keep step notes after the step body and use one note entry point: body-end for steps with body content, header for bodyless steps.
+
+  Add a preview/source switch to step note editors and keep internal mode changes from being treated as field blur.
+
+  Make step note and timer toggle buttons more compact so dense protocols use less space.
+
+- Updated dependencies [e73eefa]
+- Updated dependencies [5732108]
+- Updated dependencies [47532f6]
+- Updated dependencies [ede7afd]
+  - @airalogy/aimd-core@2.8.0
+  - @airalogy/aimd-renderer@2.6.0
+
 ## 1.17.0
 
 ### Minor Changes
