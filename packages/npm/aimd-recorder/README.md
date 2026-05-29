@@ -6,7 +6,7 @@
 Reusable recording UI for AIMD (Airalogy Markdown), including inline protocol recorder, the combined `AimdRecorderEditor`, quiz answer components, and styles.
 
 Built-in variable input types include `CurrentTime`, `UserName`, `AiralogyMarkdown`, and `DNASequence`.
-`AiralogyMarkdown` now uses a full-width embedded AIMD/Markdown editor in recorder mode, opens in `Source` mode by default, keeps the full top toolbar, and still supports switching to `WYSIWYG` instead of a plain textarea.
+`AiralogyMarkdown` now uses a full-width embedded AIMD/Markdown field in recorder mode with rendered preview and source-editing modes; source editing keeps the full top toolbar and still supports switching to `WYSIWYG` instead of a plain textarea.
 In recorder/edit mode, `ref_var` references display current var values as readonly inline content when available.
 `var` and `var_table` labels display AIMD `title`, keep canonical ids visible, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus. Host `fieldMeta` can override the same display fields at runtime.
 Frontend-only `assigner runtime=client` blocks are executed locally for pure var computations.
@@ -53,7 +53,7 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 </template>
 ```
 
-`AiralogyMarkdown` fields render a full-width embedded AIMD/Markdown editor with the full top toolbar, default to `Source` mode, and still support switching to `WYSIWYG`. Even when the field is authored mid-sentence, recorder lifts it into its own block row instead of keeping it as a tiny inline control.
+`AiralogyMarkdown` fields render a full-width embedded AIMD/Markdown area with `Preview` and `Source` modes; preview uses the AIMD renderer and renders Mermaid code blocks. Source editing keeps the full top toolbar and still supports switching to `WYSIWYG`. Even when the field is authored mid-sentence, recorder lifts it into its own block row instead of keeping it as a tiny inline control.
 
 Numeric `var` inputs honor Pydantic-style constraints such as `gt`, `ge`, `lt`, `le`, and `multiple_of`; these constraints apply to `int`, `integer`, `float`, and `number` var types.
 Client assigners also use these constraints for dependency readiness, so an assigner will not run while a dependent numeric field violates its declared bounds.
@@ -190,7 +190,7 @@ Pass `fieldAdapters` to `AimdRecorder` when the host app needs to replace or wra
 
 If the host app needs per-type behavior instead, use `typePlugins`. A type plugin can define the initial value, normalization, display/parsing hooks, and even a dedicated widget for one specific AIMD type token.
 
-The built-in `AiralogyMarkdown` editor uses this same extension path, so a host plugin can still replace it if needed.
+The built-in `AiralogyMarkdown` field uses this same extension path, so a host plugin can still replace it when it needs a different preview/source workflow.
 
 See:
 

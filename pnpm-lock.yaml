@@ -288,6 +288,9 @@ importers:
       '@milkdown/kit':
         specifier: ^7.18.0
         version: 7.18.0(@codemirror/language@6.12.1)(@codemirror/state@6.5.4)(@codemirror/view@6.39.13)(typescript@5.8.3)
+      mermaid:
+        specifier: ^11.15.0
+        version: 11.15.0
       monaco-editor:
         specifier: ^0.52.2
         version: 0.52.2

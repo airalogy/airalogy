@@ -20,6 +20,11 @@ This repository is the Airalogy monorepo. Keep package boundaries explicit and a
 
 When adding or changing AIMD syntax, add or update a fixture in `spec/fixtures` and wire it into both Python and npm parser tests where practical.
 
+## Release Metadata
+
+- If a change affects a published package's external behavior, add a `.changeset/*.md` entry instead of manually editing package `CHANGELOG.md` files.
+- Do not bump package versions or edit generated package changelogs during normal feature work; Changesets release preparation generates those updates.
+
 ## Markdown Prose
 
 For user-facing Markdown docs and README files, keep prose paragraphs as single logical lines. Do not hard-wrap normal text by column width. Use blank lines to separate paragraphs, and reserve manual line breaks for lists, tables, code blocks, command continuations, and intentional Markdown line breaks.

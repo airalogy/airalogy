@@ -35,6 +35,7 @@ __all__ = [
     "FileIdDNA",
     "Recommended",
     "IgnoreStr",
+    "CodeStr",
     "PyStr",
     "JsStr",
     "TsStr",
@@ -73,7 +74,7 @@ from .file import (
 )
 from .user_name import UserName
 from .ignore import IgnoreStr
-from .code_str import PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
+from .code_str import CodeStr, PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
 from .atcg import ATCG
 from .dna import DNASequence
 from .aimd import AiralogyMarkdown
@@ -117,6 +118,7 @@ for descriptor in (
     AiralogyTypeDescriptor("FileIdDNA", storage_kind="file-id", ui_kind="file"),
     AiralogyTypeDescriptor("Recommended", storage_kind="scalar"),
     AiralogyTypeDescriptor("IgnoreStr", storage_kind="scalar"),
+    AiralogyTypeDescriptor("CodeStr", storage_kind="scalar", ui_kind="code"),
     AiralogyTypeDescriptor("PyStr", storage_kind="scalar", ui_kind="code"),
     AiralogyTypeDescriptor("JsStr", storage_kind="scalar", ui_kind="code"),
     AiralogyTypeDescriptor("TsStr", storage_kind="scalar", ui_kind="code"),

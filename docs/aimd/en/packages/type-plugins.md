@@ -26,7 +26,7 @@ Each plugin can define:
 
 This lets a host app add a full custom widget for a single type without replacing the whole recorder.
 
-The built-in `AiralogyMarkdown` recorder editor now uses this exact mechanism: the official plugin renders a full-width embedded AIMD/Markdown editor with both `Source` and `WYSIWYG` modes, and recorder lifts inline occurrences into block layout before rendering. Host apps can still override it if they need a different editor surface.
+The built-in `AiralogyMarkdown` recorder field now uses this exact mechanism: the official plugin renders a full-width embedded AIMD/Markdown field with `Preview` and `Source` modes, renders Mermaid code blocks in preview, and recorder lifts inline occurrences into block layout before rendering. Host apps can still override it if they need a different editor surface.
 
 ```vue
 <script setup lang="ts">

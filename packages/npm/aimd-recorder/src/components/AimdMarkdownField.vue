@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { defineComponent, ref, watch, type PropType, type VNode } from 'vue'
+import { computed, defineComponent, h, ref, shallowRef, watch, type PropType, type VNode } from 'vue'
 import { AimdEditor } from '@airalogy/aimd-editor/vue'
+import { createMermaidRenderer, renderToVue } from '@airalogy/aimd-renderer'
 import type { AimdRecorderMessages } from '../locales'
 import { getAimdRecorderScopeLabel } from '../locales'
 
@@ -39,8 +40,79 @@ function normalizeMarkdownModelValue(value: unknown): string {
   return String(value)
 }
 
+function isZhLocale(locale?: string): boolean {
+  return locale?.toLowerCase().startsWith('zh') ?? false
+}
+
+type MermaidApi = {
+  initialize: (config: Record<string, unknown>) => void
+  render: (id: string, text: string) => Promise<{ svg: string }> | { svg: string }
+}
+
+let mermaidRenderId = 0
+
+const AimdMarkdownMermaidBlock = defineComponent({
+  name: 'AimdMarkdownMermaidBlock',
+  props: {
+    code: { type: String, required: true },
+  },
+  setup(mermaidProps) {
+    const svg = ref('')
+    const failed = ref(false)
+    let renderRequestId = 0
+
+    async function renderMermaid() {
+      const code = mermaidProps.code.trim()
+      const requestId = ++renderRequestId
+      if (!code) {
+        svg.value = ''
+        failed.value = false
+        return
+      }
+
+      try {
+        const mermaidModule = await import('mermaid') as { default: MermaidApi }
+        const mermaid = mermaidModule.default
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: 'strict',
+        })
+        const result = await mermaid.render(`aimd-markdown-mermaid-${++mermaidRenderId}`, code)
+        if (requestId !== renderRequestId) {
+          return
+        }
+
+        svg.value = result.svg
+        failed.value = false
+      } catch {
+        if (requestId !== renderRequestId) {
+          return
+        }
+
+        svg.value = ''
+        failed.value = true
+      }
+    }
+
+    watch(() => mermaidProps.code, () => {
+      void renderMermaid()
+    }, { immediate: true })
+
+    return () => failed.value
+      ? h('pre', { class: 'aimd-markdown-field__mermaid-fallback' }, mermaidProps.code)
+      : h('div', {
+        class: 'aimd-markdown-field__mermaid',
+        innerHTML: svg.value,
+      })
+  },
+})
+
 const fieldRootRef = ref<HTMLElement | null>(null)
 const draftValue = ref(normalizeMarkdownModelValue(props.modelValue))
+const viewMode = ref<'preview' | 'source'>(draftValue.value.trim() ? 'preview' : 'source')
+const previewNodes = shallowRef<VNode[]>([])
+const previewRenderFailed = ref(false)
+let previewRenderRequestId = 0
 const RenderVNode = defineComponent({
   name: 'RenderVNode',
   props: {
@@ -50,6 +122,70 @@ const RenderVNode = defineComponent({
     return () => renderProps.vnode
   },
 })
+
+const PreviewOutlet = defineComponent({
+  name: 'AimdMarkdownFieldPreviewOutlet',
+  props: {
+    nodes: {
+      type: Array as () => VNode[],
+      required: true,
+    },
+  },
+  setup(previewProps) {
+    return () => previewProps.nodes
+  },
+})
+
+const hasValue = computed(() => Boolean(draftValue.value.trim()))
+const showPreview = computed(() => viewMode.value === 'preview')
+const previewLabel = computed(() => (isZhLocale(props.locale) ? '预览' : 'Preview'))
+const sourceLabel = computed(() => (isZhLocale(props.locale) ? '源码' : 'Source'))
+const emptyPreviewLabel = computed(() => (isZhLocale(props.locale) ? '暂无内容' : 'No content'))
+const previewToolbarLabel = computed(() => (isZhLocale(props.locale) ? 'Markdown 显示模式' : 'Markdown view mode'))
+
+async function renderPreview() {
+  const currentContent = draftValue.value.trim()
+  const requestId = ++previewRenderRequestId
+
+  if (!currentContent) {
+    previewNodes.value = []
+    previewRenderFailed.value = false
+    return
+  }
+
+  try {
+    const rendered = await renderToVue(currentContent, {
+      locale: props.locale,
+      mode: 'preview',
+      elementRenderers: {
+        pre: createMermaidRenderer(AimdMarkdownMermaidBlock),
+      },
+    })
+
+    if (requestId !== previewRenderRequestId) {
+      return
+    }
+
+    previewNodes.value = rendered.nodes
+    previewRenderFailed.value = false
+  } catch {
+    if (requestId !== previewRenderRequestId) {
+      return
+    }
+
+    previewNodes.value = []
+    previewRenderFailed.value = true
+  }
+}
+
+function switchToPreview() {
+  viewMode.value = 'preview'
+  void renderPreview()
+}
+
+function switchToSource() {
+  viewMode.value = 'source'
+}
 
 function emitDraftValue(markdown: string) {
   if (markdown === draftValue.value) {
@@ -76,8 +212,20 @@ watch(() => props.modelValue, (value) => {
     return
   }
 
+  const hadValue = hasValue.value
   draftValue.value = nextValue
+  if (!hadValue && nextValue.trim()) {
+    viewMode.value = 'preview'
+  }
 })
+
+watch(
+  () => [draftValue.value, props.locale] as const,
+  () => {
+    void renderPreview()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -95,12 +243,34 @@ watch(() => props.modelValue, (value) => {
         {{ getAimdRecorderScopeLabel('var', messages) }}
       </span>
       <span class="aimd-field__id">{{ varId }}</span>
-      <span v-if="assignerControl || assignerStatus" class="aimd-markdown-field__assigner-actions">
-        <span v-if="assignerControl" class="aimd-markdown-field__assigner-action">
-          <RenderVNode :vnode="assignerControl" />
+      <span class="aimd-markdown-field__header-actions">
+        <span class="aimd-markdown-field__view-switch" :aria-label="previewToolbarLabel">
+          <button
+            type="button"
+            class="aimd-markdown-field__view-btn"
+            :class="{ 'aimd-markdown-field__view-btn--active': showPreview }"
+            :aria-pressed="showPreview"
+            @click="switchToPreview"
+          >
+            {{ previewLabel }}
+          </button>
+          <button
+            type="button"
+            class="aimd-markdown-field__view-btn"
+            :class="{ 'aimd-markdown-field__view-btn--active': !showPreview }"
+            :aria-pressed="!showPreview"
+            @click="switchToSource"
+          >
+            {{ sourceLabel }}
+          </button>
         </span>
-        <span v-if="assignerStatus" class="aimd-markdown-field__assigner-state">
-          <RenderVNode :vnode="assignerStatus" />
+        <span v-if="assignerControl || assignerStatus" class="aimd-markdown-field__assigner-actions">
+          <span v-if="assignerControl" class="aimd-markdown-field__assigner-action">
+            <RenderVNode :vnode="assignerControl" />
+          </span>
+          <span v-if="assignerStatus" class="aimd-markdown-field__assigner-state">
+            <RenderVNode :vnode="assignerStatus" />
+          </span>
         </span>
       </span>
     </span>
@@ -110,7 +280,21 @@ watch(() => props.modelValue, (value) => {
     </span>
 
     <div class="aimd-markdown-field__editor-shell">
+      <div v-if="showPreview" class="aimd-markdown-field__preview-shell">
+        <div v-if="!hasValue" class="aimd-markdown-field__preview-empty">
+          {{ emptyPreviewLabel }}
+        </div>
+        <pre
+          v-else-if="previewRenderFailed"
+          class="aimd-markdown-field__preview-fallback"
+        >{{ draftValue }}</pre>
+        <div v-else class="aimd-markdown-field__preview">
+          <PreviewOutlet :nodes="previewNodes" />
+        </div>
+      </div>
+
       <AimdEditor
+        v-else
         class="aimd-markdown-field__editor"
         :model-value="draftValue"
         :locale="locale"
@@ -136,10 +320,37 @@ watch(() => props.modelValue, (value) => {
   width: min(100%, 1040px);
   min-width: 0;
   max-width: 100%;
+  border-color: #d8e1ee;
+  background: #fff;
+}
+
+.aimd-markdown-field.aimd-rec-inline--var-stacked:focus-within {
+  border-color: #b8c7dc;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.12);
 }
 
 .aimd-markdown-field .aimd-field__label {
   display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  border-radius: 8px 8px 0 0;
+  background: #f8fbff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.aimd-markdown-field__header-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding-right: 8px;
+}
+
+.aimd-markdown-field__view-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
 }
 
@@ -147,8 +358,6 @@ watch(() => props.modelValue, (value) => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
-  padding-right: 6px;
 }
 
 .aimd-markdown-field__assigner-action,
@@ -196,6 +405,160 @@ watch(() => props.modelValue, (value) => {
   width: 100%;
   min-width: 0;
   background: #fff;
+}
+
+.aimd-markdown-field__view-btn {
+  min-width: 46px;
+  min-height: 24px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.18s, border-color 0.18s, color 0.18s;
+}
+
+.aimd-markdown-field__view-btn:first-child {
+  border-radius: 5px 0 0 5px;
+}
+
+.aimd-markdown-field__view-btn:last-child {
+  margin-left: -1px;
+  border-radius: 0 5px 5px 0;
+}
+
+.aimd-markdown-field__view-btn:hover {
+  border-color: #9db1cc;
+  color: #1f4f8f;
+}
+
+.aimd-markdown-field__view-btn--active {
+  position: relative;
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.aimd-markdown-field__preview-shell {
+  min-width: 0;
+  min-height: 120px;
+  padding: 14px 18px;
+  background: #fff;
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.aimd-markdown-field__preview {
+  min-width: 0;
+}
+
+.aimd-markdown-field__preview-empty {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.aimd-markdown-field__preview-fallback,
+.aimd-markdown-field__mermaid-fallback {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+  color: inherit;
+}
+
+.aimd-markdown-field__mermaid {
+  overflow-x: auto;
+}
+
+.aimd-markdown-field__mermaid :deep(svg) {
+  max-width: 100%;
+  height: auto;
+}
+
+.aimd-markdown-field__preview :deep(ul),
+.aimd-markdown-field__preview :deep(ol) {
+  margin: 0.45em 0 0.75em;
+  padding-left: 1.6em;
+}
+
+.aimd-markdown-field__preview :deep(ul) {
+  list-style: disc outside;
+}
+
+.aimd-markdown-field__preview :deep(ol) {
+  list-style: decimal outside;
+}
+
+.aimd-markdown-field__preview :deep(li + li) {
+  margin-top: 0.25em;
+}
+
+.aimd-markdown-field__preview :deep(blockquote) {
+  margin: 0.8em 0;
+  padding: 0.25em 0 0.25em 0.9em;
+  border-left: 3px solid #cbd5e1;
+  color: #475569;
+}
+
+.aimd-markdown-field__preview :deep(code) {
+  padding: 0.1em 0.32em;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
+}
+
+.aimd-markdown-field__preview :deep(pre) {
+  overflow-x: auto;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.aimd-markdown-field__preview :deep(pre code) {
+  padding: 0;
+  background: transparent;
+}
+
+.aimd-markdown-field__preview :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  font-size: 0.95em;
+}
+
+.aimd-markdown-field__preview :deep(th),
+.aimd-markdown-field__preview :deep(td) {
+  padding: 7px 9px;
+  border: 1px solid #d8e1ee;
+  text-align: left;
+  vertical-align: top;
+}
+
+.aimd-markdown-field__preview :deep(th) {
+  background: #f8fbff;
+  font-weight: 650;
+}
+
+.aimd-markdown-field__preview :deep(p:first-child),
+.aimd-markdown-field__preview :deep(ul:first-child),
+.aimd-markdown-field__preview :deep(ol:first-child),
+.aimd-markdown-field__preview :deep(blockquote:first-child),
+.aimd-markdown-field__preview :deep(pre:first-child) {
+  margin-top: 0;
+}
+
+.aimd-markdown-field__preview :deep(p:last-child),
+.aimd-markdown-field__preview :deep(ul:last-child),
+.aimd-markdown-field__preview :deep(ol:last-child),
+.aimd-markdown-field__preview :deep(blockquote:last-child),
+.aimd-markdown-field__preview :deep(pre:last-child) {
+  margin-bottom: 0;
 }
 
 .aimd-markdown-field__editor-shell :deep(.aimd-editor) {

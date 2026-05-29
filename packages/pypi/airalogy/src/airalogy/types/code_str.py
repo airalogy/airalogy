@@ -8,6 +8,7 @@ from pydantic import Field
 
 
 __all__ = [
+    "CodeStr",
     "PyStr",
     "JsStr",
     "TsStr",
@@ -37,10 +38,19 @@ def CodeStrField(language: str):
     """
     lang = language.lower()
 
+    editor_description = (
+        "rendered in a plain code editor"
+        if lang == "plaintext"
+        else f"rendered in an editor with {lang} syntax highlighting"
+    )
+    content_description = (
+        "language-agnostic code or structured text"
+        if lang == "plaintext"
+        else f"{lang} source code"
+    )
+
     return Field(
-        description=(
-            f"Airalogy built-in type: CodeStr ({lang}). Strings of this type contain {lang} source code and are rendered in an editor with {lang} syntax highlighting."
-        ),
+        description=f"Airalogy built-in type: CodeStr ({lang}). Strings of this type contain {content_description} and are {editor_description}.",
         json_schema_extra={
             "airalogy_type": "CodeStr",
             "language": lang,
@@ -51,6 +61,7 @@ def CodeStrField(language: str):
 # --------------------------------------------------------------------------- #
 # Concrete language types
 # --------------------------------------------------------------------------- #
+CodeStr = Annotated[str, CodeStrField("plaintext")]
 PyStr = Annotated[str, CodeStrField("python")]
 JsStr = Annotated[str, CodeStrField("javascript")]
 TsStr = Annotated[str, CodeStrField("typescript")]

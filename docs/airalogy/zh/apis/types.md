@@ -86,7 +86,7 @@ class VarModel(BaseModel):
     content: AiralogyMarkdown
 ```
 
-定义为`AiralogyMarkdown`类型的字段，可以在Airalogy平台上自动生成一个Markdown编辑器，用于编辑Airalogy Markdown文本。注意，这里我们将其命名为`AiralogyMarkdown`，而非`Markdown`/`Md`，是因为Markdown有很多种变体和语法规范，我们这里显式的指定该Markdown采用Airalogy Markdown语法规范，以保证前端渲染的一致性和稳定性。
+定义为`AiralogyMarkdown`类型的字段，可以在Airalogy平台上自动生成一个Markdown字段，用于编辑和预览Airalogy Markdown文本。Recorder 里的该字段支持源码编辑与渲染预览；预览会按 AIMD renderer 渲染 Markdown，并显示 Mermaid 图。注意，这里我们将其命名为`AiralogyMarkdown`，而非`Markdown`/`Md`，是因为Markdown有很多种变体和语法规范，我们这里显式的指定该Markdown采用Airalogy Markdown语法规范，以保证前端渲染的一致性和稳定性。
 
 ## SnakeStr
 
@@ -196,13 +196,14 @@ from pydantic import BaseModel
 
 ## 编程语言相关代码字符串 (Code Strings)
 
-### PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
+### CodeStr, PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
 
 ```py
-from airalogy.types import PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
+from airalogy.types import CodeStr, PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
 from pydantic import BaseModel
 
 class VarModel(BaseModel):
+    generic_code: CodeStr
     python_code: PyStr
     javascript_code: JsStr
     typescript_code: TsStr
@@ -211,9 +212,7 @@ class VarModel(BaseModel):
     yaml_str: YamlStr
 ```
 
-定义为`PyStr`类型的字段，可以在Airalogy平台上自动生成一个Python代码编辑器，用于编辑Python代码。该编辑器会提供语法高亮等功能。该Field的值以`str`形式存储。
-
-其他编程语言相关字符串类型类似。
+定义为`CodeStr`类型的字段，可以在Airalogy平台上自动生成一个通用 Monaco 代码编辑器，用于编辑不指定语言的代码或结构化文本。定义为`PyStr`等语言专用类型的字段，会使用对应语言的语法高亮。该Field的值以`str`形式存储。
 
 ## ATCG
 

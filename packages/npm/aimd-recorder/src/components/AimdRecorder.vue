@@ -256,6 +256,8 @@ let pendingInlineBuildRequestId: number | null = null
 const timerNowMs = ref(Date.now())
 let protocolTimerTicker: ReturnType<typeof setInterval> | null = null
 const serverAssignerAbortControllers = new Map<string, AbortController>()
+const autoServerAssignerSignatures = new Map<string, string>()
+let autoServerAssignerScheduled = false
 
 const resolvedLocale = computed(() => resolveAimdRecorderLocale(props.locale))
 const resolvedMessages = computed(() => createAimdRecorderMessages(resolvedLocale.value, props.messages))
@@ -607,6 +609,7 @@ function markRecordChanged(options?: { rebuild?: boolean, runClientAssigners?: b
   if (options?.rebuild || assignerChanged) {
     scheduleInlineRebuild()
   }
+  scheduleAutoServerAssigners()
 }
 
 function setInternalAssignerStates(fieldKeys: Iterable<string>, patch: AimdFieldState) {
@@ -636,6 +639,120 @@ function setInternalAssignerState(fieldKey: string, patch: AimdFieldState) {
 
 function cancelServerAssigner(fieldKey: string) {
   serverAssignerAbortControllers.get(fieldKey)?.abort()
+}
+
+function getAssignableFieldTypeFromKey(fieldKey: string): AssignableRecorderFieldType {
+  if (fieldKey.startsWith("var_table:")) return "var_table"
+  if (fieldKey.startsWith("step:")) return "step"
+  if (fieldKey.startsWith("check:")) return "check"
+  return "var"
+}
+
+function isAutoServerAssignerMode(mode: string): boolean {
+  const normalized = normalizeAimdAssignerMode(mode)
+  return normalized === "auto"
+    || normalized === "auto_first"
+    || normalized === "auto_force"
+    || normalized === "auto_readonly"
+}
+
+function getRecordValueForFieldKey(fieldKey: string): unknown {
+  if (fieldKey.startsWith("var_table:")) {
+    const [, tableName, ...columnParts] = fieldKey.split(":")
+    const rows = localRecord.var[tableName]
+    if (!Array.isArray(rows)) return rows
+    const columnName = columnParts.join(":")
+    return columnName
+      ? rows.map(row => (row && typeof row === "object" && !Array.isArray(row) ? (row as Record<string, unknown>)[columnName] : undefined))
+      : rows
+  }
+  if (fieldKey.startsWith("step:")) return localRecord.step[fieldKey.slice("step:".length)]
+  if (fieldKey.startsWith("check:")) return localRecord.check[fieldKey.slice("check:".length)]
+  return localRecord.var[fieldKey.startsWith("var:") ? fieldKey.slice("var:".length) : fieldKey]
+}
+
+function isAutoServerValueReady(value: unknown): boolean {
+  return value !== undefined
+}
+
+function areAutoServerDependenciesReady(assigner: AimdResolvedAssigner, dependentData: Record<string, unknown>): boolean {
+  if (assigner.dependentFields.length === 0) {
+    return false
+  }
+  return assigner.dependentFields.every(field => (
+    Object.prototype.hasOwnProperty.call(dependentData, field)
+    && isAutoServerValueReady(dependentData[field])
+  ))
+}
+
+function shouldRunAutoFirstServerAssigner(assigner: AimdResolvedAssigner): boolean {
+  if (normalizeAimdAssignerMode(assigner.mode) !== "auto_first") {
+    return true
+  }
+  const currentValue = getRecordValueForFieldKey(assigner.fieldKey)
+  return currentValue === undefined || currentValue === ""
+}
+
+function getAutoServerAssignerGroupKey(assigner: AimdResolvedAssigner): string {
+  return JSON.stringify({
+    mode: normalizeAimdAssignerMode(assigner.mode),
+    dependentFields: assigner.dependentFields,
+    assigner: assigner.assigner,
+  })
+}
+
+function scheduleAutoServerAssigners() {
+  if (autoServerAssignerScheduled) {
+    return
+  }
+  autoServerAssignerScheduled = true
+  Promise.resolve().then(() => {
+    autoServerAssignerScheduled = false
+    void runAutoServerAssigners()
+  })
+}
+
+async function runAutoServerAssigners() {
+  if (props.readonly || !resolvedRunServerAssigner.value) {
+    return
+  }
+
+  const visitedGroups = new Set<string>()
+  for (const assigner of protocolAssignerEntries.value) {
+    if (!isAutoServerAssignerMode(assigner.mode)) {
+      continue
+    }
+    if (serverAssignerAbortControllers.has(assigner.fieldKey)) {
+      continue
+    }
+
+    const groupKey = getAutoServerAssignerGroupKey(assigner)
+    if (visitedGroups.has(groupKey)) {
+      continue
+    }
+    visitedGroups.add(groupKey)
+
+    if (!shouldRunAutoFirstServerAssigner(assigner)) {
+      continue
+    }
+
+    const dependentData = buildAimdAssignerDependentData(localRecord, assigner)
+    if (!areAutoServerDependenciesReady(assigner, dependentData)) {
+      continue
+    }
+
+    const signature = JSON.stringify(dependentData)
+    if (autoServerAssignerSignatures.get(groupKey) === signature) {
+      continue
+    }
+    autoServerAssignerSignatures.set(groupKey, signature)
+
+    await runServerAssigner(
+      assigner,
+      getAssignableFieldTypeFromKey(assigner.fieldKey),
+      assigner.fieldKey,
+    )
+  }
 }
 
 function getAssignedFieldStateKey(assignedField: string): string {
@@ -852,13 +969,12 @@ function renderInlineVar(node: AimdVarNode): VNode {
   const extraClasses = fieldRendering.fieldStateClasses(fieldKey)
   const canUseInternalAssignerControl = Boolean(meta?.enumOptions?.length)
     || ["number", "date", "datetime", "time", "text", "textarea", "checkbox", "file"].includes(inputKind)
-  const internalAssignerControl = canUseInternalAssignerControl
-    ? resolveAssignerControl("var", fieldKey)
-    : null
+  const fieldAssignerControl = resolveAssignerControl("var", fieldKey)
+  const internalAssignerControl = canUseInternalAssignerControl ? fieldAssignerControl : null
 
   if (typePlugin?.renderField) {
     const pluginSupportsInternalAssignerControl = typePlugin.supportsInlineAssignerControl === true
-    const pluginAssignerControl = pluginSupportsInternalAssignerControl ? internalAssignerControl : null
+    const pluginAssignerControl = pluginSupportsInternalAssignerControl ? fieldAssignerControl : null
     const pluginVNode = typePlugin.renderField({
       type,
       normalizedType: normalizeVarTypeName(type),
@@ -1357,6 +1473,7 @@ async function rebuildInlineNodes(
 async function parseAndBuild() {
   const currentRequestId = ++buildRequestId
   const currentInlineRequestId = ++inlineBuildRequestId
+  autoServerAssignerSignatures.clear()
   try {
     renderError.value = ""
     const extracted = parseAndExtract(props.content || "")
@@ -1373,6 +1490,7 @@ async function parseAndBuild() {
     }
 
     await rebuildInlineNodes(currentRequestId, undefined, currentInlineRequestId)
+    scheduleAutoServerAssigners()
   } catch (error) {
     if (currentRequestId !== buildRequestId) {
       return
@@ -1408,6 +1526,7 @@ watch(
     if (shouldRebuild || assignerChanged) {
       scheduleInlineRebuild()
     }
+    scheduleAutoServerAssigners()
   },
   { deep: true, immediate: true },
 )
@@ -1447,6 +1566,7 @@ watch(
   }),
   () => {
     scheduleInlineRebuild()
+    scheduleAutoServerAssigners()
   },
   { deep: true },
 )

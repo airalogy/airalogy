@@ -16,6 +16,12 @@ def test_builtin_type_registry_contains_official_types():
     assert descriptor.storage_kind == "structured"
     assert descriptor.ui_kind == "dna-sequence"
 
+    code_descriptor = registry.get("CodeStr")
+    assert code_descriptor is not None
+    assert code_descriptor.import_from == "airalogy.types"
+    assert code_descriptor.storage_kind == "scalar"
+    assert code_descriptor.ui_kind == "code"
+
 
 def test_register_and_unregister_custom_type_descriptor():
     descriptor = AiralogyTypeDescriptor(

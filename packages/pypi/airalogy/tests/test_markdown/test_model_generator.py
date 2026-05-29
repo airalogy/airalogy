@@ -156,6 +156,7 @@ options:
 {{var|avatar: FileIdJPG}}
 {{var|gender: ChineseGender}}
 {{var|plasmid: DNASequence}}
+{{var|plain_code: CodeStr}}
 """
         code = generate_model(content)
 
@@ -165,6 +166,7 @@ options:
         assert "CurrentTime" in code
         assert "FileIdJPG" in code
         assert "DNASequence" in code
+        assert "CodeStr" in code
         # Should not use import *
         assert "from airalogy.types import *" not in code
         assert "user_name: UserName" in code
@@ -172,6 +174,14 @@ options:
         assert "avatar: FileIdJPG" in code
         assert "gender: ChineseGender" in code
         assert "plasmid: DNASequence" in code
+        assert "plain_code: CodeStr" in code
+
+        namespace = {}
+        exec(code, namespace)
+        schema = namespace["VarModel"].model_json_schema()
+        plain_code_schema = schema["properties"]["plain_code"]
+        assert plain_code_schema["airalogy_type"] == "CodeStr"
+        assert plain_code_schema["language"] == "plaintext"
 
     def test_generate_simple_var_table(self):
         """Test generating model from simple var table."""

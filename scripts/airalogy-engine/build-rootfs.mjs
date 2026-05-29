@@ -16,14 +16,17 @@ const defaultTarPath = path.join(runtimeDir, 'airalogy-engine-image.tar')
 const manifestName = '.airalogy-rootfs.json'
 const localPythonPackageDir = path.join(repoRoot, 'packages/pypi/airalogy')
 const defaultBuildxBuilder = 'airalogy-engine-oci'
+const fallbackBuildxBuilder = `${defaultBuildxBuilder}-container`
 
 function parseArgs(argv) {
+  const envBuildxBuilder = process.env.AIRALOGY_ENGINE_BUILDX_BUILDER
   const options = {
     force: false,
     image: process.env.AIRALOGY_ENGINE_IMAGE_TAG || 'airalogy-engine:latest',
     rootfsDir: process.env.ROOTFS_PATH || defaultRootfsDir,
     tarPath: defaultTarPath,
-    builder: process.env.AIRALOGY_ENGINE_BUILDX_BUILDER || defaultBuildxBuilder,
+    builder: envBuildxBuilder || defaultBuildxBuilder,
+    builderExplicit: Boolean(envBuildxBuilder),
   }
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -40,6 +43,7 @@ function parseArgs(argv) {
       options.tarPath = path.resolve(requireValue(argv, ++index, arg))
     } else if (arg === '--builder') {
       options.builder = requireValue(argv, ++index, arg)
+      options.builderExplicit = true
     } else if (arg === '--help' || arg === '-h') {
       printHelp()
       process.exit(0)
@@ -111,18 +115,25 @@ function commandOutput(command, args) {
   })
 }
 
-function ensureOciBuildxBuilder(builder) {
+function ensureOciBuildxBuilder(builder, { allowFallback = false } = {}) {
   const inspect = commandOutput('docker', ['buildx', 'inspect', builder])
   if (inspect.status === 0) {
     const output = `${inspect.stdout}\n${inspect.stderr}`
     if (!output.includes('Driver: docker-container')) {
+      if (allowFallback) {
+        console.log(
+          `Buildx builder "${builder}" exists but is not using the docker-container driver. ` +
+          `Using "${fallbackBuildxBuilder}" instead.`,
+        )
+        return ensureOciBuildxBuilder(fallbackBuildxBuilder)
+      }
       throw new Error(
         `Buildx builder "${builder}" already exists but is not using the docker-container driver.\n` +
         'Use a different builder name with --builder or AIRALOGY_ENGINE_BUILDX_BUILDER.',
       )
     }
     run('docker', ['buildx', 'inspect', builder, '--bootstrap'])
-    return
+    return builder
   }
 
   run('docker', [
@@ -134,6 +145,7 @@ function ensureOciBuildxBuilder(builder) {
     'docker-container',
   ])
   run('docker', ['buildx', 'inspect', builder, '--bootstrap'])
+  return builder
 }
 
 async function hashSources() {
@@ -210,6 +222,7 @@ async function main() {
   const rootfsDir = path.resolve(options.rootfsDir)
   const tarPath = path.resolve(options.tarPath)
   const fingerprint = await hashSources()
+  let shouldRebuildExistingRootfs = options.force
 
   if (existsSync(rootfsDir) && !options.force) {
     const manifest = await readManifest(rootfsDir)
@@ -221,11 +234,12 @@ async function main() {
     }
     if (manifest?.fingerprint === fingerprint) {
       console.log(`Airalogy Engine rootfs is up to date: ${rootfsDir}`)
+      return
     } else {
-      console.log(`Airalogy Engine rootfs already exists: ${rootfsDir}`)
-      console.log('It may be stale. Rebuild with: pnpm build:engine-rootfs -- --force')
+      console.log(`Airalogy Engine rootfs is stale: ${rootfsDir}`)
+      console.log('Rebuilding because runtime source files changed.')
+      shouldRebuildExistingRootfs = true
     }
-    return
   }
 
   if (!checkCommand('docker', ['--version'])) {
@@ -243,9 +257,11 @@ async function main() {
       ].join('\n'),
     )
   }
-  ensureOciBuildxBuilder(options.builder)
+  const buildxBuilder = ensureOciBuildxBuilder(options.builder, {
+    allowFallback: !options.builderExplicit && options.builder === defaultBuildxBuilder,
+  })
 
-  if (options.force) {
+  if (shouldRebuildExistingRootfs) {
     await rm(rootfsDir, { recursive: true, force: true })
     await rm(tarPath, { force: true })
   }
@@ -257,7 +273,7 @@ async function main() {
     'buildx',
     'build',
     '--builder',
-    options.builder,
+    buildxBuilder,
     '-f',
     dockerfilePath,
     '-t',
@@ -277,6 +293,7 @@ async function main() {
     sources: [
       path.relative(repoRoot, dockerfilePath),
       path.relative(repoRoot, requirementsPath),
+      path.relative(repoRoot, localPythonPackageDir),
     ],
   })
 

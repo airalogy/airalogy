@@ -1,13 +1,73 @@
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { defineComponent, h, nextTick } from 'vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { createMermaidRendererMock, mermaidPreRendererMock, renderToVueMock } = vi.hoisted(() => {
+  const mermaidPreRendererMock = vi.fn()
+  return {
+    createMermaidRendererMock: vi.fn(() => mermaidPreRendererMock),
+    mermaidPreRendererMock,
+    renderToVueMock: vi.fn(),
+  }
+})
+
+vi.mock('@airalogy/aimd-editor/vue', () => ({
+  AimdEditor: defineComponent({
+    name: 'AimdEditorMock',
+    props: {
+      modelValue: {
+        type: String,
+        default: '',
+      },
+    },
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () => h('textarea', {
+        class: 'aimd-editor-mock',
+        value: props.modelValue,
+        onInput: (event: Event) => emit('update:modelValue', (event.target as HTMLTextAreaElement).value),
+      })
+    },
+  }),
+}))
+
+vi.mock('@airalogy/aimd-renderer', () => ({
+  createMermaidRenderer: createMermaidRendererMock,
+  renderToVue: renderToVueMock,
+}))
+
+import AimdMarkdownField from '../components/AimdMarkdownField.vue'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const source = readFileSync(resolve(__dirname, '../components/AimdMarkdownField.vue'), 'utf8')
 
+const recorderMessages = {
+  scope: {
+    var: '变量',
+    quiz: '题目',
+    step: '步骤',
+    check: '检查点',
+    table: '表格',
+  },
+}
+
+async function flushUi() {
+  await flushPromises()
+  await new Promise(resolve => setTimeout(resolve, 0))
+  await nextTick()
+}
+
 describe('AimdMarkdownField', () => {
+  beforeEach(() => {
+    createMermaidRendererMock.mockClear()
+    mermaidPreRendererMock.mockClear()
+    renderToVueMock.mockReset()
+  })
+
   it('embeds the full AimdEditor so toolbar controls remain available', () => {
     expect(source).toMatch(/import \{ AimdEditor \} from '@airalogy\/aimd-editor\/vue'/)
     expect(source).toMatch(/<AimdEditor/)
@@ -25,6 +85,13 @@ describe('AimdMarkdownField', () => {
     expect(source).toMatch(/aimd-markdown-field__editor/)
   })
 
+  it('can switch AiralogyMarkdown output into rendered preview mode', () => {
+    expect(source).toMatch(/renderToVue/)
+    expect(source).toMatch(/createMermaidRenderer/)
+    expect(source).toMatch(/aimd-markdown-field__view-switch/)
+    expect(source).toMatch(/aimd-markdown-field__preview/)
+  })
+
   it('can host assigner controls inside the markdown field shell', () => {
     expect(source).toMatch(/assignerControl/)
     expect(source).toMatch(/assignerStatus/)
@@ -36,5 +103,56 @@ describe('AimdMarkdownField', () => {
     expect(source).toMatch(/watch\(\(\) => props\.modelValue, \(value\) => \{/)
     expect(source).toMatch(/if \(nextValue === draftValue\.value\)/)
     expect(source).toMatch(/emitDraftValue/)
+  })
+
+  it('renders markdown previews through the renderer and wires Mermaid code fences', async () => {
+    renderToVueMock.mockImplementation(async (content: string) => ({
+      nodes: [h('div', { class: 'aimd-rendered-markdown' }, `rendered:${content}`)],
+      fields: {},
+    }))
+
+    const wrapper = mount(AimdMarkdownField, {
+      props: {
+        modelValue: '```mermaid\nflowchart TD\nA-->B\n```',
+        varId: 'graph_mermaid_preview',
+        locale: 'zh-CN',
+        messages: recorderMessages,
+      },
+    })
+
+    await flushUi()
+
+    expect(createMermaidRendererMock).toHaveBeenCalled()
+    expect(renderToVueMock).toHaveBeenCalledWith('```mermaid\nflowchart TD\nA-->B\n```', expect.objectContaining({
+      locale: 'zh-CN',
+      mode: 'preview',
+      elementRenderers: { pre: mermaidPreRendererMock },
+    }))
+    expect(wrapper.find('.aimd-markdown-field__preview').exists()).toBe(true)
+    expect(wrapper.find('.aimd-rendered-markdown').text()).toContain('flowchart TD')
+    expect(wrapper.find('.aimd-editor-mock').exists()).toBe(false)
+  })
+
+  it('lets users switch from preview back to source editing', async () => {
+    renderToVueMock.mockImplementation(async (content: string) => ({
+      nodes: [h('div', { class: 'aimd-rendered-markdown' }, `rendered:${content}`)],
+      fields: {},
+    }))
+
+    const wrapper = mount(AimdMarkdownField, {
+      props: {
+        modelValue: '# Summary',
+        varId: 'graph_summary',
+        locale: 'en-US',
+        messages: recorderMessages,
+      },
+    })
+
+    await flushUi()
+    await wrapper.findAll('.aimd-markdown-field__view-btn')[1].trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.aimd-editor-mock').exists()).toBe(true)
+    expect(wrapper.find('.aimd-markdown-field__preview').exists()).toBe(false)
   })
 })

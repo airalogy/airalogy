@@ -647,6 +647,92 @@ describe('ensureDefaultsFromFields', () => {
     expect(record.quiz.q1).toBe('')
   })
 
+  it('adds missing var table defaults from extracted AIMD fields', () => {
+    const record = createEmptyProtocolRecordData()
+    const fields = {
+      step: [],
+      check: [],
+      quiz: [],
+      var: [],
+      subvar: [],
+      assigner: [],
+      ref: [],
+      fig: [],
+      cite: [],
+      var_table: [{
+        id: 'monitoring_sites',
+        scope: 'var_table',
+        subvars: [{ id: 'site_id' }, { id: 'elevation_m' }],
+        default: [
+          { site_id: 'S01', elevation_m: 128 },
+          { site_id: 'S02', elevation_m: 82 },
+        ],
+      }],
+    }
+    const changed = ensureDefaultsFromFields(record, fields as any)
+    expect(changed).toBe(true)
+    expect(record.var.monitoring_sites).toEqual([
+      { site_id: 'S01', elevation_m: '128' },
+      { site_id: 'S02', elevation_m: '82' },
+    ])
+  })
+
+  it('replaces a generated empty var table placeholder with extracted defaults', () => {
+    const record = createEmptyProtocolRecordData()
+    record.var.monitoring_sites = [{ site_id: '', elevation_m: '' }]
+    const fields = {
+      step: [],
+      check: [],
+      quiz: [],
+      var: [],
+      subvar: [],
+      assigner: [],
+      ref: [],
+      fig: [],
+      cite: [],
+      var_table: [{
+        id: 'monitoring_sites',
+        scope: 'var_table',
+        subvars: [{ id: 'site_id' }, { id: 'elevation_m' }],
+        default: [
+          { site_id: 'S01', elevation_m: 128 },
+          { site_id: 'S02', elevation_m: 82 },
+        ],
+      }],
+    }
+    const changed = ensureDefaultsFromFields(record, fields as any)
+    expect(changed).toBe(true)
+    expect(record.var.monitoring_sites).toEqual([
+      { site_id: 'S01', elevation_m: '128' },
+      { site_id: 'S02', elevation_m: '82' },
+    ])
+  })
+
+  it('does not overwrite existing var table rows with extracted defaults', () => {
+    const record = createEmptyProtocolRecordData()
+    record.var.monitoring_sites = [{ site_id: 'USER', elevation_m: '10' }]
+    const fields = {
+      step: [],
+      check: [],
+      quiz: [],
+      var: [],
+      subvar: [],
+      assigner: [],
+      ref: [],
+      fig: [],
+      cite: [],
+      var_table: [{
+        id: 'monitoring_sites',
+        scope: 'var_table',
+        subvars: [{ id: 'site_id' }, { id: 'elevation_m' }],
+        default: [{ site_id: 'S01', elevation_m: 128 }],
+      }],
+    }
+    const changed = ensureDefaultsFromFields(record, fields as any)
+    expect(changed).toBe(false)
+    expect(record.var.monitoring_sites).toEqual([{ site_id: 'USER', elevation_m: '10' }])
+  })
+
   it('returns false when nothing changes', () => {
     const record = createEmptyProtocolRecordData()
     const fields = { step: [], check: [], quiz: [], var: [], var_table: [], subvar: [], assigner: [], ref: [], fig: [], cite: [] }

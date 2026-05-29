@@ -196,6 +196,63 @@ describe('AimdRecorder assigner controls', () => {
     expect(latestRecord?.var?.ic50).toBe(42)
   })
 
+  it('runs auto host assigners when dependent fields become available', async () => {
+    const runServerAssigner = vi.fn(async (_request: AimdAssignerRunnerRequest) => ({
+      data: {
+        assigned_fields: {
+          ic50: 42,
+        },
+      },
+    }))
+
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: '{{var|ic50: float}}',
+        locale: 'en-US',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+        serverAssigners: {
+          ic50: {
+            mode: 'auto',
+            dependent_fields: ['kinetics_file'],
+          },
+        },
+        runServerAssigner,
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    expect(runServerAssigner).not.toHaveBeenCalled()
+
+    await wrapper.setProps({
+      modelValue: {
+        var: {
+          kinetics_file: 'airalogy.id.file.csv',
+        },
+        step: {},
+        check: {},
+        quiz: {},
+      },
+    })
+    await flushPromises()
+    await nextTick()
+
+    expect(runServerAssigner).toHaveBeenCalledTimes(1)
+    expect(runServerAssigner.mock.calls[0]?.[0]).toMatchObject({
+      section: 'var',
+      fieldKey: 'var:ic50',
+      assignedField: 'ic50',
+      dependentData: {
+        kinetics_file: 'airalogy.id.file.csv',
+      },
+    })
+
+    const updates = wrapper.emitted('update:modelValue') ?? []
+    const latestRecord = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    expect(latestRecord?.var?.ic50).toBe(42)
+  })
+
   it('marks all returned assigned fields as done after a shared server assigner run', async () => {
     const finalConvNode = {
       ...varNode,
@@ -511,6 +568,44 @@ describe('AimdRecorder assigner controls', () => {
     expect(runServerAssigner).toHaveBeenCalledTimes(1)
     expect(wrapper.find('.aimd-rec-inline__assigner-error').text()).toBe('Missing dependent field: final_conv_pct')
     expect(wrapper.find('.aimd-rec-assigner-field__status--error').exists()).toBe(true)
+  })
+
+  it('mounts auto server assigner controls inside built-in markdown fields', async () => {
+    currentVarNode = {
+      ...pluginVarNode,
+      raw: '{{var|report: AiralogyMarkdown}}',
+      definition: {
+        name: 'report',
+        type: 'AiralogyMarkdown',
+      },
+    }
+    currentFields = {
+      ...fields,
+      var: ['report'],
+      var_definitions: [{ name: 'report', type: 'AiralogyMarkdown' }],
+    }
+
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: '{{var|report: AiralogyMarkdown}}',
+        locale: 'zh-CN',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+        serverAssigners: {
+          report: {
+            mode: 'auto',
+            dependent_fields: ['source_file'],
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+    await vi.dynamicImportSettled()
+    await nextTick()
+
+    expect(wrapper.find('.aimd-markdown-field__assigner-action .aimd-rec-assigner-field__button').exists()).toBe(true)
+    expect(wrapper.find('.aimd-markdown-field__assigner-state .aimd-rec-assigner-field__status').exists()).toBe(true)
   })
 
   it('mounts assigner controls inside type-plugin variable fields that support inline assigners', async () => {

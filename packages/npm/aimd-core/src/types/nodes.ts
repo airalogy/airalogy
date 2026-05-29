@@ -91,7 +91,7 @@ export interface QuizPreviewOptions {
 export interface AimdVarDefinition {
   id: string
   type?: string
-  default?: string | number | boolean | null
+  default?: unknown
   /** Original AIMD default literal, preserved for UI display when lexical form matters. */
   defaultRaw?: string
   required?: boolean

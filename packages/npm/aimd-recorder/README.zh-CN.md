@@ -6,7 +6,7 @@
 AIMD（Airalogy Markdown）记录 UI 组件与样式集合，包含协议内联录入组件、组合式 `AimdRecorderEditor` 与可复用题目作答控件。
 
 内置变量控件支持 `CurrentTime`、`UserName`、`AiralogyMarkdown` 和 `DNASequence`。
-`AiralogyMarkdown` 现在会在 recorder 中以横铺内嵌 AIMD/Markdown 编辑器呈现，默认进入 `源码` 模式，并保留完整顶部工具栏，同时支持切换到 `所见即所得`，而不是普通 textarea。
+`AiralogyMarkdown` 现在会在 recorder 中以横铺内嵌 AIMD/Markdown 字段呈现，可在渲染预览和源码编辑之间切换；源码编辑保留完整顶部工具栏，并继续支持切换到 `所见即所得`，而不是普通 textarea。
 在 recorder/edit 模式下，`ref_var` 如果已经有记录值，会优先以只读内联内容显示该值。
 `var` 和 `var_table` 标签会显示 AIMD 的 `title`，保留规范 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情；宿主也可以通过 `fieldMeta` 在运行时覆盖这些显示字段。
 前端受限的 `assigner runtime=client` 代码块会在 recorder 中本地执行，用于纯 `var` 计算。
@@ -53,7 +53,7 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 </template>
 ```
 
-`AiralogyMarkdown` 字段会渲染一个横铺内嵌的 AIMD/Markdown 编辑器，默认进入 `源码` 模式，并保留完整顶部工具栏，同时支持切换到 `所见即所得`。即使它写在一行文字中间，recorder 也会把这个字段提升成下一行的块级编辑区，而不是继续当成段内小控件。
+`AiralogyMarkdown` 字段会渲染一个横铺内嵌的 AIMD/Markdown 区域，可在 `预览` 和 `源码` 之间切换；预览会通过 AIMD renderer 输出 Markdown，并渲染 Mermaid 代码块。源码编辑保留完整顶部工具栏，同时支持切换到 `所见即所得`。即使它写在一行文字中间，recorder 也会把这个字段提升成下一行的块级编辑区，而不是继续当成段内小控件。
 
 数值 `var` 输入会识别 `gt`、`ge`、`lt`、`le`、`multiple_of` 这类 Pydantic 风格约束；这些约束只对 `int`、`integer`、`float`、`number` 类型生效。
 client assigner 也会用这些约束判断依赖是否就绪，因此依赖的数值字段违反声明边界时，assigner 不会执行。
@@ -190,7 +190,7 @@ const fieldAdapters = {
 
 如果宿主应用需要的是某个具体类型的行为扩展，而不是整体替换某类字段 UI，则应该使用 `typePlugins`。type plugin 可以为单个 AIMD 类型定义初始值、归一化、显示/解析钩子，甚至完整的专用 widget。
 
-内建的 `AiralogyMarkdown` 编辑器也是沿用这条扩展路径实现的，因此宿主应用如果需要不同的源码/所见即所得工作流，仍然可以覆盖它。
+内建的 `AiralogyMarkdown` 字段也是沿用这条扩展路径实现的，因此宿主应用如果需要不同的预览/源码工作流，仍然可以覆盖它。
 
 参见：
 

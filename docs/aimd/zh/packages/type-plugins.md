@@ -26,7 +26,7 @@
 
 这意味着宿主应用可以只为某一个类型增加专用 widget，而不必整体替换整个 recorder。
 
-内建的 `AiralogyMarkdown` recorder 编辑器现在就是沿用这条机制实现的：官方插件会渲染一个横铺内嵌、同时支持 `源码` / `所见即所得` 的 AIMD/Markdown 编辑器；如果字段写在一行文字中间，recorder 会先把它提升成块级编辑区。宿主应用如果需要不同的编辑界面，仍然可以覆盖它。
+内建的 `AiralogyMarkdown` recorder 字段现在就是沿用这条机制实现的：官方插件会渲染一个横铺内嵌、支持 `预览` / `源码` 的 AIMD/Markdown 字段，预览会渲染 Mermaid 代码块；如果字段写在一行文字中间，recorder 会先把它提升成块级编辑区。宿主应用如果需要不同的编辑界面，仍然可以覆盖它。
 
 ```vue
 <script setup lang="ts">

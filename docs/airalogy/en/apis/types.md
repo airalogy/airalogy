@@ -85,7 +85,7 @@ class VarModel(BaseModel):
     content: AiralogyMarkdown
 ```
 
-Fields of type `AiralogyMarkdown` render a Markdown editor that supports **Airalogy Markdown**, the platform’s own dialect. Using a distinct name avoids confusion with the many Markdown variants and guarantees consistent rendering.
+Fields of type `AiralogyMarkdown` render a Markdown field for editing and previewing **Airalogy Markdown**, the platform’s own dialect. In recorder UIs, the field supports source editing and rendered preview; preview uses the AIMD renderer and displays Mermaid diagrams. Using a distinct name avoids confusion with the many Markdown variants and guarantees consistent rendering.
 
 ## SnakeStr
 
@@ -194,13 +194,14 @@ class VarModel(BaseModel):
 
 ## Code-String Types
 
-### `PyStr`, `JsStr`, `TsStr`, `JsonStr`, `TomlStr`, `YamlStr`
+### `CodeStr`, `PyStr`, `JsStr`, `TsStr`, `JsonStr`, `TomlStr`, `YamlStr`
 
 ```python
-from airalogy.types import PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
+from airalogy.types import CodeStr, PyStr, JsStr, TsStr, JsonStr, TomlStr, YamlStr
 from pydantic import BaseModel
 
 class VarModel(BaseModel):
+    generic_code:   CodeStr
     python_code:     PyStr
     javascript_code: JsStr
     typescript_code: TsStr
@@ -209,8 +210,7 @@ class VarModel(BaseModel):
     yaml_str:        YamlStr
 ```
 
-Each of these types renders a language-specific code editor with syntax highlighting.
-The field value is stored as a plain string.
+`CodeStr` renders a plain Monaco code editor for language-agnostic code or structured text, while the language-specific types render editors with syntax highlighting where available. The field value is stored as a plain string.
 
 ## `ATCG`
 

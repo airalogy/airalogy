@@ -149,6 +149,38 @@ describe('parseAndExtract', () => {
     expect(fields.var).toContain('age')
     expect(fields.step.length).toBeGreaterThan(0)
   })
+
+  it('extracts multiline var tables with object-list defaults', () => {
+    const content = `{{var|monitoring_sites: list[MonitoringSite] = [
+      {"site_id": "S01", "latitude": 30.0, "longitude": 120.0, "elevation_m": 128.0},
+      {"site_id": "S02", "latitude": 30.1, "longitude": 120.1, "elevation_m": 82.0}
+    ],
+    title = "Monitoring sites",
+    subvars = [
+      var(site_id: str, title = "Site ID"),
+      var(latitude: float, title = "Latitude"),
+      var(longitude: float, title = "Longitude"),
+      var(elevation_m: float, title = "Elevation")
+    ]
+  }}`
+    const fields = parseAndExtract(content)
+
+    expect(fields.var_table[0]).toMatchObject({
+      id: 'monitoring_sites',
+      title: 'Monitoring sites',
+      type_annotation: 'list[MonitoringSite]',
+      default: [
+        { site_id: 'S01', latitude: 30, longitude: 120, elevation_m: 128 },
+        { site_id: 'S02', latitude: 30.1, longitude: 120.1, elevation_m: 82 },
+      ],
+    })
+    expect(fields.var_table[0]?.subvars.map(subvar => subvar.id)).toEqual([
+      'site_id',
+      'latitude',
+      'longitude',
+      'elevation_m',
+    ])
+  })
 })
 
 // ---------------------------------------------------------------------------

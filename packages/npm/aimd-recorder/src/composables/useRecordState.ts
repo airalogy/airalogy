@@ -363,6 +363,14 @@ export function normalizeVarTableRows(raw: unknown, columns: string[]): Record<s
   return rows
 }
 
+function isPlaceholderVarTableRows(rows: Record<string, string>[], columns: string[]): boolean {
+  if (rows.length !== 1) {
+    return false
+  }
+
+  return columns.every(column => rows[0]?.[column] === "")
+}
+
 export interface VarTablePastedCell {
   rowIndex: number
   column: string
@@ -456,9 +464,20 @@ export function ensureDefaultsFromFields(localRecord: AimdProtocolRecordData, fi
 
   for (const vt of normalizeVarTableFields(fields.var_table)) {
     const columns = vt.subvars.map(subvar => subvar.id)
-    const rows = localRecord.var[vt.id]
-    const normalizedRows = normalizeVarTableRows(rows, columns)
-    if (JSON.stringify(normalizedRows) !== JSON.stringify(rows)) {
+    const hasExistingRows = vt.id in localRecord.var
+    const defaultRows = Array.isArray(vt.default) && vt.default.length > 0
+      ? normalizeVarTableRows(vt.default, columns)
+      : undefined
+    const rows = hasExistingRows ? localRecord.var[vt.id] : (defaultRows ?? vt.default)
+    const existingRows = normalizeVarTableRows(rows, columns)
+    const shouldApplyDefaults = Boolean(
+      hasExistingRows
+      && defaultRows
+      && isPlaceholderVarTableRows(existingRows, columns)
+      && !isPlaceholderVarTableRows(defaultRows, columns),
+    )
+    const normalizedRows = shouldApplyDefaults && defaultRows ? defaultRows : existingRows
+    if (!hasExistingRows || JSON.stringify(normalizedRows) !== JSON.stringify(rows)) {
       localRecord.var[vt.id] = normalizedRows
       changed = true
     }

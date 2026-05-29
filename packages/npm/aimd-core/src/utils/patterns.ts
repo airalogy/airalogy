@@ -8,7 +8,7 @@
  * Pattern for escaped protocol fields in markdown
  * Matches: {{var|name}}, {{step|name}}, {{var_table|name, subvars=[...]}}, etc.
  */
-export const ESCAPED_PROTOCOL_FIELDS = /\{\{(var_table|var|step|check|r[rq]|ref_step|rv_ref)\\?\|([^}]+)\}\}/g
+export const ESCAPED_PROTOCOL_FIELDS = /\{\{(var_table|var|step|check|r[rq]|ref_step|rv_ref)\\?\|([\s\S]*?)\}\}/g
 
 /** Pattern to extract subvars from var_table definition: subvars=[col1, col2, col3] */
 export const DYNAMIC_TABLE_SUB_VAR = /([^",]+)=\[(?<vars>[^"]+)\]/g

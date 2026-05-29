@@ -604,7 +604,7 @@ function parseSimpleVarDef(content: string): AimdVarDefinition {
 
   const eqIndex = rest.indexOf("=")
   let type: string
-  let defaultValue: string | number | boolean | null | undefined
+  let defaultValue: unknown
   let defaultRaw: string | undefined
 
   if (eqIndex > 0) {
@@ -633,7 +633,7 @@ function parseSimpleVarDef(content: string): AimdVarDefinition {
 /**
  * Parse default value.
  */
-function parseDefaultValue(value: string): string | number | boolean | null {
+function parseDefaultValue(value: string): unknown {
   const trimmed = value.trim()
 
   if (trimmed === "true" || trimmed === "True")
@@ -654,6 +654,18 @@ function parseDefaultValue(value: string): string | number | boolean | null {
   if ((trimmed.startsWith("\"") && trimmed.endsWith("\""))
     || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
     return trimmed.slice(1, -1)
+  }
+
+  if (
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))
+    || (trimmed.startsWith("{") && trimmed.endsWith("}"))
+  ) {
+    try {
+      return JSON.parse(trimmed)
+    }
+    catch {
+      // Fall through to preserving the raw literal for Python-style values.
+    }
   }
 
   return trimmed

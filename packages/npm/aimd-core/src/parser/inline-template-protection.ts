@@ -1,4 +1,4 @@
-const AIMD_INLINE_TEMPLATE_PATTERN = /\{\{(var_table|var|step|check|ref_step|ref_var|ref_fig|cite)\s*\|[^}]+?\}\}/g
+const AIMD_INLINE_TEMPLATE_PATTERN = /\{\{(var_table|var|step|check|ref_step|ref_var|ref_fig|cite)\s*\|[\s\S]*?\}\}/g
 const AIMD_INLINE_TEMPLATE_TOKEN_PATTERN = /AIMDINLINETEMPLATE([0-9a-f]+)TOKEN/g
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()

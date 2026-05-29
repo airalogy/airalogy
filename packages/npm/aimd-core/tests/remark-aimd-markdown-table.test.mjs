@@ -93,6 +93,42 @@ test('template protection does not break normal inline vars', () => {
   assert.deepEqual(fields.var, ['water_volume_ml'])
 })
 
+test('template protection handles multiline var tables with object-list defaults', () => {
+  const { tree, fields } = parseAimd(`{{var|monitoring_sites: list[MonitoringSite] = [
+    {"site_id": "S01", "latitude": 30.0, "longitude": 120.0, "elevation_m": 128.0},
+    {"site_id": "S02", "latitude": 30.1, "longitude": 120.1, "elevation_m": 82.0}
+  ],
+  title = "Monitoring sites",
+  subvars = [
+    var(site_id: str, title = "Site ID"),
+    var(latitude: float, title = "Latitude"),
+    var(longitude: float, title = "Longitude"),
+    var(elevation_m: float, title = "Elevation")
+  ]
+}}`)
+  const aimdNode = findAimdNode(tree)
+
+  assert.equal(aimdNode?.fieldType, 'var_table')
+  assert.equal(aimdNode?.id, 'monitoring_sites')
+  assert.equal(aimdNode?.definition?.type, 'list[MonitoringSite]')
+  assert.deepEqual(aimdNode?.definition?.default, [
+    { site_id: 'S01', latitude: 30, longitude: 120, elevation_m: 128 },
+    { site_id: 'S02', latitude: 30.1, longitude: 120.1, elevation_m: 82 },
+  ])
+  assert.equal(fields.var_table[0]?.id, 'monitoring_sites')
+  assert.equal(fields.var_table[0]?.title, 'Monitoring sites')
+  assert.deepEqual(fields.var_table[0]?.default, [
+    { site_id: 'S01', latitude: 30, longitude: 120, elevation_m: 128 },
+    { site_id: 'S02', latitude: 30.1, longitude: 120.1, elevation_m: 82 },
+  ])
+  assert.deepEqual(fields.var_table[0]?.subvars.map(subvar => subvar.id), [
+    'site_id',
+    'latitude',
+    'longitude',
+    'elevation_m',
+  ])
+})
+
 test('float defaults preserve their original literal for UI display', () => {
   const { tree } = parseAimd('Temperature: {{var|temperature: float = 25.0}}')
   const aimdNode = findAimdNode(tree)

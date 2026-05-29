@@ -33,6 +33,10 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value)
 }
 
+function isEmptyObjectRecord(value: unknown): boolean {
+  return isObjectRecord(value) && Object.keys(value).length === 0
+}
+
 function getStringProperty(record: Record<string, unknown>, keys: string[]): string | undefined {
   for (const key of keys) {
     const value = record[key]
@@ -185,7 +189,7 @@ export function normalizeAimdAssignerDependentValue(value: unknown): unknown {
   if (Array.isArray(value)) {
     const normalizedItems = value
       .map(item => normalizeAimdAssignerDependentValue(item))
-      .filter(item => item !== undefined)
+      .filter(item => item !== undefined && !isEmptyObjectRecord(item))
     return normalizedItems
   }
 
@@ -195,11 +199,12 @@ export function normalizeAimdAssignerDependentValue(value: unknown): unknown {
       return fileId
     }
 
-    return Object.fromEntries(
+    const normalizedObject = Object.fromEntries(
       Object.entries(value)
         .map(([key, item]) => [key, normalizeAimdAssignerDependentValue(item)] as const)
         .filter(([, item]) => item !== undefined),
     )
+    return normalizedObject
   }
 
   return value

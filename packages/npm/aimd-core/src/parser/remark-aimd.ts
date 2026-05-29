@@ -235,7 +235,7 @@ function processTextNode(
   const result: InlineContentNode[] = []
   let lastIndex = 0
 
-  const pattern = /\{\{(var_table|var|step|check|ref_step|ref_var|ref_fig|cite)\s*\|\s*([^}]+)\}\}/g
+  const pattern = /\{\{(var_table|var|step|check|ref_step|ref_var|ref_fig|cite)\s*\|\s*([\s\S]*?)\}\}/g
 
   let match: RegExpExecArray | null = pattern.exec(value)
   while (match !== null) {
@@ -456,7 +456,7 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
                   const title = getAimdFieldTitle(def)
                   const description = getAimdFieldDescription(def)
                   const examples = getAimdFieldExamples(def)
-                  fields.var_table.push({
+                  const tableField: ExtractedAimdFields["var_table"][number] = {
                     id: aimdNode.id,
                     scope: "var_table",
                     subvars,
@@ -465,6 +465,13 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
                     description,
                     examples: examples.length > 0 ? examples : undefined,
                     kwargs: def?.kwargs,
+                  }
+                  if (def && Object.prototype.hasOwnProperty.call(def, "default")) {
+                    tableField.default = def.default
+                    tableField.defaultRaw = def.defaultRaw
+                  }
+                  fields.var_table.push({
+                    ...tableField,
                   })
                 }
                 break

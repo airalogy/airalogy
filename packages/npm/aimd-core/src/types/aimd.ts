@@ -251,6 +251,10 @@ export interface AimdVarTableField {
   description?: string
   /** Example rows or values for the table */
   examples?: unknown[]
+  /** Optional default rows */
+  default?: unknown
+  /** Original AIMD default literal, preserved for UI display when lexical form matters. */
+  defaultRaw?: string
   /** Additional kwargs from AIMD syntax */
   kwargs?: Record<string, unknown>
 }
