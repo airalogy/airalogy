@@ -1,0 +1,254 @@
+# 监测站点物理约束图与 3D 打印参数
+
+## 协议说明
+
+本协议用于将一组检测或监测站点的经纬度、海拔和站点属性转换为一个带物理约束的有向图，并进一步生成可用于 3D 打印实体网络模型的尺寸参数。图的边表示“上游或高程较高站点可能流向下游或低程站点”的推断关系，必须同时满足距离、高程差、坡度、方向、置信度和可打印性约束。本协议只基于站点点位数据进行几何和物理近似推断，不替代 DEM、水文模型、实测流向、河网或管网资料。
+
+## Step 1：定义建图任务
+
+{{step|define_graph_task, check=True}} 明确建图目的、站点类型、坐标基准和输出用途；如果存在真实河网、管网、流量或 DEM，应在后续人工复核中作为约束补充。
+
+记录人：{{var|record_recorder: UserName, title = "记录人"}}
+
+记录时间：{{var|record_time: CurrentTime, title = "记录时间"}}
+
+项目名称：{{var|project_name: str = "监测站点物理约束图", title = "项目名称"}}
+
+图编号：{{var|graph_id: str = "GRAPH-YYYYMMDD-SITES", title = "图编号", description = "建议包含日期和区域名称"}}
+
+建图目的：{{var|graph_objective: Literal["水文连通性推断", "污染传播路径推断", "站点网络可视化", "3D 打印展示", "采样路线辅助"] = "水文连通性推断", title = "建图目的"}}
+
+坐标基准：{{var|coordinate_reference: str = "WGS84 经纬度", title = "坐标基准"}}
+
+站点数据说明：{{var|site_data_note: AiralogyMarkdown = "输入每个监测站点的站点编号、名称、纬度、经度和海拔。若海拔来自手持 GPS、地图 API 或 DEM，需要记录精度；若站点位于管网、涵洞、水库、泵站或人工调水系统，应在备注中说明。", title = "站点数据说明"}}
+
+## Step 2：录入监测站点
+
+{{step|enter_monitoring_sites, check=True}} 逐行录入站点经纬度和海拔。至少需要 2 个站点才能生成边；海拔精度越差，最小高程差阈值应越大。
+
+监测站点：
+
+{{var|monitoring_sites: list[MonitoringSite] = [
+        {"site_id": "S01", "site_name": "上游坡面站", "latitude": 30.0000, "longitude": 120.0000, "elevation_m": 128.0, "site_type": "河流", "elevation_accuracy_m": 2.0, "priority": 1, "note": "示例高程较高"},
+        {"site_id": "S02", "site_name": "中游汇流站", "latitude": 30.0060, "longitude": 120.0040, "elevation_m": 104.0, "site_type": "河流", "elevation_accuracy_m": 2.0, "priority": 1, "note": "示例中游"},
+        {"site_id": "S03", "site_name": "支沟站", "latitude": 30.0040, "longitude": 119.9960, "elevation_m": 116.0, "site_type": "溪沟", "elevation_accuracy_m": 2.0, "priority": 2, "note": "示例支流"},
+        {"site_id": "S04", "site_name": "下游控制站", "latitude": 30.0120, "longitude": 120.0060, "elevation_m": 82.0, "site_type": "河流", "elevation_accuracy_m": 2.0, "priority": 1, "note": "示例下游"}
+    ],
+    title = "监测站点",
+    description = "经纬度使用十进制度，海拔单位为 m",
+    subvars = [
+        var(site_id: str, title = "站点编号"),
+        var(site_name: str, title = "站点名称"),
+        var(latitude: float, title = "纬度", ge = -90, le = 90),
+        var(longitude: float, title = "经度", ge = -180, le = 180),
+        var(elevation_m: float, title = "海拔（m）"),
+        var(site_type: Literal["河流", "溪沟", "湖库", "地下水", "排口", "管网", "雨水口", "坡面", "湿地", "其他"] = "河流", title = "站点类型"),
+        var(elevation_accuracy_m: float = 2.0, title = "海拔精度（m）", ge = 0),
+        var(priority: int = 1, title = "站点优先级", description = "1 为主站，数值越大优先级越低", ge = 1),
+        var(note: str, title = "备注")
+    ]
+}}
+
+原始站点文件（CSV）：{{var|site_csv_file: FileIdCSV, title = "原始站点文件 CSV", description = "上传包含 site_id、latitude、longitude、elevation_m 等字段的站点 CSV 后，点击图生成状态字段旁的 Assigner 按钮生成图。"}}
+
+<details>
+<summary>站点 CSV 推荐结构</summary>
+
+CSV 建议使用 UTF-8 编码，第一行为表头；每行一个站点。`site_id`、`latitude`、`longitude`、`elevation_m` 为必需字段，其他字段可留空但不要删除列名。
+
+| 字段名 | 含义 | 单位/格式 | 示例 |
+| --- | --- | --- | --- |
+| `site_id` | 站点编号 | 文本 | S01 |
+| `site_name` | 站点名称 | 文本 | 上游坡面站 |
+| `latitude` | 纬度 | 十进制度 | 30.0000 |
+| `longitude` | 经度 | 十进制度 | 120.0000 |
+| `elevation_m` | 海拔 | m | 128.0 |
+| `site_type` | 站点类型 | 文本 | 河流 |
+| `elevation_accuracy_m` | 海拔精度 | m | 2.0 |
+| `priority` | 站点优先级 | 整数 | 1 |
+| `note` | 备注 | 文本 | GPS 高程，待 DEM 复核 |
+
+```csv
+site_id,site_name,latitude,longitude,elevation_m,site_type,elevation_accuracy_m,priority,note
+S01,上游坡面站,30.0000,120.0000,128.0,河流,2.0,1,"示例高程较高"
+S02,中游汇流站,30.0060,120.0040,104.0,河流,2.0,1,"示例中游"
+S03,支沟站,30.0040,119.9960,116.0,溪沟,2.0,2,"示例支流"
+S04,下游控制站,30.0120,120.0060,82.0,河流,2.0,1,"示例下游"
+```
+
+</details>
+
+## Step 3：设置物理建图规则
+
+{{step|configure_physical_rules, check=True}} 设置候选边的距离、高程差、坡度、出边数量和交叉约束。规则越严格，图越稀疏；规则越宽松，候选边越多，需要人工复核。
+
+最大连边距离（km）：{{var|max_link_distance_km: float = 2.0, title = "最大连边距离", description = "超过该距离的站点不直接连边", gt = 0}}
+
+最小连边距离（m）：{{var|min_link_distance_m: float = 10.0, title = "最小连边距离", description = "低于该距离可能是同一站点或重复点", ge = 0}}
+
+最小高程差（m）：{{var|min_elevation_drop_m: float = 1.0, title = "最小高程差", description = "上游站点必须至少比下游站点高出该值；建议不小于海拔测量误差"}}
+
+最大允许坡度（m/km）：{{var|max_slope_m_per_km: float = 200.0, title = "最大允许坡度", description = "过大坡度会被标记为不稳定或人工复核", gt = 0}}
+
+最小有效坡度（m/km）：{{var|min_slope_m_per_km: float = 0.2, title = "最小有效坡度", description = "过小坡度可能无法可靠判断流向", ge = 0}}
+
+每个站点最多下游边数：{{var|max_downstream_edges_per_site: int = 2, title = "每个站点最多下游边数", ge = 1, le = 6}}
+
+优先连向最近低程点：{{var|prefer_nearest_lower_site: bool = True, title = "优先连向最近低程点"}}
+
+避免平面交叉边：{{var|avoid_crossing_edges: bool = True, title = "避免平面交叉边", description = "启用后会删除较低置信度的交叉边，便于图面和 3D 打印"}}
+
+允许同高程边：{{var|allow_equal_elevation_edges: bool = False, title = "允许同高程边", description = "一般不建议开启；只有潮汐、管网或泵站系统才可能需要"}}
+
+人工强制边：
+
+{{var|manual_edges: list[ManualEdge] = [],
+    title = "人工强制边",
+    description = "用于添加已知河网、管网、涵洞或实测流向；会覆盖距离或坡度筛选，但仍会标记是否违反高程规则",
+    subvars = [
+        var(from_site_id: str = "", title = "起点站点"),
+        var(to_site_id: str = "", title = "终点站点"),
+        var(edge_type: Literal["实测流向", "河网连接", "管网连接", "涵洞连接", "人工调水", "其他"] = "实测流向", title = "边类型"),
+        var(note: str = "", title = "备注")
+    ]
+}}
+
+禁用边：
+
+{{var|blocked_edges: list[BlockedEdge] = [],
+    title = "禁用边",
+    description = "用于排除已知不连通、隔水岭、堤坝阻隔或错误候选边",
+    subvars = [
+        var(from_site_id: str = "", title = "起点站点"),
+        var(to_site_id: str = "", title = "终点站点"),
+        var(reason: str = "", title = "禁用原因")
+    ]
+}}
+
+## Step 4：生成物理约束图
+
+{{step|generate_physical_graph, check=True}} 运行 Assigner，根据站点坐标、海拔和物理规则生成候选有向边、邻接关系、图诊断和需要人工复核的问题。
+
+图生成状态：{{var|graph_generation_note: AiralogyMarkdown = "", title = "图生成状态", description = "上传原始站点 CSV 或编辑站点表后，点击本字段旁的 Assigner 按钮生成推断边、邻接表、Mermaid 图和 SVG 示意图。"}}
+
+图摘要：{{var|graph_summary: AiralogyMarkdown = "", title = "图摘要"}}
+
+推断边：
+
+{{var|inferred_edges: list[InferredEdge] = [],
+    title = "推断边",
+    subvars = [
+        var(edge_id: str, title = "边编号"),
+        var(from_site_id: str, title = "上游或高程较高站点"),
+        var(to_site_id: str, title = "下游或低程站点"),
+        var(distance_km: float = 0.0, title = "距离（km）", ge = 0),
+        var(elevation_drop_m: float = 0.0, title = "高程差（m）"),
+        var(slope_m_per_km: float = 0.0, title = "坡度（m/km）"),
+        var(confidence_score: float = 0.0, title = "置信度（0-1）", ge = 0, le = 1),
+        var(rule_status: str, title = "规则状态"),
+        var(note: str, title = "备注")
+    ]
+}}
+
+邻接表：{{var|adjacency_list: AiralogyMarkdown = "", title = "邻接表"}}
+
+图可视化说明：{{var|graph_visual_legend: AiralogyMarkdown = "", title = "图可视化说明"}}
+
+Mermaid 流向图：{{var|graph_mermaid_preview: AiralogyMarkdown = "", title = "Mermaid 流向图", description = "支持 Mermaid 的渲染器会直接显示为流向图；也可复制到 Mermaid Live Editor 进一步调整"}}
+
+SVG 平面示意图：{{var|graph_svg_file: FileIdSVG = "", title = "SVG 平面示意图", description = "如果 Assigner 运行环境允许上传文件，这里会显示可视化 SVG"}}
+
+图诊断：{{var|graph_diagnostics: AiralogyMarkdown = "", title = "图诊断"}}
+
+人工复核建议：{{var|graph_review_recommendations: AiralogyMarkdown = "", title = "人工复核建议"}}
+
+## Step 5：设置 3D 打印约束
+
+{{step|configure_3d_print, check=True}} 设置打印机尺寸、模型缩放、节点尺寸、边线直径、底板厚度和 Z 轴夸张系数。打印参数必须满足打印机最小特征尺寸和床面尺寸。
+
+打印机类型：{{var|printer_type: Literal["FDM", "SLA/DLP", "SLS", "其他"] = "FDM", title = "打印机类型"}}
+
+材料：{{var|print_material: Literal["PLA", "PETG", "ABS", "树脂", "尼龙", "其他"] = "PLA", title = "材料"}}
+
+打印床 X（mm）：{{var|print_bed_x_mm: float = 220.0, title = "打印床 X", gt = 0}}
+
+打印床 Y（mm）：{{var|print_bed_y_mm: float = 220.0, title = "打印床 Y", gt = 0}}
+
+最大模型高度（mm）：{{var|max_model_height_mm: float = 80.0, title = "最大模型高度", gt = 0}}
+
+边距（mm）：{{var|print_margin_mm: float = 12.0, title = "边距", ge = 0}}
+
+底板厚度（mm）：{{var|base_thickness_mm: float = 3.0, title = "底板厚度", gt = 0}}
+
+最小节点直径（mm）：{{var|min_node_diameter_mm: float = 4.0, title = "最小节点直径", gt = 0}}
+
+最大节点直径（mm）：{{var|max_node_diameter_mm: float = 8.0, title = "最大节点直径", gt = 0}}
+
+边线直径（mm）：{{var|edge_strut_diameter_mm: float = 2.0, title = "边线直径", gt = 0}}
+
+最小可打印特征（mm）：{{var|min_printable_feature_mm: float = 1.2, title = "最小可打印特征", gt = 0}}
+
+Z 轴夸张系数：{{var|z_exaggeration: float = 2.0, title = "Z 轴夸张系数", gt = 0}}
+
+标签高度（mm）：{{var|label_height_mm: float = 1.0, title = "标签高度", ge = 0}}
+
+## Step 6：生成 3D 打印参数
+
+{{step|generate_3d_print_parameters, check=True}} 运行 Assigner，将站点和推断边转换为打印坐标、缩放因子、节点尺寸、边线尺寸和 OpenSCAD 参数草稿。
+
+3D 打印参数摘要：{{var|print_parameter_summary: AiralogyMarkdown = "", title = "3D 打印参数摘要", description = "点击本字段旁的 Assigner 按钮，生成打印节点、打印边和 OpenSCAD 参数草稿"}}
+
+打印节点：
+
+{{var|print_nodes: list[PrintNode] = [],
+    title = "打印节点",
+    subvars = [
+        var(site_id: str, title = "站点编号"),
+        var(x_mm: float = 0.0, title = "X（mm）"),
+        var(y_mm: float = 0.0, title = "Y（mm）"),
+        var(z_mm: float = 0.0, title = "Z（mm）"),
+        var(node_diameter_mm: float = 0.0, title = "节点直径（mm）"),
+        var(label: str, title = "标签")
+    ]
+}}
+
+打印边：
+
+{{var|print_edges: list[PrintEdge] = [],
+    title = "打印边",
+    subvars = [
+        var(edge_id: str, title = "边编号"),
+        var(from_site_id: str, title = "起点"),
+        var(to_site_id: str, title = "终点"),
+        var(strut_diameter_mm: float = 0.0, title = "连杆直径（mm）"),
+        var(print_note: str, title = "打印备注")
+    ]
+}}
+
+OpenSCAD 参数草稿：{{var|openscad_parameter_block: CodeStr = "", title = "OpenSCAD 参数草稿", description = "可复制到 OpenSCAD 或 CAD 脚本中继续生成实体模型"}}
+
+打印风险提示：{{var|print_risk_note: AiralogyMarkdown = "", title = "打印风险提示"}}
+
+## Step 7：人工复核与导出
+
+{{step|review_and_export, check=True}} 结合真实地形、DEM、河网、管网和现场经验复核图边；确认 3D 打印参数满足打印机尺寸、材料和最小特征要求后再导出 CAD/STL。
+
+复核结论：{{var|manual_review_result: Literal["通过", "需要修改边", "需要修改打印参数", "需要补充 DEM/河网", "待定"] = "待定", title = "复核结论"}}
+
+人工修订说明：{{var|manual_revision_notes: AiralogyMarkdown = "", title = "人工修订说明"}}
+
+最终图与打印说明：{{var|final_graph_and_print_memo: AiralogyMarkdown = "", title = "最终图与打印说明"}}
+
+## 质量控制
+
+{{check|coordinate_and_elevation_qc}} 所有站点都必须有有效纬度、经度和海拔；海拔精度不足时提高最小高程差阈值。
+
+{{check|physical_rule_review}} 每条边必须满足距离、高程差和坡度规则，人工强制边必须标记违反了哪些规则。
+
+{{check|hydrology_not_overclaimed}} 只基于点位和海拔生成的图不得宣称为真实河网或精确水文模型，必须保留“需要 DEM、河网或现场核验”的说明。
+
+{{check|printability_check}} 节点直径、连杆直径、底板厚度和标签高度不得低于所选打印机和材料的最小可打印特征。
+
+{{check|bed_fit_check}} 模型 X/Y 尺寸加边距后必须小于打印床尺寸，模型高度不得超过最大模型高度。
+
+{{check|edge_crossing_review}} 如果启用避免交叉边，删除边的原因需要在图诊断中说明；如果保留交叉边，应在 3D 打印方案中处理跨越或分层。

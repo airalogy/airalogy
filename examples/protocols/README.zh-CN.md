@@ -13,6 +13,7 @@
 | `field-water-sample-observation` | 野外水样观测与环境扰动分析 | `zh-CN` | 否 | 野外水样采集、当天气象场地记录、水化学与生化环境判读、季风和极端降雨扰动分析。 |
 | `literature-review-assistant` | AI 辅助文献调研与证据综述 | `zh-CN` | 是 | 配置 OpenAI 兼容联网大模型，完成候选文献初筛、人工证据提取、质量评价和综述草稿生成。 |
 | `stock-fundamental-analysis-assistant` | AI 辅助股票基本面分析 | `zh-CN` | 是 | 输入股票代码和公司名称，配置 OpenAI 兼容联网大模型，整理公开财报、业务分部、财务质量、估值比较、风险清单和研究报告草稿。 |
+| `monitoring-site-flow-graph-3d-print` | 监测站点物理约束图与 3D 打印参数 | `zh-CN` | 是 | 基于站点经纬度和海拔生成物理约束有向图，并输出 3D 打印节点、边、缩放和结构参数。 |
 | `fiber-endface-process` | 光纤端面微纳结构器件工艺路线 | `zh-CN` | 否 | 光纤端面微纳结构器件的课题拆解、工艺路线设计、工艺窗口和表征计划记录。 |
 | `fiber-endface-sensing-calibration` | 光纤端面传感标定分析 | `zh-CN` | 是 | 标定数据上传、灵敏度拟合、检测限估计、质控判定、绘图和报告生成。 |
 | `drug-response-ic50` | 药物剂量-反应 IC50 分析 | `en-US`, `zh-CN` | 是 | 剂量-反应数据上传、IC50 估算、质控、曲线绘制和报告生成。 |

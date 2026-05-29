@@ -189,6 +189,46 @@
       ]
     },
     {
+      "id": "monitoring-site-flow-graph-3d-print",
+      "category": "environment",
+      "languages": [
+        "zh-CN"
+      ],
+      "title": {
+        "zh-CN": "监测站点物理约束图与 3D 打印参数"
+      },
+      "description": {
+        "zh-CN": "基于监测站点经纬度和海拔生成距离、高程差、坡度等物理约束下的有向图，并输出适合 3D 打印的节点、边、缩放和结构参数。"
+      },
+      "protocol_dir": {
+        "zh-CN": "monitoring-site-flow-graph-3d-print/zh-CN"
+      },
+      "entry": {
+        "zh-CN": "monitoring-site-flow-graph-3d-print/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "zh-CN": "monitoring-site-flow-graph-3d-print/zh-CN/protocol.toml"
+      },
+      "assigner": {
+        "zh-CN": "monitoring-site-flow-graph-3d-print/zh-CN/assigner.py"
+      },
+      "sample_data": {
+        "zh-CN": [
+          "monitoring-site-flow-graph-3d-print/zh-CN/monitoring-sites-demo.csv"
+        ]
+      },
+      "engine_required": true,
+      "tags": [
+        "environment",
+        "monitoring-sites",
+        "hydrology",
+        "graph",
+        "3d-printing",
+        "geospatial",
+        "assigner"
+      ]
+    },
+    {
       "id": "fiber-endface-process",
       "category": "photonics",
       "languages": [

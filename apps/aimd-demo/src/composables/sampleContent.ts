@@ -9,6 +9,7 @@ import cuaacKineticsZh from '../../../../examples/protocols/cuaac-kinetics/zh-CN
 import fieldWaterSampleObservationZh from '../../../../examples/protocols/field-water-sample-observation/zh-CN/protocol.aimd?raw'
 import literatureReviewAssistantZh from '../../../../examples/protocols/literature-review-assistant/zh-CN/protocol.aimd?raw'
 import stockFundamentalAnalysisAssistantZh from '../../../../examples/protocols/stock-fundamental-analysis-assistant/zh-CN/protocol.aimd?raw'
+import monitoringSiteFlowGraph3dPrintZh from '../../../../examples/protocols/monitoring-site-flow-graph-3d-print/zh-CN/protocol.aimd?raw'
 import drugResponseIc50En from '../../../../examples/protocols/drug-response-ic50/en-US/protocol.aimd?raw'
 import drugResponseIc50Zh from '../../../../examples/protocols/drug-response-ic50/zh-CN/protocol.aimd?raw'
 import diaryEn from '../../../../examples/protocols/diary/en-US/protocol.aimd?raw'
@@ -179,6 +180,26 @@ export const DEMO_EXAMPLES: DemoExample[] = [
     },
     locales: ['zh-CN'],
     tags: ['protocol', 'finance', 'stock-analysis', 'fundamental-analysis', 'AI', 'assigner'],
+  },
+  {
+    id: 'monitoring-site-flow-graph-3d-print',
+    kind: 'protocol',
+    source: {
+      'zh-CN': 'examples/protocols/monitoring-site-flow-graph-3d-print/zh-CN/protocol.aimd',
+    },
+    title: {
+      'en-US': 'Monitoring site physical graph and 3D print parameters',
+      'zh-CN': '监测站点物理约束图与 3D 打印参数',
+    },
+    description: {
+      'en-US': 'Protocol for generating a physics-constrained directed graph from site coordinates and elevation, then deriving node, edge, scale, and structure parameters for 3D printing.',
+      'zh-CN': '用于根据监测站点经纬度和海拔生成物理约束有向图，并推导 3D 打印节点、边、缩放和结构参数。',
+    },
+    content: {
+      'zh-CN': monitoringSiteFlowGraph3dPrintZh,
+    },
+    locales: ['zh-CN'],
+    tags: ['protocol', 'environment', 'monitoring-sites', 'graph', '3d-printing', 'assigner'],
   },
   {
     id: 'drug-response-ic50',

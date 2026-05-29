@@ -1,0 +1,14 @@
+[airalogy_protocol]
+id = "monitoring_site_flow_graph_3d_print_zh"
+version = "0.1.0"
+name = "监测站点物理约束图与 3D 打印参数"
+description = "基于监测站点经纬度和海拔生成物理约束有向图，并输出适合 3D 打印的节点、边、缩放和结构参数。"
+authors = [
+    { name = "Airalogy" },
+]
+maintainers = [
+    { name = "Airalogy" },
+]
+disciplines = ["environmental monitoring", "hydrology", "graph modeling", "3D printing"]
+keywords = ["监测站点", "经纬度", "海拔", "物理约束图", "水流方向", "3D 打印", "assigner"]
+license = "Apache-2.0"
