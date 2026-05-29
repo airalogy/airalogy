@@ -71,6 +71,34 @@ const pluginVarNode = {
   },
 }
 
+const varTableNode = {
+  type: 'aimd',
+  fieldType: 'var_table',
+  scope: 'var_table',
+  id: 'print_nodes',
+  raw: '{{var_table|print_nodes}}',
+  columns: ['site_id'],
+  definition: {
+    id: 'print_nodes',
+    subvars: {
+      site_id: {
+        id: 'site_id',
+        type: 'str',
+      },
+    },
+  },
+}
+
+const varTableField = {
+  id: 'print_nodes',
+  subvars: [
+    {
+      id: 'site_id',
+      type: 'str',
+    },
+  ],
+}
+
 const fields = {
   var: ['ic50'],
   var_definitions: [{ name: 'ic50', type: 'float' }],
@@ -424,6 +452,74 @@ describe('AimdRecorder assigner controls', () => {
       },
     })
     expect(wrapper.findAll('.aimd-rec-assigner-field__status--done')).toHaveLength(2)
+  })
+
+  it('mounts server assigner controls inside var table headers', async () => {
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      callback(0)
+      return 1
+    })
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+
+    currentFields = {
+      ...fields,
+      var: [],
+      var_definitions: [],
+      var_table: [varTableField],
+    }
+    mocks.renderToVue.mockImplementation(async (
+      _content: string,
+      options: { aimdRenderers: { var_table: (node: unknown) => unknown } },
+    ) => ({
+      fields: currentFields,
+      nodes: [options.aimdRenderers.var_table(varTableNode)],
+    }))
+    const runServerAssigner = vi.fn(async () => ({
+      data: {
+        assigned_fields: {
+          print_nodes: [{ site_id: 'S01' }],
+        },
+      },
+    }))
+
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: '{{var_table|print_nodes}}',
+        locale: 'zh-CN',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+        serverAssigners: {
+          print_nodes: {
+            mode: 'manual',
+            dependent_fields: ['site_csv_file'],
+          },
+        },
+        runServerAssigner,
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    const button = wrapper.find('.aimd-rec-inline-table__header-action .aimd-rec-assigner-field__button')
+    expect(button.exists()).toBe(true)
+    expect(wrapper.find('.aimd-rec-assigner-field--var_table').exists()).toBe(false)
+
+    await button.trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(runServerAssigner).toHaveBeenCalledTimes(1)
+    const [request] = (runServerAssigner.mock.calls[0] ?? []) as unknown as [AimdAssignerRunnerRequest]
+    expect(request).toMatchObject({
+      section: 'var_table',
+      fieldKey: 'var_table:print_nodes',
+      assignedField: 'print_nodes',
+    })
   })
 
   it('falls back to assigner-request for parsed assigners without a runner', async () => {

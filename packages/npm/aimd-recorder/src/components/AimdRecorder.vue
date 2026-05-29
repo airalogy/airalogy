@@ -1027,7 +1027,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
   const disabled = fieldRendering.isFieldDisabled(fieldKey)
   const extraClasses = fieldRendering.fieldStateClasses(fieldKey)
   const canUseInternalAssignerControl = Boolean(meta?.enumOptions?.length)
-    || ["number", "date", "datetime", "time", "text", "textarea", "checkbox", "file"].includes(inputKind)
+    || ["number", "date", "datetime", "time", "text", "textarea", "checkbox", "file", "code"].includes(inputKind)
   const fieldAssignerControl = resolveAssignerControl("var", fieldKey)
   const internalAssignerControl = canUseInternalAssignerControl ? fieldAssignerControl : null
 
@@ -1115,6 +1115,7 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
   const rows = tableDragDrop.ensureVarTableRows(tableName, columns)
   const disabled = fieldRendering.isFieldDisabled(fieldKey)
   const disabledColumns = columns.filter(column => !!effectiveFieldMeta.value[`var_table:${tableName}:${column}`]?.disabled)
+  const tableAssignerControl = resolveAssignerControl("var_table", fieldKey)
 
   const vnode = h(AimdVarTableField, {
     node,
@@ -1126,6 +1127,13 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
     messages: resolvedMessages.value,
     fieldMeta: effectiveFieldMeta.value,
     fieldState: effectiveFieldState.value,
+    assignerControl: tableAssignerControl
+      ? renderAssignerButton(tableAssignerControl, rows)
+      : undefined,
+    assignerStatus: tableAssignerControl
+      ? renderAssignerCloudStatusIcon(tableAssignerControl)
+      : undefined,
+    assignerError: tableAssignerControl?.state?.error,
     onCellInput: (payload: { tableName: string, column: string, rowIndex: number, value: string, row: Record<string, string> }) => {
       payload.row[payload.column] = payload.value
       markRecordChanged({ runClientAssigners: true })
@@ -1192,7 +1200,9 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
     },
   })
 
-  const assignerVNode = withAssignerControl("var_table", fieldKey, rows, vnode)
+  const assignerVNode = tableAssignerControl
+    ? vnode
+    : withAssignerControl("var_table", fieldKey, rows, vnode)
   return applyFieldAdapter("var_table", fieldKey, node, rows, assignerVNode)
 }
 
@@ -1984,14 +1994,57 @@ defineExpose({
   color: #1f2937;
 }
 .aimd-protocol-recorder__content :deep(.aimd-field--var-table .aimd-field__header) {
-  display: inline-flex;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
+  width: 100%;
   max-width: 100%;
 }
 .aimd-protocol-recorder__content :deep(.aimd-field--var-table .aimd-field__table-preview),
 .aimd-protocol-recorder__content :deep(.aimd-field--var-table .aimd-rec-card-list) {
   width: 100%;
   max-width: 100%;
+}
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__header-actions) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__header-action),
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__header-state) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__header-action .aimd-rec-assigner-field__button) {
+  width: 30px;
+  min-width: 30px;
+  height: 26px;
+  min-height: 26px;
+  border: 0 none;
+  border-radius: 6px;
+  margin: 0;
+  background: #edf6ff;
+  color: #1976d2;
+  box-shadow: none;
+  font-size: 16px;
+}
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__header-action .aimd-rec-assigner-field__button:hover:not(:disabled)) {
+  background: #dbeafe;
+  color: #1565c0;
+}
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__header-action .aimd-rec-assigner-field__spinner) {
+  border-color: rgba(25, 118, 210, 0.25);
+  border-top-color: #1976d2;
+}
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__header-state .aimd-rec-assigner-field__status) {
+  font-size: 16px;
+}
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline-table__assigner-error) {
+  margin: 6px 0 8px;
 }
 /* ── Error & loading ────────────────────────────────────────────────────── */
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline--error) { border-color: var(--rec-error) !important; }

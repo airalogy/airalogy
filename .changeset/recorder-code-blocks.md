@@ -12,3 +12,7 @@ Make block recorder fields such as AiralogyMarkdown, step, and check cards fill 
 Make CodeStr, PyStr, and AiralogyMarkdown recorder editors start at a compact one-line height and grow with their content.
 
 Show manual Assigner controls on every field declared in a shared server assigner's assigned_fields list.
+
+Place var table Assigner controls in the table header so assigned table fields keep their full-width card layout.
+
+Place CodeStr and PyStr Assigner controls in the field header instead of an external side button.

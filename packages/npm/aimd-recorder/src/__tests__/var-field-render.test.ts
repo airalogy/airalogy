@@ -188,6 +188,12 @@ describe('AimdVarField render behavior', () => {
     expect(recorderSource).toContain('.aimd-rec-inline__header-assigner-actions')
   })
 
+  it('places code assigner actions in the field header instead of a side prefix', () => {
+    expect(source).toContain('["file", "code"].includes(inputKind)')
+    expect(source).toMatch(/if \(inputKind === "code"\) \{[\s\S]*?"aimd-rec-inline--var-stacked--code",[\s\S]*?\{ controlRow: false \}/)
+    expect(recorderSource).toContain('["number", "date", "datetime", "time", "text", "textarea", "checkbox", "file", "code"].includes(inputKind)')
+  })
+
   it('shows file ids as user-facing file cards instead of raw ids', async () => {
     const fileId = 'airalogy.id.file.11111111-1111-1111-1111-111111111111'
     vi.stubGlobal('fetch', vi.fn(async () => ({
@@ -577,6 +583,58 @@ describe('AimdVarField render behavior', () => {
     expect(wrapper.findAll('.aimd-field__metadata-popover').some(popover => popover.text().includes('S-001'))).toBe(true)
     expect(wrapper.find('.aimd-field__metadata-popover').exists()).toBe(true)
     expect((wrapper.find('input').element as HTMLInputElement).placeholder).toBe('S-001')
+  })
+
+  it('places table assigner actions in the table header', () => {
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      callback(0)
+      return 1
+    })
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+
+    const node: AimdVarTableNode = {
+      type: 'aimd',
+      fieldType: 'var_table',
+      scope: 'var_table',
+      id: 'samples',
+      raw: '{{var_table|samples}}',
+      columns: ['sample_id'],
+      definition: {
+        id: 'samples',
+        subvars: {
+          sample_id: {
+            id: 'sample_id',
+            type: 'str',
+          },
+        },
+      },
+    }
+
+    const wrapper = mount(AimdVarTableField, {
+      props: {
+        node,
+        rows: [{ sample_id: '' }],
+        columns: ['sample_id'],
+        disabled: false,
+        readonly: false,
+        settlingRowKey: null,
+        messages: createAimdRecorderMessages('en-US'),
+        assignerControl: h('button', { class: 'assigner-test-button', type: 'button' }, 'run'),
+        assignerStatus: h('span', { class: 'assigner-test-status' }, 'idle'),
+        assignerError: 'Missing source data',
+      },
+    })
+
+    expect(wrapper.find('.aimd-rec-inline-table__header-actions').exists()).toBe(true)
+    expect(wrapper.find('.aimd-rec-inline-table__header-action .assigner-test-button').exists()).toBe(true)
+    expect(wrapper.find('.aimd-rec-inline-table__header-state .assigner-test-status').exists()).toBe(true)
+    expect(wrapper.find('.aimd-rec-inline-table__assigner-error').text()).toBe('Missing source data')
+    expect(recorderSource).toContain('.aimd-rec-inline-table__header-actions')
   })
 
   it('does not use AIMD var_table titles as cell placeholders and honors explicit column placeholders', () => {

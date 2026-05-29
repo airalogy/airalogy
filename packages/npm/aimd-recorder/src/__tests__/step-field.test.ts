@@ -31,10 +31,13 @@ vi.mock('@airalogy/aimd-editor/vue', async () => {
   }
 })
 
-vi.mock('@airalogy/aimd-renderer', async () => {
+vi.mock('@airalogy/aimd-renderer', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@airalogy/aimd-renderer')>()
   const { h } = await import('vue')
 
   return {
+    ...actual,
+    loadShikiHighlighter: vi.fn(() => new Promise(() => {})),
     renderToVue: async (content: string) => ({
       nodes: [h('div', { class: 'aimd-rendered-note' }, content)],
       fields: {},

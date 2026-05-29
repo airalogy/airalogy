@@ -470,7 +470,7 @@ export default defineComponent({
       }
 
       const renderHeaderAssignerActions = (): VNode | null => {
-        if (inputKind !== "file" || (!props.assignerControl && !props.assignerStatus)) {
+        if (!["file", "code"].includes(inputKind) || (!props.assignerControl && !props.assignerStatus)) {
           return null
         }
 
@@ -643,6 +643,7 @@ export default defineComponent({
             onBlur: onVarBlur,
           }),
           "aimd-rec-inline--var-stacked--code",
+          { controlRow: false },
         )
       }
 

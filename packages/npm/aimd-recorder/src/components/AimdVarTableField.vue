@@ -141,6 +141,9 @@ export default defineComponent({
     messages: { type: Object as PropType<AimdRecorderMessages>, required: true },
     fieldMeta: { type: Object as PropType<Record<string, AimdFieldMeta> | undefined>, default: undefined },
     fieldState: { type: Object as PropType<Record<string, AimdFieldState> | undefined>, default: undefined },
+    assignerControl: { type: Object as PropType<VNode | undefined>, default: undefined },
+    assignerStatus: { type: Object as PropType<VNode | undefined>, default: undefined },
+    assignerError: { type: String, default: undefined },
   },
   emits: [
     "cell-input",
@@ -536,7 +539,20 @@ export default defineComponent({
             hasCustomTableTitle ? h("span", { class: "aimd-field__key" }, tableName) : null,
             renderFieldMetadataPopover(tableHelp),
           ]),
+          props.assignerControl || props.assignerStatus
+            ? h("span", { class: "aimd-rec-inline-table__header-actions" }, [
+                props.assignerControl
+                  ? h("span", { class: "aimd-rec-inline-table__header-action" }, [props.assignerControl])
+                  : null,
+                props.assignerStatus
+                  ? h("span", { class: "aimd-rec-inline-table__header-state" }, [props.assignerStatus])
+                  : null,
+              ])
+            : null,
         ]),
+        props.assignerError
+          ? h("div", { class: "aimd-rec-inline__assigner-error aimd-rec-inline-table__assigner-error" }, props.assignerError)
+          : null,
         h(Transition, {
           name: "aimd-table-layout-switch",
           mode: "out-in",
