@@ -1,5 +1,5 @@
 <script lang="ts">
-import { computed, defineAsyncComponent, defineComponent, h, onBeforeUnmount, ref, watch, type PropType, type VNodeChild } from "vue"
+import { computed, defineAsyncComponent, defineComponent, h, nextTick, onBeforeUnmount, ref, watch, type PropType, type VNodeChild } from "vue"
 import type { AimdStepNode, AimdCheckNode, AimdStepTimerMode } from "@airalogy/aimd-core/types"
 import type { AimdRecorderMessages } from "../locales"
 import { getAimdRecorderScopeLabel } from "../locales"
@@ -32,6 +32,7 @@ export const AimdStepField = defineComponent({
   setup(props, { emit }) {
     const nowMs = ref(Date.now())
     const rootEl = ref<HTMLElement | null>(null)
+    const annotationDetailsEl = ref<HTMLElement | null>(null)
     const annotationExpanded = ref(false)
     const timerExpanded = ref(false)
     let liveTimer: ReturnType<typeof setInterval> | null = null
@@ -122,7 +123,6 @@ export const AimdStepField = defineComponent({
       || timerExpanded.value
     ))
     const showTimerSummary = computed(() => !showTimerDetails.value && (timerRunning.value || hasRecordedDuration.value))
-    const showDetailRow = computed(() => showAnnotationEditor.value || showTimerDetails.value)
 
     function clearPendingFocusOutCheck() {
       if (focusOutCheckTimer) {
@@ -164,6 +164,7 @@ export const AimdStepField = defineComponent({
 
     function openAnnotationDetail() {
       annotationExpanded.value = true
+      scrollDetailsIntoView()
     }
 
     function openTimerDetail() {
@@ -175,27 +176,44 @@ export const AimdStepField = defineComponent({
       event.preventDefault()
     }
 
+    function scrollDetailsIntoView() {
+      void nextTick(() => {
+        const target = annotationDetailsEl.value
+        if (typeof target?.scrollIntoView !== "function") {
+          return
+        }
+
+        target.scrollIntoView({
+          block: "nearest",
+          inline: "nearest",
+          behavior: "smooth",
+        })
+      })
+    }
+
     return () => {
       const node = props.node
       const id = node.id
       const state = props.state
       const stepNumber = node.step || "?"
       const hasCheck = Boolean(node.check)
+      const hasBody = props.bodyNodes.length > 0
       const disabled = props.disabled
       const extraClasses = props.extraClasses
       const canResetTimer = hasRecordedDuration.value || timerRunning.value
       const startButtonLabel = timerRunning.value
         ? props.messages.step.pauseTimer
         : (hasRecordedDuration.value ? props.messages.step.resumeTimer : props.messages.step.startTimer)
-      const detailChildren = []
+      const timerDetailChildren: VNodeChild[] = []
+      const annotationDetailChildren: VNodeChild[] = []
       const headerMetaChildren = []
       const headerActionChildren = []
 
       if (showTimerDetails.value) {
-        const timerDetailChildren = []
+        const timerBadgeChildren: VNodeChild[] = []
 
         if (countdownEnabled.value && countdownLabel.value) {
-          timerDetailChildren.push(
+          timerBadgeChildren.push(
             h("span", {
               class: [
                 "aimd-step-timer__hero",
@@ -211,7 +229,7 @@ export const AimdStepField = defineComponent({
         }
 
         if (showElapsedDetail.value) {
-          timerDetailChildren.push(
+          timerBadgeChildren.push(
             h("span", {
               class: [
                 "aimd-step-timer__pill",
@@ -223,11 +241,11 @@ export const AimdStepField = defineComponent({
           )
         }
 
-        detailChildren.push(
+        timerDetailChildren.push(
           h("span", {
             class: "aimd-step-field__detail aimd-step-field__detail--timer",
           }, [
-            ...timerDetailChildren,
+            ...timerBadgeChildren,
             !disabled
               ? h("span", { class: "aimd-step-timer__controls" }, [
                 h("button", {
@@ -248,7 +266,7 @@ export const AimdStepField = defineComponent({
       }
 
       if (showAnnotationEditor.value) {
-        detailChildren.push(
+        annotationDetailChildren.push(
           h("span", {
             class: "aimd-step-field__detail aimd-step-field__detail--annotation",
           }, [
@@ -256,7 +274,6 @@ export const AimdStepField = defineComponent({
               class: "aimd-step-field__annotation-editor",
               disabled,
               locale: props.locale,
-              minHeight: 220,
               modelValue: state.annotation || "",
               "onUpdate:modelValue": (value: string) => {
                 emit("annotation-change", {
@@ -319,7 +336,7 @@ export const AimdStepField = defineComponent({
         )
       }
 
-      if (!disabled && !showAnnotationEditor.value) {
+      if (!disabled && !hasBody && !showAnnotationEditor.value) {
         headerActionChildren.push(
           h("button", {
             type: "button",
@@ -342,7 +359,37 @@ export const AimdStepField = defineComponent({
       }
 
       const bodyChildren = props.bodyNodes.length > 0
-        ? h("div", { class: "aimd-step-field__body" }, props.bodyNodes)
+        ? h("div", { key: "body", class: "aimd-step-field__body" }, props.bodyNodes.slice())
+        : null
+      const bodyAnnotationAction = hasBody && !disabled && !showAnnotationEditor.value
+        ? h("div", {
+          key: "body-annotation-actions",
+          class: "aimd-step-field__body-actions",
+        }, [
+          h("button", {
+            type: "button",
+            class: "aimd-step-timer__btn aimd-step-timer__btn--ghost aimd-step-field__toggle aimd-step-field__toggle--annotation aimd-step-field__body-action",
+            onMousedown: preventToggleFocus,
+            onClick: openAnnotationDetail,
+          }, props.messages.step.annotationToggle),
+        ])
+        : null
+      const timerDetailSlot = timerDetailChildren.length > 0
+        ? h("div", {
+          key: "timer-details-slot",
+          class: "aimd-step-field__details-slot aimd-step-field__details-slot--timer",
+        }, [
+          h("div", { class: "aimd-step-field__details" }, timerDetailChildren),
+        ])
+        : null
+      const annotationDetailSlot = annotationDetailChildren.length > 0
+        ? h("div", {
+          key: "annotation-details-slot",
+          ref: annotationDetailsEl,
+          class: "aimd-step-field__details-slot aimd-step-field__details-slot--annotation",
+        }, [
+          h("div", { class: "aimd-step-field__details" }, annotationDetailChildren),
+        ])
         : null
 
       return h("div", {
@@ -352,6 +399,7 @@ export const AimdStepField = defineComponent({
         onFocusout: handleFocusOut,
       }, [
         h("div", {
+          key: "main",
           class: "aimd-step-field__main",
         }, [
           h("div", {
@@ -363,10 +411,10 @@ export const AimdStepField = defineComponent({
             }, headerActionChildren)
             : null,
         ]),
+        timerDetailSlot,
         bodyChildren,
-        showDetailRow.value
-          ? h("div", { class: "aimd-step-field__details" }, detailChildren)
-          : null,
+        bodyAnnotationAction,
+        annotationDetailSlot,
       ])
     }
   },
@@ -386,6 +434,7 @@ export const AimdCheckField = defineComponent({
   emits: ["check-change", "annotation-change", "blur"],
   setup(props, { emit }) {
     const rootEl = ref<HTMLElement | null>(null)
+    const detailsEl = ref<HTMLElement | null>(null)
     const annotationExpanded = ref(false)
     let focusOutCheckTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -429,10 +478,26 @@ export const AimdCheckField = defineComponent({
 
     function openAnnotationDetail() {
       annotationExpanded.value = true
+      scrollDetailsIntoView()
     }
 
     function preventToggleFocus(event: MouseEvent) {
       event.preventDefault()
+    }
+
+    function scrollDetailsIntoView() {
+      void nextTick(() => {
+        const target = detailsEl.value
+        if (typeof target?.scrollIntoView !== "function") {
+          return
+        }
+
+        target.scrollIntoView({
+          block: "nearest",
+          inline: "nearest",
+          behavior: "smooth",
+        })
+      })
     }
 
     onBeforeUnmount(() => {
@@ -469,7 +534,6 @@ export const AimdCheckField = defineComponent({
                 class: "aimd-check-field__annotation-editor",
                 disabled,
                 locale: props.locale,
-                minHeight: 220,
                 modelValue: state.annotation || "",
                 "onUpdate:modelValue": (value: string) => {
                   emit("annotation-change", {
@@ -525,14 +589,14 @@ export const AimdCheckField = defineComponent({
                 "aimd-check-field__body",
                 state.checked ? "aimd-check-field__body--checked" : "",
               ],
-            }, props.bodyNodes)
+            }, props.bodyNodes.slice())
             : null,
         ]),
         showCheckedMessage
           ? h("div", { class: "aimd-check-field__banner" }, node.checked_message)
           : null,
         detailChildren.length > 0
-          ? h("div", { class: "aimd-check-field__details" }, detailChildren)
+          ? h("div", { ref: detailsEl, class: "aimd-check-field__details" }, detailChildren)
           : null,
       ])
     }

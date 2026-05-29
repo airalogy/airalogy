@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { mount } from '@vue/test-utils'
 import { defineComponent, h, nextTick } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
@@ -36,6 +39,10 @@ vi.mock('@airalogy/aimd-renderer', () => ({
 
 import AimdMarkdownNoteField from '../components/AimdMarkdownNoteField.vue'
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const source = readFileSync(resolve(__dirname, '../components/AimdMarkdownNoteField.vue'), 'utf8')
+
 async function flushUi() {
   await Promise.resolve()
   await new Promise(resolve => setTimeout(resolve, 0))
@@ -43,6 +50,23 @@ async function flushUi() {
 }
 
 describe('AimdMarkdownNoteField', () => {
+  it('uses the shared compact Monaco editor height behavior', () => {
+    expect(source).toContain('createMonacoAutoHeight')
+    expect(source).toContain('--aimd-markdown-note-editor-height')
+    expect(source).toMatch(/const noteEditorHeight = noteAutoHeight\.editorHeight/)
+    expect(source).toMatch(/noteAutoHeight\.attachEditor\(editor\.monaco\)/)
+    expect(source).toMatch(/:min-height="noteEditorHeight"/)
+    expect(source).not.toContain('minHeight: 220')
+  })
+
+  it('offers an explicit preview/source switch for note markdown', () => {
+    expect(source).toContain('aimd-markdown-note-field__view-switch')
+    expect(source).toContain('aimd-markdown-note-field__view-btn--preview')
+    expect(source).toContain('aimd-markdown-note-field__view-btn--source')
+    expect(source).toContain('switchToPreview')
+    expect(source).toContain('guardModeSwitchFocus')
+  })
+
   it('renders saved notes as compact markdown preview by default', async () => {
     renderToVueMock.mockImplementation(async (content: string) => ({
       nodes: [h('div', { class: 'aimd-rendered-note' }, `rendered:${content}`)],
@@ -81,11 +105,37 @@ describe('AimdMarkdownNoteField', () => {
     })
 
     await flushUi()
-    await wrapper.find('.aimd-markdown-note-field__preview-edit').trigger('click')
+    await wrapper.find('.aimd-markdown-note-field__view-btn--source').trigger('click')
     await nextTick()
 
     expect(wrapper.find('.aimd-editor-mock').exists()).toBe(true)
     expect(wrapper.find('.aimd-markdown-note-field__preview').exists()).toBe(false)
+  })
+
+  it('keeps source mode open when the preview/source toggle briefly loses focus', async () => {
+    renderToVueMock.mockImplementation(async (content: string) => ({
+      nodes: [h('div', { class: 'aimd-rendered-note' }, `rendered:${content}`)],
+      fields: {},
+    }))
+
+    const wrapper = mount(AimdMarkdownNoteField, {
+      props: {
+        modelValue: 'Existing **note**',
+        locale: 'en-US',
+      },
+      attachTo: document.body,
+    })
+
+    await flushUi()
+    await wrapper.find('.aimd-markdown-note-field__view-btn--source').trigger('click')
+    await wrapper.trigger('focusout', { relatedTarget: null })
+    await flushUi()
+
+    expect(wrapper.find('.aimd-editor-mock').exists()).toBe(true)
+    expect(wrapper.find('.aimd-markdown-note-field__preview').exists()).toBe(false)
+    expect(wrapper.emitted('blur')).toBeFalsy()
+
+    wrapper.unmount()
   })
 
   it('opens empty notes directly in editor mode', () => {
@@ -124,6 +174,32 @@ describe('AimdMarkdownNoteField', () => {
     expect(wrapper.find('.aimd-editor-mock').exists()).toBe(false)
 
     wrapper.unmount()
+  })
+
+  it('switches edited notes into rendered preview on demand', async () => {
+    renderToVueMock.mockImplementation(async (content: string) => ({
+      nodes: [h('div', { class: 'aimd-rendered-note' }, `rendered:${content}`)],
+      fields: {},
+    }))
+
+    const wrapper = mount(AimdMarkdownNoteField, {
+      props: {
+        modelValue: '',
+        locale: 'en-US',
+      },
+    })
+
+    await wrapper.find('.aimd-editor-mock').setValue('Preview **this** note')
+    await nextTick()
+    await wrapper.find('.aimd-markdown-note-field__view-btn--preview').trigger('click')
+    await flushUi()
+
+    expect(renderToVueMock).toHaveBeenCalledWith('Preview **this** note', expect.objectContaining({
+      locale: 'en-US',
+    }))
+    expect(wrapper.find('.aimd-markdown-note-field__preview').exists()).toBe(true)
+    expect(wrapper.find('.aimd-rendered-note').text()).toContain('rendered:Preview **this** note')
+    expect(wrapper.find('.aimd-editor-mock').exists()).toBe(false)
   })
 
   it('offers an explicit close action while editing notes', async () => {

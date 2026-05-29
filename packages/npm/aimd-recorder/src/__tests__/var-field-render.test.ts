@@ -47,9 +47,9 @@ describe('AimdVarField render behavior', () => {
   })
 
   it('starts CodeStr and PyStr editors at a compact content-driven height', () => {
-    expect(codeFieldSource).toMatch(/const CODE_FIELD_MIN_HEIGHT = CODE_FIELD_LINE_HEIGHT \+ CODE_FIELD_VERTICAL_PADDING/)
-    expect(codeFieldSource).toMatch(/const editorHeight = ref\(estimateCodeFieldHeight\(draftValue\.value\)\)/)
-    expect(codeFieldSource).toMatch(/monacoEditor\.onDidContentSizeChange\(\(event\) => \{[\s\S]*?setEditorHeight\(event\.contentHeight\)/)
+    expect(codeFieldSource).toContain('createMonacoAutoHeight')
+    expect(codeFieldSource).toMatch(/const editorHeight = codeAutoHeight\.editorHeight/)
+    expect(codeFieldSource).toMatch(/codeAutoHeight\.attachEditor\(monacoEditor\)/)
     expect(codeFieldSource).toContain('--aimd-code-field-editor-height')
     expect(codeFieldSource).not.toContain('min-height: 240px;')
   })

@@ -150,6 +150,49 @@ describe('AimdStepField', () => {
     wrapper.unmount()
   })
 
+  it('keeps a single step note entry at the end of long body content', async () => {
+    const state = reactive(createEmptyStepRecordItem())
+    const originalScrollIntoView = Element.prototype.scrollIntoView
+    const scrollIntoView = vi.fn()
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    })
+    const wrapper = mount(AimdStepField, {
+      props: {
+        ...createBaseProps(),
+        state,
+        bodyNodes: ['Long protocol step body'],
+      },
+      attachTo: document.body,
+    })
+
+    expect(wrapper.find('.aimd-step-field__main .aimd-step-field__toggle--annotation').exists()).toBe(false)
+    expect(wrapper.find('.aimd-step-field__body-action').exists()).toBe(true)
+
+    await wrapper.find('.aimd-step-field__body-action').trigger('click')
+    await flushStepFieldAsync()
+
+    const children = Array.from(wrapper.element.children)
+    const detailsSlotIndex = children.indexOf(wrapper.find('.aimd-step-field__details-slot--annotation').element)
+    const bodyIndex = children.indexOf(wrapper.find('.aimd-step-field__body').element)
+    expect(wrapper.find('.aimd-step-field__details').exists()).toBe(true)
+    expect(detailsSlotIndex).toBeGreaterThan(-1)
+    expect(bodyIndex).toBeGreaterThan(-1)
+    expect(detailsSlotIndex).toBeGreaterThan(bodyIndex)
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      block: 'nearest',
+      inline: 'nearest',
+      behavior: 'smooth',
+    })
+
+    wrapper.unmount()
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: originalScrollIntoView,
+    })
+  })
+
   it('opens timer controls on demand in auto mode', async () => {
     const state = reactive(createEmptyStepRecordItem())
     const wrapper = mount(AimdStepField, {

@@ -1,6 +1,8 @@
 export { captureFocusSnapshot, restoreFocusSnapshot } from './useFocusManagement'
 export type { FocusSnapshot } from './useFocusManagement'
 export { createChainedElementRenderer, useCodeBlockRendering } from './useCodeBlockRendering'
+export { createMonacoAutoHeight, estimateMonacoVisualLineCount } from './useMonacoAutoHeight'
+export type { MonacoAutoHeightController, MonacoAutoHeightEditor, MonacoAutoHeightOptions } from './useMonacoAutoHeight'
 
 export {
   cloneRecordData,

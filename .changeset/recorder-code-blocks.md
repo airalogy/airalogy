@@ -16,3 +16,11 @@ Show manual Assigner controls on every field declared in a shared server assigne
 Place var table Assigner controls in the table header so assigned table fields keep their full-width card layout.
 
 Place CodeStr and PyStr Assigner controls in the field header instead of an external side button.
+
+Use the shared compact Monaco auto-height behavior for note, markdown, and code editors.
+
+Keep step notes after the step body and use one note entry point: body-end for steps with body content, header for bodyless steps.
+
+Add a preview/source switch to step note editors and keep internal mode changes from being treated as field blur.
+
+Make step note and timer toggle buttons more compact so dense protocols use less space.

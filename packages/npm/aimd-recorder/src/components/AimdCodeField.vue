@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ensureMonacoEnvironment, ensureMonacoLanguageContribution } from '../monaco-code'
+import { createMonacoAutoHeight } from '../composables/useMonacoAutoHeight'
 
 const props = withDefaults(defineProps<{
   modelValue?: string | number
@@ -20,12 +21,12 @@ const editorContainer = ref<HTMLElement | null>(null)
 const loading = ref(true)
 const loadError = ref<string | null>(null)
 const draftValue = ref(normalizeCodeFieldValue(props.modelValue))
-const CODE_FIELD_LINE_HEIGHT = 21
-const CODE_FIELD_VERTICAL_PADDING = 24
-const CODE_FIELD_MIN_HEIGHT = CODE_FIELD_LINE_HEIGHT + CODE_FIELD_VERTICAL_PADDING
-const CODE_FIELD_MAX_HEIGHT = 520
-const CODE_FIELD_ESTIMATED_CHARS_PER_LINE = 96
-const editorHeight = ref(estimateCodeFieldHeight(draftValue.value))
+const codeAutoHeight = createMonacoAutoHeight({
+  getInitialValue: () => draftValue.value,
+  getLayoutElement: () => editorContainer.value,
+  maxHeight: 520,
+})
+const editorHeight = codeAutoHeight.editorHeight
 const editorStyle = computed(() => ({
   '--aimd-code-field-editor-height': `${editorHeight.value}px`,
 }))
@@ -33,7 +34,6 @@ const editorStyle = computed(() => ({
 let monacoModule: typeof import('monaco-editor') | null = null
 let monacoEditor: import('monaco-editor').editor.IStandaloneCodeEditor | null = null
 let monacoModel: import('monaco-editor').editor.ITextModel | null = null
-let contentSizeDisposable: { dispose: () => void } | null = null
 let isSyncing = false
 
 function normalizeCodeFieldValue(value: string | number | undefined): string {
@@ -48,59 +48,8 @@ function normalizeCodeFieldValue(value: string | number | undefined): string {
   return ''
 }
 
-function clampEditorHeight(height: number): number {
-  return Math.max(CODE_FIELD_MIN_HEIGHT, Math.min(CODE_FIELD_MAX_HEIGHT, Math.ceil(height)))
-}
-
-function estimateVisualLineCount(value: string): number {
-  const lines = value.replace(/\r\n?/g, '\n').split('\n')
-  return lines.reduce((total, line) => {
-    const length = Array.from(line).length
-    return total + Math.max(1, Math.ceil(length / CODE_FIELD_ESTIMATED_CHARS_PER_LINE))
-  }, 0)
-}
-
-function estimateCodeFieldHeight(value: string): number {
-  return clampEditorHeight((estimateVisualLineCount(value) * CODE_FIELD_LINE_HEIGHT) + CODE_FIELD_VERTICAL_PADDING)
-}
-
-function layoutEditor() {
-  if (!monacoEditor) {
-    return
-  }
-
-  const width = editorContainer.value?.clientWidth ?? 0
-  if (width > 0) {
-    monacoEditor.layout({ width, height: editorHeight.value })
-    return
-  }
-
-  monacoEditor.layout()
-}
-
-function setEditorHeight(height: number) {
-  const nextHeight = clampEditorHeight(height)
-  if (nextHeight === editorHeight.value) {
-    return
-  }
-
-  editorHeight.value = nextHeight
-  void nextTick(layoutEditor)
-}
-
-function syncEstimatedEditorHeight(value = draftValue.value) {
-  setEditorHeight(estimateCodeFieldHeight(value))
-}
-
-function syncMeasuredEditorHeight() {
-  const contentHeight = monacoEditor?.getContentHeight()
-  if (typeof contentHeight === 'number' && Number.isFinite(contentHeight)) {
-    setEditorHeight(contentHeight)
-  }
-}
-
 function emitDraftValue(nextValue: string) {
-  syncEstimatedEditorHeight(nextValue)
+  codeAutoHeight.syncEstimatedEditorHeight(nextValue)
   if (nextValue === draftValue.value) {
     return
   }
@@ -140,7 +89,7 @@ async function createEditor() {
       automaticLayout: true,
       lineNumbers: 'on',
       wordWrap: 'on',
-      lineHeight: CODE_FIELD_LINE_HEIGHT,
+      lineHeight: codeAutoHeight.lineHeight,
       tabSize: 2,
       padding: { top: 12, bottom: 12 },
       scrollbar: { vertical: 'auto', horizontal: 'auto' },
@@ -161,10 +110,7 @@ async function createEditor() {
       emit('blur')
     })
 
-    contentSizeDisposable = monacoEditor.onDidContentSizeChange((event) => {
-      setEditorHeight(event.contentHeight)
-    })
-    syncMeasuredEditorHeight()
+    codeAutoHeight.attachEditor(monacoEditor)
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : 'Failed to load Monaco editor.'
   } finally {
@@ -174,7 +120,7 @@ async function createEditor() {
 
 function syncEditorValue(nextValue: string) {
   draftValue.value = nextValue
-  syncEstimatedEditorHeight(nextValue)
+  codeAutoHeight.syncEstimatedEditorHeight(nextValue)
 
   if (!monacoEditor || nextValue === monacoEditor.getValue()) {
     return
@@ -183,7 +129,7 @@ function syncEditorValue(nextValue: string) {
   isSyncing = true
   monacoEditor.setValue(nextValue)
   isSyncing = false
-  void nextTick(syncMeasuredEditorHeight)
+  void nextTick(codeAutoHeight.syncMeasuredEditorHeight)
 }
 
 function onFallbackInput(event: Event) {
@@ -195,7 +141,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  contentSizeDisposable?.dispose()
+  codeAutoHeight.dispose()
   monacoEditor?.dispose()
   monacoModel?.dispose()
 })

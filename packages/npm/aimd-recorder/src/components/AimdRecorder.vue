@@ -2813,7 +2813,7 @@ defineExpose({
   flex: 0 0 auto;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 .aimd-protocol-recorder__content :deep(.aimd-step-field__body) {
   min-width: 0;
@@ -2828,6 +2828,19 @@ defineExpose({
 }
 .aimd-protocol-recorder__content :deep(.aimd-step-field__body p) {
   margin: 0;
+}
+.aimd-protocol-recorder__content :deep(.aimd-step-field__body-actions) {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+  margin-top: -8px;
+}
+.aimd-protocol-recorder__content :deep(.aimd-step-field__body-action) {
+  opacity: 0.86;
+}
+.aimd-protocol-recorder__content :deep(.aimd-step-field__body-action:hover:not(:disabled)),
+.aimd-protocol-recorder__content :deep(.aimd-step-field__body-action:focus-visible) {
+  opacity: 1;
 }
 .aimd-protocol-recorder__content :deep(.aimd-step-field__details) {
   display: flex;
@@ -2950,9 +2963,13 @@ defineExpose({
   background: transparent;
 }
 .aimd-protocol-recorder__content :deep(.aimd-step-field__toggle) {
+  min-height: 22px;
+  padding: 0 8px;
   color: #8a5a12;
   border-color: rgba(154, 88, 0, 0.18);
   background: rgba(255, 255, 255, 0.82);
+  font-size: 11px;
+  line-height: 1;
 }
 .aimd-protocol-recorder__content :deep(.aimd-step-field__toggle:hover:not(:disabled)) {
   border-color: rgba(154, 88, 0, 0.34);

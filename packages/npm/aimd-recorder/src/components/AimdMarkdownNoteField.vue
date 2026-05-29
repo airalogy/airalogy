@@ -3,9 +3,14 @@ import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, shallowRe
 import { AimdEditor } from '@airalogy/aimd-editor/vue'
 import { renderToVue } from '@airalogy/aimd-renderer'
 import { useCodeBlockRendering } from '../composables/useCodeBlockRendering'
+import { createMonacoAutoHeight, type MonacoAutoHeightEditor } from '../composables/useMonacoAutoHeight'
 
 type AimdEditorExpose = {
-  getMonacoEditor?: () => { focus?: () => void } | null
+  getMonacoEditor?: () => NoteMonacoEditor | null
+}
+
+type NoteMonacoEditor = MonacoAutoHeightEditor & {
+  focus?: () => void
 }
 
 const props = withDefaults(defineProps<{
@@ -17,7 +22,6 @@ const props = withDefaults(defineProps<{
   modelValue: undefined,
   disabled: false,
   locale: undefined,
-  minHeight: 220,
 })
 
 const emit = defineEmits<{
@@ -45,11 +49,24 @@ function isZhLocale(locale?: string): boolean {
 const fieldRootRef = ref<HTMLElement | null>(null)
 const editorRef = ref<AimdEditorExpose | null>(null)
 const draftValue = ref(normalizeMarkdownModelValue(props.modelValue))
+const noteAutoHeight = createMonacoAutoHeight({
+  getInitialValue: () => draftValue.value,
+  getLayoutElement: () => fieldRootRef.value?.querySelector('.aimd-editor-container') as HTMLElement | null,
+  minHeight: props.minHeight,
+  maxHeight: 420,
+})
+const noteEditorHeight = noteAutoHeight.editorHeight
+const noteFieldStyle = computed(() => ({
+  '--aimd-markdown-note-editor-height': `${noteEditorHeight.value}px`,
+}))
 const editing = ref(false)
 const previewNodes = shallowRef<VNode[]>([])
 const previewRenderFailed = ref(false)
 let previewRenderRequestId = 0
 let focusOutCheckTimer: ReturnType<typeof setTimeout> | null = null
+let modeSwitchFocusGuardTimer: ReturnType<typeof setTimeout> | null = null
+let modeSwitchFocusGuardActive = false
+let pendingEditorFocus = false
 const { preRenderer: codeBlockPreRenderer } = useCodeBlockRendering(() => {
   void renderPreview()
 })
@@ -58,9 +75,17 @@ const hasValue = computed(() => Boolean(draftValue.value.trim()))
 const showPreview = computed(() => hasValue.value && !editing.value)
 const showEditor = computed(() => !props.disabled && (!hasValue.value || editing.value))
 const showEmptyState = computed(() => !showPreview.value && !showEditor.value)
-const editLabel = computed(() => (isZhLocale(props.locale) ? '编辑备注' : 'Edit note'))
 const closeLabel = computed(() => (isZhLocale(props.locale) ? '关闭备注' : 'Close note'))
 const emptyLabel = computed(() => (isZhLocale(props.locale) ? '暂无备注' : 'No notes'))
+const previewLabel = computed(() => (isZhLocale(props.locale) ? '预览' : 'Preview'))
+const sourceLabel = computed(() => (isZhLocale(props.locale) ? '源码' : 'Source'))
+const viewSwitchLabel = computed(() => (isZhLocale(props.locale) ? '备注显示模式' : 'Note view mode'))
+const noteMonacoOptions = computed(() => ({
+  minimap: { enabled: false },
+  lineHeight: noteAutoHeight.lineHeight,
+  padding: { top: 12, bottom: 12 },
+  scrollbar: { vertical: 'auto', horizontal: 'auto' },
+}))
 
 const PreviewOutlet = defineComponent({
   name: 'AimdMarkdownNotePreviewOutlet',
@@ -87,6 +112,7 @@ function syncEditingState() {
 }
 
 function emitDraftValue(markdown: string) {
+  noteAutoHeight.syncEstimatedEditorHeight(markdown)
   if (markdown === draftValue.value) {
     return
   }
@@ -134,12 +160,23 @@ async function beginEditing() {
     return
   }
 
+  guardModeSwitchFocus()
   editing.value = true
-  await nextTick()
-  editorRef.value?.getMonacoEditor?.()?.focus?.()
+  await focusEditorAfterMount()
+}
+
+function switchToPreview() {
+  if (!hasValue.value) {
+    return
+  }
+
+  guardModeSwitchFocus()
+  editing.value = false
+  void renderPreview()
 }
 
 function closeEditor() {
+  clearModeSwitchFocusGuard()
   clearPendingFocusOutCheck()
   editing.value = false
   emit('close')
@@ -178,6 +215,50 @@ function clearPendingFocusOutCheck() {
   }
 }
 
+function clearModeSwitchFocusGuard() {
+  if (modeSwitchFocusGuardTimer) {
+    clearTimeout(modeSwitchFocusGuardTimer)
+    modeSwitchFocusGuardTimer = null
+  }
+  modeSwitchFocusGuardActive = false
+}
+
+function guardModeSwitchFocus() {
+  clearModeSwitchFocusGuard()
+  modeSwitchFocusGuardActive = true
+  modeSwitchFocusGuardTimer = setTimeout(() => {
+    modeSwitchFocusGuardTimer = null
+    modeSwitchFocusGuardActive = false
+  }, 80)
+}
+
+function focusCurrentEditor(): boolean {
+  const editor = editorRef.value?.getMonacoEditor?.()
+  if (!editor?.focus) {
+    pendingEditorFocus = true
+    return false
+  }
+
+  pendingEditorFocus = false
+  editor.focus()
+  return true
+}
+
+async function focusEditorAfterMount() {
+  await nextTick()
+  focusCurrentEditor()
+}
+
+function handleEditorReady(editor: { monaco?: NoteMonacoEditor }) {
+  if (editor.monaco) {
+    noteAutoHeight.attachEditor(editor.monaco)
+  }
+
+  if (pendingEditorFocus) {
+    focusCurrentEditor()
+  }
+}
+
 function handleFocusIn() {
   clearPendingFocusOutCheck()
 }
@@ -186,6 +267,10 @@ function emitBlurIfLeavingField(event: FocusEvent) {
   const currentTarget = fieldRootRef.value
   const nextTarget = event.relatedTarget as Node | null
   if (!currentTarget || (nextTarget && currentTarget.contains(nextTarget))) {
+    return
+  }
+
+  if (modeSwitchFocusGuardActive) {
     return
   }
 
@@ -212,6 +297,7 @@ watch(() => props.modelValue, (value) => {
   }
 
   draftValue.value = nextValue
+  noteAutoHeight.syncEstimatedEditorHeight(nextValue)
 })
 
 watch(
@@ -227,8 +313,16 @@ watch(() => props.disabled, () => {
   syncEditingState()
 })
 
+watch(showEditor, (visible) => {
+  if (visible && !props.disabled) {
+    void focusEditorAfterMount()
+  }
+}, { immediate: true })
+
 onBeforeUnmount(() => {
   clearPendingFocusOutCheck()
+  clearModeSwitchFocusGuard()
+  noteAutoHeight.dispose()
 })
 </script>
 
@@ -236,6 +330,7 @@ onBeforeUnmount(() => {
   <div
     ref="fieldRootRef"
     class="aimd-markdown-note-field"
+    :style="noteFieldStyle"
     :class="{
       'aimd-markdown-note-field--disabled': disabled,
       'aimd-markdown-note-field--preview': showPreview,
@@ -247,13 +342,23 @@ onBeforeUnmount(() => {
   >
     <div v-if="showPreview" class="aimd-markdown-note-field__preview-shell">
       <div v-if="!disabled" class="aimd-markdown-note-field__preview-actions">
-        <button
-          type="button"
-          class="aimd-markdown-note-field__preview-edit"
-          @click="beginEditing"
-        >
-          {{ editLabel }}
-        </button>
+        <span class="aimd-markdown-note-field__view-switch" role="group" :aria-label="viewSwitchLabel">
+          <button
+            type="button"
+            class="aimd-markdown-note-field__view-btn aimd-markdown-note-field__view-btn--active"
+            aria-pressed="true"
+          >
+            {{ previewLabel }}
+          </button>
+          <button
+            type="button"
+            class="aimd-markdown-note-field__view-btn aimd-markdown-note-field__view-btn--source"
+            aria-pressed="false"
+            @click="beginEditing"
+          >
+            {{ sourceLabel }}
+          </button>
+        </span>
       </div>
       <div
         class="aimd-markdown-note-field__preview"
@@ -273,6 +378,24 @@ onBeforeUnmount(() => {
 
     <div v-else-if="showEditor" class="aimd-markdown-note-field__editor-shell">
       <div class="aimd-markdown-note-field__editor-actions">
+        <span class="aimd-markdown-note-field__view-switch" role="group" :aria-label="viewSwitchLabel">
+          <button
+            type="button"
+            class="aimd-markdown-note-field__view-btn aimd-markdown-note-field__view-btn--preview"
+            :disabled="!hasValue"
+            aria-pressed="false"
+            @click="switchToPreview"
+          >
+            {{ previewLabel }}
+          </button>
+          <button
+            type="button"
+            class="aimd-markdown-note-field__view-btn aimd-markdown-note-field__view-btn--active"
+            aria-pressed="true"
+          >
+            {{ sourceLabel }}
+          </button>
+        </span>
         <button
           type="button"
           class="aimd-markdown-note-field__editor-close"
@@ -294,10 +417,11 @@ onBeforeUnmount(() => {
         :show-aimd-toolbar="true"
         :enable-block-handle="!disabled"
         :keep-inactive-editors-mounted="false"
-        :min-height="minHeight"
+        :min-height="noteEditorHeight"
         :readonly="disabled"
-        :monaco-options="{ minimap: { enabled: false } }"
+        :monaco-options="noteMonacoOptions"
         @update:model-value="emitDraftValue"
+        @ready="handleEditorReady"
       />
     </div>
 
@@ -329,27 +453,10 @@ onBeforeUnmount(() => {
 
 .aimd-markdown-note-field__preview-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 8px;
   padding: 8px 8px 0;
-}
-
-.aimd-markdown-note-field__preview-edit {
-  border: 1px solid #d1d9e6;
-  border-radius: 999px;
-  min-height: 26px;
-  padding: 0 10px;
-  background: #fff;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
-}
-
-.aimd-markdown-note-field__preview-edit:hover {
-  border-color: #9db1cc;
-  background: #f7faff;
-  color: #1f4f8f;
 }
 
 .aimd-markdown-note-field__editor-shell {
@@ -358,9 +465,50 @@ onBeforeUnmount(() => {
 
 .aimd-markdown-note-field__editor-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 8px 8px 0;
   background: #fff;
+}
+
+.aimd-markdown-note-field__view-switch {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #d1d9e6;
+  border-radius: 999px;
+  background: #f8fbff;
+}
+
+.aimd-markdown-note-field__view-btn {
+  min-height: 24px;
+  padding: 0 10px;
+  border: 0 none;
+  border-radius: 999px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.aimd-markdown-note-field__view-btn:hover:not(:disabled):not(.aimd-markdown-note-field__view-btn--active) {
+  background: #eef5ff;
+  color: #334155;
+}
+
+.aimd-markdown-note-field__view-btn--active {
+  background: #ffffff;
+  color: #1f4f8f;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  cursor: default;
+}
+
+.aimd-markdown-note-field__view-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .aimd-markdown-note-field__editor-close {
@@ -478,10 +626,18 @@ onBeforeUnmount(() => {
 
 .aimd-markdown-note-field :deep(.aimd-editor-panel) {
   min-width: 0;
+  min-height: var(--aimd-markdown-note-editor-height) !important;
 }
 
 .aimd-markdown-note-field :deep(.aimd-editor-source-mode) {
+  height: var(--aimd-markdown-note-editor-height) !important;
+  min-height: var(--aimd-markdown-note-editor-height);
   background: #fff;
+}
+
+.aimd-markdown-note-field :deep(.aimd-editor-container) {
+  height: var(--aimd-markdown-note-editor-height);
+  min-height: var(--aimd-markdown-note-editor-height);
 }
 
 .aimd-markdown-note-field :deep(.aimd-editor-wysiwyg-mode) {

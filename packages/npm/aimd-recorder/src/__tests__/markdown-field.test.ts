@@ -100,8 +100,9 @@ describe('AimdMarkdownField', () => {
   })
 
   it('starts the embedded AiralogyMarkdown editor at a compact content-driven height', () => {
-    expect(source).toMatch(/const MARKDOWN_EDITOR_MIN_HEIGHT = MARKDOWN_EDITOR_LINE_HEIGHT \+ MARKDOWN_EDITOR_VERTICAL_PADDING/)
-    expect(source).toMatch(/const markdownEditorHeight = ref\(estimateMarkdownEditorHeight\(draftValue\.value\)\)/)
+    expect(source).toContain('createMonacoAutoHeight')
+    expect(source).toMatch(/const markdownEditorHeight = markdownAutoHeight\.editorHeight/)
+    expect(source).toMatch(/markdownAutoHeight\.attachEditor\(editor\.monaco\)/)
     expect(source).toMatch(/:min-height="markdownEditorHeight"/)
     expect(source).toMatch(/@ready="handleMarkdownEditorReady"/)
     expect(source).toContain('--aimd-markdown-field-editor-height')

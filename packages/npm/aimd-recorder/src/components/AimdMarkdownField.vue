@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, shallowRef, watch, type PropType, type VNode } from 'vue'
+import { computed, defineComponent, h, onBeforeUnmount, ref, shallowRef, watch, type PropType, type VNode } from 'vue'
 import { AimdEditor } from '@airalogy/aimd-editor/vue'
 import { createMermaidRenderer, renderToVue } from '@airalogy/aimd-renderer'
 import type { AimdRecorderMessages } from '../locales'
 import { getAimdRecorderScopeLabel } from '../locales'
 import { createChainedElementRenderer, useCodeBlockRendering } from '../composables/useCodeBlockRendering'
+import { createMonacoAutoHeight, type MonacoAutoHeightEditor } from '../composables/useMonacoAutoHeight'
 
 const props = withDefaults(defineProps<{
   modelValue?: unknown
@@ -28,18 +29,6 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'blur'): void
 }>()
-
-type MonacoLikeEditor = {
-  getContentHeight?: () => number
-  layout?: (dimension?: { width: number; height: number }) => void
-  onDidContentSizeChange?: (listener: (event: { contentHeight: number }) => void) => { dispose: () => void }
-}
-
-const MARKDOWN_EDITOR_LINE_HEIGHT = 21
-const MARKDOWN_EDITOR_VERTICAL_PADDING = 24
-const MARKDOWN_EDITOR_MIN_HEIGHT = MARKDOWN_EDITOR_LINE_HEIGHT + MARKDOWN_EDITOR_VERTICAL_PADDING
-const MARKDOWN_EDITOR_MAX_HEIGHT = 560
-const MARKDOWN_EDITOR_ESTIMATED_CHARS_PER_LINE = 96
 
 function normalizeMarkdownModelValue(value: unknown): string {
   if (typeof value === 'string') {
@@ -127,15 +116,18 @@ const { preRenderer: codeBlockPreRenderer } = useCodeBlockRendering(() => {
 const fieldRootRef = ref<HTMLElement | null>(null)
 const draftValue = ref(normalizeMarkdownModelValue(props.modelValue))
 const viewMode = ref<'preview' | 'source'>(draftValue.value.trim() ? 'preview' : 'source')
-const markdownEditorHeight = ref(estimateMarkdownEditorHeight(draftValue.value))
+const markdownAutoHeight = createMonacoAutoHeight({
+  getInitialValue: () => draftValue.value,
+  getLayoutElement: () => fieldRootRef.value?.querySelector('.aimd-editor-container') as HTMLElement | null,
+  maxHeight: 560,
+})
+const markdownEditorHeight = markdownAutoHeight.editorHeight
 const markdownFieldStyle = computed(() => ({
   '--aimd-markdown-field-editor-height': `${markdownEditorHeight.value}px`,
 }))
 const previewNodes = shallowRef<VNode[]>([])
 const previewRenderFailed = ref(false)
 let previewRenderRequestId = 0
-let markdownEditor: MonacoLikeEditor | null = null
-let markdownContentSizeDisposable: { dispose: () => void } | null = null
 const RenderVNode = defineComponent({
   name: 'RenderVNode',
   props: {
@@ -167,62 +159,10 @@ const emptyPreviewLabel = computed(() => (isZhLocale(props.locale) ? '暂无内�
 const previewToolbarLabel = computed(() => (isZhLocale(props.locale) ? 'Markdown 显示模式' : 'Markdown view mode'))
 const markdownMonacoOptions = computed(() => ({
   minimap: { enabled: false },
-  lineHeight: MARKDOWN_EDITOR_LINE_HEIGHT,
+  lineHeight: markdownAutoHeight.lineHeight,
   padding: { top: 12, bottom: 12 },
   scrollbar: { vertical: 'auto', horizontal: 'auto' },
 }))
-
-function clampMarkdownEditorHeight(height: number): number {
-  return Math.max(MARKDOWN_EDITOR_MIN_HEIGHT, Math.min(MARKDOWN_EDITOR_MAX_HEIGHT, Math.ceil(height)))
-}
-
-function estimateVisualLineCount(value: string): number {
-  const lines = value.replace(/\r\n?/g, '\n').split('\n')
-  return lines.reduce((total, line) => {
-    const length = Array.from(line).length
-    return total + Math.max(1, Math.ceil(length / MARKDOWN_EDITOR_ESTIMATED_CHARS_PER_LINE))
-  }, 0)
-}
-
-function estimateMarkdownEditorHeight(value: string): number {
-  return clampMarkdownEditorHeight((estimateVisualLineCount(value) * MARKDOWN_EDITOR_LINE_HEIGHT) + MARKDOWN_EDITOR_VERTICAL_PADDING)
-}
-
-function layoutMarkdownEditor() {
-  if (!markdownEditor?.layout) {
-    return
-  }
-
-  const editorContainer = fieldRootRef.value?.querySelector('.aimd-editor-container') as HTMLElement | null
-  const width = editorContainer?.clientWidth ?? 0
-  if (width > 0) {
-    markdownEditor.layout({ width, height: markdownEditorHeight.value })
-    return
-  }
-
-  markdownEditor.layout()
-}
-
-function setMarkdownEditorHeight(height: number) {
-  const nextHeight = clampMarkdownEditorHeight(height)
-  if (nextHeight === markdownEditorHeight.value) {
-    return
-  }
-
-  markdownEditorHeight.value = nextHeight
-  void nextTick(layoutMarkdownEditor)
-}
-
-function syncEstimatedMarkdownEditorHeight(value = draftValue.value) {
-  setMarkdownEditorHeight(estimateMarkdownEditorHeight(value))
-}
-
-function syncMeasuredMarkdownEditorHeight() {
-  const contentHeight = markdownEditor?.getContentHeight?.()
-  if (typeof contentHeight === 'number' && Number.isFinite(contentHeight)) {
-    setMarkdownEditorHeight(contentHeight)
-  }
-}
 
 async function renderPreview() {
   const currentContent = draftValue.value.trim()
@@ -272,7 +212,7 @@ function switchToSource() {
 }
 
 function emitDraftValue(markdown: string) {
-  syncEstimatedMarkdownEditorHeight(markdown)
+  markdownAutoHeight.syncEstimatedEditorHeight(markdown)
   if (markdown === draftValue.value) {
     return
   }
@@ -281,17 +221,12 @@ function emitDraftValue(markdown: string) {
   emit('update:modelValue', markdown)
 }
 
-function handleMarkdownEditorReady(editor: { monaco?: MonacoLikeEditor }) {
+function handleMarkdownEditorReady(editor: { monaco?: MonacoAutoHeightEditor }) {
   if (!editor.monaco) {
     return
   }
 
-  markdownContentSizeDisposable?.dispose()
-  markdownEditor = editor.monaco
-  markdownContentSizeDisposable = markdownEditor.onDidContentSizeChange?.((event) => {
-    setMarkdownEditorHeight(event.contentHeight)
-  }) ?? null
-  syncMeasuredMarkdownEditorHeight()
+  markdownAutoHeight.attachEditor(editor.monaco)
 }
 
 function emitBlurIfLeavingField(event: FocusEvent) {
@@ -312,14 +247,14 @@ watch(() => props.modelValue, (value) => {
 
   const hadValue = hasValue.value
   draftValue.value = nextValue
-  syncEstimatedMarkdownEditorHeight(nextValue)
+  markdownAutoHeight.syncEstimatedEditorHeight(nextValue)
   if (!hadValue && nextValue.trim()) {
     viewMode.value = 'preview'
   }
 })
 
 onBeforeUnmount(() => {
-  markdownContentSizeDisposable?.dispose()
+  markdownAutoHeight.dispose()
 })
 
 watch(
