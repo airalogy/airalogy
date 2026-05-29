@@ -74,6 +74,37 @@ Client assigners also use these constraints for dependency readiness, so an assi
 Use `locale` to switch built-in recorder labels (`en-US` / `zh-CN`).
 `AimdProtocolRecorder` is still available as a deprecated compatibility alias, but new code should use `AimdRecorder`.
 
+## Assigner Graph
+
+Use `AimdAssignerGraph` to render protocol `assigner_graph` data without depending on an app-specific store or UI framework.
+
+```vue
+<script setup lang="ts">
+import { AimdAssignerGraph } from "@airalogy/aimd-recorder"
+import "@airalogy/aimd-recorder/styles"
+
+const assignerGraph = {
+  nodes: [
+    { name: "seconds", type: "dependent_field" },
+    { name: "calculate_duration", type: "assigner" },
+    { name: "duration", type: "assigned_field" },
+  ],
+  edges: [
+    ["seconds", "calculate_duration"],
+    ["calculate_duration", "duration"],
+  ],
+}
+</script>
+
+<template>
+  <AimdAssignerGraph
+    :assigner-graph="assignerGraph"
+    :node-schema-map="{ duration: { title: 'Duration' } }"
+    height="520px"
+  />
+</template>
+```
+
 ## Recorder Editor
 
 Use `AimdRecorderEditor` when users need to edit the AIMD protocol structure and fill recorder values in the same screen.

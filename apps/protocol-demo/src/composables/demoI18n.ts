@@ -64,7 +64,23 @@ export interface ProtocolDemoMessages {
   tabs: {
     record: string
     source: string
+    graph: string
     engine: string
+  }
+  graph: {
+    title: string
+    zoomIn: string
+    zoomOut: string
+    fitView: string
+    fullscreen: string
+    close: string
+    showTitle: string
+    showName: string
+    dependentField: string
+    assigner: string
+    assignedField: string
+    empty: string
+    loading: string
   }
   source: {
     files: string
@@ -165,7 +181,23 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
     tabs: {
       record: 'Record',
       source: 'Source',
+      graph: 'Topology',
       engine: 'Engine',
+    },
+    graph: {
+      title: 'Assigner topology',
+      zoomIn: 'Zoom in',
+      zoomOut: 'Zoom out',
+      fitView: 'Fit view',
+      fullscreen: 'Fullscreen',
+      close: 'Close',
+      showTitle: 'Show title',
+      showName: 'Show name',
+      dependentField: 'Dependent field',
+      assigner: 'Assigner',
+      assignedField: 'Assigned field',
+      empty: 'No assigner graph available. Parse the protocol first, or choose an example with assigners.',
+      loading: 'Loading assigner graph',
     },
     source: {
       files: 'Protocol files',
@@ -264,7 +296,23 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
     tabs: {
       record: '记录',
       source: '源码',
+      graph: '拓扑',
       engine: '引擎',
+    },
+    graph: {
+      title: '赋值器拓扑',
+      zoomIn: '放大',
+      zoomOut: '缩小',
+      fitView: '适应视图',
+      fullscreen: '全屏',
+      close: '关闭',
+      showTitle: '显示标题',
+      showName: '显示名称',
+      dependentField: '依赖字段',
+      assigner: '赋值器',
+      assignedField: '赋值字段',
+      empty: '暂无赋值器拓扑。请先解析协议，或选择包含赋值器的示例。',
+      loading: '正在加载赋值器拓扑',
     },
     source: {
       files: '协议文件',

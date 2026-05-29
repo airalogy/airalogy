@@ -10,7 +10,7 @@
 import './styles/aimd.css'
 import { AimdProtocolRecorder as DeprecatedAimdProtocolRecorder } from './components'
 
-export { AimdRecorder, AimdRecorderEditor, AimdQuizRecorder } from './components'
+export { AimdAssignerGraph, AimdRecorder, AimdRecorderEditor, AimdQuizRecorder } from './components'
 export { AimdDnaSequenceField, AimdMarkdownField } from './components'
 /**
  * @deprecated Use `AimdRecorder` instead.
@@ -24,7 +24,13 @@ export {
 export type {
   AimdProtocolRecordData,
   AimdAssignerDefinition,
+  AimdAssignerGraphData,
+  AimdAssignerGraphEdge,
+  AimdAssignerGraphLabels,
+  AimdAssignerGraphNode,
+  AimdAssignerGraphNodeType,
   AimdAssignerMap,
+  AimdAssignerNodeSchemaInfo,
   AimdAssignerRunner,
   AimdAssignerRunnerRequest,
   AimdServerAssignerMap,

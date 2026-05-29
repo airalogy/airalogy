@@ -163,6 +163,43 @@ export interface AimdAssignerDefinition {
   [key: string]: unknown
 }
 
+export type AimdAssignerGraphNodeType = "dependent_field" | "assigner" | "assigned_field"
+
+export interface AimdAssignerGraphNode {
+  name: string
+  type: AimdAssignerGraphNodeType
+}
+
+export type AimdAssignerGraphEdge = [string, string]
+
+export interface AimdAssignerGraphData {
+  nodes: AimdAssignerGraphNode[]
+  edges: AimdAssignerGraphEdge[]
+}
+
+export interface AimdAssignerNodeSchemaInfo {
+  title?: string
+  type?: string
+  format?: string
+  description?: string
+}
+
+export interface AimdAssignerGraphLabels {
+  zoomIn: string
+  zoomOut: string
+  fitView: string
+  fullscreen: string
+  close: string
+  showTitle: string
+  showName: string
+  dependentField: string
+  assigner: string
+  assignedField: string
+  empty: string
+  loading: string
+  fullscreenTitle: string
+}
+
 export interface AimdServerAssignerRunnerRequest {
   section: Exclude<AimdRecorderFieldType, "quiz">
   fieldKey: string

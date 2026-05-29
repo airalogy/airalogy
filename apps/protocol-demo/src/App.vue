@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import {
+  AimdAssignerGraph,
   AimdRecorderEditor,
   applyAimdAssignedFieldsToRecord,
   buildAimdAssignerDependentData,
@@ -8,6 +9,10 @@ import {
   createEmptyProtocolRecordData,
   extractAimdAssignedFields,
   getAimdAssignerFieldKey,
+  type AimdAssignerGraphData,
+  type AimdAssignerGraphLabels,
+  type AimdAssignerGraphNodeType,
+  type AimdAssignerNodeSchemaInfo,
   type AimdFieldState,
   type AimdFileUploadContext,
   type AimdResolvedFileInfo,
@@ -102,7 +107,7 @@ const { locale: uiLocale } = useDemoLocale()
 const messages = useDemoMessages()
 const selectedProtocolId = ref('')
 const selectedLocale = ref('')
-const activeTab = ref<'record' | 'source' | 'engine'>('record')
+const activeTab = ref<'record' | 'source' | 'graph' | 'engine'>('record')
 const selectedSourcePath = ref('')
 const sourceDrafts = ref<Record<string, string>>({})
 const sourceContent = ref('')
@@ -213,6 +218,59 @@ const protocolAssigners = computed<AimdAssignerMap>(() => {
   return assigners as AimdAssignerMap
 })
 
+const protocolAssignerGraph = computed<AimdAssignerGraphData | null>(() => {
+  const data = parseResult.value?.data
+  if (!data || typeof data !== 'object') return null
+  const graph = (data as Record<string, unknown>).assigner_graph
+  if (!isObjectRecord(graph)) return null
+
+  const rawNodes = Array.isArray(graph.nodes) ? graph.nodes : []
+  const rawEdges = Array.isArray(graph.edges) ? graph.edges : []
+  const nodes = rawNodes
+    .map(normalizeAssignerGraphNode)
+    .filter((node): node is AimdAssignerGraphData['nodes'][number] => node !== null)
+  const edges = rawEdges
+    .map(normalizeAssignerGraphEdge)
+    .filter((edge): edge is AimdAssignerGraphData['edges'][number] => edge !== null)
+
+  return nodes.length > 0 ? { nodes, edges } : null
+})
+
+const assignerGraphNodeSchemaMap = computed<Record<string, AimdAssignerNodeSchemaInfo>>(() => {
+  const data = parseResult.value?.data
+  if (!data || typeof data !== 'object') return {}
+  const jsonSchema = (data as Record<string, unknown>).json_schema
+  if (!isObjectRecord(jsonSchema)) return {}
+
+  const map: Record<string, AimdAssignerNodeSchemaInfo> = {}
+  for (const schema of Object.values(jsonSchema)) {
+    if (!isObjectRecord(schema) || !isObjectRecord(schema.properties)) {
+      continue
+    }
+    for (const [name, property] of Object.entries(schema.properties)) {
+      if (!isObjectRecord(property)) continue
+      map[name] = {
+        title: typeof property.title === 'string' ? property.title : undefined,
+        type: typeof property.type === 'string' ? property.type : undefined,
+        format: typeof property.format === 'string' ? property.format : undefined,
+        description: typeof property.description === 'string' ? property.description : undefined,
+      }
+    }
+  }
+  return map
+})
+
+const assignerGraphLabels = computed<AimdAssignerGraphLabels>(() => ({
+  ...messages.value.graph,
+  fullscreenTitle: messages.value.graph.title,
+}))
+
+const assignerGraphLoading = computed(() => (
+  engineBusy.value
+  && engineStatusState.value.type === 'running'
+  && engineStatusState.value.action === 'parse'
+))
+
 const parseAssigners = computed(() => {
   return Object.keys(protocolAssigners.value)
 })
@@ -316,6 +374,29 @@ function parsedFieldName(value: unknown) {
 function extractParsedFieldNameSet(value: unknown) {
   if (!Array.isArray(value)) return new Set<string>()
   return new Set(value.map(parsedFieldName).filter(Boolean))
+}
+
+function isAssignerGraphNodeType(value: unknown): value is AimdAssignerGraphNodeType {
+  return value === 'dependent_field' || value === 'assigner' || value === 'assigned_field'
+}
+
+function normalizeAssignerGraphNode(value: unknown): AimdAssignerGraphData['nodes'][number] | null {
+  if (!isObjectRecord(value) || typeof value.name !== 'string' || !value.name.trim()) {
+    return null
+  }
+  return {
+    name: value.name.trim(),
+    type: isAssignerGraphNodeType(value.type) ? value.type : 'dependent_field',
+  }
+}
+
+function normalizeAssignerGraphEdge(value: unknown): AimdAssignerGraphData['edges'][number] | null {
+  if (!Array.isArray(value) || value.length < 2) return null
+  const [from, to] = value
+  if (typeof from !== 'string' || typeof to !== 'string') return null
+  const trimmedFrom = from.trim()
+  const trimmedTo = to.trim()
+  return trimmedFrom && trimmedTo ? [trimmedFrom, trimmedTo] : null
 }
 
 function assignedFieldToRecorderFieldKey(assignedField: string) {
@@ -897,6 +978,13 @@ onMounted(() => {
             {{ messages.tabs.source }}
           </button>
           <button
+            :class="{ active: activeTab === 'graph' }"
+            type="button"
+            @click="activeTab = 'graph'"
+          >
+            {{ messages.tabs.graph }}
+          </button>
+          <button
             :class="{ active: activeTab === 'engine' }"
             type="button"
             @click="activeTab = 'engine'"
@@ -966,6 +1054,16 @@ onMounted(() => {
             :labels="messages.source"
             :root-label="sourceRootLabel"
             @content-change="handleSourceContentChange"
+          />
+        </section>
+
+        <section v-else-if="activeTab === 'graph'" class="graph-panel">
+          <AimdAssignerGraph
+            :assigner-graph="protocolAssignerGraph"
+            :node-schema-map="assignerGraphNodeSchemaMap"
+            :loading="assignerGraphLoading"
+            :labels="assignerGraphLabels"
+            height="640px"
           />
         </section>
 
@@ -1363,6 +1461,7 @@ button:disabled {
 
 .record-panel,
 .source-panel,
+.graph-panel,
 .engine-panel {
   min-width: 0;
 }
@@ -1396,10 +1495,15 @@ button:disabled {
 }
 
 .source-panel,
+.graph-panel,
 .engine-panel {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.graph-panel {
+  min-height: 640px;
 }
 
 .json-view {
