@@ -342,7 +342,7 @@ describe('AimdRecorder assigner controls', () => {
         },
         serverAssigners: {
           final_conv_pct: sharedAssigner,
-          k_obs: sharedAssigner,
+          k_obs: { ...sharedAssigner },
         },
         runServerAssigner,
       },
@@ -362,6 +362,94 @@ describe('AimdRecorder assigner controls', () => {
     const latestRecord = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
     expect(latestRecord?.var?.final_conv_pct).toBe(96.5)
     expect(latestRecord?.var?.k_obs).toBe(0.125)
+    expect(wrapper.findAll('.aimd-rec-assigner-field__status--done')).toHaveLength(2)
+  })
+
+  it('shows running state on every field in a shared server assigner batch', async () => {
+    const finalConvNode = {
+      ...varNode,
+      id: 'final_conv_pct',
+      name: 'final_conv_pct',
+      label: 'final_conv_pct',
+      raw: '{{var|final_conv_pct: float}}',
+      definition: {
+        name: 'final_conv_pct',
+        type: 'float',
+      },
+    }
+    const rateNode = {
+      ...varNode,
+      id: 'k_obs',
+      name: 'k_obs',
+      label: 'k_obs',
+      raw: '{{var|k_obs: float}}',
+      definition: {
+        name: 'k_obs',
+        type: 'float',
+      },
+    }
+    currentVarNodes = [finalConvNode, rateNode]
+    currentFields = {
+      ...fields,
+      var: ['final_conv_pct', 'k_obs'],
+      var_definitions: [
+        { name: 'final_conv_pct', type: 'float' },
+        { name: 'k_obs', type: 'float' },
+      ],
+    }
+    const sharedAssigner = {
+      mode: 'manual',
+      dependent_fields: ['kinetics_file'],
+    }
+    let resolveRun: (value: unknown) => void = () => {}
+    const runServerAssigner = vi.fn((_request: AimdAssignerRunnerRequest) => new Promise((resolve) => {
+      resolveRun = resolve
+    }))
+
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: '{{var|final_conv_pct: float}}{{var|k_obs: float}}',
+        locale: 'en-US',
+        modelValue: {
+          var: {
+            kinetics_file: 'airalogy.id.file.csv',
+          },
+          step: {},
+          check: {},
+          quiz: {},
+        },
+        serverAssigners: {
+          final_conv_pct: sharedAssigner,
+          k_obs: { ...sharedAssigner },
+        },
+        runServerAssigner,
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    const buttons = wrapper.findAll('.aimd-rec-assigner-field__button')
+    expect(buttons).toHaveLength(2)
+    await buttons[0].trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(runServerAssigner).toHaveBeenCalledTimes(1)
+    expect(wrapper.findAll('.aimd-rec-assigner-field__spinner')).toHaveLength(2)
+    expect(wrapper.findAll('.aimd-rec-assigner-field__status--loading')).toHaveLength(2)
+
+    resolveRun({
+      data: {
+        assigned_fields: {
+          final_conv_pct: 96.5,
+          k_obs: 0.125,
+        },
+      },
+    })
+    await flushPromises()
+    await nextTick()
+
     expect(wrapper.findAll('.aimd-rec-assigner-field__status--done')).toHaveLength(2)
   })
 

@@ -324,6 +324,7 @@ interface ResolvedAssignerControl {
   payloadFieldKey: string
   clientAssigner?: AimdClientAssignerField
   serverAssigner?: AimdResolvedAssigner
+  serverRunKey?: string
   state?: AimdFieldState
   loading: boolean
   disabled: boolean
@@ -347,8 +348,15 @@ function resolveAssignerControl(
   }
 
   const state = effectiveFieldState.value[fieldKey]
-  const loading = state?.loading === true
-  const canCancelServerRun = Boolean(serverAssigner && resolvedRunServerAssigner.value && loading)
+  const serverRunKey = serverAssigner ? getServerAssignerRunKey(serverAssigner) : undefined
+  const serverGroupLoading = Boolean(serverRunKey && serverAssignerAbortControllers.has(serverRunKey))
+  const loading = state?.loading === true || serverGroupLoading
+  const canCancelServerRun = Boolean(
+    serverAssigner
+    && resolvedRunServerAssigner.value
+    && serverRunKey
+    && serverAssignerAbortControllers.has(serverRunKey),
+  )
   const disabled = (loading && !canCancelServerRun) || state?.disabled === true
   const label = canCancelServerRun
     ? resolvedMessages.value.assigner.cancel
@@ -363,6 +371,7 @@ function resolveAssignerControl(
     payloadFieldKey,
     clientAssigner,
     serverAssigner,
+    serverRunKey,
     state,
     loading,
     disabled,
@@ -382,7 +391,7 @@ function renderAssignerButton(control: ResolvedAssignerControl, value: unknown):
       event.stopPropagation()
       if (control.loading) {
         if (control.serverAssigner && resolvedRunServerAssigner.value) {
-          cancelServerAssigner(control.fieldKey)
+          cancelServerAssigner(control.serverRunKey ?? control.fieldKey)
         } else {
           emit("assigner-cancel", {
             section: control.fieldType,
@@ -753,6 +762,10 @@ function getAutoServerAssignerGroupKey(assigner: AimdResolvedAssigner): string {
   })
 }
 
+function getServerAssignerRunKey(assigner: AimdResolvedAssigner): string {
+  return getAutoServerAssignerGroupKey(assigner)
+}
+
 function scheduleAutoServerAssigners() {
   if (autoServerAssignerScheduled) {
     return
@@ -774,15 +787,15 @@ async function runAutoServerAssigners() {
     if (!isAutoServerAssignerMode(assigner.mode)) {
       continue
     }
-    if (serverAssignerAbortControllers.has(assigner.fieldKey)) {
-      continue
-    }
 
-    const groupKey = getAutoServerAssignerGroupKey(assigner)
+    const groupKey = getServerAssignerRunKey(assigner)
     if (visitedGroups.has(groupKey)) {
       continue
     }
     visitedGroups.add(groupKey)
+    if (serverAssignerAbortControllers.has(groupKey)) {
+      continue
+    }
 
     if (!shouldRunAutoFirstServerAssigner(assigner)) {
       continue
@@ -840,6 +853,21 @@ function getDeclaredServerAssignerStateKeys(assigner: AimdResolvedAssigner, fall
   return [...stateKeys]
 }
 
+function getServerAssignerGroupStateKeys(assigner: AimdResolvedAssigner, fallbackFieldKey: string): string[] {
+  const groupKey = getServerAssignerRunKey(assigner)
+  const stateKeys = new Set<string>(getDeclaredServerAssignerStateKeys(assigner, fallbackFieldKey))
+  for (const entry of protocolAssignerEntries.value) {
+    if (getServerAssignerRunKey(entry) !== groupKey) {
+      continue
+    }
+    stateKeys.add(entry.fieldKey)
+    for (const stateKey of getDeclaredServerAssignerStateKeys(entry, entry.fieldKey)) {
+      stateKeys.add(stateKey)
+    }
+  }
+  return [...stateKeys]
+}
+
 function getReturnedServerAssignerStateKeys(
   assignedFields: Record<string, unknown>,
   fallbackFieldKey: string,
@@ -862,10 +890,12 @@ async function runServerAssigner(
   const runner = resolvedRunServerAssigner.value
   if (!runner) return
 
-  serverAssignerAbortControllers.get(fieldKey)?.abort()
+  const runKey = getServerAssignerRunKey(assigner)
+  const groupStateKeys = getServerAssignerGroupStateKeys(assigner, fieldKey)
+  serverAssignerAbortControllers.get(runKey)?.abort()
   const abortController = new AbortController()
-  serverAssignerAbortControllers.set(fieldKey, abortController)
-  setInternalAssignerStates(getDeclaredServerAssignerStateKeys(assigner, fieldKey), { loading: true, error: undefined })
+  serverAssignerAbortControllers.set(runKey, abortController)
+  setInternalAssignerStates(groupStateKeys, { loading: true, error: undefined })
 
   try {
     const result = await runner({
@@ -883,27 +913,28 @@ async function runServerAssigner(
     }
     const assignedFields = extractAimdAssignedFields(result)
     const returnedStateKeys = getReturnedServerAssignerStateKeys(assignedFields, fieldKey)
+    const completedStateKeys = [...new Set([...groupStateKeys, ...returnedStateKeys])]
     if (Object.keys(assignedFields).length > 0) {
       applyAimdAssignedFieldsToRecord(localRecord, assignedFields)
       markRecordChanged({ rebuild: true, runClientAssigners: true })
     } else {
       emitRecordUpdate()
     }
-    if (serverAssignerAbortControllers.get(fieldKey) === abortController) {
-      setInternalAssignerStates(returnedStateKeys, { loading: false, error: undefined })
+    if (serverAssignerAbortControllers.get(runKey) === abortController) {
+      setInternalAssignerStates(completedStateKeys, { loading: false, error: undefined })
     }
   } catch (error) {
     if (abortController.signal.aborted) {
-      if (serverAssignerAbortControllers.get(fieldKey) === abortController) {
-        setInternalAssignerStates(getDeclaredServerAssignerStateKeys(assigner, fieldKey), { loading: false, error: undefined })
+      if (serverAssignerAbortControllers.get(runKey) === abortController) {
+        setInternalAssignerStates(groupStateKeys, { loading: false, error: undefined })
       }
       return
     }
     const message = error instanceof Error ? error.message : String(error)
-    setInternalAssignerStates(getDeclaredServerAssignerStateKeys(assigner, fieldKey), { loading: false, error: message })
+    setInternalAssignerStates(groupStateKeys, { loading: false, error: message })
   } finally {
-    if (serverAssignerAbortControllers.get(fieldKey) === abortController) {
-      serverAssignerAbortControllers.delete(fieldKey)
+    if (serverAssignerAbortControllers.get(runKey) === abortController) {
+      serverAssignerAbortControllers.delete(runKey)
     }
   }
 }

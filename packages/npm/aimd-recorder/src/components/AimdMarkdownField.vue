@@ -437,6 +437,14 @@ watch(
   font-size: 16px;
 }
 
+.aimd-markdown-field__assigner-state :deep(.aimd-rec-assigner-field__status--done) {
+  color: #16a34a;
+}
+
+.aimd-markdown-field__assigner-state :deep(.aimd-rec-assigner-field__status--error) {
+  color: #dc2626;
+}
+
 .aimd-markdown-field__assigner-error {
   margin: 0;
   border-top: 1px solid #fecaca;
