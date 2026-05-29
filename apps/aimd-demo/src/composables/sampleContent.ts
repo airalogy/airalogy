@@ -7,6 +7,7 @@ import meetingNotesZh from '../../../../examples/protocols/meeting-notes/zh-CN/p
 import cuaacKineticsEn from '../../../../examples/protocols/cuaac-kinetics/en-US/protocol.aimd?raw'
 import cuaacKineticsZh from '../../../../examples/protocols/cuaac-kinetics/zh-CN/protocol.aimd?raw'
 import fieldWaterSampleObservationZh from '../../../../examples/protocols/field-water-sample-observation/zh-CN/protocol.aimd?raw'
+import literatureReviewAssistantZh from '../../../../examples/protocols/literature-review-assistant/zh-CN/protocol.aimd?raw'
 import drugResponseIc50En from '../../../../examples/protocols/drug-response-ic50/en-US/protocol.aimd?raw'
 import drugResponseIc50Zh from '../../../../examples/protocols/drug-response-ic50/zh-CN/protocol.aimd?raw'
 import diaryEn from '../../../../examples/protocols/diary/en-US/protocol.aimd?raw'
@@ -137,6 +138,26 @@ export const DEMO_EXAMPLES: DemoExample[] = [
     },
     locales: ['zh-CN'],
     tags: ['protocol', 'environment', 'water-quality', 'monsoon', 'rainfall'],
+  },
+  {
+    id: 'literature-review-assistant',
+    kind: 'protocol',
+    source: {
+      'zh-CN': 'examples/protocols/literature-review-assistant/zh-CN/protocol.aimd',
+    },
+    title: {
+      'en-US': 'AI-assisted literature review',
+      'zh-CN': 'AI 辅助文献调研与证据综述',
+    },
+    description: {
+      'en-US': 'Protocol for configuring an OpenAI-compatible web-search model, screening literature, extracting evidence, appraising quality, and drafting a review.',
+      'zh-CN': '用于配置 OpenAI 兼容联网大模型，完成候选文献初筛、人工证据提取、质量评价和综述草稿生成。',
+    },
+    content: {
+      'zh-CN': literatureReviewAssistantZh,
+    },
+    locales: ['zh-CN'],
+    tags: ['protocol', 'research', 'literature-review', 'AI', 'assigner'],
   },
   {
     id: 'drug-response-ic50',
