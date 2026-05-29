@@ -2,6 +2,7 @@
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, shallowRef, watch, type VNode } from 'vue'
 import { AimdEditor } from '@airalogy/aimd-editor/vue'
 import { renderToVue } from '@airalogy/aimd-renderer'
+import { useCodeBlockRendering } from '../composables/useCodeBlockRendering'
 
 type AimdEditorExpose = {
   getMonacoEditor?: () => { focus?: () => void } | null
@@ -49,6 +50,9 @@ const previewNodes = shallowRef<VNode[]>([])
 const previewRenderFailed = ref(false)
 let previewRenderRequestId = 0
 let focusOutCheckTimer: ReturnType<typeof setTimeout> | null = null
+const { preRenderer: codeBlockPreRenderer } = useCodeBlockRendering(() => {
+  void renderPreview()
+})
 
 const hasValue = computed(() => Boolean(draftValue.value.trim()))
 const showPreview = computed(() => hasValue.value && !editing.value)
@@ -104,6 +108,9 @@ async function renderPreview() {
   try {
     const rendered = await renderToVue(currentContent, {
       locale: props.locale,
+      elementRenderers: {
+        pre: codeBlockPreRenderer,
+      },
     })
 
     if (requestId !== previewRenderRequestId) {
@@ -401,6 +408,54 @@ onBeforeUnmount(() => {
   word-break: break-word;
   font: inherit;
   color: inherit;
+}
+
+.aimd-markdown-note-field__preview :deep(.aimd-code-block) {
+  max-width: 100%;
+  overflow: hidden;
+  margin: 0.8em 0;
+  padding: 0;
+  border: 1px solid #d8e1ee;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.58;
+  white-space: normal;
+}
+
+.aimd-markdown-note-field__preview :deep(.aimd-code-block__code) {
+  display: block;
+  padding: 10px 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.aimd-markdown-note-field__preview :deep(.aimd-code-block__line) {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 12px;
+  padding-right: 12px;
+}
+
+.aimd-markdown-note-field__preview :deep(.aimd-code-block__line-number) {
+  min-width: 3ch;
+  padding-left: 12px;
+  color: #94a3b8;
+  text-align: right;
+  user-select: none;
+}
+
+.aimd-markdown-note-field__preview :deep(.aimd-code-block__line-code) {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.aimd-markdown-note-field__preview :deep(.aimd-code-block--wrap .aimd-code-block__line-code) {
+  padding-left: var(--aimd-code-wrap-indent, 0ch);
+  text-indent: calc(-1 * var(--aimd-code-wrap-indent, 0ch));
 }
 
 .aimd-markdown-note-field__empty {

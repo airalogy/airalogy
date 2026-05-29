@@ -1364,7 +1364,165 @@ export function createStepCardRenderer(
  */
 export interface ShikiHighlighter {
   codeToHtml: (code: string, options: { lang: string, theme: string }) => string
+  codeToTokensBase?: (code: string, options: { lang: string, theme: string }) => Array<Array<{ content: string, color?: string, bgColor?: string, fontStyle?: number, htmlStyle?: string | Record<string, string> }>>
   codeToTokensWithThemes?: (code: string, options: { lang: string, themes: Record<string, string> }) => Array<Array<{ content: string, variants: Record<string, { color: string }> }>>
+}
+
+export interface CodeBlockRendererOptions {
+  theme?: string
+  lineNumbers?: boolean
+  wrap?: boolean
+  className?: string
+}
+
+export interface LoadShikiHighlighterOptions {
+  themes?: string[]
+  langs?: string[]
+}
+
+type CodeBlockToken = {
+  content: string
+  color?: string
+  bgColor?: string
+  fontStyle?: number
+  htmlStyle?: string | Record<string, string>
+}
+
+const DEFAULT_CODE_BLOCK_THEME = "github-light"
+const DEFAULT_CODE_HIGHLIGHTER_THEMES = [DEFAULT_CODE_BLOCK_THEME]
+const DEFAULT_CODE_HIGHLIGHTER_LANGS = [
+  "bash",
+  "css",
+  "html",
+  "javascript",
+  "json",
+  "jsonc",
+  "markdown",
+  "python",
+  "shellscript",
+  "sql",
+  "toml",
+  "typescript",
+  "xml",
+  "yaml",
+]
+let defaultCodeHighlighterPromise: Promise<ShikiHighlighter> | null = null
+
+export async function loadShikiHighlighter(
+  options: LoadShikiHighlighterOptions = {},
+): Promise<ShikiHighlighter> {
+  const hasCustomOptions = Boolean(options.themes || options.langs)
+  const create = async () => {
+    const { createHighlighter } = await import("shiki")
+    return createHighlighter({
+      themes: (options.themes ?? DEFAULT_CODE_HIGHLIGHTER_THEMES) as never,
+      langs: (options.langs ?? DEFAULT_CODE_HIGHLIGHTER_LANGS) as never,
+    }) as Promise<unknown> as Promise<ShikiHighlighter>
+  }
+
+  if (hasCustomOptions) {
+    return create()
+  }
+
+  defaultCodeHighlighterPromise ??= create()
+  return defaultCodeHighlighterPromise
+}
+
+function resolveCodeBlockRendererOptions(
+  optionsOrTheme: string | CodeBlockRendererOptions | undefined,
+): Required<CodeBlockRendererOptions> {
+  if (typeof optionsOrTheme === "string") {
+    return {
+      theme: optionsOrTheme,
+      lineNumbers: false,
+      wrap: false,
+      className: "",
+    }
+  }
+
+  return {
+    theme: optionsOrTheme?.theme ?? DEFAULT_CODE_BLOCK_THEME,
+    lineNumbers: optionsOrTheme?.lineNumbers ?? false,
+    wrap: optionsOrTheme?.wrap ?? false,
+    className: optionsOrTheme?.className ?? "",
+  }
+}
+
+function getCodeLanguage(codeNode: Element): string {
+  const className = codeNode.properties?.className
+  if (Array.isArray(className)) {
+    const langClass = className.find(c => typeof c === "string" && c.startsWith("language-"))
+    return typeof langClass === "string" ? langClass.replace("language-", "") : "text"
+  }
+
+  return typeof className === "string" && className.startsWith("language-")
+    ? className.replace("language-", "")
+    : "text"
+}
+
+function getCodeContent(codeNode: Element): string {
+  return codeNode.children
+    .map(child => (child.type === "text" ? child.value : ""))
+    .join("")
+}
+
+function normalizeCodeContent(code: string): string {
+  return code.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n$/, "")
+}
+
+function splitCodeLines(code: string): CodeBlockToken[][] {
+  const lines = code.split(/\r\n|\r|\n/)
+  return (lines.length ? lines : [""]).map(line => [{ content: line }])
+}
+
+function getLineIndentColumns(tokens: CodeBlockToken[]): number {
+  const line = tokens.map(token => token.content).join("")
+  let columns = 0
+  for (const char of line) {
+    if (char === " ") {
+      columns += 1
+    }
+    else if (char === "\t") {
+      columns += 2
+    }
+    else {
+      break
+    }
+  }
+  return Math.min(columns, 24)
+}
+
+function hasCodeTokenContent(tokens: CodeBlockToken[]): boolean {
+  return tokens.some(token => token.content.length > 0)
+}
+
+function getCodeTokenStyle(token: CodeBlockToken): string | Record<string, string> | undefined {
+  if (token.htmlStyle) {
+    return token.htmlStyle
+  }
+
+  const style: Record<string, string> = {}
+  if (token.color) {
+    style.color = token.color
+  }
+  if (token.bgColor) {
+    style.backgroundColor = token.bgColor
+  }
+  if (typeof token.fontStyle === "number") {
+    if (token.fontStyle & 1) style.fontStyle = "italic"
+    if (token.fontStyle & 2) style.fontWeight = "700"
+    if (token.fontStyle & 4) style.textDecoration = "underline"
+  }
+
+  return Object.keys(style).length > 0 ? style : undefined
+}
+
+function renderLegacyPlainCodeBlock(lang: string, codeContent: string): VNode {
+  return h("pre", {
+    class: `language-${lang}`,
+  }, h("code", {
+    class: `language-${lang}`,
+  }, codeContent))
 }
 
 /**
@@ -1374,8 +1532,11 @@ export interface ShikiHighlighter {
  */
 export function createCodeBlockRenderer(
   highlighter: ShikiHighlighter | null | (() => ShikiHighlighter | null),
-  defaultTheme = "github-dark",
+  optionsOrTheme: string | CodeBlockRendererOptions = DEFAULT_CODE_BLOCK_THEME,
 ): ElementRenderer {
+  const options = resolveCodeBlockRendererOptions(optionsOrTheme)
+  const useLegacyHtmlOutput = typeof optionsOrTheme === "string"
+
   return (node, children, ctx) => {
     // Find code element inside pre
     const codeNode = node.children.find(
@@ -1386,39 +1547,38 @@ export function createCodeBlockRenderer(
       return h("pre", {}, children)
     }
 
-    // Get language from class
-    const className = codeNode.properties?.className
-    let lang = "text"
-    if (Array.isArray(className)) {
-      const langClass = className.find(c => typeof c === "string" && c.startsWith("language-"))
-      if (langClass && typeof langClass === "string") {
-        lang = langClass.replace("language-", "")
-      }
-    }
-    else if (typeof className === "string" && className.startsWith("language-")) {
-      lang = className.replace("language-", "")
-    }
-
-    // Get code content
-    const codeContent = codeNode.children
-      .map(child => (child.type === "text" ? child.value : ""))
-      .join("")
-
-    // Get highlighter
+    const lang = getCodeLanguage(codeNode)
+    const codeContent = normalizeCodeContent(getCodeContent(codeNode))
     const hl = typeof highlighter === "function" ? highlighter() : highlighter
+    let tokenLines = splitCodeLines(codeContent)
 
-    // Use Shiki if available
-    if (hl) {
+    if (useLegacyHtmlOutput) {
+      if (hl?.codeToHtml) {
+        try {
+          const highlightedHtml = hl.codeToHtml(codeContent, {
+            lang,
+            theme: options.theme,
+          })
+
+          return h("div", {
+            "class": "shiki-code-block",
+            "data-lang": lang,
+            "innerHTML": highlightedHtml,
+          })
+        }
+        catch (error) {
+          console.error("Failed to highlight code:", error)
+        }
+      }
+
+      return renderLegacyPlainCodeBlock(lang, codeContent)
+    }
+
+    if (hl?.codeToTokensBase) {
       try {
-        const highlightedHtml = hl.codeToHtml(codeContent, {
+        tokenLines = hl.codeToTokensBase(codeContent, {
           lang,
-          theme: defaultTheme,
-        })
-
-        return h("div", {
-          "class": "shiki-code-block",
-          "data-lang": lang,
-          "innerHTML": highlightedHtml,
+          theme: options.theme,
         })
       }
       catch (error) {
@@ -1426,9 +1586,40 @@ export function createCodeBlockRenderer(
       }
     }
 
-    // Fallback: render without highlighting
-    return h("pre", { class: `language-${lang}` }, h("code", { class: `language-${lang}` }, codeContent),
-    )
+    return h("pre", {
+      "class": [
+        "aimd-code-block",
+        options.lineNumbers ? "aimd-code-block--line-numbers" : "",
+        options.wrap ? "aimd-code-block--wrap" : "",
+        options.className,
+        `language-${lang}`,
+      ].filter(Boolean).join(" "),
+      "data-lang": lang,
+    }, h("code", {
+      class: [
+        "aimd-code-block__code",
+        `language-${lang}`,
+      ],
+    }, tokenLines.map((lineTokens, lineIndex) => h("span", {
+      class: "aimd-code-block__line",
+      "data-line": String(lineIndex + 1),
+    }, [
+      options.lineNumbers
+        ? h("span", {
+            class: "aimd-code-block__line-number",
+            "aria-hidden": "true",
+          }, String(lineIndex + 1))
+        : null,
+      h("span", {
+        class: "aimd-code-block__line-code",
+        style: { "--aimd-code-wrap-indent": `${getLineIndentColumns(lineTokens)}ch` },
+      }, hasCodeTokenContent(lineTokens)
+        ? lineTokens.map((token, tokenIndex) => h("span", {
+            key: `${lineIndex}:${tokenIndex}`,
+            style: getCodeTokenStyle(token),
+          }, token.content))
+        : "\u00a0"),
+    ]))))
   }
 }
 

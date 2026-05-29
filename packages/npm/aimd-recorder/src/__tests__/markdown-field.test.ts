@@ -5,10 +5,14 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, h, nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { createMermaidRendererMock, mermaidPreRendererMock, renderToVueMock } = vi.hoisted(() => {
+const { codePreRendererMock, createCodeBlockRendererMock, createMermaidRendererMock, loadShikiHighlighterMock, mermaidPreRendererMock, renderToVueMock } = vi.hoisted(() => {
   const mermaidPreRendererMock = vi.fn()
+  const codePreRendererMock = vi.fn()
   return {
+    codePreRendererMock,
+    createCodeBlockRendererMock: vi.fn(() => codePreRendererMock),
     createMermaidRendererMock: vi.fn(() => mermaidPreRendererMock),
+    loadShikiHighlighterMock: vi.fn(() => new Promise(() => {})),
     mermaidPreRendererMock,
     renderToVueMock: vi.fn(),
   }
@@ -35,7 +39,9 @@ vi.mock('@airalogy/aimd-editor/vue', () => ({
 }))
 
 vi.mock('@airalogy/aimd-renderer', () => ({
+  createCodeBlockRenderer: createCodeBlockRendererMock,
   createMermaidRenderer: createMermaidRendererMock,
+  loadShikiHighlighter: loadShikiHighlighterMock,
   renderToVue: renderToVueMock,
 }))
 
@@ -64,7 +70,10 @@ async function flushUi() {
 describe('AimdMarkdownField', () => {
   beforeEach(() => {
     createMermaidRendererMock.mockClear()
+    createCodeBlockRendererMock.mockClear()
+    loadShikiHighlighterMock.mockClear()
     mermaidPreRendererMock.mockClear()
+    codePreRendererMock.mockClear()
     renderToVueMock.mockReset()
   })
 
@@ -126,7 +135,7 @@ describe('AimdMarkdownField', () => {
     expect(renderToVueMock).toHaveBeenCalledWith('```mermaid\nflowchart TD\nA-->B\n```', expect.objectContaining({
       locale: 'zh-CN',
       mode: 'preview',
-      elementRenderers: { pre: mermaidPreRendererMock },
+      elementRenderers: { pre: expect.any(Function) },
     }))
     expect(wrapper.find('.aimd-markdown-field__preview').exists()).toBe(true)
     expect(wrapper.find('.aimd-rendered-markdown').text()).toContain('flowchart TD')

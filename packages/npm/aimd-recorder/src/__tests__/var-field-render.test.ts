@@ -71,6 +71,15 @@ describe('AimdVarField render behavior', () => {
     expect(recorderSource).toContain('.aimd-rec-inline__value-control::-webkit-datetime-edit')
   })
 
+  it('uses wrapped line-numbered code blocks in recorder markdown output', () => {
+    expect(recorderSource).toContain('useCodeBlockRendering')
+    expect(recorderSource).toMatch(/elementRenderers:\s*\{\s*pre: codeBlockPreRenderer/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-code-block\) \{[\s\S]*?overflow: hidden;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-code-block__line\) \{[\s\S]*?grid-template-columns: max-content minmax\(0, 1fr\);/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-code-block__line-code\) \{[\s\S]*?white-space: pre-wrap;[\s\S]*?overflow-wrap: anywhere;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-code-block--wrap \.aimd-code-block__line-code\) \{[\s\S]*?text-indent: calc\(-1 \* var\(--aimd-code-wrap-indent, 0ch\)\);/)
+  })
+
   it('renders file-like vars with a native file picker control', async () => {
     const node: AimdVarNode = {
       type: 'aimd',

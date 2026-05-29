@@ -69,6 +69,23 @@ describe('AimdRecorderEditor', () => {
     expect(source).toMatch(/aimd-recorder-workbench__panel-body--recorder \{[\s\S]*overflow: auto;/)
   })
 
+  it('lets users resize the source and recorder columns or collapse the source panel', () => {
+    expect(source).toMatch(/const sourcePanelCollapsed = ref\(false\)/)
+    expect(source).toMatch(/const sourcePanelWidthPercent = ref\(50\)/)
+    expect(source).toMatch(/const isPanelResizing = ref\(false\)/)
+    expect(source).toMatch(/const workbenchMainStyle = computed/)
+    expect(source).toMatch(/--aimd-recorder-source-panel-width/)
+    expect(source).toMatch(/function handlePanelResizePointerDown\(event: PointerEvent\)/)
+    expect(source).toMatch(/function handlePanelResizeKeydown\(event: KeyboardEvent\)/)
+    expect(source).toMatch(/function setSourcePanelCollapsed\(collapsed: boolean\)/)
+    expect(source).toMatch(/aimd-recorder-workbench__splitter/)
+    expect(source).toMatch(/aimd-recorder-workbench__main--source-collapsed/)
+    expect(source).toMatch(/aimd-recorder-workbench__main--resizing/)
+    expect(source).toMatch(/workbenchUi\.collapseSource/)
+    expect(source).toMatch(/workbenchUi\.expandSource/)
+    expect(source).toMatch(/grid-template-columns: minmax\(260px, var\(--aimd-recorder-source-panel-width, 50%\)\) 12px minmax\(0, 1fr\);/)
+  })
+
   it('can fit both columns to the remaining viewport height while still exposing a fixed-height opt-out', () => {
     expect(source).toMatch(/fitViewport\?: boolean/)
     expect(source).toMatch(/viewportOffset\?: number/)

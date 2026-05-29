@@ -1,5 +1,6 @@
 export { captureFocusSnapshot, restoreFocusSnapshot } from './useFocusManagement'
 export type { FocusSnapshot } from './useFocusManagement'
+export { createChainedElementRenderer, useCodeBlockRendering } from './useCodeBlockRendering'
 
 export {
   cloneRecordData,

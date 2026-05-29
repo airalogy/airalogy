@@ -75,6 +75,7 @@ import type { ClientAssignerFieldDefinitions } from "../client-assigner"
 import { resolveAimdRecorderFieldVNode } from "../composables/useFieldAdapters"
 import { useVarTableDragDrop, getVarTableColumns } from "../composables/useVarTableDragDrop"
 import { useFieldRendering } from "../composables/useFieldRendering"
+import { useCodeBlockRendering } from "../composables/useCodeBlockRendering"
 import {
   createEmptyCheckRecordItem,
   createEmptyStepRecordItem,
@@ -651,6 +652,8 @@ function scheduleInlineRebuild() {
     void rebuildInlineNodes(undefined, focusSnapshot, inlineRequestId)
   })
 }
+
+const { preRenderer: codeBlockPreRenderer } = useCodeBlockRendering(scheduleInlineRebuild)
 
 function markRecordChanged(options?: { rebuild?: boolean, runClientAssigners?: boolean }) {
   const assignerChanged = options?.runClientAssigners ? clientAssignerRunner.applyCurrentClientAssigners() : false
@@ -1503,6 +1506,9 @@ async function rebuildInlineNodes(
       value: localRecord as Record<string, Record<string, unknown>>,
     },
     blockVarTypes: ["AiralogyMarkdown"],
+    elementRenderers: {
+      pre: codeBlockPreRenderer,
+    },
     aimdRenderers: {
       var: node => renderInlineVar(node as AimdVarNode),
       var_table: node => renderInlineVarTable(node as AimdVarTableNode),
@@ -1782,7 +1788,49 @@ defineExpose({
 .aimd-protocol-recorder__content :deep(td) { border: 1px solid #e2e8f0; padding: 6px 10px; text-align: left; }
 .aimd-protocol-recorder__content :deep(th) { background: #f8fafc; }
 .aimd-protocol-recorder__content :deep(blockquote) { margin: 8px 0; padding: 8px 12px; border-left: 3px solid #d8dee8; color: #666; background: #fafbfc; }
-.aimd-protocol-recorder__content :deep(code) { background: #f0f2f5; border-radius: 4px; padding: 2px 5px; }
+.aimd-protocol-recorder__content :deep(:not(pre) > code) { background: #f0f2f5; border-radius: 4px; padding: 2px 5px; }
+.aimd-protocol-recorder__content :deep(.aimd-code-block) {
+  max-width: 100%;
+  overflow: hidden;
+  margin: 12px 0;
+  padding: 0;
+  border: 1px solid #d8e1ee;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.58;
+  white-space: normal;
+}
+.aimd-protocol-recorder__content :deep(.aimd-code-block__code) {
+  display: block;
+  padding: 10px 0;
+  border-radius: 0;
+  background: transparent;
+}
+.aimd-protocol-recorder__content :deep(.aimd-code-block__line) {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 12px;
+  padding-right: 12px;
+}
+.aimd-protocol-recorder__content :deep(.aimd-code-block__line-number) {
+  min-width: 3ch;
+  padding-left: 12px;
+  color: #94a3b8;
+  text-align: right;
+  user-select: none;
+}
+.aimd-protocol-recorder__content :deep(.aimd-code-block__line-code) {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.aimd-protocol-recorder__content :deep(.aimd-code-block--wrap .aimd-code-block__line-code) {
+  padding-left: var(--aimd-code-wrap-indent, 0ch);
+  text-indent: calc(-1 * var(--aimd-code-wrap-indent, 0ch));
+}
 
 /* ── Field base ─────────────────────────────────────────────────────────── */
 .aimd-protocol-recorder__content :deep(.aimd-field) {

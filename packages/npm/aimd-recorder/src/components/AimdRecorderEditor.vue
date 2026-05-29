@@ -169,6 +169,7 @@ const EMPTY_FIELDS: ExtractedAimdFields = {
 const editorRef = ref<InstanceType<typeof AimdEditor> | null>(null)
 const recorderRef = ref<InstanceType<typeof AimdRecorder> | null>(null)
 const workbenchRef = ref<HTMLElement | null>(null)
+const workbenchMainRef = ref<HTMLElement | null>(null)
 const editorPanelHeadRef = ref<HTMLElement | null>(null)
 const sidePanelHeadRef = ref<HTMLElement | null>(null)
 const editorPanelBodyRef = ref<HTMLElement | null>(null)
@@ -182,6 +183,9 @@ const draggedFieldUid = ref<string | null>(null)
 const visualEditMode = ref(props.initialVisualEditMode)
 const activeContentSurface = ref<'source' | 'visual' | null>(null)
 const activeSideTab = ref<WorkbenchSideTab>('recorder')
+const sourcePanelCollapsed = ref(false)
+const sourcePanelWidthPercent = ref(50)
+const isPanelResizing = ref(false)
 const viewportEditorMinHeight = ref(props.editorMinHeight)
 const viewportSideBodyHeight = ref(props.recorderMinHeight)
 const viewportVisualEditorMinHeight = ref(Math.max(320, props.recorderMinHeight))
@@ -189,6 +193,7 @@ const activeFieldEditor = ref<AimdWorkbenchFieldDescriptor | null>(null)
 const fieldEditorRawDraft = ref('')
 const fieldInsertMenuIndex = ref<number | null>(null)
 let viewportLayoutFrame = 0
+let panelResizeRect: DOMRect | null = null
 let visualContentSyncTimer: ReturnType<typeof setTimeout> | null = null
 let pendingContentEchoes: string[] = []
 let recentSourceDraftCleanupTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -390,6 +395,9 @@ const workbenchUi = computed(() => (
     ? {
         visualEditOn: '可视化编辑开',
         visualEditOff: '可视化编辑关',
+        collapseSource: '收起源码',
+        expandSource: '展开源码',
+        resizePanels: '调整源码和记录面板宽度',
         kind: '字段类型',
         id: '字段 ID',
         valueType: '值类型',
@@ -421,6 +429,9 @@ const workbenchUi = computed(() => (
     : {
         visualEditOn: 'Visual Edit On',
         visualEditOff: 'Visual Edit Off',
+        collapseSource: 'Collapse Source',
+        expandSource: 'Expand Source',
+        resizePanels: 'Resize source and recorder panels',
         kind: 'Field Kind',
         id: 'Field ID',
         valueType: 'Value Type',
@@ -613,6 +624,11 @@ const hasDetachedData = computed(() => detachedEntryCount.value > 0)
 
 const recordJson = computed(() => JSON.stringify(recordSnapshot.value, null, 2))
 const detachedRecordJson = computed(() => JSON.stringify(detachedRecord.value, null, 2))
+const workbenchMainStyle = computed(() => (
+  sourcePanelCollapsed.value
+    ? {}
+    : { '--aimd-recorder-source-panel-width': `${sourcePanelWidthPercent.value}%` }
+))
 const sidePanelBodyStyle = computed(() => ({
   height: `${viewportSideBodyHeight.value}px`,
 }))
@@ -683,6 +699,7 @@ watch(
     () => props.editorMinHeight,
     () => props.recorderMinHeight,
     () => props.editorMode,
+    sourcePanelCollapsed,
   ],
   async () => {
     await nextTick()
@@ -704,6 +721,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  stopPanelResize()
+
   if (typeof window !== 'undefined') {
     window.removeEventListener('resize', scheduleViewportPanelHeights)
     window.removeEventListener('scroll', scheduleViewportPanelHeights)
@@ -807,6 +826,91 @@ function handleContentSurfaceFocusOut(
 function handleRecordUpdate(value: AimdProtocolRecordData) {
   recordSnapshot.value = normalizeIncomingRecord(value)
   emit('update:modelValue', value)
+}
+
+function clampSourcePanelWidthPercent(value: number) {
+  return Math.min(76, Math.max(24, value))
+}
+
+function setSourcePanelCollapsed(collapsed: boolean) {
+  sourcePanelCollapsed.value = collapsed
+  void nextTick(() => {
+    scheduleViewportPanelHeights()
+  })
+}
+
+function stopPanelResize() {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('pointermove', handlePanelResizePointerMove)
+    window.removeEventListener('pointerup', handlePanelResizePointerUp)
+    window.removeEventListener('pointercancel', handlePanelResizePointerUp)
+  }
+
+  isPanelResizing.value = false
+  panelResizeRect = null
+}
+
+function handlePanelResizePointerMove(event: PointerEvent) {
+  if (!panelResizeRect || sourcePanelCollapsed.value) {
+    return
+  }
+
+  const nextPercent = ((event.clientX - panelResizeRect.left) / panelResizeRect.width) * 100
+  sourcePanelWidthPercent.value = clampSourcePanelWidthPercent(nextPercent)
+  scheduleViewportPanelHeights()
+}
+
+function handlePanelResizePointerUp() {
+  stopPanelResize()
+}
+
+function handlePanelResizePointerDown(event: PointerEvent) {
+  if (sourcePanelCollapsed.value || typeof window === 'undefined') {
+    return
+  }
+
+  const mainRect = workbenchMainRef.value?.getBoundingClientRect()
+  if (!mainRect || mainRect.width <= 0) {
+    return
+  }
+
+  event.preventDefault()
+  panelResizeRect = mainRect
+  isPanelResizing.value = true
+
+  const target = event.currentTarget
+  if (target instanceof HTMLElement) {
+    target.setPointerCapture?.(event.pointerId)
+  }
+
+  window.addEventListener('pointermove', handlePanelResizePointerMove)
+  window.addEventListener('pointerup', handlePanelResizePointerUp)
+  window.addEventListener('pointercancel', handlePanelResizePointerUp)
+  handlePanelResizePointerMove(event)
+}
+
+function handlePanelResizeKeydown(event: KeyboardEvent) {
+  if (sourcePanelCollapsed.value) {
+    return
+  }
+
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+    sourcePanelWidthPercent.value = clampSourcePanelWidthPercent(sourcePanelWidthPercent.value - 4)
+  } else if (event.key === 'ArrowRight') {
+    event.preventDefault()
+    sourcePanelWidthPercent.value = clampSourcePanelWidthPercent(sourcePanelWidthPercent.value + 4)
+  } else if (event.key === 'Home') {
+    event.preventDefault()
+    sourcePanelWidthPercent.value = 32
+  } else if (event.key === 'End') {
+    event.preventDefault()
+    sourcePanelWidthPercent.value = 68
+  } else {
+    return
+  }
+
+  scheduleViewportPanelHeights()
 }
 
 function handleFieldsChange(fields: ExtractedAimdFields) {
@@ -1123,10 +1227,30 @@ defineExpose({
 
 <template>
   <div ref="workbenchRef" class="aimd-recorder-workbench">
-    <div class="aimd-recorder-workbench__main">
-      <section class="aimd-recorder-workbench__panel">
+    <div
+      ref="workbenchMainRef"
+      class="aimd-recorder-workbench__main"
+      :class="{
+        'aimd-recorder-workbench__main--source-collapsed': sourcePanelCollapsed,
+        'aimd-recorder-workbench__main--resizing': isPanelResizing,
+      }"
+      :style="workbenchMainStyle"
+    >
+      <section
+        v-if="!sourcePanelCollapsed"
+        class="aimd-recorder-workbench__panel aimd-recorder-workbench__panel--source"
+      >
         <header ref="editorPanelHeadRef" class="aimd-recorder-workbench__panel-head">
-          <h3 class="aimd-recorder-workbench__panel-title">{{ editorTitleLabel }}</h3>
+          <div class="aimd-recorder-workbench__panel-head-row">
+            <h3 class="aimd-recorder-workbench__panel-title">{{ editorTitleLabel }}</h3>
+            <button
+              class="aimd-recorder-workbench__panel-head-action"
+              type="button"
+              @click="setSourcePanelCollapsed(true)"
+            >
+              {{ workbenchUi.collapseSource }}
+            </button>
+          </div>
         </header>
 
         <div
@@ -1145,6 +1269,20 @@ defineExpose({
           />
         </div>
       </section>
+
+      <button
+        v-if="!sourcePanelCollapsed"
+        class="aimd-recorder-workbench__splitter"
+        type="button"
+        role="separator"
+        :aria-label="workbenchUi.resizePanels"
+        aria-orientation="vertical"
+        aria-valuemin="24"
+        aria-valuemax="76"
+        :aria-valuenow="Math.round(sourcePanelWidthPercent)"
+        @pointerdown="handlePanelResizePointerDown"
+        @keydown="handlePanelResizeKeydown"
+      />
 
       <section
         class="aimd-recorder-workbench__panel"
@@ -1175,8 +1313,16 @@ defineExpose({
 
             <div
               v-if="showVisualEditToggle && activeSideTab === 'recorder'"
-              class="aimd-recorder-workbench__visual-toggle-wrap"
+              class="aimd-recorder-workbench__panel-actions"
             >
+              <button
+                v-if="sourcePanelCollapsed"
+                class="aimd-recorder-workbench__panel-head-action"
+                type="button"
+                @click="setSourcePanelCollapsed(false)"
+              >
+                {{ workbenchUi.expandSource }}
+              </button>
               <button
                 class="aimd-recorder-workbench__visual-toggle"
                 :class="{ 'aimd-recorder-workbench__visual-toggle--active': visualEditMode }"
@@ -1184,6 +1330,18 @@ defineExpose({
                 @click="visualEditMode = !visualEditMode"
               >
                 {{ visualEditMode ? workbenchUi.visualEditOn : workbenchUi.visualEditOff }}
+              </button>
+            </div>
+            <div
+              v-else-if="sourcePanelCollapsed"
+              class="aimd-recorder-workbench__panel-actions"
+            >
+              <button
+                class="aimd-recorder-workbench__panel-head-action"
+                type="button"
+                @click="setSourcePanelCollapsed(false)"
+              >
+                {{ workbenchUi.expandSource }}
               </button>
             </div>
           </div>
@@ -1540,9 +1698,18 @@ defineExpose({
 
 .aimd-recorder-workbench__main {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
+  grid-template-columns: minmax(260px, var(--aimd-recorder-source-panel-width, 50%)) 12px minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
+}
+
+.aimd-recorder-workbench__main--source-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.aimd-recorder-workbench__main--resizing {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .aimd-recorder-workbench__panel {
@@ -1552,6 +1719,10 @@ defineExpose({
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.aimd-recorder-workbench__panel--source {
+  min-width: 0;
 }
 
 .aimd-recorder-workbench__panel--detached {
@@ -1580,6 +1751,14 @@ defineExpose({
   min-width: 0;
 }
 
+.aimd-recorder-workbench__panel-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .aimd-recorder-workbench__panel--detached .aimd-recorder-workbench__panel-head {
   border-bottom-color: #f0dfbf;
   background: linear-gradient(180deg, #fffdf8 0%, #fff7ea 100%);
@@ -1601,6 +1780,58 @@ defineExpose({
   color: #5e6f85;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.aimd-recorder-workbench__panel-head-action {
+  appearance: none;
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid #d6deea;
+  border-radius: 8px;
+  background: #fff;
+  color: #45556c;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.aimd-recorder-workbench__panel-head-action:hover {
+  border-color: #abc1e4;
+  background: #f7faff;
+  color: #244878;
+}
+
+.aimd-recorder-workbench__splitter {
+  appearance: none;
+  position: relative;
+  align-self: stretch;
+  width: 12px;
+  min-height: 180px;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+}
+
+.aimd-recorder-workbench__splitter::before {
+  content: "";
+  position: absolute;
+  inset: 12px 5px;
+  border-radius: 999px;
+  background: #d8e1ee;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.aimd-recorder-workbench__splitter:hover::before,
+.aimd-recorder-workbench__splitter:focus-visible::before,
+.aimd-recorder-workbench__main--resizing .aimd-recorder-workbench__splitter::before {
+  background: #88a9db;
+  transform: scaleX(1.8);
+}
+
+.aimd-recorder-workbench__splitter:focus-visible {
+  outline: 2px solid rgba(47, 111, 237, 0.42);
+  outline-offset: 2px;
 }
 
 .aimd-recorder-workbench__panel-body {
@@ -2281,6 +2512,11 @@ defineExpose({
 @media (max-width: 1080px) {
   .aimd-recorder-workbench__main {
     grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .aimd-recorder-workbench__splitter {
+    display: none;
   }
 
   .aimd-recorder-workbench__panel-head-row {
@@ -2288,7 +2524,7 @@ defineExpose({
     align-items: stretch;
   }
 
-  .aimd-recorder-workbench__visual-toggle-wrap {
+  .aimd-recorder-workbench__panel-actions {
     align-self: flex-start;
   }
 

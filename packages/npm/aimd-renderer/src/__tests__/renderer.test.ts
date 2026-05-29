@@ -9,7 +9,7 @@ import {
   createRenderer,
 } from '../common/processor'
 import { getFinalIndent, parseFieldTag } from '../index'
-import { createStepCardRenderer } from '../vue/vue-renderer'
+import { createCodeBlockRenderer, createStepCardRenderer } from '../vue/vue-renderer'
 
 function findVNodeByType(node: any, expectedType: string): any | null {
   if (!node || typeof node !== 'object') {
@@ -405,6 +405,94 @@ describe('renderToHtmlSync', () => {
 })
 
 describe('renderToVue', () => {
+  it('renders code blocks with line numbers and wrapping classes', async () => {
+    const { nodes } = await renderToVue(
+      '```json\n{\n  "model":"qwen3.6-flash","enable_search":true\n}\n```',
+      {
+        elementRenderers: {
+          pre: createCodeBlockRenderer(null, {
+            lineNumbers: true,
+            wrap: true,
+          }),
+        },
+      },
+    )
+
+    const pre = findVNodeByType(nodes[0], 'pre') as any
+    expect(pre).toBeTruthy()
+    expect(pre.props.class).toContain('aimd-code-block')
+    expect(pre.props.class).toContain('aimd-code-block--line-numbers')
+    expect(pre.props.class).toContain('aimd-code-block--wrap')
+    expect(pre.props['data-lang']).toBe('json')
+    const code = findVNodeByType(pre, 'code') as any
+    expect(code.children).toHaveLength(3)
+    expect(code.children[1].children[1].props.style['--aimd-code-wrap-indent']).toBe('2ch')
+    expect(collectVNodeText(pre)).toContain('1')
+    expect(collectVNodeText(pre)).toContain('qwen3.6-flash')
+  })
+
+  it('keeps blank code lines visible without adding an extra line for the trailing markdown fence newline', async () => {
+    const { nodes } = await renderToVue(
+      '```json\n{\n\n  "model": "qwen3.6-flash"\n}\n```',
+      {
+        elementRenderers: {
+          pre: createCodeBlockRenderer(null, {
+            lineNumbers: true,
+            wrap: true,
+          }),
+        },
+      },
+    )
+
+    const pre = findVNodeByType(nodes[0], 'pre') as any
+    const code = findVNodeByType(pre, 'code') as any
+    expect(code.children).toHaveLength(4)
+    expect(code.children[1].children[1].children).toBe('\u00a0')
+    expect(code.children[2].children[1].props.style['--aimd-code-wrap-indent']).toBe('2ch')
+  })
+
+  it('uses Shiki token output when a highlighter is available', async () => {
+    const highlighter = {
+      codeToHtml: (code: string) => code,
+      codeToTokensBase: () => [
+        [
+          { content: '  ', color: '#24292e' },
+          { content: '"model"', color: '#005cc5' },
+        ],
+      ],
+    }
+    const { nodes } = await renderToVue('```json\n  "model"\n```', {
+      elementRenderers: {
+        pre: createCodeBlockRenderer(highlighter, {
+          lineNumbers: true,
+          wrap: true,
+        }),
+      },
+    })
+
+    const pre = findVNodeByType(nodes[0], 'pre') as any
+    const code = findVNodeByType(pre, 'code') as any
+    const tokenSpans = code.children[0].children[1].children
+    expect(tokenSpans[0].props.style).toEqual({ color: '#24292e' })
+    expect(tokenSpans[1].props.style).toEqual({ color: '#005cc5' })
+    expect(tokenSpans[1].children).toBe('"model"')
+  })
+
+  it('keeps the legacy plain pre fallback when called with a theme string and no highlighter', async () => {
+    const { nodes } = await renderToVue('```json\n{"model":"qwen"}\n```', {
+      elementRenderers: {
+        pre: createCodeBlockRenderer(null, 'github-light'),
+      },
+    })
+
+    const pre = findVNodeByType(nodes[0], 'pre') as any
+    expect(pre.props.class).toBe('language-json')
+    expect(pre.props.class).not.toContain('aimd-code-block')
+    const code = findVNodeByType(pre, 'code') as any
+    expect(code.props.class).toBe('language-json')
+    expect(code.children).toBe('{"model":"qwen"}')
+  })
+
   it('renders host-ready step cards with grouped body content', async () => {
     const { nodes } = await renderToVue(
       "{{step|verify, 2, title='Verify Output', subtitle='Cross-check', check=True}}\n\nStep body content.",
