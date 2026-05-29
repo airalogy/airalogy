@@ -1,5 +1,5 @@
 [airalogy_protocol]
-id = "fiber_endface_sensing_calibration_zh"
+id = "fiber_sensing_calib_zh"
 version = "0.1.0"
 name = "光纤端面微纳结构传感标定数据分析"
 description = "面向光纤端面微纳结构传感器的标定数据上传、灵敏度拟合、检测限估计、质控判定、绘图和报告生成的 Airalogy Protocol 示例。"
