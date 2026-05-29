@@ -1,7 +1,5 @@
 # CHANGELOG
 
-## Unreleased
-
 ## 0.10.0 (20260507)
 
 ### Features
