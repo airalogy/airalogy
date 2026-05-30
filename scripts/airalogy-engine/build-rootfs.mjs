@@ -115,20 +115,26 @@ function commandOutput(command, args) {
   })
 }
 
+function parseBuildxDriver(inspectOutput) {
+  const match = inspectOutput.match(/^Driver:\s*(\S+)\s*$/m)
+  return match?.[1] ?? null
+}
+
 function ensureOciBuildxBuilder(builder, { allowFallback = false } = {}) {
   const inspect = commandOutput('docker', ['buildx', 'inspect', builder])
   if (inspect.status === 0) {
     const output = `${inspect.stdout}\n${inspect.stderr}`
-    if (!output.includes('Driver: docker-container')) {
+    const driver = parseBuildxDriver(output)
+    if (driver !== 'docker-container') {
       if (allowFallback) {
         console.log(
-          `Buildx builder "${builder}" exists but is not using the docker-container driver. ` +
+          `Buildx builder "${builder}" exists but is using the ${driver ?? 'unknown'} driver. ` +
           `Using "${fallbackBuildxBuilder}" instead.`,
         )
         return ensureOciBuildxBuilder(fallbackBuildxBuilder)
       }
       throw new Error(
-        `Buildx builder "${builder}" already exists but is not using the docker-container driver.\n` +
+        `Buildx builder "${builder}" already exists but is using the ${driver ?? 'unknown'} driver.\n` +
         'Use a different builder name with --builder or AIRALOGY_ENGINE_BUILDX_BUILDER.',
       )
     }
