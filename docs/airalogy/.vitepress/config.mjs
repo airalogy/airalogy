@@ -4,14 +4,22 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 import enApisSidebar from './sidebars/en/apis.mjs'
 import enSyntaxSidebar from './sidebars/en/syntax.mjs'
 import enDataStructureSidebar from './sidebars/en/data-structure.mjs'
+import enVisionSidebar from './sidebars/en/vision.mjs'
 import zhApisSidebar from './sidebars/zh/apis.mjs'
 import zhSyntaxSidebar from './sidebars/zh/syntax.mjs'
 import zhDataStructureSidebar from './sidebars/zh/data-structure.mjs'
+import zhVisionSidebar from './sidebars/zh/vision.mjs'
 
 const base = process.env.BASE_PATH || '/'
 const githubLink = 'https://github.com/airalogy/airalogy'
 
 const enRootSidebar = [
+  {
+    text: 'Vision',
+    link: '/en/vision/',
+    collapsed: true,
+    items: enVisionSidebar[0]?.items ?? []
+  },
   {
     text: 'Examples',
     link: '/en/examples'
@@ -38,6 +46,12 @@ const enRootSidebar = [
 
 const zhRootSidebar = [
   {
+    text: '发展蓝图',
+    link: '/zh/vision/',
+    collapsed: true,
+    items: zhVisionSidebar[0]?.items ?? []
+  },
+  {
     text: '示例',
     link: '/zh/examples'
   },
@@ -63,6 +77,7 @@ const zhRootSidebar = [
 
 const enSidebar = {
   '/en/': enRootSidebar,
+  '/en/vision/': enVisionSidebar,
   '/en/apis/': enApisSidebar,
   '/en/syntax/': enSyntaxSidebar,
   '/en/data-structure/': enDataStructureSidebar
@@ -70,6 +85,7 @@ const enSidebar = {
 
 const zhSidebar = {
   '/zh/': zhRootSidebar,
+  '/zh/vision/': zhVisionSidebar,
   '/zh/apis/': zhApisSidebar,
   '/zh/syntax/': zhSyntaxSidebar,
   '/zh/data-structure/': zhDataStructureSidebar
@@ -88,6 +104,7 @@ export default withMermaid(defineConfig({
       themeConfig: {
         nav: [
           { text: 'Home', link: '/en/' },
+          { text: 'Vision', link: '/en/vision/' },
           { text: 'Examples', link: '/en/examples' },
           { text: 'Syntax', link: '/en/syntax/' },
           { text: 'APIs', link: '/en/apis/' },
@@ -103,6 +120,7 @@ export default withMermaid(defineConfig({
       themeConfig: {
         nav: [
           { text: '首页', link: '/zh/' },
+          { text: '蓝图', link: '/zh/vision/' },
           { text: '示例', link: '/zh/examples' },
           { text: '语法', link: '/zh/syntax/' },
           { text: 'API', link: '/zh/apis/' },
