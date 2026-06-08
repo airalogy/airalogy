@@ -10,6 +10,8 @@ These example archives are intended for quick Airalogy Reader testing.
 | `multi-protocol-records.aira` | `records` | Two embedded Protocols and Records from both Protocols |
 | `records-with-file.aira` | `records` | One embedded Protocol, one Record, one file reference, and one offline blob |
 
+The Record source fixtures use explicit `format: "airalogy.record"` and `schema_version: 1` fields.
+
 The source Protocol and Record fixtures live in `sources/` so these archives can be regenerated from the repository root when the `airalogy` CLI is available:
 
 ```bash

@@ -26,6 +26,7 @@ def test_cli_help():
     assert "pack" in result.stdout
     assert "unpack" in result.stdout
     assert "import-records" in result.stdout
+    assert "record" in result.stdout
 
 
 def test_cli_version():
@@ -522,6 +523,111 @@ def test_pack_records_command_with_file_payload():
         )
         assert validate_result.returncode == 0
         assert "archive validation passed" in validate_result.stdout
+
+
+def test_record_validate_and_inspect_commands():
+    """Test standalone record inspect/validate commands."""
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        protocol_dir = tmp_path / "protocol_demo"
+        protocol_dir.mkdir()
+        (protocol_dir / "protocol.aimd").write_text(
+            "{{var|sample_id: str}}\n{{var|amount: int}}\n",
+            encoding="utf-8",
+        )
+        (protocol_dir / "protocol.toml").write_text(
+            "\n".join(
+                [
+                    "[airalogy_protocol]",
+                    'id = "protocol_demo"',
+                    'version = "0.1.0"',
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        record_path = tmp_path / "record.json"
+        record_path.write_text(
+            json.dumps(
+                {
+                    "format": "airalogy.record",
+                    "schema_version": 1,
+                    "record_id": "01234567-0123-0123-0123-0123456789ab",
+                    "record_version": 1,
+                    "metadata": {
+                        "protocol_id": "protocol_demo",
+                        "protocol_version": "0.1.0",
+                    },
+                    "data": {
+                        "var": {"sample_id": "S1", "amount": 3},
+                        "step": {},
+                        "check": {},
+                        "quiz": {},
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        inspect_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "record",
+                "inspect",
+                str(record_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert inspect_result.returncode == 0
+        assert "Records: 1" in inspect_result.stdout
+        assert "Protocol IDs: protocol_demo" in inspect_result.stdout
+
+        validate_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "record",
+                "validate",
+                str(record_path),
+                "--protocol-dir",
+                str(protocol_dir),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert validate_result.returncode == 0
+        assert "record validation passed" in validate_result.stdout
+
+
+def test_record_validate_command_reports_errors():
+    """Test standalone record validate command reports structural errors."""
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        record_path = tmp_path / "bad-record.json"
+        record_path.write_text(
+            json.dumps({"record_version": 0, "data": {"var": "not an object"}}),
+            encoding="utf-8",
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "record",
+                "validate",
+                str(record_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 1
+        assert "record_version must be a positive integer" in result.stderr
+        assert "data.var must be an object" in result.stderr
 
 
 def test_import_records_command():

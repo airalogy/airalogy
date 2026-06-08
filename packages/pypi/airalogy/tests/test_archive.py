@@ -231,6 +231,22 @@ def test_pack_records_archive_with_embedded_protocol_and_record_list(tmp_path: P
     assert issues == []
 
 
+def test_pack_records_archive_rejects_invalid_record_shape(tmp_path: Path):
+    records_file = tmp_path / "records.json"
+    records_file.write_text(
+        json.dumps(
+            {
+                "record_id": "01234567-0123-0123-0123-0123456789ab",
+                "record_version": 0,
+                "data": {"var": "not an object"},
+            }
+        )
+    )
+
+    with pytest.raises(ArchiveError, match="data.var must be an object"):
+        pack_records_archive([records_file], tmp_path / "bad-records.aira")
+
+
 def test_pack_records_archive_with_file_payloads(tmp_path: Path):
     records_file = tmp_path / "records.json"
     file_id = "airalogy.id.file.11111111-1111-4111-8111-111111111111.png"

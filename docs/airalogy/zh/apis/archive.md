@@ -255,6 +255,8 @@ schemas/aira/manifest.v1.schema.json
 
 这个 schema 是 `.aira` v1 manifest 的公共格式契约，第三方 Reader、导出器和桥接器可以用它对 `_airalogy_archive/manifest.json` 做结构检查。运行时仍然应该继续校验成员路径、hash、Record JSON 和 blob 字节，因为这些属于归档内容完整性检查。
 
+Record payload 自身的结构由 `schemas/aira/record.v1.schema.json` 定义。`.aira` 校验会检查 Record payload 的基础结构；如果需要结合 Protocol 检查 `data.var` 和 quiz 答案，应使用 `airalogy record validate --protocol-dir ./my_protocol`。
+
 ## Python API
 
 ```python

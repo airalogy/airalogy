@@ -3,7 +3,13 @@ import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 
-import { AIRA_ARCHIVE_FORMAT, AIRA_MANIFEST_PATH, openAiraArchive } from '../dist/index.js'
+import {
+  AIRA_ARCHIVE_FORMAT,
+  AIRA_MANIFEST_PATH,
+  AIRALOGY_RECORD_FORMAT,
+  AIRALOGY_RECORD_SCHEMA_VERSION,
+  openAiraArchive,
+} from '../dist/index.js'
 
 function sha256Hex(value) {
   return createHash('sha256').update(value).digest('hex')
@@ -201,6 +207,37 @@ function createRecordsArchiveWithBlob({ expectedHash } = {}) {
   ])
 }
 
+function createRecordsArchiveWithInvalidRecordPayload() {
+  const record = `${JSON.stringify({
+    format: AIRALOGY_RECORD_FORMAT,
+    schema_version: AIRALOGY_RECORD_SCHEMA_VERSION,
+    record_id: 'bad-record',
+    record_version: 0,
+    data: {
+      var: 'not an object',
+    },
+  }, null, 2)}\n`
+  const manifest = {
+    format: AIRA_ARCHIVE_FORMAT,
+    version: 1,
+    kind: 'records',
+    created_at: '2026-06-08T00:00:00+00:00',
+    records: [
+      {
+        path: 'records/bad-record.json',
+        record_id: 'bad-record',
+        record_version: 0,
+        sha256: sha256Hex(record),
+      },
+    ],
+    protocols: [],
+  }
+  return createStoredZip([
+    [AIRA_MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`],
+    ['records/bad-record.json', record],
+  ])
+}
+
 test('documents the manifest v1 schema', async () => {
   const schemaPath = new URL('../../../../schemas/aira/manifest.v1.schema.json', import.meta.url)
   const schema = JSON.parse(await readFile(schemaPath, 'utf-8'))
@@ -210,6 +247,16 @@ test('documents the manifest v1 schema', async () => {
   assert.ok(schema.$defs.protocol)
   assert.ok(schema.$defs.record)
   assert.ok(schema.$defs.blob)
+  assert.ok(schema.$defs.fileReference)
+})
+
+test('documents the record v1 schema', async () => {
+  const schemaPath = new URL('../../../../schemas/aira/record.v1.schema.json', import.meta.url)
+  const schema = JSON.parse(await readFile(schemaPath, 'utf-8'))
+
+  assert.equal(schema.properties.format.const, AIRALOGY_RECORD_FORMAT)
+  assert.equal(schema.properties.schema_version.const, AIRALOGY_RECORD_SCHEMA_VERSION)
+  assert.ok(schema.properties.data)
   assert.ok(schema.$defs.fileReference)
 })
 
@@ -279,6 +326,15 @@ test('reports blob file hash mismatches', async () => {
 
   assert.equal(validation.ok, false)
   assert.match(validation.issues.join('\n'), /Blob file .* sha256 mismatch/)
+})
+
+test('reports invalid record payload structure', async () => {
+  const archive = await openAiraArchive(createRecordsArchiveWithInvalidRecordPayload())
+  const validation = await archive.validate()
+
+  assert.equal(validation.ok, false)
+  assert.match(validation.issues.join('\n'), /record_version must be a positive integer/)
+  assert.match(validation.issues.join('\n'), /data\.var must be an object/)
 })
 
 const exampleArchives = [

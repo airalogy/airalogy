@@ -248,6 +248,14 @@ airalogy validate ./record_bundle.aira
 airalogy validate ./record_bundle.aira --json
 ```
 
+Inspect or validate Record JSON before packaging:
+
+```bash
+airalogy record inspect ./record.json
+airalogy record validate ./record.json
+airalogy record validate ./record.json --protocol-dir ./my_protocol
+```
+
 Notes:
 
 - Protocol archives preserve the original protocol directory layout, including `files/`.
@@ -259,6 +267,7 @@ Notes:
 - Record archives bundle JSON records, optional embedded protocol directories, and optional local file payloads under `blobs/`.
 - Remote Airalogy file IDs or OSS objects are not downloaded automatically; exporters should download those bytes first, then pass local paths through `--file-payload`.
 - The public manifest schema is available at `schemas/aira/manifest.v1.schema.json`.
+- The public Record schema is available at `schemas/aira/record.v1.schema.json`.
 - Browser users can open `.aira` files locally with the Airalogy Reader app in `apps/aira-reader`; it parses the archive in the browser and does not upload file content.
 - Ready-to-open example archives for Reader testing live in `examples/aira/`.
 

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://airalogy.github.io/airalogy/schemas/aira/record.v1.schema.json",
+  "title": "Airalogy Record v1",
+  "description": "Core JSON structure for one Airalogy Record.",
+  "type": "object",
+  "required": ["data"],
+  "properties": {
+    "format": {
+      "const": "airalogy.record"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "airalogy_record_id": {
+      "type": ["string", "null"]
+    },
+    "record_id": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "record_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "airalogy_protocol_id": {
+          "type": ["string", "null"]
+        },
+        "protocol_id": {
+          "type": ["string", "null"]
+        },
+        "protocol_version": {
+          "type": ["string", "null"]
+        },
+        "sha1": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "data": {
+      "type": "object",
+      "required": ["var"],
+      "properties": {
+        "var": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "step": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "check": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "quiz": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fileReference"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "fileReference": {
+      "type": "object",
+      "properties": {
+        "file_id": {
+          "type": ["string", "null"]
+        },
+        "source_uri": {
+          "type": ["string", "null"]
+        },
+        "blob_id": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "filename": {
+          "type": ["string", "null"]
+        },
+        "mime_type": {
+          "type": ["string", "null"]
+        },
+        "field_path": {
+          "type": ["string", "null"]
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["file_id"]
+        },
+        {
+          "required": ["source_uri"]
+        },
+        {
+          "required": ["blob_id"]
+        }
+      ],
+      "additionalProperties": true
+    }
+  }
+}

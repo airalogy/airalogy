@@ -23,6 +23,7 @@ from .assigner.inline_assigner import (
     strip_inline_assigner_blocks,
 )
 from .ingest import import_records
+from .record.schema import inspect_record_file, validate_record_file
 from .markdown import generate_model, validate_aimd
 
 
@@ -275,6 +276,52 @@ def validate_archive_command(args):
     return 0 if ok else 1
 
 
+def inspect_record_command(args):
+    """Inspect Airalogy Record JSON without packaging it."""
+    try:
+        summary = inspect_record_file(args.record)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return 0
+
+    print(f"Record file: {summary['path']}")
+    print(f"Format: {summary['format']} v{summary['schema_version']}")
+    print(f"Records: {summary['record_count']}")
+    print(f"Record IDs: {', '.join(summary['record_ids']) or 'none'}")
+    print(f"Airalogy Record IDs: {', '.join(summary['airalogy_record_ids']) or 'none'}")
+    print(f"Protocol IDs: {', '.join(summary['protocol_ids']) or 'none'}")
+    print(f"Protocol versions: {', '.join(summary['protocol_versions']) or 'none'}")
+    print(f"Data sections: {', '.join(summary['data_sections']) or 'none'}")
+    return 0
+
+
+def validate_record_command(args):
+    """Validate Airalogy Record JSON without packaging it."""
+    result = validate_record_file(
+        args.record,
+        protocol_dir=args.protocol_dir or None,
+        allow_extra_var_fields=args.allow_extra_var_fields,
+        require_complete_quiz=args.require_complete_quiz,
+        validate_model_sync=not args.skip_model_sync_check,
+    )
+    if args.json:
+        print(json.dumps({"ok": result.ok, "issues": result.issues}, indent=2, ensure_ascii=False))
+    elif result.ok:
+        print(f"✓ {args.record}: record validation passed")
+    else:
+        print(
+            f"✗ {args.record}: record validation failed, {len(result.issues)} issue(s) found:",
+            file=sys.stderr,
+        )
+        for index, issue in enumerate(result.issues, start=1):
+            print(f"{index}. {issue}", file=sys.stderr)
+    return 0 if result.ok else 1
+
+
 def import_records_command(args):
     """Import batch row data into Airalogy Record JSON."""
     try:
@@ -501,6 +548,77 @@ def main():
         help="Print machine-readable JSON.",
     )
     validate_parser.set_defaults(func=validate_archive_command)
+
+    # Record command group
+    record_parser = subparsers.add_parser(
+        "record",
+        help="Inspect or validate Airalogy Record JSON",
+        description="Inspect or validate standalone Airalogy Record JSON files.",
+    )
+    record_subparsers = record_parser.add_subparsers(
+        dest="record_command",
+        help="Record commands",
+    )
+    record_parser.set_defaults(func=lambda _args: record_parser.print_help() or 0)
+
+    record_inspect_parser = record_subparsers.add_parser(
+        "inspect",
+        help="Inspect Airalogy Record JSON",
+        description="Inspect one Record JSON file without packaging it.",
+    )
+    record_inspect_parser.add_argument(
+        "record",
+        help="Record JSON file to inspect. The file may contain one object, a list, or {'records': [...]}.",
+    )
+    record_inspect_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print machine-readable JSON.",
+    )
+    record_inspect_parser.set_defaults(func=inspect_record_command)
+
+    record_validate_parser = record_subparsers.add_parser(
+        "validate",
+        help="Validate Airalogy Record JSON",
+        description="Validate one Record JSON file, optionally against a Protocol directory.",
+    )
+    record_validate_parser.add_argument(
+        "record",
+        help="Record JSON file to validate. The file may contain one object, a list, or {'records': [...]}.",
+    )
+    record_validate_parser.add_argument(
+        "--protocol-dir",
+        action="append",
+        default=[],
+        help=(
+            "Validate Record data.var and quiz answers against this Protocol directory. "
+            "Can be passed multiple times for multi-Protocol record files."
+        ),
+    )
+    record_validate_parser.add_argument(
+        "--allow-extra-var-fields",
+        action="store_true",
+        help="Allow data.var fields that are not declared by the Protocol.",
+    )
+    record_validate_parser.add_argument(
+        "--require-complete-quiz",
+        action="store_true",
+        help="Require every quiz item in the Protocol to have a Record answer.",
+    )
+    record_validate_parser.add_argument(
+        "--skip-model-sync-check",
+        action="store_true",
+        help=(
+            "Do not check compatibility between protocol.aimd vars and "
+            "model.py::VarModel."
+        ),
+    )
+    record_validate_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print machine-readable JSON.",
+    )
+    record_validate_parser.set_defaults(func=validate_record_command)
 
     # Import records command
     import_parser = subparsers.add_parser(

@@ -8,6 +8,8 @@ An Airalogy Record is a JSON object that contains the metadata and data of a res
 
 ```json
 {
+    "format": "airalogy.record",
+    "schema_version": 1,
     "airalogy_record_id": "airalogy.id.record.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.v.2", // 如果为本地Protocol记录的Record，由于不存在全局唯一的Airalogy Record ID概念，因此该字段可以留空（null），当本地数据同步到Airalogy平台时，如果UUID发生碰撞，则会自动生成一个新的UUID来替换原有的UUID（下面的`record_id`字段也会相应地更新）。如果是基于一个Airalogy Protocol记录的Record，则该字段为该Record在Airalogy平台中的全局唯一ID
     "record_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", // 一个UUID
     "record_version": 2, // 该Record的版本号，即第几次更新。首次提交时，此值为1；当用户更新Record时，此值递增
@@ -21,6 +23,8 @@ An Airalogy Record is a JSON object that contains the metadata and data of a res
 ```
 
 关于Airalogy Record / Airalogy Protocol的ID设计说明，请参考[Airalogy ID](id.md)。
+
+Record v1 的公共 JSON Schema 位于 `schemas/aira/record.v1.schema.json`。
 
 ## Metadata
 

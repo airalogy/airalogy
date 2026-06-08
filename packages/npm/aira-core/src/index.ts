@@ -1,5 +1,7 @@
 export const AIRA_MANIFEST_PATH = '_airalogy_archive/manifest.json'
 export const AIRA_ARCHIVE_FORMAT = 'airalogy.archive'
+export const AIRALOGY_RECORD_FORMAT = 'airalogy.record'
+export const AIRALOGY_RECORD_SCHEMA_VERSION = 1
 
 export type AiraArchiveKind = 'protocol' | 'protocols' | 'records'
 
@@ -32,6 +34,24 @@ export interface AiraRecordManifest {
   source_path?: string
   source_index?: number
   embedded_protocol_root?: string | null
+}
+
+export interface AiralogyRecordPayload {
+  format?: string
+  schema_version?: number
+  airalogy_record_id?: string | null
+  record_id?: string | null
+  record_version?: number | null
+  metadata?: Record<string, unknown> | null
+  data?: {
+    var?: Record<string, unknown>
+    step?: Record<string, unknown>
+    check?: Record<string, unknown>
+    quiz?: Record<string, unknown>
+    [key: string]: unknown
+  }
+  files?: Array<Record<string, unknown>>
+  [key: string]: unknown
 }
 
 export interface AiraBlobManifest {
@@ -110,6 +130,88 @@ function validateMemberPath(name: string): string | null {
     return `Archive member '${name}' escapes the archive root.`
   }
   return null
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function validateRecordPayload(record: unknown, label: string): string[] {
+  const issues: string[] = []
+  if (!isPlainObject(record)) {
+    return [`${label} must be a JSON object.`]
+  }
+
+  if (record.format !== undefined && record.format !== AIRALOGY_RECORD_FORMAT) {
+    issues.push(`${label} format must be '${AIRALOGY_RECORD_FORMAT}' when present.`)
+  }
+  if (
+    record.schema_version !== undefined
+    && record.schema_version !== AIRALOGY_RECORD_SCHEMA_VERSION
+  ) {
+    issues.push(`${label} schema_version must be ${AIRALOGY_RECORD_SCHEMA_VERSION} when present.`)
+  }
+  if (
+    record.record_id !== undefined
+    && record.record_id !== null
+    && (typeof record.record_id !== 'string' || record.record_id.length === 0)
+  ) {
+    issues.push(`${label} record_id must be a non-empty string when present.`)
+  }
+  if (
+    record.airalogy_record_id !== undefined
+    && record.airalogy_record_id !== null
+    && (typeof record.airalogy_record_id !== 'string' || record.airalogy_record_id.length === 0)
+  ) {
+    issues.push(`${label} airalogy_record_id must be a non-empty string when present.`)
+  }
+  const recordVersion = record.record_version
+  if (
+    recordVersion !== undefined
+    && recordVersion !== null
+    && (typeof recordVersion !== 'number' || !Number.isInteger(recordVersion) || recordVersion < 1)
+  ) {
+    issues.push(`${label} record_version must be a positive integer when present.`)
+  }
+  if (
+    record.metadata !== undefined
+    && record.metadata !== null
+    && !isPlainObject(record.metadata)
+  ) {
+    issues.push(`${label} metadata must be an object when present.`)
+  }
+
+  if (!isPlainObject(record.data)) {
+    issues.push(`${label} data must be an object.`)
+    return issues
+  }
+  if (!isPlainObject(record.data.var)) {
+    issues.push(`${label} data.var must be an object.`)
+  }
+  for (const section of ['step', 'check', 'quiz']) {
+    const value = record.data[section]
+    if (value !== undefined && value !== null && !isPlainObject(value)) {
+      issues.push(`${label} data.${section} must be an object when present.`)
+    }
+  }
+
+  if (record.files !== undefined) {
+    if (!Array.isArray(record.files)) {
+      issues.push(`${label} files must be a list when present.`)
+    }
+    else {
+      for (const [index, fileRef] of record.files.entries()) {
+        if (!isPlainObject(fileRef)) {
+          issues.push(`${label} files[${index + 1}] must be an object.`)
+          continue
+        }
+        if (!['file_id', 'source_uri', 'blob_id'].some(key => typeof fileRef[key] === 'string' && fileRef[key])) {
+          issues.push(`${label} files[${index + 1}] must include file_id, source_uri, or blob_id.`)
+        }
+      }
+    }
+  }
+  return issues
 }
 
 function findEndOfCentralDirectory(bytes: Uint8Array): number {
@@ -407,14 +509,16 @@ export class AiraArchive {
       }
       recordPaths.add(path)
       let raw: Uint8Array
+      let parsedRecord: unknown
       try {
         raw = await this.readBytes(path)
-        JSON.parse(textDecoder.decode(raw))
+        parsedRecord = JSON.parse(textDecoder.decode(raw))
       }
       catch {
         issues.push(`Record file '${path}' is not valid UTF-8 JSON.`)
         continue
       }
+      issues.push(...validateRecordPayload(parsedRecord, `Record file '${path}'`))
       if (record.sha256) {
         const actualHash = await sha256Hex(raw)
         if (actualHash !== record.sha256) {

@@ -255,6 +255,8 @@ schemas/aira/manifest.v1.schema.json
 
 This schema is the public structure contract for `.aira` v1 manifests. Third-party Readers, exporters, and bridges can use it to check `_airalogy_archive/manifest.json`. Runtime consumers should still validate member paths, hashes, Record JSON, and blob bytes because those checks cover archive content integrity.
 
+Record payload structure is defined by `schemas/aira/record.v1.schema.json`. `.aira` validation checks the basic Record payload structure; use `airalogy record validate --protocol-dir ./my_protocol` when you also need Protocol-aware validation for `data.var` and quiz answers.
+
 ## Python API
 
 ```python

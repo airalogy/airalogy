@@ -8,6 +8,8 @@ An Airalogy Record is a JSON object that contains the metadata and data of a res
 
 ```json
 {
+    "format": "airalogy.record",
+    "schema_version": 1,
     "airalogy_record_id": "airalogy.id.record.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.v.2", // If the record is created from a local Protocol, there is no global unique Airalogy Record ID, so this field can be null. When local data is synchronized to the Airalogy platform, if a UUID collision occurs, a new UUID will be generated to replace the original UUID (the `record_id` field below will also be updated). If the record is based on an Protocol within Airalogy platform, this field is the globally unique ID of the record on the Airalogy platform.
     "record_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", // An UUID
     "record_version": 2, // Version number of this record. The first submission is 1; it increments on each update.
@@ -21,6 +23,8 @@ An Airalogy Record is a JSON object that contains the metadata and data of a res
 ```
 
 For the ID design of Airalogy Record / Airalogy Protocol, see [Airalogy ID](id.md).
+
+The public JSON Schema for Record v1 lives at `schemas/aira/record.v1.schema.json`.
 
 ## Metadata
 

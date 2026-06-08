@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
 from .markdown import validate_aimd
+from .record.schema import validate_record, validate_record_structure
 
 ARCHIVE_FORMAT = "airalogy.archive"
 ARCHIVE_VERSION = 1
@@ -537,6 +538,19 @@ def _find_matching_protocol_root(
     return None
 
 
+def _find_matching_protocol_descriptor(
+    record_descriptor: dict[str, Any],
+    embedded_protocols: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    matching_root = _find_matching_protocol_root(record_descriptor, embedded_protocols)
+    if matching_root is None:
+        return None
+    for protocol in embedded_protocols:
+        if protocol["archive_root"] == matching_root:
+            return protocol
+    return None
+
+
 def _validate_output_path_for_write(output_path: Path, force: bool) -> None:
     if output_path.exists() and not force:
         raise ArchiveError(
@@ -744,6 +758,25 @@ def pack_records_archive(
         protocol_dirs or [],
         output_path=destination,
     )
+    for index, descriptor in enumerate(record_descriptors, start=1):
+        matching_protocol = _find_matching_protocol_descriptor(
+            descriptor,
+            embedded_protocols,
+        )
+        if matching_protocol is None:
+            record_issues = validate_record_structure(
+                descriptor["record"],
+                label=f"Record '{descriptor['source_path']}' item #{descriptor['source_index']}",
+            )
+        else:
+            record_issues = validate_record(
+                descriptor["record"],
+                protocol_dir=matching_protocol["protocol_dir"],
+                label=f"Record '{descriptor['source_path']}' item #{descriptor['source_index']}",
+            )
+        if record_issues:
+            joined_issues = "; ".join(record_issues)
+            raise ArchiveError(f"Record input #{index} failed validation: {joined_issues}")
 
     used_record_names: set[str] = set()
     record_payloads: dict[str, str] = {}
@@ -1221,6 +1254,40 @@ def validate_archive(archive_path: str | Path) -> tuple[bool, list[str]]:
                         continue
                     if not isinstance(parsed_record, dict):
                         issues.append(f"Record file '{record_path}' must contain a JSON object.")
+                    else:
+                        issues.extend(
+                            validate_record_structure(
+                                parsed_record,
+                                label=f"Record file '{record_path}'",
+                            )
+                        )
+                        manifest_record_id = record.get("record_id")
+                        payload_record_id = parsed_record.get("record_id")
+                        if (
+                            isinstance(manifest_record_id, str)
+                            and manifest_record_id
+                            and payload_record_id != manifest_record_id
+                        ):
+                            issues.append(
+                                f"Record file '{record_path}' record_id mismatch: "
+                                f"manifest has '{manifest_record_id}', payload has "
+                                f"'{payload_record_id or 'missing'}'."
+                            )
+                        manifest_protocol_id = record.get("protocol_id")
+                        payload_protocol_id = None
+                        payload_metadata = parsed_record.get("metadata")
+                        if isinstance(payload_metadata, dict):
+                            payload_protocol_id = payload_metadata.get("protocol_id")
+                        if (
+                            isinstance(manifest_protocol_id, str)
+                            and manifest_protocol_id
+                            and payload_protocol_id != manifest_protocol_id
+                        ):
+                            issues.append(
+                                f"Record file '{record_path}' protocol_id mismatch: "
+                                f"manifest has '{manifest_protocol_id}', payload has "
+                                f"'{payload_protocol_id or 'missing'}'."
+                            )
                     expected_hash = record.get("sha256")
                     if isinstance(expected_hash, str) and expected_hash:
                         actual_hash = _sha256_bytes(raw_record)

@@ -17,6 +17,7 @@ from .markdown.model_sync import (
     validate_var_model_compatible_with_aimd_vars,
 )
 from .record.hash import get_data_sha1
+from .record.schema import RECORD_FORMAT, RECORD_SCHEMA_VERSION
 from .record.validator import validate_record_quiz_answers
 
 InputFormat = Literal["auto", "csv", "tsv", "json", "jsonl"]
@@ -338,6 +339,8 @@ def _row_to_record(
         data["var"] = {}
 
     record: dict[str, Any] = {
+        "format": RECORD_FORMAT,
+        "schema_version": RECORD_SCHEMA_VERSION,
         "metadata": {
             **context.protocol_metadata,
             **base_metadata,

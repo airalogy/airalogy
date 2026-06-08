@@ -57,6 +57,8 @@ options:
     assert result.ok is True
     assert len(result.records) == 1
     record = result.records[0]
+    assert record["format"] == "airalogy.record"
+    assert record["schema_version"] == 1
     assert record["record_id"]
     assert record["record_version"] == 1
     assert record["metadata"]["protocol_id"] == "protocol_demo"

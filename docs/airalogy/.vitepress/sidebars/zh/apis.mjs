@@ -4,6 +4,7 @@ export default [
     items: [
       { text: '概览', link: '/zh/apis/' },
       { text: '单文件归档打包', link: '/zh/apis/archive' },
+      { text: 'Record v1', link: '/zh/apis/record' },
       { text: '批量导入 Record', link: '/zh/apis/ingest' },
       { text: 'Types', link: '/zh/apis/types' },
       { text: '类型插件', link: '/zh/apis/type-plugins' },
