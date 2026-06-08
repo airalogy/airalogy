@@ -11,6 +11,7 @@ _MONOREPO_ROOT = Path(__file__).resolve().parents[4]
 _DEFAULT_ROOTFS_PATH = str(
     _MONOREPO_ROOT / "packages/runtime/airalogy-engine-image/airalogy-engine-image"
 )
+_EXAMPLE_PROTOCOL = str(_MONOREPO_ROOT / "examples/airalogy-engine")
 _DEFAULT_IMAGE = "numbcoder/airalogy-engine:latest"
 
 
@@ -64,6 +65,10 @@ def boxlite_home(request):
 
 @pytest.fixture(scope="session")
 def engine(sandbox_kwargs, boxlite_home):
-    engine = AiralogyEngine(boxlite_home=boxlite_home, **sandbox_kwargs)
+    engine = AiralogyEngine(
+        protocol_path=_EXAMPLE_PROTOCOL,
+        boxlite_home=boxlite_home,
+        **sandbox_kwargs,
+    )
     yield engine
     asyncio.run(engine.close())

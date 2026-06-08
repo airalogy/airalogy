@@ -20,10 +20,10 @@ logger = logging.getLogger("protocol_executor_logger")
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
-_DEBUG_LOG_PATH = "protocol_debug.log"
+_DEBUG_LOG_PATH = os.environ.get("PROTOCOL_DEBUG_LOG_FILE", "protocol_debug.log")
 _debug_mode = os.environ.get("PROTOCOL_DEBUG", "0") == "1"
 if _debug_mode:
-    _file_handler = logging.FileHandler(_DEBUG_LOG_PATH)
+    _file_handler = logging.FileHandler(_DEBUG_LOG_PATH, mode="w")
     _file_handler.setLevel(logging.DEBUG)
     _file_handler.setFormatter(formatter)
     logger.addHandler(_file_handler)

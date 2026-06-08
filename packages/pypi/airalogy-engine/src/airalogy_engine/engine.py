@@ -1,21 +1,22 @@
 import asyncio
-import atexit
 import json
 import os
 import tempfile
-import threading
+import uuid
+from collections.abc import Sequence
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
-from boxlite import Box, Boxlite, BoxOptions, CopyOptions, Options
+from boxlite import Box, Boxlite, BoxOptions, BoxStateInfo, CopyOptions, Options
 from boxlite.errors import BoxliteError
 
 # Locate protocol_executor.py relative to this file
 _EXECUTOR_PATH = str(Path(__file__).parent / "protocol_executor.py")
 _WORKING_DIR = "/home/airalogy/protocols"
+_PROTOCOL_DIR = f"{_WORKING_DIR}/protocol"
 _SANDBOX_LOG_FILE = "protocol_debug.log"
-DEFAULT_IMAGE = "numbcoder/airalogy-engine:0.1"
+DEFAULT_IMAGE = "numbcoder/airalogy-engine:latest"
 _COPY_OPTIONS = CopyOptions(
     recursive=True,
     overwrite=True,
@@ -23,14 +24,6 @@ _COPY_OPTIONS = CopyOptions(
     include_parent=False,
 )
 _BACKGROUND_CLEANUP_TASKS: set[asyncio.Task[Any]] = set()
-_RUNTIME_REGISTRY_LOCK = threading.Lock()
-_RUNTIME_REGISTRY: dict[str, "_RuntimeEntry"] = {}
-
-
-class _RuntimeEntry:
-    def __init__(self, runtime: Boxlite) -> None:
-        self.runtime = runtime
-        self.ref_count = 0
 
 
 def _resolve_boxlite_home(boxlite_home: str | None) -> str:
@@ -44,52 +37,6 @@ def _resolve_boxlite_home(boxlite_home: str | None) -> str:
     return str(Path.home().joinpath(".boxlite").resolve())
 
 
-def _acquire_runtime(boxlite_home: str | None) -> tuple[str, Boxlite]:
-    key = _resolve_boxlite_home(boxlite_home)
-
-    with _RUNTIME_REGISTRY_LOCK:
-        entry = _RUNTIME_REGISTRY.get(key)
-        if entry is None:
-            runtime = (
-                Boxlite.default()
-                if boxlite_home is None
-                else Boxlite(Options(home_dir=key))
-            )
-            entry = _RuntimeEntry(runtime)
-            _RUNTIME_REGISTRY[key] = entry
-
-        entry.ref_count += 1
-        return key, entry.runtime
-
-
-def _release_runtime(key: str) -> None:
-    runtime: Boxlite | None = None
-
-    with _RUNTIME_REGISTRY_LOCK:
-        entry = _RUNTIME_REGISTRY.get(key)
-        if entry is None:
-            return
-
-        entry.ref_count -= 1
-        if entry.ref_count <= 0:
-            runtime = entry.runtime
-            del _RUNTIME_REGISTRY[key]
-
-    if runtime is not None:
-        with suppress(Exception):
-            runtime.close()
-
-
-def _close_all_runtimes() -> None:
-    with _RUNTIME_REGISTRY_LOCK:
-        runtimes = [entry.runtime for entry in _RUNTIME_REGISTRY.values()]
-        _RUNTIME_REGISTRY.clear()
-
-    for runtime in runtimes:
-        with suppress(Exception):
-            runtime.close()
-
-
 def _is_pyo3_panic(exc: BaseException) -> bool:
     exc_type = type(exc)
     return (
@@ -97,19 +44,16 @@ def _is_pyo3_panic(exc: BaseException) -> bool:
     )
 
 
-atexit.register(_close_all_runtimes)
-
-
-async def _copy_out_log(box: Box, log_file: str) -> None:
+async def _copy_out_log(box: Box, sandbox_log_file: str, log_file: str) -> None:
     """Copy the executor log from sandbox and append to the host log file."""
     tmp_dir = tempfile.mkdtemp()
     try:
         await box.copy_out(
-            f"{_WORKING_DIR}/{_SANDBOX_LOG_FILE}",
+            f"{_WORKING_DIR}/{sandbox_log_file}",
             tmp_dir,
             _COPY_OPTIONS,
         )
-        tmp_log = Path(tmp_dir) / _SANDBOX_LOG_FILE
+        tmp_log = Path(tmp_dir) / sandbox_log_file
         if tmp_log.exists():
             log_content = tmp_log.read_text(encoding="utf-8")
             if log_content:
@@ -159,21 +103,20 @@ def _track_background_cleanup(task: asyncio.Task[Any]) -> None:
     task.add_done_callback(_BACKGROUND_CLEANUP_TASKS.discard)
 
 
-async def _cleanup_box(box: Box, runtime: Boxlite) -> None:
-    """Best-effort asynchronous cleanup for timed-out boxes."""
-    with suppress(Exception):
+async def _stop_box_best_effort(box: Box) -> None:
+    """Best-effort asynchronous cleanup for boxes no longer held by an engine."""
+    with suppress(BaseException):
         await box.stop()
-    with suppress(Exception):
-        await runtime.remove(box.id, force=True)
 
 
 async def _exec_command_with_timeout(
     box: Box,
     command: list[str],
     timeout: int,
+    env: Sequence[tuple[str, str]] | None = None,
 ) -> tuple[Any | None, str, str, bool]:
     """Run a low-level BoxLite execution with explicit timeout kill semantics."""
-    execution = await box.exec(command[0], command[1:])
+    execution = await box.exec(command[0], command[1:], env=env)
 
     try:
         stdout_stream = execution.stdout()
@@ -209,21 +152,23 @@ async def _exec_command_with_timeout(
             with suppress(Exception):
                 exec_result = wait_task.result()
     finally:
-        if not timed_out:
-            await _cancel_future(wait_task)
-            await _cancel_future(stdout_task)
-            await _cancel_future(stderr_task)
+        await _cancel_future(wait_task)
+        await _cancel_future(stdout_task)
+        await _cancel_future(stderr_task)
 
     return exec_result, "".join(stdout_lines), "".join(stderr_lines), timed_out
 
 
-async def _copy_protocol_into_box(box: Box, protocol_path: Path) -> None:
-    """Copy the protocol directory into the sandbox to isolate host files."""
-    await box.copy_in(
-        f"{protocol_path.absolute()}/",
-        f"{_WORKING_DIR}/protocol/",
-        _COPY_OPTIONS,
-    )
+def _is_running_state(state: BoxStateInfo | None) -> bool:
+    """Return whether a BoxLite state object represents a running box."""
+    if state is None:
+        return False
+
+    running = getattr(state, "running", None)
+    if isinstance(running, bool):
+        return running
+
+    return str(getattr(state, "status", "")).lower() == "running"
 
 
 class AiralogyEngine:
@@ -231,22 +176,34 @@ class AiralogyEngine:
 
     def __init__(
         self,
+        protocol_path: str,
         boxlite_home: str | None = None,
         image: str | None = None,
         rootfs_path: str | None = None,
         timeout: int = 300,
         memory_mib: int = 512,
         cpus: int = 1,
+        auto_stop: bool = True,
     ) -> None:
+        proto_path = Path(protocol_path).expanduser().resolve()
+        if not proto_path.is_dir():
+            raise ValueError(f"protocol_path must be a directory: {protocol_path}")
+        if not proto_path.joinpath("protocol.aimd").is_file():
+            raise ValueError(
+                f"protocol.aimd not found in protocol_path: {protocol_path}"
+            )
+
+        self.protocol_path = str(proto_path)
         self.boxlite_home = boxlite_home
         self.image = image
         self.rootfs_path = rootfs_path
         self.timeout = timeout
         self.memory_mib = memory_mib
         self.cpus = cpus
-        self._runtime_key: str | None = None
+        self.auto_stop = auto_stop
         self._runtime: Boxlite | None = None
-        self._runtime_lock = threading.Lock()
+        self._box: Box | None = None
+        self._box_active_counts: dict[str, int] = {}
         self._closed = False
 
     async def __aenter__(self) -> "AiralogyEngine":
@@ -256,28 +213,122 @@ class AiralogyEngine:
         await self.close()
 
     async def close(self) -> None:
-        """Release this engine's BoxLite runtime reference."""
-        with self._runtime_lock:
-            runtime_key = self._runtime_key
-            self._runtime_key = None
-            self._runtime = None
-            self._closed = True
+        """Stop this engine's box and release its BoxLite runtime reference."""
+        await self.stop()
 
-        if runtime_key is not None:
-            _release_runtime(runtime_key)
+        runtime = self._runtime
+        self._runtime = None
+        self._closed = True
+
+        if runtime is not None:
+            with suppress(Exception):
+                runtime.close()
 
     def _get_runtime(self) -> Boxlite:
-        with self._runtime_lock:
-            if self._closed:
-                raise ValueError("AiralogyEngine is closed")
-            if self._runtime is None:
-                self._runtime_key, self._runtime = _acquire_runtime(self.boxlite_home)
-            return self._runtime
+        if self._closed:
+            raise ValueError("AiralogyEngine is closed")
+        if self._runtime is None:
+            self._runtime = (
+                Boxlite.default()
+                if self.boxlite_home is None
+                else Boxlite(Options(home_dir=_resolve_boxlite_home(self.boxlite_home)))
+            )
+        return self._runtime
+
+    def _build_box_options(self) -> BoxOptions:
+        image = self.image
+        rootfs_path = self.rootfs_path
+        if image is None and rootfs_path is None:
+            image = DEFAULT_IMAGE
+
+        rootfs: Path | None = None
+        if rootfs_path is not None:
+            rootfs = Path(rootfs_path).expanduser().resolve()
+            if not rootfs.is_dir():
+                raise ValueError(f"rootfs_path must be a directory: {rootfs_path}")
+
+        return BoxOptions(
+            image=image if rootfs_path is None else None,
+            rootfs_path=str(rootfs) if rootfs is not None else None,
+            memory_mib=self.memory_mib,
+            cpus=self.cpus,
+            working_dir=_WORKING_DIR,
+            volumes=[(self.protocol_path, _PROTOCOL_DIR, False)],
+        )
+
+    async def _create_box(self) -> Box:
+        runtime = self._get_runtime()
+        box = await runtime.create(self._build_box_options())
+        await box.copy_in(
+            _EXECUTOR_PATH,
+            f"{_WORKING_DIR}/",
+            _COPY_OPTIONS,
+        )
+        return box
+
+    def box_status(self) -> BoxStateInfo | None:
+        """Return the current box state, or None when this engine has no box."""
+        box = self._box
+        if box is None:
+            return None
+        return box.info().state
+
+    async def _ensure_running_box(self) -> Box:
+        box = self._box
+        if box is not None:
+            try:
+                if _is_running_state(box.info().state):
+                    return box
+            except Exception:
+                pass
+            self._box = None
+            self._box_active_counts.pop(box.id, None)
+
+        new_box = await self._create_box()
+        current_box = self._box
+        if current_box is not None:
+            try:
+                if _is_running_state(current_box.info().state):
+                    _track_background_cleanup(
+                        asyncio.create_task(_stop_box_best_effort(new_box))
+                    )
+                    return current_box
+            except Exception:
+                pass
+
+        self._box = new_box
+        return new_box
+
+    async def _stop_box(self, box: Box) -> None:
+        try:
+            await box.stop()
+        except BaseException as e:
+            if not _is_pyo3_panic(e):
+                raise
+
+    async def stop(self) -> None:
+        """Stop the current box without closing the engine."""
+        box = self._box
+        self._box = None
+        if box is not None:
+            self._box_active_counts.pop(box.id, None)
+            await self._stop_box(box)
+
+    def _begin_box_command(self, box: Box) -> None:
+        self._box_active_counts[box.id] = self._box_active_counts.get(box.id, 0) + 1
+
+    def _finish_box_command(self, box: Box) -> int:
+        active_count = self._box_active_counts.get(box.id, 0)
+        if active_count <= 1:
+            self._box_active_counts.pop(box.id, None)
+            return 0
+
+        self._box_active_counts[box.id] = active_count - 1
+        return active_count - 1
 
     async def _execute_in_sandbox(
         self,
         action: str,
-        protocol_path: str,
         params: dict,
         env_vars: dict | None = None,
         timeout: int | None = None,
@@ -285,51 +336,26 @@ class AiralogyEngine:
         log_file: str = "protocol_debug.log",
     ) -> dict:
         """Execute an action inside the BoxLite sandbox."""
-        image = self.image
-        rootfs_path = self.rootfs_path
-        if image is None and rootfs_path is None:
-            image = DEFAULT_IMAGE
-
-        proto_path = Path(protocol_path)
-        if not proto_path.is_dir():
-            raise ValueError(f"protocol_path must be a directory: {protocol_path}")
-        if not proto_path.joinpath("protocol.aimd").is_file():
-            raise ValueError(
-                f"protocol.aimd not found in protocol_path: {protocol_path}"
-            )
-
-        if rootfs_path is not None:
-            rootfs = Path(rootfs_path).resolve()
-            if not rootfs.is_dir():
-                raise ValueError(f"rootfs_path must be a directory: {rootfs_path}")
-
         env_pairs = [(k, v) for k, v in (env_vars or {}).items()]
+        sandbox_log_file = _SANDBOX_LOG_FILE
         if debug:
+            sandbox_log_file = f"protocol_debug_{uuid.uuid4().hex}.log"
+            env_pairs = [
+                (k, v)
+                for k, v in env_pairs
+                if k not in {"PROTOCOL_DEBUG", "PROTOCOL_DEBUG_LOG_FILE"}
+            ]
             env_pairs.append(("PROTOCOL_DEBUG", "1"))
-
-        box_options = BoxOptions(
-            image=image if rootfs_path is None else None,
-            rootfs_path=str(rootfs) if rootfs_path is not None else None,
-            memory_mib=self.memory_mib,
-            cpus=self.cpus,
-            working_dir=_WORKING_DIR,
-            env=env_pairs,
-        )
+            env_pairs.append(("PROTOCOL_DEBUG_LOG_FILE", sandbox_log_file))
 
         effective_timeout = self.timeout if timeout is None else timeout
         box: Box | None = None
-        runtime: Boxlite | None = None
         result: dict | None = None
+
         timed_out = False
         try:
-            runtime = self._get_runtime()
-            box = await runtime.create(box_options)
-            await box.copy_in(
-                _EXECUTOR_PATH,
-                f"{_WORKING_DIR}/",
-                _COPY_OPTIONS,
-            )
-            await _copy_protocol_into_box(box, proto_path)
+            box = await self._ensure_running_box()
+            self._begin_box_command(box)
 
             command = [
                 "python",
@@ -342,6 +368,7 @@ class AiralogyEngine:
                 box,
                 command,
                 effective_timeout,
+                env=env_pairs,
             )
 
             if timed_out:
@@ -395,17 +422,16 @@ class AiralogyEngine:
         finally:
             if box is not None:
                 if debug:
-                    await _copy_out_log(box, log_file)
-                if timed_out and runtime is not None:
-                    _track_background_cleanup(
-                        asyncio.create_task(_cleanup_box(box, runtime))
-                    )
-                else:
-                    try:
-                        await box.stop()
-                    except BaseException as e:
-                        if result is None or not _is_pyo3_panic(e):
-                            raise
+                    await _copy_out_log(box, sandbox_log_file, log_file)
+                remaining_active = self._finish_box_command(box)
+                if self.auto_stop and remaining_active == 0 and self._box is box:
+                    self._box = None
+                    if timed_out:
+                        _track_background_cleanup(
+                            asyncio.create_task(_stop_box_best_effort(box))
+                        )
+                    else:
+                        await self._stop_box(box)
 
         if result is None:
             return {
@@ -418,7 +444,6 @@ class AiralogyEngine:
 
     async def parse_protocol(
         self,
-        protocol_path: str,
         env_vars: dict | None = None,
         timeout: int | None = None,
         debug: bool = False,
@@ -427,7 +452,6 @@ class AiralogyEngine:
         """Parse a protocol package and return its schema, metadata, and fields."""
         return await self._execute_in_sandbox(
             "parse_protocol",
-            protocol_path,
             {},
             env_vars=env_vars,
             timeout=timeout,
@@ -437,7 +461,6 @@ class AiralogyEngine:
 
     async def assign_variable(
         self,
-        protocol_path: str,
         var_name: str,
         dependent_data: dict,
         env_vars: dict | None = None,
@@ -452,7 +475,6 @@ class AiralogyEngine:
         }
         return await self._execute_in_sandbox(
             "assign_variable",
-            protocol_path,
             params,
             env_vars=env_vars,
             timeout=timeout,
@@ -462,7 +484,6 @@ class AiralogyEngine:
 
     async def validate_variables(
         self,
-        protocol_path: str,
         variables: dict,
         env_vars: dict | None = None,
         timeout: int | None = None,
@@ -472,8 +493,38 @@ class AiralogyEngine:
         """Validate variable values against the protocol's model."""
         return await self._execute_in_sandbox(
             "validate_variables",
-            protocol_path,
             variables,
+            env_vars=env_vars,
+            timeout=timeout,
+            debug=debug,
+            log_file=log_file,
+        )
+
+    async def import_records(
+        self,
+        input_filename: str,
+        input_format: str = "auto",
+        allow_extra_var_fields: bool = False,
+        require_complete_quiz: bool = False,
+        include_template_defaults: bool = True,
+        validate_model_sync: bool = True,
+        env_vars: dict | None = None,
+        timeout: int | None = None,
+        debug: bool = False,
+        log_file: str = "protocol_debug.log",
+    ) -> dict:
+        """Import protocol-local rows into Airalogy record JSON objects."""
+        params = {
+            "input_filename": input_filename,
+            "input_format": input_format,
+            "allow_extra_var_fields": allow_extra_var_fields,
+            "require_complete_quiz": require_complete_quiz,
+            "include_template_defaults": include_template_defaults,
+            "validate_model_sync": validate_model_sync,
+        }
+        return await self._execute_in_sandbox(
+            "import_records",
+            params,
             env_vars=env_vars,
             timeout=timeout,
             debug=debug,
