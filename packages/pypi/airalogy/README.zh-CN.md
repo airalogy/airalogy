@@ -130,20 +130,24 @@ def calculate_required_solute_mass(dependent_fields: dict) -> AssignerResult:
 
 ```bash
 $ airalogy --help
-usage: airalogy [-h] [-v] {check,c,generate_model,gm,generate_assigner,ga,pack,unpack} ...
+usage: airalogy [-h] [-v] {check,c,generate_model,gm,generate_assigner,ga,pack,unpack,inspect,validate,import-records,ir} ...
 
 Airalogy CLI - Tools for Airalogy
 
 positional arguments:
-  {check,c,generate_model,gm,generate_assigner,ga,pack,unpack}
+  {check,c,generate_model,gm,generate_assigner,ga,pack,unpack,inspect,validate,import-records,ir}
                         Available commands
     check (c)           Check AIMD syntax
     generate_model (gm)
-                        Generate VarModel
+                        Generate models
     generate_assigner (ga)
                         Generate Assigner
     pack                Pack a protocol directory or record JSON files into a single-file archive
     unpack              Unpack an Airalogy archive
+    inspect             Inspect an Airalogy archive
+    validate            Validate an Airalogy archive
+    import-records (ir)
+                        Import batch data into Airalogy Record JSON
 
 options:
   -h, --help            show this help message and exit
@@ -215,13 +219,24 @@ airalogy unpack ./my_protocol.aira -o ./extracted_protocol
 airalogy unpack ./record_bundle.aira -o ./extracted_bundle
 ```
 
+无需解包即可查看或校验归档：
+
+```bash
+airalogy inspect ./record_bundle.aira
+airalogy inspect ./record_bundle.aira --json
+airalogy validate ./record_bundle.aira
+airalogy validate ./record_bundle.aira --json
+```
+
 说明：
 
 - 协议归档会保留原始协议目录结构，包括 `files/`。
 - 记录归档接受包含单条记录对象或记录对象列表的 JSON 文件。
 - 两种归档都使用 `.aira` 后缀；可以通过 `_airalogy_archive/manifest.json` 判断载荷是协议归档还是记录包。
+- 新生成的归档会为打包的 Record 和 Protocol 文件写入 SHA-256 hash，便于 Reader 和命令行检测篡改。
 - 协议打包默认排除 `.env` 和常见缓存产物，避免本地敏感信息被误打包。
 - 记录归档目前只会打包 JSON 记录和可选嵌入协议目录，不会自动将远程 Airalogy 文件 ID 解析成原始文件字节。
+- 浏览器用户可以用 `apps/aira-reader` 中的 Airalogy Reader 在本地打开 `.aira` 文件；Reader 在浏览器内解析文件，不会上传归档内容。
 
 ## 文档转换（MarkItDown）
 

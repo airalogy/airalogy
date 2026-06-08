@@ -7,8 +7,10 @@ import pytest
 from airalogy.archive import (
     ARCHIVE_MANIFEST_PATH,
     ArchiveError,
+    inspect_archive,
     pack_protocol_archive,
     pack_records_archive,
+    validate_archive,
     unpack_archive,
 )
 
@@ -65,6 +67,7 @@ def test_pack_protocol_archive_round_trip(tmp_path: Path):
         assert manifest["protocol"]["protocol_id"] == "protocol_demo"
         assert manifest["protocol"]["protocol_version"] == "0.0.1"
         assert manifest["protocol"]["protocol_name"] == "Protocol Demo"
+        assert manifest["protocol"]["file_hashes"]["protocol.aimd"]
 
     unpack_dir, manifest = unpack_archive(archive_path, tmp_path / "unpacked_protocol")
     assert manifest["kind"] == "protocol"
@@ -155,6 +158,8 @@ def test_pack_records_archive_with_embedded_protocol_and_record_list(tmp_path: P
         assert manifest["kind"] == "records"
         assert len(manifest["records"]) == 2
         assert len(manifest["protocols"]) == 1
+        assert manifest["records"][0]["sha256"]
+        assert manifest["protocols"][0]["file_hashes"]["protocol.aimd"]
         embedded_root = manifest["records"][0]["embedded_protocol_root"]
         assert embedded_root == "protocols/protocol_demo__0.0.1"
         assert f"{embedded_root}/protocol.aimd" in set(archive.namelist())
@@ -164,6 +169,46 @@ def test_pack_records_archive_with_embedded_protocol_and_record_list(tmp_path: P
     assert manifest["kind"] == "records"
     assert (unpack_dir / "records").is_dir()
     assert (unpack_dir / "protocols" / "protocol_demo__0.0.1" / "protocol.aimd").exists()
+
+    summary = inspect_archive(archive_path)
+    assert summary["kind"] == "records"
+    assert summary["records"]["count"] == 2
+
+    ok, issues = validate_archive(archive_path)
+    assert ok
+    assert issues == []
+
+
+def test_validate_archive_detects_record_hash_mismatch(tmp_path: Path):
+    records_file = tmp_path / "records.json"
+    records_file.write_text(
+        json.dumps(
+            {
+                "record_id": "01234567-0123-0123-0123-0123456789ab",
+                "metadata": {"protocol_id": "protocol_demo"},
+                "data": {"var": {"sample_name": "alpha"}},
+            }
+        )
+    )
+    archive_path = tmp_path / "records.aira"
+    pack_records_archive([records_file], archive_path)
+
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        members = {
+            info.filename: archive.read(info.filename)
+            for info in archive.infolist()
+            if not info.is_dir()
+        }
+    members["records/01234567-0123-0123-0123-0123456789ab.json"] = (
+        json.dumps({"record_id": "tampered"}) + "\n"
+    ).encode("utf-8")
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for member_name, payload in members.items():
+            archive.writestr(member_name, payload)
+
+    ok, issues = validate_archive(archive_path)
+    assert not ok
+    assert any("sha256 mismatch" in issue for issue in issues)
 
 
 def test_unpack_archive_rejects_zip_slip(tmp_path: Path):

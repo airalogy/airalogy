@@ -332,6 +332,35 @@ def test_pack_and_unpack_protocol_commands():
         assert (unpack_dir / "protocol.aimd").exists()
         assert not (unpack_dir / ".env").exists()
 
+        inspect_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "inspect",
+                str(archive_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert inspect_result.returncode == 0
+        assert "Kind: protocol" in inspect_result.stdout
+        assert "Protocol ID: protocol_demo" in inspect_result.stdout
+
+        validate_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "validate",
+                str(archive_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert validate_result.returncode == 0
+        assert "archive validation passed" in validate_result.stdout
+
 
 def test_import_records_command():
     """Test import-records command with a protocol directory and CSV input."""

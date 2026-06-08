@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import tomllib
@@ -38,6 +39,17 @@ class ArchiveError(ValueError):
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _read_file_bytes(path: Path) -> bytes:
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise ArchiveError(f"Failed to read '{path}': {exc}") from exc
 
 
 def _slugify(value: str | None, fallback: str) -> str:
@@ -145,6 +157,13 @@ def _collect_protocol_files(protocol_dir: Path, output_path: Path | None = None)
             continue
         files.append(path)
     return files
+
+
+def _relative_protocol_file_hashes(protocol_dir: Path, files: Iterable[Path]) -> dict[str, str]:
+    return {
+        path.relative_to(protocol_dir).as_posix(): _sha256_bytes(_read_file_bytes(path))
+        for path in files
+    }
 
 
 def _read_json_file(path: Path) -> Any:
@@ -334,6 +353,7 @@ def pack_protocol_archive(
     relative_files = [
         path.relative_to(protocol_dir_path).as_posix() for path in protocol_files
     ]
+    file_hashes = _relative_protocol_file_hashes(protocol_dir_path, protocol_files)
 
     manifest = {
         "format": ARCHIVE_FORMAT,
@@ -343,6 +363,7 @@ def pack_protocol_archive(
         "protocol": {
             **metadata,
             "files": relative_files,
+            "file_hashes": file_hashes,
         },
     }
 
@@ -420,6 +441,7 @@ def pack_records_archive(
         )
 
     used_record_names: set[str] = set()
+    record_payloads: dict[str, str] = {}
     manifest_records: list[dict[str, Any]] = []
     for index, descriptor in enumerate(record_descriptors, start=1):
         archive_name = _build_record_archive_name(descriptor, used_record_names, index)
@@ -427,6 +449,8 @@ def pack_records_archive(
         embedded_protocol_root = _find_matching_protocol_root(
             descriptor, embedded_protocols
         )
+        record_payload = json.dumps(descriptor["record"], indent=2, ensure_ascii=False) + "\n"
+        record_payloads[archive_path] = record_payload
         manifest_records.append(
             {
                 "path": archive_path,
@@ -435,6 +459,7 @@ def pack_records_archive(
                 "protocol_id": descriptor["protocol_id"],
                 "protocol_version": descriptor["protocol_version"],
                 "sha1": descriptor["sha1"],
+                "sha256": _sha256_bytes(record_payload.encode("utf-8")),
                 "source_path": descriptor["source_path"],
                 "source_index": descriptor["source_index"],
                 "embedded_protocol_root": embedded_protocol_root,
@@ -456,6 +481,10 @@ def pack_records_archive(
                     path.relative_to(protocol["protocol_dir"]).as_posix()
                     for path in protocol["files"]
                 ],
+                "file_hashes": _relative_protocol_file_hashes(
+                    protocol["protocol_dir"],
+                    protocol["files"],
+                ),
             }
             for protocol in embedded_protocols
         ],
@@ -470,7 +499,7 @@ def pack_records_archive(
         for descriptor in record_descriptors:
             archive.writestr(
                 descriptor["archive_path"],
-                json.dumps(descriptor["record"], indent=2, ensure_ascii=False) + "\n",
+                record_payloads[descriptor["archive_path"]],
             )
 
         for protocol in embedded_protocols:
@@ -523,6 +552,228 @@ def read_archive_manifest(archive_path: str | Path) -> dict[str, Any]:
             f"Archive '{archive_file}' has unsupported kind '{manifest.get('kind')}'."
         )
     return manifest
+
+
+def _validate_zip_member_path(member_name: str) -> str | None:
+    relative_path = PurePosixPath(member_name)
+    if relative_path.is_absolute():
+        return f"Archive member '{member_name}' uses an absolute path."
+    if any(part == ".." for part in relative_path.parts):
+        return f"Archive member '{member_name}' escapes the output directory."
+    return None
+
+
+def _read_archive_member_bytes(archive: zipfile.ZipFile, member_name: str) -> bytes:
+    try:
+        return archive.read(member_name)
+    except KeyError as exc:
+        raise ArchiveError(f"Archive is missing member '{member_name}'.") from exc
+
+
+def _archive_member_sha256(archive: zipfile.ZipFile, member_name: str) -> str:
+    return _sha256_bytes(_read_archive_member_bytes(archive, member_name))
+
+
+def _validate_protocol_manifest(
+    archive: zipfile.ZipFile,
+    manifest: dict[str, Any],
+    *,
+    prefix: str = "",
+) -> list[str]:
+    issues: list[str] = []
+    protocol = manifest.get("protocol") if not prefix else manifest
+    if not isinstance(protocol, dict):
+        return ["Protocol manifest entry must be an object."]
+
+    entrypoint = protocol.get("entrypoint", "protocol.aimd")
+    if not isinstance(entrypoint, str) or not entrypoint:
+        issues.append("Protocol entrypoint must be a non-empty string.")
+        entrypoint = "protocol.aimd"
+
+    files = protocol.get("files")
+    if not isinstance(files, list) or not all(isinstance(item, str) for item in files):
+        issues.append("Protocol files must be a list of paths.")
+        files = []
+
+    file_hashes = protocol.get("file_hashes")
+    if file_hashes is not None and not isinstance(file_hashes, dict):
+        issues.append("Protocol file_hashes must be an object when present.")
+        file_hashes = None
+
+    archive_names = set(archive.namelist())
+    expected_entrypoint = f"{prefix}{entrypoint}" if prefix else entrypoint
+    if expected_entrypoint not in archive_names:
+        issues.append(f"Protocol entrypoint '{expected_entrypoint}' is missing.")
+
+    for file_name in files:
+        member_name = f"{prefix}{file_name}" if prefix else file_name
+        path_issue = _validate_zip_member_path(member_name)
+        if path_issue:
+            issues.append(path_issue)
+            continue
+        if member_name not in archive_names:
+            issues.append(f"Protocol file '{member_name}' is missing.")
+            continue
+        if isinstance(file_hashes, dict) and file_name in file_hashes:
+            expected_hash = file_hashes[file_name]
+            actual_hash = _archive_member_sha256(archive, member_name)
+            if expected_hash != actual_hash:
+                issues.append(
+                    f"Protocol file '{member_name}' sha256 mismatch: expected {expected_hash}, got {actual_hash}."
+                )
+
+    return issues
+
+
+def inspect_archive(archive_path: str | Path) -> dict[str, Any]:
+    """Return a stable summary for an Airalogy .aira archive."""
+    archive_file = Path(archive_path)
+    manifest = read_archive_manifest(archive_file)
+    with zipfile.ZipFile(archive_file, "r") as archive:
+        members = [
+            name
+            for name in archive.namelist()
+            if not name.endswith("/")
+        ]
+        summary: dict[str, Any] = {
+            "path": str(archive_file),
+            "format": manifest["format"],
+            "version": manifest["version"],
+            "kind": manifest["kind"],
+            "created_at": manifest.get("created_at"),
+            "member_count": len(members),
+            "manifest_path": ARCHIVE_MANIFEST_PATH,
+        }
+        if manifest["kind"] == "protocol":
+            protocol = manifest.get("protocol") or {}
+            summary["protocol"] = {
+                "protocol_id": protocol.get("protocol_id"),
+                "protocol_version": protocol.get("protocol_version"),
+                "protocol_name": protocol.get("protocol_name"),
+                "entrypoint": protocol.get("entrypoint"),
+                "file_count": len(protocol.get("files") or []),
+            }
+        elif manifest["kind"] == "records":
+            records = manifest.get("records") or []
+            protocols = manifest.get("protocols") or []
+            summary["records"] = {
+                "count": len(records),
+                "protocol_ids": sorted(
+                    {
+                        item.get("protocol_id")
+                        for item in records
+                        if isinstance(item, dict) and item.get("protocol_id")
+                    }
+                ),
+            }
+            summary["protocols"] = {
+                "count": len(protocols),
+                "protocol_ids": sorted(
+                    {
+                        item.get("protocol_id")
+                        for item in protocols
+                        if isinstance(item, dict) and item.get("protocol_id")
+                    }
+                ),
+            }
+        return summary
+
+
+def validate_archive(archive_path: str | Path) -> tuple[bool, list[str]]:
+    """Validate an Airalogy .aira archive without extracting it."""
+    archive_file = Path(archive_path)
+    issues: list[str] = []
+    try:
+        manifest = read_archive_manifest(archive_file)
+        with zipfile.ZipFile(archive_file, "r") as archive:
+            archive_names = set(archive.namelist())
+            for member in archive.infolist():
+                path_issue = _validate_zip_member_path(member.filename)
+                if path_issue:
+                    issues.append(path_issue)
+
+            if ARCHIVE_MANIFEST_PATH not in archive_names:
+                issues.append(f"Archive is missing '{ARCHIVE_MANIFEST_PATH}'.")
+
+            if manifest["kind"] == "protocol":
+                issues.extend(_validate_protocol_manifest(archive, manifest))
+
+            elif manifest["kind"] == "records":
+                records = manifest.get("records")
+                if not isinstance(records, list):
+                    issues.append("Records manifest field must be a list.")
+                    records = []
+                protocols = manifest.get("protocols")
+                if not isinstance(protocols, list):
+                    issues.append("Protocols manifest field must be a list.")
+                    protocols = []
+
+                protocol_roots = {
+                    item.get("archive_root")
+                    for item in protocols
+                    if isinstance(item, dict) and isinstance(item.get("archive_root"), str)
+                }
+                for index, record in enumerate(records, start=1):
+                    if not isinstance(record, dict):
+                        issues.append(f"Record manifest entry #{index} must be an object.")
+                        continue
+                    record_path = record.get("path")
+                    if not isinstance(record_path, str) or not record_path:
+                        issues.append(f"Record manifest entry #{index} is missing a path.")
+                        continue
+                    path_issue = _validate_zip_member_path(record_path)
+                    if path_issue:
+                        issues.append(path_issue)
+                        continue
+                    if record_path not in archive_names:
+                        issues.append(f"Record file '{record_path}' is missing.")
+                        continue
+                    raw_record = _read_archive_member_bytes(archive, record_path)
+                    try:
+                        parsed_record = json.loads(raw_record.decode("utf-8"))
+                    except (UnicodeDecodeError, json.JSONDecodeError):
+                        issues.append(f"Record file '{record_path}' is not valid UTF-8 JSON.")
+                        continue
+                    if not isinstance(parsed_record, dict):
+                        issues.append(f"Record file '{record_path}' must contain a JSON object.")
+                    expected_hash = record.get("sha256")
+                    if isinstance(expected_hash, str) and expected_hash:
+                        actual_hash = _sha256_bytes(raw_record)
+                        if actual_hash != expected_hash:
+                            issues.append(
+                                f"Record file '{record_path}' sha256 mismatch: expected {expected_hash}, got {actual_hash}."
+                            )
+                    embedded_protocol_root = record.get("embedded_protocol_root")
+                    if (
+                        embedded_protocol_root is not None
+                        and embedded_protocol_root not in protocol_roots
+                    ):
+                        issues.append(
+                            f"Record file '{record_path}' references missing embedded protocol root '{embedded_protocol_root}'."
+                        )
+
+                for index, protocol in enumerate(protocols, start=1):
+                    if not isinstance(protocol, dict):
+                        issues.append(f"Protocol manifest entry #{index} must be an object.")
+                        continue
+                    archive_root = protocol.get("archive_root")
+                    if not isinstance(archive_root, str) or not archive_root:
+                        issues.append(f"Protocol manifest entry #{index} is missing archive_root.")
+                        continue
+                    root_prefix = archive_root.rstrip("/") + "/"
+                    issues.extend(
+                        _validate_protocol_manifest(
+                            archive,
+                            protocol,
+                            prefix=root_prefix,
+                        )
+                    )
+    except ArchiveError as exc:
+        issues.append(str(exc))
+    except zipfile.BadZipFile:
+        issues.append(f"Archive '{archive_file}' is not a valid zip file.")
+
+    return not issues, issues
 
 
 def _safe_extract_member(archive: zipfile.ZipFile, member: zipfile.ZipInfo, output_dir: Path) -> None:

@@ -3,14 +3,17 @@ Command-line interface for Airalogy.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from . import __version__
 from .archive import (
     ArchiveError,
+    inspect_archive,
     pack_protocol_archive,
     pack_records_archive,
+    validate_archive,
     unpack_archive,
 )
 from .assigner.inline_assigner import (
@@ -184,6 +187,57 @@ def unpack_command(args):
     except ArchiveError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
+
+
+def inspect_archive_command(args):
+    """Inspect an Airalogy archive without extracting it."""
+    try:
+        summary = inspect_archive(args.archive)
+    except ArchiveError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return 0
+
+    print(f"Archive: {summary['path']}")
+    print(f"Format: {summary['format']} v{summary['version']}")
+    print(f"Kind: {summary['kind']}")
+    print(f"Created at: {summary.get('created_at') or 'unknown'}")
+    print(f"Members: {summary['member_count']}")
+    if summary["kind"] == "protocol":
+        protocol = summary["protocol"]
+        print(f"Protocol ID: {protocol.get('protocol_id') or 'unknown'}")
+        print(f"Protocol version: {protocol.get('protocol_version') or 'unversioned'}")
+        print(f"Protocol name: {protocol.get('protocol_name') or 'unknown'}")
+        print(f"Entrypoint: {protocol.get('entrypoint') or 'protocol.aimd'}")
+        print(f"Protocol files: {protocol.get('file_count', 0)}")
+    elif summary["kind"] == "records":
+        records = summary["records"]
+        protocols = summary["protocols"]
+        print(f"Records: {records['count']}")
+        print(f"Record protocol IDs: {', '.join(records['protocol_ids']) or 'none'}")
+        print(f"Embedded protocols: {protocols['count']}")
+        print(f"Embedded protocol IDs: {', '.join(protocols['protocol_ids']) or 'none'}")
+    return 0
+
+
+def validate_archive_command(args):
+    """Validate an Airalogy archive without extracting it."""
+    ok, issues = validate_archive(args.archive)
+    if args.json:
+        print(json.dumps({"ok": ok, "issues": issues}, indent=2, ensure_ascii=False))
+    elif ok:
+        print(f"✓ {args.archive}: archive validation passed")
+    else:
+        print(
+            f"✗ {args.archive}: archive validation failed, {len(issues)} issue(s) found:",
+            file=sys.stderr,
+        )
+        for index, issue in enumerate(issues, start=1):
+            print(f"{index}. {issue}", file=sys.stderr)
+    return 0 if ok else 1
 
 
 def import_records_command(args):
@@ -368,6 +422,40 @@ def main():
         help="Allow extraction into an existing directory.",
     )
     unpack_parser.set_defaults(func=unpack_command)
+
+    # Inspect archive command
+    inspect_parser = subparsers.add_parser(
+        "inspect",
+        help="Inspect an Airalogy archive",
+        description="Inspect a .aira archive without extracting it.",
+    )
+    inspect_parser.add_argument(
+        "archive",
+        help="Archive file to inspect.",
+    )
+    inspect_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print machine-readable JSON.",
+    )
+    inspect_parser.set_defaults(func=inspect_archive_command)
+
+    # Validate archive command
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help="Validate an Airalogy archive",
+        description="Validate a .aira archive manifest, members, JSON payloads, and hashes.",
+    )
+    validate_parser.add_argument(
+        "archive",
+        help="Archive file to validate.",
+    )
+    validate_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print machine-readable JSON.",
+    )
+    validate_parser.set_defaults(func=validate_archive_command)
 
     # Import records command
     import_parser = subparsers.add_parser(

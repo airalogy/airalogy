@@ -10,6 +10,9 @@ hero:
       text: Airalogy Python
       link: /airalogy/en/
     - theme: alt
+      text: Open .aira Reader
+      link: /aira-reader/
+    - theme: alt
       text: AIMD npm packages
       link: /aimd/en/
     - theme: alt

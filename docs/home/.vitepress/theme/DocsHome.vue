@@ -93,6 +93,14 @@ const copy = {
         href: '/airalogy-engine/',
         linkText: 'Open engine docs',
       },
+      {
+        kicker: 'Local file reader',
+        title: '.aira Reader',
+        description:
+          'Open Airalogy protocol and record archives in the browser, inspect their manifest, and validate file hashes locally.',
+        href: '/aira-reader/',
+        linkText: 'Open Reader',
+      },
     ],
     install: {
       eyebrow: 'Install',
@@ -138,6 +146,14 @@ const copy = {
           '通过 Python API 或 Node.js API，在共享 sandbox image 中运行 protocol package。',
         href: '/airalogy-engine/',
         linkText: '打开 Engine 文档',
+      },
+      {
+        kicker: '本地文件阅读器',
+        title: '.aira Reader',
+        description:
+          '在浏览器中打开 Airalogy Protocol 和 Record 归档，查看 manifest，并在本地校验文件 hash。',
+        href: '/aira-reader/',
+        linkText: '打开 Reader',
       },
     ],
     install: {

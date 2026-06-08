@@ -130,20 +130,24 @@ Airalogy provides a CLI tool for common operations. After installation, you can 
 
 ```bash
 $ airalogy --help
-usage: airalogy [-h] [-v] {check,c,generate_model,gm,generate_assigner,ga,pack,unpack} ...
+usage: airalogy [-h] [-v] {check,c,generate_model,gm,generate_assigner,ga,pack,unpack,inspect,validate,import-records,ir} ...
 
 Airalogy CLI - Tools for Airalogy
 
 positional arguments:
-  {check,c,generate_model,gm,generate_assigner,ga,pack,unpack}
+  {check,c,generate_model,gm,generate_assigner,ga,pack,unpack,inspect,validate,import-records,ir}
                         Available commands
     check (c)           Check AIMD syntax
     generate_model (gm)
-                        Generate VarModel
+                        Generate models
     generate_assigner (ga)
                         Generate Assigner
     pack                Pack a protocol directory or record JSON files into a single-file archive
     unpack              Unpack an Airalogy archive
+    inspect             Inspect an Airalogy archive
+    validate            Validate an Airalogy archive
+    import-records (ir)
+                        Import batch data into Airalogy Record JSON
 
 options:
   -h, --help            show this help message and exit
@@ -221,13 +225,24 @@ airalogy unpack ./my_protocol.aira -o ./extracted_protocol
 airalogy unpack ./record_bundle.aira -o ./extracted_bundle
 ```
 
+Inspect or validate an archive without extracting it:
+
+```bash
+airalogy inspect ./record_bundle.aira
+airalogy inspect ./record_bundle.aira --json
+airalogy validate ./record_bundle.aira
+airalogy validate ./record_bundle.aira --json
+```
+
 Notes:
 
 - Protocol archives preserve the original protocol directory layout, including `files/`.
 - Record archives accept JSON files containing either one record object or a list of record objects.
 - Both archive kinds use the same `.aira` suffix; inspect `_airalogy_archive/manifest.json` to determine whether the payload is a protocol archive or a record bundle.
+- New archives include SHA-256 hashes for packed records and protocol files so readers can detect tampering.
 - Protocol packing excludes `.env` and common cache artifacts by default so local secrets are not bundled accidentally.
 - Record archives currently bundle JSON records and optional embedded protocol directories. They do not automatically dereference remote Airalogy file IDs into raw file bytes.
+- Browser users can open `.aira` files locally with the Airalogy Reader app in `apps/aira-reader`; it parses the archive in the browser and does not upload file content.
 
 ## Document Conversion (MarkItDown)
 

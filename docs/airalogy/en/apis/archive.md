@@ -1,4 +1,4 @@
-# Archive Packaging
+# `.aira` Archive Packaging and Reader
 
 Airalogy supports zip-based single-file archives for sharing protocols and records over chat, email, cloud drives, or other file-transfer tools.
 
@@ -17,7 +17,7 @@ Both archive types keep a machine-readable manifest at `_airalogy_archive/manife
 
 An Airalogy Protocol is usually authored as a directory containing `protocol.aimd` plus optional sibling files such as `model.py`, `assigner.py`, `protocol.toml`, and `files/`. That layout is convenient for development, but awkward to send as a single file.
 
-Airalogy archives keep the existing on-disk structure intact while wrapping it in a dedicated shareable container.
+Airalogy archives keep the existing on-disk structure intact while wrapping it in a dedicated shareable container. This makes `.aira` the portable file surface for Airalogy Protocols and Airalogy Records: every computer can open, inspect, validate, and eventually route these files into Airalogy-compatible tools.
 
 ## CLI usage
 
@@ -46,19 +46,43 @@ airalogy unpack ./my_protocol.aira -o ./extracted_protocol
 airalogy unpack ./record_bundle.aira -o ./extracted_bundle
 ```
 
+Inspect or validate an archive without extracting it:
+
+```bash
+airalogy inspect ./record_bundle.aira
+airalogy inspect ./record_bundle.aira --json
+airalogy validate ./record_bundle.aira
+airalogy validate ./record_bundle.aira --json
+```
+
+## Airalogy Reader
+
+The repository includes a browser-based Reader app at `apps/aira-reader`. It opens `.aira` files locally, displays the manifest, protocols, records, archive members, and validation issues, and does not upload file content to a server.
+
+```bash
+pnpm dev:aira-reader
+pnpm build:aira-reader
+```
+
+The docs workflow publishes the Reader as a static app at `https://airalogy.github.io/airalogy/aira-reader/`.
+
 ## Python API
 
 ```python
 from airalogy.archive import (
+    inspect_archive,
     pack_protocol_archive,
     pack_records_archive,
     read_archive_manifest,
+    validate_archive,
     unpack_archive,
 )
 
 pack_protocol_archive("my_protocol", "my_protocol.aira")
 pack_records_archive(["record.json"], "records.aira", protocol_dirs=["my_protocol"])
 manifest = read_archive_manifest("records.aira")
+summary = inspect_archive("records.aira")
+ok, issues = validate_archive("records.aira")
 output_dir, manifest = unpack_archive("records.aira", "records_out")
 ```
 
@@ -67,6 +91,7 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 - The protocol is validated before packaging; if a sibling `model.py` exists, Airalogy also checks that `model.py::VarModel` only defines AIMD variable fields and that same-name fields do not have explicit type conflicts.
 - The archive preserves the original protocol directory layout.
 - `files/` and other regular protocol assets are included as-is.
+- New archives include SHA-256 hashes for protocol files in the manifest so readers can detect file tampering.
 - `.env` plus common cache artifacts such as `__pycache__/` and `.pyc` files are excluded by default.
 - If `protocol.toml` exists, its metadata is copied into the manifest. Otherwise Airalogy falls back to the directory name and the first `# Heading` in `protocol.aimd` when available.
 
@@ -74,11 +99,13 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 
 - Input JSON files may contain either one record object or a list of record objects.
 - Record bundle manifests keep per-record metadata such as `record_id`, `record_version`, `protocol_id`, and `protocol_version` when available.
+- New archives include SHA-256 hashes for each packed record JSON payload.
 - If embedded protocol directories are provided, Airalogy validates each protocol first, then tries to link each record to the matching embedded protocol in the manifest.
 
 ## Safety and limitations
 
 - `airalogy unpack` performs safe extraction checks and rejects archive entries that try to escape the target directory.
+- `airalogy validate` and Airalogy Reader check the manifest, member paths, record JSON payloads, protocol file references, and SHA-256 hashes when present.
 - Because `.aira` is shared by multiple payload kinds, consumers should read `_airalogy_archive/manifest.json` and branch on `kind`.
 - Version 1 bundles JSON records and optional protocol directories only.
 - Version 1 does not automatically resolve remote Airalogy file IDs into raw file bytes.
