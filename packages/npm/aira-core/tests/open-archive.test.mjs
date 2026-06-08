@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 
 import { AIRA_ARCHIVE_FORMAT, AIRA_MANIFEST_PATH, openAiraArchive } from '../dist/index.js'
@@ -178,3 +179,23 @@ test('reports protocol file hash mismatches', async () => {
   assert.equal(validation.ok, false)
   assert.match(validation.issues.join('\n'), /sha256 mismatch/)
 })
+
+const exampleArchives = [
+  ['single-protocol.aira', { kind: 'protocol', recordCount: 0, protocolCount: 1 }],
+  ['protocols-bundle.aira', { kind: 'protocols', recordCount: 0, protocolCount: 2 }],
+  ['records-with-protocol.aira', { kind: 'records', recordCount: 2, protocolCount: 1 }],
+  ['multi-protocol-records.aira', { kind: 'records', recordCount: 2, protocolCount: 2 }],
+]
+
+for (const [fileName, expected] of exampleArchives) {
+  test(`opens repository example ${fileName}`, async () => {
+    const archivePath = new URL(`../../../../examples/aira/${fileName}`, import.meta.url)
+    const archive = await openAiraArchive(await readFile(archivePath))
+    const summary = archive.summary()
+
+    assert.equal(summary.kind, expected.kind)
+    assert.equal(summary.recordCount, expected.recordCount)
+    assert.equal(summary.protocolCount, expected.protocolCount)
+    assert.deepEqual(await archive.validate(), { ok: true, issues: [] })
+  })
+}

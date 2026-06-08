@@ -73,6 +73,17 @@ pnpm build:aira-reader
 
 The docs workflow publishes the Reader as a static app at `https://airalogy.github.io/airalogy/aira-reader/`.
 
+## Example archives
+
+The repository includes ready-to-open sample archives in `examples/aira/`:
+
+- `single-protocol.aira`: one Protocol and no Record
+- `protocols-bundle.aira`: multiple Protocols and no Record
+- `records-with-protocol.aira`: one embedded Protocol and multiple Records
+- `multi-protocol-records.aira`: multiple embedded Protocols and Records from multiple Protocols
+
+These files are useful for testing Airalogy Reader and for checking how different archive `kind` values appear in the manifest.
+
 ## Python API
 
 ```python

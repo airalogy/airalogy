@@ -73,6 +73,17 @@ pnpm build:aira-reader
 
 GitHub Pages workflow 会把 Reader 发布为静态应用：`https://airalogy.github.io/airalogy/aira-reader/`。
 
+## 示例归档
+
+仓库中提供了可直接打开的示例归档，位置是 `examples/aira/`：
+
+- `single-protocol.aira`：一个 Protocol，不包含 Record
+- `protocols-bundle.aira`：多个 Protocol，不包含 Record
+- `records-with-protocol.aira`：一个内嵌 Protocol 和多条 Record
+- `multi-protocol-records.aira`：多个内嵌 Protocol，以及来自多个 Protocol 的 Record
+
+这些文件适合用来测试 Airalogy Reader，也可以用来观察不同 `kind` 在 manifest 中的结构差异。
+
 ## Python API
 
 ```python

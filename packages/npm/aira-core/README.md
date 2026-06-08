@@ -6,6 +6,8 @@ It opens `.aira` files in browser-compatible JavaScript, reads `_airalogy_archiv
 
 Supported archive kinds are `protocol`, `protocols`, and `records`.
 
+Example archives covering these kinds are available in `examples/aira/`.
+
 ```ts
 import { openAiraArchive } from '@airalogy/aira-core'
 

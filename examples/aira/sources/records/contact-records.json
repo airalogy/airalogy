@@ -1,0 +1,42 @@
+[
+  {
+    "record_id": "11111111-1111-4111-8111-111111111111",
+    "record_version": 1,
+    "metadata": {
+      "protocol_id": "contact_note",
+      "protocol_version": "0.1.0",
+      "created_at": "2026-06-08T08:00:00Z",
+      "source": "examples/aira"
+    },
+    "data": {
+      "var": {
+        "person_name": "Ada Lovelace",
+        "channel": "email",
+        "summary": "Shared notes about a protocol review."
+      },
+      "step": {},
+      "check": {},
+      "quiz": {}
+    }
+  },
+  {
+    "record_id": "22222222-2222-4222-8222-222222222222",
+    "record_version": 1,
+    "metadata": {
+      "protocol_id": "contact_note",
+      "protocol_version": "0.1.0",
+      "created_at": "2026-06-08T08:10:00Z",
+      "source": "examples/aira"
+    },
+    "data": {
+      "var": {
+        "person_name": "Grace Hopper",
+        "channel": "meeting",
+        "summary": "Captured follow-up work for a data bridge discussion."
+      },
+      "step": {},
+      "check": {},
+      "quiz": {}
+    }
+  }
+]

@@ -244,6 +244,7 @@ airalogy validate ./record_bundle.aira --json
 - 协议打包默认排除 `.env` 和常见缓存产物，避免本地敏感信息被误打包。
 - 记录归档目前只会打包 JSON 记录和可选嵌入协议目录，不会自动将远程 Airalogy 文件 ID 解析成原始文件字节。
 - 浏览器用户可以用 `apps/aira-reader` 中的 Airalogy Reader 在本地打开 `.aira` 文件；Reader 在浏览器内解析文件，不会上传归档内容。
+- 用于快速测试 Reader 的示例归档位于 `examples/aira/`。
 
 ## 文档转换（MarkItDown）
 

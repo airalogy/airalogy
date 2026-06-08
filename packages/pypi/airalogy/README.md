@@ -250,6 +250,7 @@ Notes:
 - Protocol packing excludes `.env` and common cache artifacts by default so local secrets are not bundled accidentally.
 - Record archives currently bundle JSON records and optional embedded protocol directories. They do not automatically dereference remote Airalogy file IDs into raw file bytes.
 - Browser users can open `.aira` files locally with the Airalogy Reader app in `apps/aira-reader`; it parses the archive in the browser and does not upload file content.
+- Ready-to-open example archives for Reader testing live in `examples/aira/`.
 
 ## Document Conversion (MarkItDown)
 

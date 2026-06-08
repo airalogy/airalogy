@@ -9,4 +9,6 @@ pnpm dev:aira-reader
 pnpm build:aira-reader
 ```
 
+Example archives for quick testing are available in `examples/aira/`.
+
 The GitHub Pages workflow builds this app into `/aira-reader/`.
