@@ -383,6 +383,21 @@ td {
   overflow-wrap: anywhere;
 }
 
+td span {
+  display: block;
+  margin-top: 3px;
+  color: #667571;
+}
+
+.inline-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2f6f61;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 860px) {
   .topbar {
     align-items: flex-start;

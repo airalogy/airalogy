@@ -11,6 +11,7 @@ from . import __version__
 from .archive import (
     ArchiveError,
     inspect_archive,
+    load_file_payload_specs,
     pack_protocol_archive,
     pack_protocols_archive,
     pack_records_archive,
@@ -152,6 +153,12 @@ def pack_command(args):
                     file=sys.stderr,
                 )
                 return 1
+            if args.file_payload:
+                print(
+                    "Error: --file-payload is only supported when packing record JSON files.",
+                    file=sys.stderr,
+                )
+                return 1
             if len(input_paths) > 1:
                 output_path = pack_protocols_archive(
                     input_paths,
@@ -176,10 +183,15 @@ def pack_command(args):
             )
             return 1
 
+        file_payloads: list[dict] = []
+        for payload_spec_path in args.file_payload:
+            file_payloads.extend(load_file_payload_specs(payload_spec_path))
+
         output_path = pack_records_archive(
             input_paths,
             output_path=args.output,
             protocol_dirs=args.protocol_dir,
+            file_payloads=file_payloads,
             force=args.force,
         )
         print(f"✓ Packed records archive: {output_path}")
@@ -236,6 +248,10 @@ def inspect_archive_command(args):
             print(f"Record protocol IDs: {', '.join(records['protocol_ids']) or 'none'}")
             print(f"Embedded protocols: {protocols['count']}")
             print(f"Embedded protocol IDs: {', '.join(protocols['protocol_ids']) or 'none'}")
+            blobs = summary.get("blobs", {})
+            files = summary.get("files", {})
+            print(f"File references: {files.get('count', 0)}")
+            print(f"Offline blobs: {blobs.get('count', 0)}")
         else:
             print(f"Protocols: {protocols['count']}")
             print(f"Protocol IDs: {', '.join(protocols['protocol_ids']) or 'none'}")
@@ -416,6 +432,15 @@ def main():
         help=(
             "Embed a related protocol directory when packing records. "
             "Can be passed multiple times."
+        ),
+    )
+    pack_parser.add_argument(
+        "--file-payload",
+        action="append",
+        default=[],
+        help=(
+            "JSON file describing record file references and optional local "
+            "payload paths to store under blobs/. Can be passed multiple times."
         ),
     )
     pack_parser.set_defaults(func=pack_command)

@@ -1,0 +1,13 @@
+{
+  "files": [
+    {
+      "path": "examples/aira/sources/payloads/sample-note.txt",
+      "file_id": "airalogy.id.file.55555555-5555-4555-8555-555555555555.txt",
+      "source_uri": "oss://airalogy-examples/notes/sample-note.txt",
+      "filename": "sample-note.txt",
+      "mime_type": "text/plain",
+      "record_id": "55555555-5555-4555-8555-555555555555",
+      "field_path": "data.var.sample_file"
+    }
+  ]
+}

@@ -141,6 +141,66 @@ function createProtocolsArchive() {
   ])
 }
 
+function createRecordsArchiveWithBlob({ expectedHash } = {}) {
+  const record = `${JSON.stringify({
+    record_id: 'record-with-file',
+    metadata: {
+      protocol_id: 'file_protocol',
+      protocol_version: '0.1.0',
+    },
+    data: {
+      var: {
+        sample_file: 'airalogy.id.file.11111111-1111-4111-8111-111111111111.txt',
+      },
+    },
+  }, null, 2)}\n`
+  const recordHash = sha256Hex(record)
+  const blobPayload = Buffer.from('offline payload')
+  const blobHash = sha256Hex(blobPayload)
+  const blobPath = `blobs/sha256/${blobHash.slice(0, 2)}/${blobHash.slice(2, 4)}/${blobHash}`
+  const manifest = {
+    format: AIRA_ARCHIVE_FORMAT,
+    version: 1,
+    kind: 'records',
+    created_at: '2026-06-08T00:00:00+00:00',
+    records: [
+      {
+        path: 'records/record-with-file.v1.json',
+        record_id: 'record-with-file',
+        record_version: 1,
+        protocol_id: 'file_protocol',
+        protocol_version: '0.1.0',
+        sha256: recordHash,
+      },
+    ],
+    protocols: [],
+    blobs: [
+      {
+        blob_id: `sha256:${expectedHash ?? blobHash}`,
+        archive_path: blobPath,
+        sha256: expectedHash ?? blobHash,
+        size: blobPayload.length,
+      },
+    ],
+    files: [
+      {
+        file_id: 'airalogy.id.file.11111111-1111-4111-8111-111111111111.txt',
+        source_uri: 'oss://airalogy-demo/payload.txt',
+        blob_id: `sha256:${expectedHash ?? blobHash}`,
+        filename: 'payload.txt',
+        mime_type: 'text/plain',
+        record_path: 'records/record-with-file.v1.json',
+        field_path: 'data.var.sample_file',
+      },
+    ],
+  }
+  return createStoredZip([
+    [AIRA_MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`],
+    ['records/record-with-file.v1.json', record],
+    [blobPath, blobPayload],
+  ])
+}
+
 test('opens and validates a protocol .aira archive', async () => {
   const archive = await openAiraArchive(createProtocolArchive())
 
@@ -152,6 +212,8 @@ test('opens and validates a protocol .aira archive', async () => {
     memberCount: 2,
     recordCount: 0,
     protocolCount: 1,
+    blobCount: 0,
+    fileCount: 0,
   })
   assert.equal(await archive.readText('protocol.aimd'), '# Demo Protocol\n\n{{var|sample_name}}\n')
   assert.deepEqual(await archive.validate(), { ok: true, issues: [] })
@@ -168,6 +230,25 @@ test('opens and validates a protocols .aira archive', async () => {
     memberCount: 3,
     recordCount: 0,
     protocolCount: 2,
+    blobCount: 0,
+    fileCount: 0,
+  })
+  assert.deepEqual(await archive.validate(), { ok: true, issues: [] })
+})
+
+test('opens and validates a records .aira archive with offline blobs', async () => {
+  const archive = await openAiraArchive(createRecordsArchiveWithBlob())
+
+  assert.deepEqual(archive.summary(), {
+    format: AIRA_ARCHIVE_FORMAT,
+    version: 1,
+    kind: 'records',
+    createdAt: '2026-06-08T00:00:00+00:00',
+    memberCount: 3,
+    recordCount: 1,
+    protocolCount: 0,
+    blobCount: 1,
+    fileCount: 1,
   })
   assert.deepEqual(await archive.validate(), { ok: true, issues: [] })
 })
@@ -180,11 +261,20 @@ test('reports protocol file hash mismatches', async () => {
   assert.match(validation.issues.join('\n'), /sha256 mismatch/)
 })
 
+test('reports blob file hash mismatches', async () => {
+  const archive = await openAiraArchive(createRecordsArchiveWithBlob({ expectedHash: `${'0'.repeat(64)}` }))
+  const validation = await archive.validate()
+
+  assert.equal(validation.ok, false)
+  assert.match(validation.issues.join('\n'), /Blob file .* sha256 mismatch/)
+})
+
 const exampleArchives = [
   ['single-protocol.aira', { kind: 'protocol', recordCount: 0, protocolCount: 1 }],
   ['protocols-bundle.aira', { kind: 'protocols', recordCount: 0, protocolCount: 2 }],
   ['records-with-protocol.aira', { kind: 'records', recordCount: 2, protocolCount: 1 }],
   ['multi-protocol-records.aira', { kind: 'records', recordCount: 2, protocolCount: 2 }],
+  ['records-with-file.aira', { kind: 'records', recordCount: 1, protocolCount: 1, blobCount: 1, fileCount: 1 }],
 ]
 
 for (const [fileName, expected] of exampleArchives) {
@@ -196,6 +286,8 @@ for (const [fileName, expected] of exampleArchives) {
     assert.equal(summary.kind, expected.kind)
     assert.equal(summary.recordCount, expected.recordCount)
     assert.equal(summary.protocolCount, expected.protocolCount)
+    assert.equal(summary.blobCount, expected.blobCount ?? 0)
+    assert.equal(summary.fileCount, expected.fileCount ?? 0)
     assert.deepEqual(await archive.validate(), { ok: true, issues: [] })
   })
 }

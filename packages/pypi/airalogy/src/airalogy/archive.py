@@ -17,6 +17,10 @@ ARCHIVE_METADATA_DIR = "_airalogy_archive"
 ARCHIVE_MANIFEST_PATH = f"{ARCHIVE_METADATA_DIR}/manifest.json"
 ARCHIVE_SUFFIX = ".aira"
 ARCHIVE_KINDS = {"protocol", "protocols", "records"}
+BLOB_HASH_ALGORITHM = "sha256"
+BLOBS_ROOT = "blobs"
+
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 _EXCLUDED_FILE_NAMES = {
     ".DS_Store",
@@ -51,6 +55,19 @@ def _read_file_bytes(path: Path) -> bytes:
         return path.read_bytes()
     except OSError as exc:
         raise ArchiveError(f"Failed to read '{path}': {exc}") from exc
+
+
+def _as_non_empty_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        value = str(value)
+    stripped = value.strip()
+    return stripped or None
+
+
+def _without_none_values(value: dict[str, Any]) -> dict[str, Any]:
+    return {key: item for key, item in value.items() if item is not None}
 
 
 def _slugify(value: str | None, fallback: str) -> str:
@@ -190,6 +207,184 @@ def _load_records_from_path(path: Path) -> list[dict[str, Any]]:
     raise ArchiveError(
         f"Record file '{path}' must contain a JSON object or a list of JSON objects."
     )
+
+
+def load_file_payload_specs(path: str | Path) -> list[dict[str, Any]]:
+    """Load file payload specs for record archive packing.
+
+    The JSON file may contain one object, a list of objects, or an object with a
+    top-level ``files`` or ``file_payloads`` list.
+    """
+    spec_path = Path(path)
+    parsed = _read_json_file(spec_path)
+    if isinstance(parsed, dict):
+        if isinstance(parsed.get("files"), list):
+            items = parsed["files"]
+        elif isinstance(parsed.get("file_payloads"), list):
+            items = parsed["file_payloads"]
+        else:
+            items = [parsed]
+    elif isinstance(parsed, list):
+        items = parsed
+    else:
+        raise ArchiveError(
+            f"File payload spec '{spec_path}' must contain an object, a list, "
+            "or an object with a 'files' list."
+        )
+
+    specs = [item for item in items if isinstance(item, dict)]
+    if len(specs) != len(items):
+        raise ArchiveError(
+            f"File payload spec '{spec_path}' must contain only JSON objects."
+        )
+    return specs
+
+
+def _blob_archive_path(sha256: str) -> str:
+    return f"{BLOBS_ROOT}/{BLOB_HASH_ALGORITHM}/{sha256[:2]}/{sha256[2:4]}/{sha256}"
+
+
+def _file_payload_local_path(spec: dict[str, Any]) -> Path | None:
+    for key in ("path", "local_path", "file_path"):
+        value = _as_non_empty_string(spec.get(key))
+        if value:
+            return Path(value)
+    return None
+
+
+def _record_lookup_key(value: str | None) -> str | None:
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _resolve_file_record_path(
+    spec: dict[str, Any],
+    record_descriptors: list[dict[str, Any]],
+    valid_record_paths: set[str],
+) -> str | None:
+    explicit_record_path = _as_non_empty_string(spec.get("record_path"))
+    if explicit_record_path:
+        if explicit_record_path not in valid_record_paths:
+            raise ArchiveError(
+                f"File payload references unknown record_path '{explicit_record_path}'."
+            )
+        return explicit_record_path
+
+    record_id = _record_lookup_key(_as_non_empty_string(spec.get("record_id")))
+    if record_id:
+        matches = [
+            descriptor["archive_path"]
+            for descriptor in record_descriptors
+            if descriptor.get("record_id") == record_id
+        ]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ArchiveError(
+                f"File payload record_id '{record_id}' matches multiple records."
+            )
+        raise ArchiveError(f"File payload record_id '{record_id}' does not match any record.")
+
+    source_path = _as_non_empty_string(spec.get("source_path"))
+    source_index = spec.get("source_index")
+    if source_path is not None and source_index is not None:
+        try:
+            source_index = int(source_index)
+        except (TypeError, ValueError) as exc:
+            raise ArchiveError(
+                f"File payload source_index for '{source_path}' must be an integer."
+            ) from exc
+        matches = [
+            descriptor["archive_path"]
+            for descriptor in record_descriptors
+            if descriptor.get("source_path") == Path(source_path).name
+            and descriptor.get("source_index") == source_index
+        ]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ArchiveError(
+                f"File payload source reference '{source_path}' index {source_index} "
+                "matches multiple records."
+            )
+        raise ArchiveError(
+            f"File payload source reference '{source_path}' index {source_index} "
+            "does not match any record."
+        )
+
+    if len(record_descriptors) == 1 and _as_non_empty_string(spec.get("field_path")):
+        return record_descriptors[0]["archive_path"]
+
+    return None
+
+
+def _normalize_file_payloads(
+    file_payloads: Iterable[dict[str, Any]] | None,
+    record_descriptors: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, bytes]]:
+    blob_entries_by_id: dict[str, dict[str, Any]] = {}
+    blob_payloads: dict[str, bytes] = {}
+    file_entries: list[dict[str, Any]] = []
+    valid_record_paths = {
+        descriptor["archive_path"]
+        for descriptor in record_descriptors
+        if isinstance(descriptor.get("archive_path"), str)
+    }
+
+    for index, spec in enumerate(file_payloads or [], start=1):
+        if not isinstance(spec, dict):
+            raise ArchiveError(f"File payload #{index} must be an object.")
+
+        local_path = _file_payload_local_path(spec)
+        blob_id: str | None = None
+        blob_size: int | None = None
+        filename = _as_non_empty_string(spec.get("filename"))
+        if local_path is not None:
+            if not local_path.exists():
+                raise ArchiveError(f"File payload path '{local_path}' not found.")
+            if not local_path.is_file():
+                raise ArchiveError(f"File payload path '{local_path}' must be a file.")
+            payload = _read_file_bytes(local_path)
+            sha256 = _sha256_bytes(payload)
+            blob_id = f"{BLOB_HASH_ALGORITHM}:{sha256}"
+            blob_size = len(payload)
+            archive_path = _blob_archive_path(sha256)
+            blob_payloads.setdefault(archive_path, payload)
+            blob_entries_by_id.setdefault(
+                blob_id,
+                {
+                    "blob_id": blob_id,
+                    "archive_path": archive_path,
+                    "sha256": sha256,
+                    "size": blob_size,
+                },
+            )
+            if filename is None:
+                filename = local_path.name
+        elif _as_non_empty_string(spec.get("blob_id")):
+            raise ArchiveError(
+                f"File payload #{index} provides blob_id but no local file path."
+            )
+
+        record_path = _resolve_file_record_path(spec, record_descriptors, valid_record_paths)
+        file_entry = _without_none_values(
+            {
+                "file_id": _as_non_empty_string(spec.get("file_id")),
+                "source_uri": _as_non_empty_string(spec.get("source_uri")),
+                "blob_id": blob_id,
+                "filename": filename,
+                "mime_type": _as_non_empty_string(spec.get("mime_type")),
+                "size": blob_size,
+                "record_path": record_path,
+                "field_path": _as_non_empty_string(spec.get("field_path")),
+            }
+        )
+        if not any(file_entry.get(key) for key in ("file_id", "source_uri", "blob_id")):
+            raise ArchiveError(
+                f"File payload #{index} must include a file_id, source_uri, or local file path."
+            )
+        file_entries.append(file_entry)
+
+    return list(blob_entries_by_id.values()), file_entries, blob_payloads
 
 
 def _normalize_record_descriptor(
@@ -490,6 +685,7 @@ def pack_records_archive(
     output_path: str | Path | None = None,
     *,
     protocol_dirs: Iterable[str | Path] | None = None,
+    file_payloads: Iterable[dict[str, Any]] | None = None,
     force: bool = False,
 ) -> Path:
     record_path_list = [Path(path) for path in record_paths]
@@ -556,6 +752,10 @@ def pack_records_archive(
         )
         descriptor["archive_path"] = archive_path
 
+    manifest_blobs, manifest_files, blob_payloads = _normalize_file_payloads(
+        file_payloads,
+        record_descriptors,
+    )
     manifest = {
         "format": ARCHIVE_FORMAT,
         "version": ARCHIVE_VERSION,
@@ -567,6 +767,10 @@ def pack_records_archive(
             for protocol in embedded_protocols
         ],
     }
+    if manifest_blobs:
+        manifest["blobs"] = manifest_blobs
+    if manifest_files:
+        manifest["files"] = manifest_files
 
     with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr(
@@ -581,6 +785,8 @@ def pack_records_archive(
             )
 
         _write_protocol_bundle_files(archive, embedded_protocols)
+        for archive_path, payload in blob_payloads.items():
+            archive.writestr(archive_path, payload)
 
     return destination
 
@@ -732,6 +938,131 @@ def _validate_protocols_manifest(
     return issues, protocol_roots
 
 
+def _validate_blobs_manifest(
+    archive: zipfile.ZipFile,
+    blobs: Any,
+) -> tuple[list[str], set[str]]:
+    issues: list[str] = []
+    blob_ids: set[str] = set()
+    if blobs is None:
+        return issues, blob_ids
+    if not isinstance(blobs, list):
+        return ["Blobs manifest field must be a list."], blob_ids
+
+    archive_names = set(archive.namelist())
+    archive_paths: set[str] = set()
+    for index, blob in enumerate(blobs, start=1):
+        if not isinstance(blob, dict):
+            issues.append(f"Blob manifest entry #{index} must be an object.")
+            continue
+
+        blob_id = blob.get("blob_id")
+        archive_path = blob.get("archive_path")
+        expected_hash = blob.get("sha256")
+        expected_size = blob.get("size")
+
+        if not isinstance(blob_id, str) or not blob_id:
+            issues.append(f"Blob manifest entry #{index} is missing blob_id.")
+            continue
+        if blob_id in blob_ids:
+            issues.append(f"Blob manifest entry #{index} uses duplicate blob_id '{blob_id}'.")
+            continue
+        blob_ids.add(blob_id)
+
+        if not isinstance(expected_hash, str) or not _SHA256_RE.fullmatch(expected_hash):
+            issues.append(f"Blob '{blob_id}' must include a valid sha256 hash.")
+            continue
+        expected_blob_id = f"{BLOB_HASH_ALGORITHM}:{expected_hash}"
+        if blob_id != expected_blob_id:
+            issues.append(
+                f"Blob '{blob_id}' does not match sha256-derived id '{expected_blob_id}'."
+            )
+
+        if not isinstance(archive_path, str) or not archive_path:
+            issues.append(f"Blob '{blob_id}' is missing archive_path.")
+            continue
+        path_issue = _validate_zip_member_path(archive_path)
+        if path_issue:
+            issues.append(path_issue)
+            continue
+        if not archive_path.startswith(f"{BLOBS_ROOT}/{BLOB_HASH_ALGORITHM}/"):
+            issues.append(
+                f"Blob '{blob_id}' archive_path must be under "
+                f"'{BLOBS_ROOT}/{BLOB_HASH_ALGORITHM}/'."
+            )
+        if archive_path in archive_paths:
+            issues.append(f"Blob '{blob_id}' uses duplicate archive_path '{archive_path}'.")
+            continue
+        archive_paths.add(archive_path)
+        if archive_path not in archive_names:
+            issues.append(f"Blob file '{archive_path}' is missing.")
+            continue
+
+        raw_blob = _read_archive_member_bytes(archive, archive_path)
+        actual_hash = _sha256_bytes(raw_blob)
+        if actual_hash != expected_hash:
+            issues.append(
+                f"Blob file '{archive_path}' sha256 mismatch: "
+                f"expected {expected_hash}, got {actual_hash}."
+            )
+        if isinstance(expected_size, int) and expected_size != len(raw_blob):
+            issues.append(
+                f"Blob file '{archive_path}' size mismatch: "
+                f"expected {expected_size}, got {len(raw_blob)}."
+            )
+        elif expected_size is not None and not isinstance(expected_size, int):
+            issues.append(f"Blob '{blob_id}' size must be an integer when present.")
+
+    return issues, blob_ids
+
+
+def _validate_file_references_manifest(
+    files: Any,
+    *,
+    blob_ids: set[str],
+    record_paths: set[str],
+) -> list[str]:
+    issues: list[str] = []
+    if files is None:
+        return issues
+    if not isinstance(files, list):
+        return ["Files manifest field must be a list."]
+
+    for index, file_ref in enumerate(files, start=1):
+        if not isinstance(file_ref, dict):
+            issues.append(f"File manifest entry #{index} must be an object.")
+            continue
+
+        file_id = file_ref.get("file_id")
+        source_uri = file_ref.get("source_uri")
+        blob_id = file_ref.get("blob_id")
+        record_path = file_ref.get("record_path")
+        field_path = file_ref.get("field_path")
+
+        if not any(isinstance(value, str) and value for value in (file_id, source_uri, blob_id)):
+            issues.append(
+                f"File manifest entry #{index} must include file_id, source_uri, or blob_id."
+            )
+        if blob_id is not None:
+            if not isinstance(blob_id, str) or not blob_id:
+                issues.append(f"File manifest entry #{index} blob_id must be a string.")
+            elif blob_id not in blob_ids:
+                issues.append(
+                    f"File manifest entry #{index} references missing blob_id '{blob_id}'."
+                )
+        if record_path is not None:
+            if not isinstance(record_path, str) or not record_path:
+                issues.append(f"File manifest entry #{index} record_path must be a string.")
+            elif record_path not in record_paths:
+                issues.append(
+                    f"File manifest entry #{index} references missing record_path '{record_path}'."
+                )
+        if field_path is not None and (not isinstance(field_path, str) or not field_path):
+            issues.append(f"File manifest entry #{index} field_path must be a string.")
+
+    return issues
+
+
 def inspect_archive(archive_path: str | Path) -> dict[str, Any]:
     """Return a stable summary for an Airalogy .aira archive."""
     archive_file = Path(archive_path)
@@ -763,8 +1094,12 @@ def inspect_archive(archive_path: str | Path) -> dict[str, Any]:
         elif manifest["kind"] in {"protocols", "records"}:
             records = manifest.get("records") or []
             protocols = manifest.get("protocols") or []
+            blobs = manifest.get("blobs") or []
+            files = manifest.get("files") or []
             record_items = records if isinstance(records, list) else []
             protocol_items = protocols if isinstance(protocols, list) else []
+            blob_items = blobs if isinstance(blobs, list) else []
+            file_items = files if isinstance(files, list) else []
             summary["records"] = {
                 "count": len(record_items),
                 "protocol_ids": sorted(
@@ -783,6 +1118,22 @@ def inspect_archive(archive_path: str | Path) -> dict[str, Any]:
                         for item in protocol_items
                         if isinstance(item, dict) and item.get("protocol_id")
                     }
+                ),
+            }
+            summary["blobs"] = {
+                "count": len(blob_items),
+                "total_size": sum(
+                    item.get("size", 0)
+                    for item in blob_items
+                    if isinstance(item, dict) and isinstance(item.get("size"), int)
+                ),
+            }
+            summary["files"] = {
+                "count": len(file_items),
+                "offline_count": sum(
+                    1
+                    for item in file_items
+                    if isinstance(item, dict) and item.get("blob_id")
                 ),
             }
         return summary
@@ -825,6 +1176,7 @@ def validate_archive(archive_path: str | Path) -> tuple[bool, list[str]]:
                     manifest.get("protocols"),
                 )
                 issues.extend(protocol_issues)
+                record_paths: set[str] = set()
                 for index, record in enumerate(records, start=1):
                     if not isinstance(record, dict):
                         issues.append(f"Record manifest entry #{index} must be an object.")
@@ -840,6 +1192,7 @@ def validate_archive(archive_path: str | Path) -> tuple[bool, list[str]]:
                     if record_path not in archive_names:
                         issues.append(f"Record file '{record_path}' is missing.")
                         continue
+                    record_paths.add(record_path)
                     raw_record = _read_archive_member_bytes(archive, record_path)
                     try:
                         parsed_record = json.loads(raw_record.decode("utf-8"))
@@ -863,6 +1216,18 @@ def validate_archive(archive_path: str | Path) -> tuple[bool, list[str]]:
                         issues.append(
                             f"Record file '{record_path}' references missing embedded protocol root '{embedded_protocol_root}'."
                         )
+                blob_issues, blob_ids = _validate_blobs_manifest(
+                    archive,
+                    manifest.get("blobs"),
+                )
+                issues.extend(blob_issues)
+                issues.extend(
+                    _validate_file_references_manifest(
+                        manifest.get("files"),
+                        blob_ids=blob_ids,
+                        record_paths=record_paths,
+                    )
+                )
 
     except ArchiveError as exc:
         issues.append(str(exc))

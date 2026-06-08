@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { type AiraArchive, AIRA_MANIFEST_PATH, openAiraArchive, prettyPrintJson } from '@airalogy/aira-core'
 
-type ViewMode = 'overview' | 'manifest' | 'protocols' | 'records' | 'members'
+type ViewMode = 'overview' | 'manifest' | 'protocols' | 'records' | 'files' | 'members'
 
 const archive = ref<AiraArchive | null>(null)
 const fileName = ref('')
@@ -19,6 +19,8 @@ const isBusy = ref(false)
 const summary = computed(() => archive.value?.summary() ?? null)
 const manifest = computed(() => archive.value?.manifest ?? null)
 const records = computed(() => Array.isArray(manifest.value?.records) ? manifest.value.records : [])
+const fileRefs = computed(() => Array.isArray(manifest.value?.files) ? manifest.value.files : [])
+const blobs = computed(() => Array.isArray(manifest.value?.blobs) ? manifest.value.blobs : [])
 const protocols = computed(() => {
   if (!manifest.value) {
     return []
@@ -151,6 +153,7 @@ function selectMode(nextMode: ViewMode): void {
           <button :class="{ active: mode === 'manifest' }" @click="selectMode('manifest')">Manifest</button>
           <button :class="{ active: mode === 'protocols' }" @click="selectMode('protocols')">Protocols</button>
           <button :class="{ active: mode === 'records' }" @click="selectMode('records')">Records</button>
+          <button :class="{ active: mode === 'files' }" @click="selectMode('files')">Files</button>
           <button :class="{ active: mode === 'members' }" @click="selectMode('members')">Members</button>
         </nav>
 
@@ -181,6 +184,14 @@ function selectMode(nextMode: ViewMode): void {
           <article class="metric">
             <span>Protocols</span>
             <strong>{{ summary?.protocolCount }}</strong>
+          </article>
+          <article class="metric">
+            <span>Files</span>
+            <strong>{{ summary?.fileCount }}</strong>
+          </article>
+          <article class="metric">
+            <span>Blobs</span>
+            <strong>{{ summary?.blobCount }}</strong>
           </article>
           <article class="metric">
             <span>Members</span>
@@ -227,6 +238,57 @@ function selectMode(nextMode: ViewMode): void {
           </article>
           <article v-if="records.length === 0" class="wide-panel">
             <p>This archive does not contain record entries.</p>
+          </article>
+        </div>
+
+        <div v-else-if="mode === 'files'" class="details-layout">
+          <article class="wide-panel">
+            <h2>File References</h2>
+            <table v-if="fileRefs.length">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Record</th>
+                  <th>Blob</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(fileRef, index) in fileRefs" :key="`${fileRef.file_id || fileRef.source_uri || index}`">
+                  <td>
+                    <strong>{{ fileRef.filename || fileRef.file_id || fileRef.source_uri || 'file' }}</strong>
+                    <span>{{ fileRef.mime_type || 'unknown type' }}</span>
+                  </td>
+                  <td>{{ fileRef.record_path || 'unlinked' }}<br>{{ fileRef.field_path || '' }}</td>
+                  <td>{{ fileRef.blob_id || 'reference only' }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-else>This archive does not contain file reference entries.</p>
+          </article>
+
+          <article class="wide-panel">
+            <h2>Offline Blobs</h2>
+            <table v-if="blobs.length">
+              <thead>
+                <tr>
+                  <th>Blob</th>
+                  <th>Size</th>
+                  <th>Path</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="blob in blobs" :key="blob.blob_id">
+                  <td>{{ blob.blob_id }}</td>
+                  <td>{{ formatBytes(blob.size || 0) }}</td>
+                  <td>
+                    <button class="inline-link" @click="loadSelected(blob.archive_path)">
+                      {{ blob.archive_path }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-else>This archive does not contain offline blob payloads.</p>
           </article>
         </div>
 

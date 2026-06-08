@@ -1,0 +1,19 @@
+{
+  "record_id": "55555555-5555-4555-8555-555555555555",
+  "record_version": 1,
+  "metadata": {
+    "protocol_id": "file_note",
+    "protocol_version": "0.1.0",
+    "created_at": "2026-06-08T08:40:00Z",
+    "source": "examples/aira"
+  },
+  "data": {
+    "var": {
+      "sample_name": "offline-file-sample",
+      "sample_file": "airalogy.id.file.55555555-5555-4555-8555-555555555555.txt"
+    },
+    "step": {},
+    "check": {},
+    "quiz": {}
+  }
+}

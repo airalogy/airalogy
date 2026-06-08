@@ -1,0 +1,1 @@
+This text file is embedded as an offline blob in records-with-file.aira.

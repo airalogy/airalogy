@@ -46,6 +46,30 @@ airalogy pack ./record.json ./record-history.json -o records.aira
 airalogy pack ./record.json -o record_bundle.aira --protocol-dir ./my_protocol
 ```
 
+把 Record 引用的本地文件载荷一起打入离线包：
+
+```bash
+airalogy pack ./record.json -o record_bundle.aira --file-payload ./files.json
+```
+
+`files.json` 可以是一个对象、对象数组，或带有顶层 `files` 数组的对象：
+
+```json
+{
+  "files": [
+    {
+      "path": "./downloads/image.png",
+      "file_id": "airalogy.id.file.xxx.png",
+      "source_uri": "oss://bucket/path/image.png",
+      "filename": "image.png",
+      "mime_type": "image/png",
+      "record_id": "01234567-0123-0123-0123-0123456789ab",
+      "field_path": "data.var.sample_photo"
+    }
+  ]
+}
+```
+
 解包：
 
 ```bash
@@ -81,14 +105,145 @@ GitHub Pages workflow 会把 Reader 发布为静态应用：`https://airalogy.gi
 - `protocols-bundle.aira`：多个 Protocol，不包含 Record
 - `records-with-protocol.aira`：一个内嵌 Protocol 和多条 Record
 - `multi-protocol-records.aira`：多个内嵌 Protocol，以及来自多个 Protocol 的 Record
+- `records-with-file.aira`：一个内嵌 Protocol、一条 Record、一个文件引用和一个离线 blob
 
 这些文件适合用来测试 Airalogy Reader，也可以用来观察不同 `kind` 在 manifest 中的结构差异。
+
+## 内部文件结构
+
+`.aira` 文件本质上是一个 ZIP 归档。每个归档都必须包含 `_airalogy_archive/manifest.json`；其他文件都通过这个 manifest 来解释。
+
+单个 Protocol 归档：
+
+```text
+example.aira
+├─ _airalogy_archive/
+│  └─ manifest.json
+├─ protocol.aimd
+├─ protocol.toml              # 可选，但推荐
+├─ model.py                   # 可选
+├─ assigner.py                # 可选
+└─ files/                     # 可选的 Protocol 资源文件
+   └─ ...
+```
+
+对于 `kind: "protocol"`，Protocol 文件直接位于归档根目录。manifest 使用 `protocol.files` 列出这些成员，并用 `protocol.file_hashes` 保存同一组相对路径对应的 SHA-256 hash。
+
+多个 Protocol bundle：
+
+```text
+protocols.aira
+├─ _airalogy_archive/
+│  └─ manifest.json
+└─ protocols/
+   ├─ contact_note__0.1.0/
+   │  ├─ protocol.aimd
+   │  ├─ protocol.toml
+   │  └─ ...
+   └─ measurement_note__0.1.0/
+      ├─ protocol.aimd
+      ├─ protocol.toml
+      └─ ...
+```
+
+对于 `kind: "protocols"`，`manifest.protocols[]` 中每一项对应一个 Protocol。每个 Protocol 都有自己的 `archive_root`，其 `files` 和 `file_hashes` 都相对于这个 `archive_root`。
+
+Record bundle，也可以内嵌相关 Protocol：
+
+```text
+records.aira
+├─ _airalogy_archive/
+│  └─ manifest.json
+├─ records/
+│  ├─ 11111111-1111-4111-8111-111111111111.v1.json
+│  └─ 22222222-2222-4222-8222-222222222222.v1.json
+└─ protocols/                 # 只有内嵌 Protocol 时才存在
+   └─ contact_note__0.1.0/
+      ├─ protocol.aimd
+      ├─ protocol.toml
+      └─ ...
+```
+
+对于 `kind: "records"`，`manifest.records[]` 描述每一条 Record payload。`path` 字段指向 `records/` 下真正的 JSON 文件。如果归档内嵌了相关 Protocol，`manifest.protocols[]` 使用和 Protocol bundle 相同的结构，每条 Record 可以通过 `embedded_protocol_root` 指向匹配的内嵌 Protocol。
+
+Record 文件载荷层：
+
+有些 Record 会包含 file 类型的 `var` 字段。在云端部署中，这些字段可能指向 OSS 对象、S3 对象、文件服务 ID 或 signed URL。当 `.aira` 需要支持离线使用时，真实文件字节应该进入一个独立的 content-addressed blob 层，而不是放进 `records/`，也不应该复用 Protocol 的 `files/` 目录。
+
+```text
+records-with-files.aira
+├─ _airalogy_archive/
+│  └─ manifest.json
+├─ records/
+│  └─ record-001.v1.json
+├─ protocols/
+│  └─ sample_protocol__0.1.0/
+│     └─ ...
+└─ blobs/
+   └─ sha256/
+      └─ ab/
+         └─ cd/
+            └─ abcdef...1234
+```
+
+blob 路径采用内容寻址，并且可以按 hash 前缀分片。消费者应该以 manifest 为准，不应该只从路径推断文件元信息。
+
+推荐的文件载荷 manifest 结构：
+
+```json
+{
+  "blobs": [
+    {
+      "blob_id": "sha256:abcdef...1234",
+      "archive_path": "blobs/sha256/ab/cd/abcdef...1234",
+      "sha256": "abcdef...1234",
+      "size": 123456
+    }
+  ],
+  "files": [
+    {
+      "file_id": "airalogy.file.xxx",
+      "source_uri": "oss://bucket/path/image.png",
+      "blob_id": "sha256:abcdef...1234",
+      "filename": "image.png",
+      "mime_type": "image/png",
+      "record_path": "records/record-001.v1.json",
+      "field_path": "data.var.sample_photo"
+    }
+  ]
+}
+```
+
+这里把真实字节和语义文件引用拆开。Record 可以保留原始云端引用，而归档可以选择性携带真实文件字节用于离线使用。多个 Record 也可以指向同一个 blob，避免重复保存。
+
+Protocol `files/` 和 archive `blobs/` 的含义不同：
+
+- Protocol `files/`：Protocol 定义所需的资源文件。
+- Archive `blobs/`：Record 数据或外部来源对象引用的真实载荷字节。
+
+归档格式至少应该支持两种导出模式：
+
+- `reference-only`：只保留 file ID 和 source URI，不打包真实字节。
+- `offline-bundle`：保留来源引用，同时把经过校验的真实文件放入 `blobs/`。
+
+重要 manifest 字段：
+
+- `format`：当前为 `airalogy.archive`
+- `version`：归档格式版本，当前为 `1`
+- `kind`：`protocol`、`protocols` 或 `records`
+- `created_at`：归档创建时间
+- `protocol`：`kind: "protocol"` 使用的单 Protocol 元数据
+- `protocols`：`kind: "protocols"` 和 `kind: "records"` 使用的 Protocol bundle 或内嵌 Protocol 元数据
+- `records`：`kind: "records"` 使用的 Record payload 元数据
+- `blobs`：可选，归档内部保存的真实文件载荷
+- `files`：可选，连接 Record 字段、来源 URI 和 blob 的语义文件引用
 
 ## Python API
 
 ```python
 from airalogy.archive import (
     inspect_archive,
+    load_file_payload_specs,
     pack_protocol_archive,
     pack_protocols_archive,
     pack_records_archive,
@@ -100,6 +255,11 @@ from airalogy.archive import (
 pack_protocol_archive("my_protocol", "my_protocol.aira")
 pack_protocols_archive(["protocol_a", "protocol_b"], "protocols.aira")
 pack_records_archive(["record.json"], "records.aira", protocol_dirs=["my_protocol"])
+pack_records_archive(
+    ["record.json"],
+    "records_with_files.aira",
+    file_payloads=load_file_payload_specs("files.json"),
+)
 manifest = read_archive_manifest("records.aira")
 summary = inspect_archive("records.aira")
 ok, issues = validate_archive("records.aira")
@@ -127,11 +287,13 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 - manifest 会尽量保留每条 record 的 `record_id`、`record_version`、`protocol_id`、`protocol_version` 等元信息。
 - 新生成的归档会为每条打包后的 Record JSON 写入 SHA-256 hash。
 - 当你传入 `--protocol-dir` 时，Airalogy 会先校验该 Protocol，再尝试把每条 record 和对应的内嵌 Protocol 关联起来。
+- 当你传入 file payload spec 时，Airalogy 会把本地文件字节写入 `blobs/sha256/`，按 SHA-256 自动去重，并把语义文件引用写入 `manifest.files[]`。
+- 如果 file payload spec 没有提供本地 `path`、`local_path` 或 `file_path`，则只会作为 reference-only 文件引用写入 `manifest.files[]`。
 
 ## 安全性与限制
 
 - `airalogy unpack` 会进行安全解包检查，拒绝任何试图逃逸目标目录的归档条目。
 - `airalogy validate` 和 Airalogy Reader 会检查 manifest、成员路径、Record JSON、Protocol 文件引用，以及存在时的 SHA-256 hash。
 - 因为 `.aira` 是统一后缀，所以消费者需要读取 `_airalogy_archive/manifest.json` 并根据 `kind` 判断里面到底是单 Protocol、Protocol bundle，还是 Record 包。
-- 第 1 版只打包 Protocol 目录、JSON records 和可选的内嵌 Protocol 目录。
-- 第 1 版不会自动把远端 Airalogy file ID 解析成实际二进制文件内容。
+- 第 1 版支持打包 Protocol 目录、JSON records、可选的内嵌 Protocol 目录，以及 `blobs/` 下的可选本地文件载荷。
+- 第 1 版不会自动下载远端 Airalogy file ID 或 OSS 对象。导出器应先下载真实字节，再通过 `--file-payload` 或 `file_payloads` 传入本地路径。

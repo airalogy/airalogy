@@ -30,29 +30,35 @@ export default defineConfig({
   description: 'Documentation hub for the Airalogy ecosystem',
   base,
   locales: {
-    root: {
+    en: {
       label: 'English',
       lang: 'en-US',
+      link: '/en/',
       title: 'Airalogy Docs',
       description: 'Documentation hub for the Airalogy ecosystem',
       themeConfig: {
         nav: [
+          { text: 'Home', link: '/en/' },
           { text: 'Airalogy', link: '/airalogy/en/' },
           { text: 'AIMD', link: '/aimd/en/' },
           { text: 'Engine', link: '/airalogy-engine/' },
+          { text: '.aira Reader', link: '/aira-reader/' },
         ],
       },
     },
     zh: {
       label: '简体中文',
       lang: 'zh-CN',
+      link: '/zh/',
       title: 'Airalogy 文档',
       description: 'Airalogy 生态系统文档入口',
       themeConfig: {
         nav: [
+          { text: '首页', link: '/zh/' },
           { text: 'Airalogy', link: '/airalogy/zh/' },
           { text: 'AIMD', link: '/aimd/zh/' },
           { text: 'Engine', link: '/airalogy-engine/' },
+          { text: '.aira Reader', link: '/aira-reader/' },
         ],
       },
     },

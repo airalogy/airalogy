@@ -224,6 +224,12 @@ If you want the record bundle to carry the related protocol definition as well, 
 airalogy pack ./record.json -o record_bundle.aira --protocol-dir ./my_protocol
 ```
 
+If Records reference local file payloads, embed them through a file payload spec:
+
+```bash
+airalogy pack ./record.json -o record_bundle.aira --file-payload ./files.json
+```
+
 Unpack either archive type:
 
 ```bash
@@ -248,7 +254,8 @@ Notes:
 - All archive kinds use the same `.aira` suffix; inspect `_airalogy_archive/manifest.json` to determine whether the payload is a single protocol archive, a protocols bundle, or a record bundle.
 - New archives include SHA-256 hashes for packed records and protocol files so readers can detect tampering.
 - Protocol packing excludes `.env` and common cache artifacts by default so local secrets are not bundled accidentally.
-- Record archives currently bundle JSON records and optional embedded protocol directories. They do not automatically dereference remote Airalogy file IDs into raw file bytes.
+- Record archives bundle JSON records, optional embedded protocol directories, and optional local file payloads under `blobs/`.
+- Remote Airalogy file IDs or OSS objects are not downloaded automatically; exporters should download those bytes first, then pass local paths through `--file-payload`.
 - Browser users can open `.aira` files locally with the Airalogy Reader app in `apps/aira-reader`; it parses the archive in the browser and does not upload file content.
 - Ready-to-open example archives for Reader testing live in `examples/aira/`.
 

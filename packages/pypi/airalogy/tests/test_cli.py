@@ -2,6 +2,7 @@
 Tests for CLI module.
 """
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -420,6 +421,91 @@ def test_pack_multiple_protocol_directories_command():
         assert "Protocols: 2" in inspect_result.stdout
         assert "protocol_a" in inspect_result.stdout
         assert "protocol_b" in inspect_result.stdout
+
+        validate_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "validate",
+                str(archive_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert validate_result.returncode == 0
+        assert "archive validation passed" in validate_result.stdout
+
+
+def test_pack_records_command_with_file_payload():
+    """Test pack command embeds record file payloads into blobs/."""
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        file_id = "airalogy.id.file.11111111-1111-4111-8111-111111111111.txt"
+        records_file = tmp_path / "records.json"
+        records_file.write_text(
+            json.dumps(
+                {
+                    "record_id": "01234567-0123-0123-0123-0123456789ab",
+                    "record_version": 1,
+                    "metadata": {"protocol_id": "protocol_demo"},
+                    "data": {"var": {"sample_file": file_id}},
+                }
+            )
+        )
+        payload_file = tmp_path / "payload.txt"
+        payload_file.write_text("payload")
+        file_payload_spec = tmp_path / "files.json"
+        file_payload_spec.write_text(
+            json.dumps(
+                {
+                    "files": [
+                        {
+                            "path": str(payload_file),
+                            "file_id": file_id,
+                            "source_uri": "oss://airalogy-demo/payload.txt",
+                            "mime_type": "text/plain",
+                            "record_id": "01234567-0123-0123-0123-0123456789ab",
+                            "field_path": "data.var.sample_file",
+                        }
+                    ]
+                }
+            )
+        )
+        archive_path = tmp_path / "records.aira"
+
+        pack_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "pack",
+                str(records_file),
+                "-o",
+                str(archive_path),
+                "--file-payload",
+                str(file_payload_spec),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert pack_result.returncode == 0
+        assert archive_path.exists()
+
+        inspect_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "inspect",
+                str(archive_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert inspect_result.returncode == 0
+        assert "File references: 1" in inspect_result.stdout
+        assert "Offline blobs: 1" in inspect_result.stdout
 
         validate_result = subprocess.run(
             [

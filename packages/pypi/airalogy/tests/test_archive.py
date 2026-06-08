@@ -230,6 +230,158 @@ def test_pack_records_archive_with_embedded_protocol_and_record_list(tmp_path: P
     assert issues == []
 
 
+def test_pack_records_archive_with_file_payloads(tmp_path: Path):
+    records_file = tmp_path / "records.json"
+    file_id = "airalogy.id.file.11111111-1111-4111-8111-111111111111.png"
+    records_file.write_text(
+        json.dumps(
+            {
+                "record_id": "01234567-0123-0123-0123-0123456789ab",
+                "record_version": 1,
+                "metadata": {"protocol_id": "protocol_demo"},
+                "data": {"var": {"sample_image": file_id}},
+            }
+        )
+    )
+    image_file = tmp_path / "image.png"
+    image_file.write_bytes(b"fake png bytes")
+
+    archive_path = tmp_path / "records-with-file.aira"
+    pack_records_archive(
+        [records_file],
+        archive_path,
+        file_payloads=[
+            {
+                "path": str(image_file),
+                "file_id": file_id,
+                "source_uri": "oss://airalogy-demo/images/image.png",
+                "filename": "image.png",
+                "mime_type": "image/png",
+                "record_id": "01234567-0123-0123-0123-0123456789ab",
+                "field_path": "data.var.sample_image",
+            }
+        ],
+    )
+
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        manifest = json.loads(archive.read(ARCHIVE_MANIFEST_PATH).decode("utf-8"))
+        assert manifest["kind"] == "records"
+        assert len(manifest["records"]) == 1
+        assert len(manifest["blobs"]) == 1
+        assert len(manifest["files"]) == 1
+
+        blob = manifest["blobs"][0]
+        assert blob["blob_id"] == f"sha256:{blob['sha256']}"
+        assert blob["archive_path"].startswith("blobs/sha256/")
+        assert archive.read(blob["archive_path"]) == b"fake png bytes"
+
+        file_ref = manifest["files"][0]
+        assert file_ref["file_id"] == file_id
+        assert file_ref["source_uri"] == "oss://airalogy-demo/images/image.png"
+        assert file_ref["blob_id"] == blob["blob_id"]
+        assert file_ref["record_path"] == manifest["records"][0]["path"]
+        assert file_ref["field_path"] == "data.var.sample_image"
+
+    summary = inspect_archive(archive_path)
+    assert summary["files"]["count"] == 1
+    assert summary["files"]["offline_count"] == 1
+    assert summary["blobs"]["count"] == 1
+    assert summary["blobs"]["total_size"] == len(b"fake png bytes")
+
+    ok, issues = validate_archive(archive_path)
+    assert ok
+    assert issues == []
+
+    unpack_dir, manifest = unpack_archive(archive_path, tmp_path / "unpacked_files")
+    assert manifest["kind"] == "records"
+    blob_path = manifest["blobs"][0]["archive_path"]
+    assert (unpack_dir / blob_path).read_bytes() == b"fake png bytes"
+
+
+def test_pack_records_archive_with_reference_only_file_payload(tmp_path: Path):
+    records_file = tmp_path / "records.json"
+    records_file.write_text(
+        json.dumps(
+            {
+                "record_id": "01234567-0123-0123-0123-0123456789ab",
+                "metadata": {"protocol_id": "protocol_demo"},
+                "data": {"var": {"sample_image": "airalogy.id.file.reference.png"}},
+            }
+        )
+    )
+
+    archive_path = tmp_path / "records-reference-only.aira"
+    pack_records_archive(
+        [records_file],
+        archive_path,
+        file_payloads=[
+            {
+                "file_id": "airalogy.id.file.reference.png",
+                "source_uri": "oss://airalogy-demo/images/reference.png",
+                "record_id": "01234567-0123-0123-0123-0123456789ab",
+                "field_path": "data.var.sample_image",
+            }
+        ],
+    )
+
+    with zipfile.ZipFile(archive_path) as archive:
+        manifest = json.loads(archive.read(ARCHIVE_MANIFEST_PATH).decode("utf-8"))
+    assert "blobs" not in manifest
+    assert manifest["files"][0]["source_uri"] == "oss://airalogy-demo/images/reference.png"
+
+    summary = inspect_archive(archive_path)
+    assert summary["files"]["count"] == 1
+    assert summary["files"]["offline_count"] == 0
+    assert summary["blobs"]["count"] == 0
+
+    ok, issues = validate_archive(archive_path)
+    assert ok
+    assert issues == []
+
+
+def test_validate_archive_detects_blob_hash_mismatch(tmp_path: Path):
+    records_file = tmp_path / "records.json"
+    records_file.write_text(
+        json.dumps(
+            {
+                "record_id": "01234567-0123-0123-0123-0123456789ab",
+                "metadata": {"protocol_id": "protocol_demo"},
+                "data": {"var": {"sample_file": "airalogy.id.file.payload.txt"}},
+            }
+        )
+    )
+    payload_file = tmp_path / "payload.txt"
+    payload_file.write_text("original")
+    archive_path = tmp_path / "records-with-blob.aira"
+    pack_records_archive(
+        [records_file],
+        archive_path,
+        file_payloads=[
+            {
+                "path": str(payload_file),
+                "file_id": "airalogy.id.file.payload.txt",
+                "record_id": "01234567-0123-0123-0123-0123456789ab",
+            }
+        ],
+    )
+
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        members = {
+            info.filename: archive.read(info.filename)
+            for info in archive.infolist()
+            if not info.is_dir()
+        }
+        manifest = json.loads(members[ARCHIVE_MANIFEST_PATH].decode("utf-8"))
+    members[manifest["blobs"][0]["archive_path"]] = b"tampered"
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for member_name, payload in members.items():
+            archive.writestr(member_name, payload)
+
+    ok, issues = validate_archive(archive_path)
+    assert not ok
+    assert any("Blob file" in issue and "sha256 mismatch" in issue for issue in issues)
+
+
 def test_validate_archive_detects_record_hash_mismatch(tmp_path: Path):
     records_file = tmp_path / "records.json"
     records_file.write_text(

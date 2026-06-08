@@ -34,6 +34,24 @@ export interface AiraRecordManifest {
   embedded_protocol_root?: string | null
 }
 
+export interface AiraBlobManifest {
+  blob_id: string
+  archive_path: string
+  sha256: string
+  size?: number
+}
+
+export interface AiraFileManifest {
+  file_id?: string | null
+  source_uri?: string | null
+  blob_id?: string | null
+  filename?: string | null
+  mime_type?: string | null
+  size?: number | null
+  record_path?: string | null
+  field_path?: string | null
+}
+
 export interface AiraManifest {
   format: string
   version: number
@@ -42,6 +60,8 @@ export interface AiraManifest {
   protocol?: AiraProtocolManifest
   records?: AiraRecordManifest[]
   protocols?: AiraProtocolManifest[]
+  blobs?: AiraBlobManifest[]
+  files?: AiraFileManifest[]
   [key: string]: unknown
 }
 
@@ -53,6 +73,8 @@ export interface AiraSummary {
   memberCount: number
   recordCount: number
   protocolCount: number
+  blobCount: number
+  fileCount: number
 }
 
 export interface AiraValidationResult {
@@ -66,6 +88,7 @@ type ZipEntryInternal = AiraEntry & {
 
 const textDecoder = new TextDecoder('utf-8')
 const textEncoder = new TextEncoder()
+const sha256Pattern = /^[0-9a-f]{64}$/
 
 function getUint16(view: DataView, offset: number): number {
   return view.getUint16(offset, true)
@@ -215,6 +238,8 @@ export class AiraArchive {
     const protocols = this.manifest.kind === 'protocol'
       ? 1
       : Array.isArray(this.manifest.protocols) ? this.manifest.protocols.length : 0
+    const blobs = Array.isArray(this.manifest.blobs) ? this.manifest.blobs.length : 0
+    const files = Array.isArray(this.manifest.files) ? this.manifest.files.length : 0
     return {
       format: this.manifest.format,
       version: this.manifest.version,
@@ -223,6 +248,8 @@ export class AiraArchive {
       memberCount: this.entries.length,
       recordCount: records,
       protocolCount: protocols,
+      blobCount: blobs,
+      fileCount: files,
     }
   }
 
@@ -357,6 +384,7 @@ export class AiraArchive {
   private async validateRecords(issues: string[]): Promise<void> {
     const records = Array.isArray(this.manifest.records) ? this.manifest.records : []
     const protocolRoots = await this.validateProtocolList(this.manifest.protocols, issues)
+    const recordPaths = new Set<string>()
 
     for (const [index, record] of records.entries()) {
       if (!record || typeof record !== 'object') {
@@ -377,6 +405,7 @@ export class AiraArchive {
         issues.push(`Record file '${path}' is missing.`)
         continue
       }
+      recordPaths.add(path)
       let raw: Uint8Array
       try {
         raw = await this.readBytes(path)
@@ -394,6 +423,113 @@ export class AiraArchive {
       }
       if (record.embedded_protocol_root && !protocolRoots.has(record.embedded_protocol_root)) {
         issues.push(`Record file '${path}' references missing embedded protocol root '${record.embedded_protocol_root}'.`)
+      }
+    }
+    const blobIds = await this.validateBlobs(issues)
+    this.validateFileReferences(issues, blobIds, recordPaths)
+  }
+
+  private async validateBlobs(issues: string[]): Promise<Set<string>> {
+    const blobIds = new Set<string>()
+    const blobs = this.manifest.blobs
+    if (blobs === undefined) {
+      return blobIds
+    }
+    if (!Array.isArray(blobs)) {
+      issues.push('Blobs manifest field must be a list.')
+      return blobIds
+    }
+
+    const archivePaths = new Set<string>()
+    for (const [index, blob] of blobs.entries()) {
+      if (!blob || typeof blob !== 'object') {
+        issues.push(`Blob manifest entry #${index + 1} must be an object.`)
+        continue
+      }
+      const blobId = blob.blob_id
+      const archivePath = blob.archive_path
+      const expectedHash = blob.sha256
+
+      if (!blobId) {
+        issues.push(`Blob manifest entry #${index + 1} is missing blob_id.`)
+        continue
+      }
+      if (blobIds.has(blobId)) {
+        issues.push(`Blob manifest entry #${index + 1} uses duplicate blob_id '${blobId}'.`)
+        continue
+      }
+      blobIds.add(blobId)
+
+      if (!expectedHash || !sha256Pattern.test(expectedHash)) {
+        issues.push(`Blob '${blobId}' must include a valid sha256 hash.`)
+        continue
+      }
+      const expectedBlobId = `sha256:${expectedHash}`
+      if (blobId !== expectedBlobId) {
+        issues.push(`Blob '${blobId}' does not match sha256-derived id '${expectedBlobId}'.`)
+      }
+      if (!archivePath) {
+        issues.push(`Blob '${blobId}' is missing archive_path.`)
+        continue
+      }
+      const pathIssue = validateMemberPath(archivePath)
+      if (pathIssue) {
+        issues.push(pathIssue)
+        continue
+      }
+      if (!archivePath.startsWith('blobs/sha256/')) {
+        issues.push(`Blob '${blobId}' archive_path must be under 'blobs/sha256/'.`)
+      }
+      if (archivePaths.has(archivePath)) {
+        issues.push(`Blob '${blobId}' uses duplicate archive_path '${archivePath}'.`)
+        continue
+      }
+      archivePaths.add(archivePath)
+      if (!this.has(archivePath)) {
+        issues.push(`Blob file '${archivePath}' is missing.`)
+        continue
+      }
+      const raw = await this.readBytes(archivePath)
+      const actualHash = await sha256Hex(raw)
+      if (actualHash !== expectedHash) {
+        issues.push(`Blob file '${archivePath}' sha256 mismatch: expected ${expectedHash}, got ${actualHash}.`)
+      }
+      if (typeof blob.size === 'number' && blob.size !== raw.byteLength) {
+        issues.push(`Blob file '${archivePath}' size mismatch: expected ${blob.size}, got ${raw.byteLength}.`)
+      }
+      else if (blob.size !== undefined && typeof blob.size !== 'number') {
+        issues.push(`Blob '${blobId}' size must be a number when present.`)
+      }
+    }
+    return blobIds
+  }
+
+  private validateFileReferences(issues: string[], blobIds: Set<string>, recordPaths: Set<string>): void {
+    const files = this.manifest.files
+    if (files === undefined) {
+      return
+    }
+    if (!Array.isArray(files)) {
+      issues.push('Files manifest field must be a list.')
+      return
+    }
+
+    for (const [index, fileRef] of files.entries()) {
+      if (!fileRef || typeof fileRef !== 'object') {
+        issues.push(`File manifest entry #${index + 1} must be an object.`)
+        continue
+      }
+      if (!fileRef.file_id && !fileRef.source_uri && !fileRef.blob_id) {
+        issues.push(`File manifest entry #${index + 1} must include file_id, source_uri, or blob_id.`)
+      }
+      if (fileRef.blob_id && !blobIds.has(fileRef.blob_id)) {
+        issues.push(`File manifest entry #${index + 1} references missing blob_id '${fileRef.blob_id}'.`)
+      }
+      if (fileRef.record_path && !recordPaths.has(fileRef.record_path)) {
+        issues.push(`File manifest entry #${index + 1} references missing record_path '${fileRef.record_path}'.`)
+      }
+      if (fileRef.field_path !== undefined && typeof fileRef.field_path !== 'string') {
+        issues.push(`File manifest entry #${index + 1} field_path must be a string.`)
       }
     }
   }

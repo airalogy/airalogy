@@ -218,6 +218,12 @@ airalogy pack ./record.json ./record-history.json -o records.aira
 airalogy pack ./record.json -o record_bundle.aira --protocol-dir ./my_protocol
 ```
 
+如果 Record 引用了本地文件载荷，可以通过 file payload spec 一起打入离线包：
+
+```bash
+airalogy pack ./record.json -o record_bundle.aira --file-payload ./files.json
+```
+
 解包任意归档类型：
 
 ```bash
@@ -242,7 +248,8 @@ airalogy validate ./record_bundle.aira --json
 - 所有归档都使用 `.aira` 后缀；可以通过 `_airalogy_archive/manifest.json` 判断载荷是单 Protocol 归档、Protocol bundle，还是 Record 包。
 - 新生成的归档会为打包的 Record 和 Protocol 文件写入 SHA-256 hash，便于 Reader 和命令行检测篡改。
 - 协议打包默认排除 `.env` 和常见缓存产物，避免本地敏感信息被误打包。
-- 记录归档目前只会打包 JSON 记录和可选嵌入协议目录，不会自动将远程 Airalogy 文件 ID 解析成原始文件字节。
+- 记录归档会打包 JSON 记录、可选嵌入协议目录，以及 `blobs/` 下的可选本地文件载荷。
+- 远端 Airalogy file ID 或 OSS 对象不会自动下载；导出器应先下载真实字节，再通过 `--file-payload` 传入本地路径。
 - 浏览器用户可以用 `apps/aira-reader` 中的 Airalogy Reader 在本地打开 `.aira` 文件；Reader 在浏览器内解析文件，不会上传归档内容。
 - 用于快速测试 Reader 的示例归档位于 `examples/aira/`。
 
