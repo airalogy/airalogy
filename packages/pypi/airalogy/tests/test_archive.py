@@ -8,6 +8,7 @@ from airalogy.archive import (
     ARCHIVE_MANIFEST_PATH,
     ArchiveError,
     inspect_archive,
+    load_file_payload_specs,
     pack_protocol_archive,
     pack_protocols_archive,
     pack_records_archive,
@@ -296,6 +297,33 @@ def test_pack_records_archive_with_file_payloads(tmp_path: Path):
     assert manifest["kind"] == "records"
     blob_path = manifest["blobs"][0]["archive_path"]
     assert (unpack_dir / blob_path).read_bytes() == b"fake png bytes"
+
+
+def test_load_file_payload_specs_resolves_paths_relative_to_spec_file(tmp_path: Path):
+    payload_dir = tmp_path / "payloads"
+    payload_dir.mkdir()
+    payload_file = payload_dir / "sample.txt"
+    payload_file.write_text("payload")
+
+    spec_dir = tmp_path / "specs"
+    spec_dir.mkdir()
+    spec_path = spec_dir / "files.json"
+    spec_path.write_text(
+        json.dumps(
+            {
+                "files": [
+                    {
+                        "path": "../payloads/sample.txt",
+                        "file_id": "airalogy.id.file.relative.txt",
+                    }
+                ]
+            }
+        )
+    )
+
+    specs = load_file_payload_specs(spec_path)
+
+    assert Path(specs[0]["path"]) == payload_file.resolve()
 
 
 def test_pack_records_archive_with_reference_only_file_payload(tmp_path: Path):

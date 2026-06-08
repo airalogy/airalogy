@@ -8,6 +8,8 @@ Supported archive kinds are `protocol`, `protocols`, and `records`.
 
 Example archives covering these kinds are available in `examples/aira/`.
 
+The public manifest schema is available at `schemas/aira/manifest.v1.schema.json`.
+
 ```ts
 import { openAiraArchive } from '@airalogy/aira-core'
 

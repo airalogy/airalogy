@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://airalogy.github.io/airalogy/schemas/aira/manifest.v1.schema.json",
+  "title": "Airalogy .aira Manifest v1",
+  "description": "Machine-readable manifest for Airalogy .aira archives.",
+  "type": "object",
+  "required": ["format", "version", "kind"],
+  "properties": {
+    "format": {
+      "const": "airalogy.archive"
+    },
+    "version": {
+      "const": 1
+    },
+    "kind": {
+      "enum": ["protocol", "protocols", "records"]
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "protocol": {
+      "$ref": "#/$defs/protocol"
+    },
+    "protocols": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/protocol"
+      }
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/record"
+      }
+    },
+    "blobs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blob"
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fileReference"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "protocol"
+          }
+        },
+        "required": ["kind"]
+      },
+      "then": {
+        "required": ["protocol"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "protocols"
+          }
+        },
+        "required": ["kind"]
+      },
+      "then": {
+        "required": ["protocols"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "records"
+          }
+        },
+        "required": ["kind"]
+      },
+      "then": {
+        "required": ["records"]
+      }
+    }
+  ],
+  "additionalProperties": true,
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "blobId": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "archivePath": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "^/|(^|/)\\.\\.($|/)"
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "properties": {
+        "protocol_id": {
+          "type": ["string", "null"]
+        },
+        "protocol_version": {
+          "type": ["string", "null"]
+        },
+        "protocol_name": {
+          "type": ["string", "null"]
+        },
+        "entrypoint": {
+          "type": "string"
+        },
+        "archive_root": {
+          "$ref": "#/$defs/archivePath"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/archivePath"
+          }
+        },
+        "file_hashes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "record": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/archivePath"
+        },
+        "record_id": {
+          "type": ["string", "null"]
+        },
+        "record_version": {
+          "type": ["string", "number", "integer", "null"]
+        },
+        "protocol_id": {
+          "type": ["string", "null"]
+        },
+        "protocol_version": {
+          "type": ["string", "null"]
+        },
+        "sha1": {
+          "type": ["string", "null"]
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_path": {
+          "type": "string"
+        },
+        "source_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "embedded_protocol_root": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "blob": {
+      "type": "object",
+      "required": ["blob_id", "archive_path", "sha256"],
+      "properties": {
+        "blob_id": {
+          "$ref": "#/$defs/blobId"
+        },
+        "archive_path": {
+          "type": "string",
+          "pattern": "^blobs/sha256/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{64}$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "fileReference": {
+      "type": "object",
+      "properties": {
+        "file_id": {
+          "type": ["string", "null"]
+        },
+        "source_uri": {
+          "type": ["string", "null"]
+        },
+        "blob_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/blobId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "filename": {
+          "type": ["string", "null"]
+        },
+        "mime_type": {
+          "type": ["string", "null"]
+        },
+        "size": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "record_path": {
+          "type": ["string", "null"]
+        },
+        "field_path": {
+          "type": ["string", "null"]
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["file_id"]
+        },
+        {
+          "required": ["source_uri"]
+        },
+        {
+          "required": ["blob_id"]
+        }
+      ],
+      "additionalProperties": true
+    }
+  }
+}

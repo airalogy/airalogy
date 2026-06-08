@@ -224,6 +224,8 @@ airalogy pack ./record.json -o record_bundle.aira --protocol-dir ./my_protocol
 airalogy pack ./record.json -o record_bundle.aira --file-payload ./files.json
 ```
 
+`files.json` 里的相对 `path`、`local_path` 或 `file_path` 会相对于该 spec 文件自身解析。
+
 解包任意归档类型：
 
 ```bash
@@ -250,6 +252,7 @@ airalogy validate ./record_bundle.aira --json
 - 协议打包默认排除 `.env` 和常见缓存产物，避免本地敏感信息被误打包。
 - 记录归档会打包 JSON 记录、可选嵌入协议目录，以及 `blobs/` 下的可选本地文件载荷。
 - 远端 Airalogy file ID 或 OSS 对象不会自动下载；导出器应先下载真实字节，再通过 `--file-payload` 传入本地路径。
+- 公共 manifest schema 位于 `schemas/aira/manifest.v1.schema.json`。
 - 浏览器用户可以用 `apps/aira-reader` 中的 Airalogy Reader 在本地打开 `.aira` 文件；Reader 在浏览器内解析文件，不会上传归档内容。
 - 用于快速测试 Reader 的示例归档位于 `examples/aira/`。
 

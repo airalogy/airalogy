@@ -21,6 +21,7 @@ BLOB_HASH_ALGORITHM = "sha256"
 BLOBS_ROOT = "blobs"
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_FILE_PAYLOAD_PATH_KEYS = ("path", "local_path", "file_path")
 
 _EXCLUDED_FILE_NAMES = {
     ".DS_Store",
@@ -213,7 +214,9 @@ def load_file_payload_specs(path: str | Path) -> list[dict[str, Any]]:
     """Load file payload specs for record archive packing.
 
     The JSON file may contain one object, a list of objects, or an object with a
-    top-level ``files`` or ``file_payloads`` list.
+    top-level ``files`` or ``file_payloads`` list. Relative local payload paths
+    are resolved against the JSON file location, not the current working
+    directory.
     """
     spec_path = Path(path)
     parsed = _read_json_file(spec_path)
@@ -237,7 +240,24 @@ def load_file_payload_specs(path: str | Path) -> list[dict[str, Any]]:
         raise ArchiveError(
             f"File payload spec '{spec_path}' must contain only JSON objects."
         )
-    return specs
+    base_dir = spec_path.resolve().parent
+    return [_resolve_file_payload_spec_paths(spec, base_dir) for spec in specs]
+
+
+def _resolve_file_payload_spec_paths(
+    spec: dict[str, Any],
+    base_dir: Path,
+) -> dict[str, Any]:
+    normalized = dict(spec)
+    for key in _FILE_PAYLOAD_PATH_KEYS:
+        value = _as_non_empty_string(normalized.get(key))
+        if value is None:
+            continue
+        local_path = Path(value)
+        if not local_path.is_absolute():
+            local_path = base_dir / local_path
+        normalized[key] = str(local_path.resolve())
+    return normalized
 
 
 def _blob_archive_path(sha256: str) -> str:
@@ -245,7 +265,7 @@ def _blob_archive_path(sha256: str) -> str:
 
 
 def _file_payload_local_path(spec: dict[str, Any]) -> Path | None:
-    for key in ("path", "local_path", "file_path"):
+    for key in _FILE_PAYLOAD_PATH_KEYS:
         value = _as_non_empty_string(spec.get(key))
         if value:
             return Path(value)

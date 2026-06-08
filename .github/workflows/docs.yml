@@ -9,6 +9,7 @@ on:
       - packages/npm/**
       - apps/aira-reader/**
       - apps/aimd-demo/**
+      - schemas/**
       - scripts/aimd/**
       - package.json
       - pnpm-lock.yaml
@@ -88,6 +89,7 @@ jobs:
           cp -R docs/aimd/.vitepress/dist/. .pages/aimd/
           cp -R docs/airalogy-engine/.vitepress/dist/. .pages/airalogy-engine/
           cp -R apps/aira-reader/dist/. .pages/aira-reader/
+          cp -R schemas .pages/schemas
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

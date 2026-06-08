@@ -201,6 +201,18 @@ function createRecordsArchiveWithBlob({ expectedHash } = {}) {
   ])
 }
 
+test('documents the manifest v1 schema', async () => {
+  const schemaPath = new URL('../../../../schemas/aira/manifest.v1.schema.json', import.meta.url)
+  const schema = JSON.parse(await readFile(schemaPath, 'utf-8'))
+
+  assert.equal(schema.properties.format.const, AIRA_ARCHIVE_FORMAT)
+  assert.equal(schema.properties.version.const, 1)
+  assert.ok(schema.$defs.protocol)
+  assert.ok(schema.$defs.record)
+  assert.ok(schema.$defs.blob)
+  assert.ok(schema.$defs.fileReference)
+})
+
 test('opens and validates a protocol .aira archive', async () => {
   const archive = await openAiraArchive(createProtocolArchive())
 

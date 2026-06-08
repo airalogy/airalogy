@@ -455,13 +455,15 @@ def test_pack_records_command_with_file_payload():
         )
         payload_file = tmp_path / "payload.txt"
         payload_file.write_text("payload")
-        file_payload_spec = tmp_path / "files.json"
+        spec_dir = tmp_path / "specs"
+        spec_dir.mkdir()
+        file_payload_spec = spec_dir / "files.json"
         file_payload_spec.write_text(
             json.dumps(
                 {
                     "files": [
                         {
-                            "path": str(payload_file),
+                            "path": "../payload.txt",
                             "file_id": file_id,
                             "source_uri": "oss://airalogy-demo/payload.txt",
                             "mime_type": "text/plain",

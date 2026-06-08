@@ -70,6 +70,8 @@ airalogy pack ./record.json -o record_bundle.aira --file-payload ./files.json
 }
 ```
 
+`path`、`local_path` 或 `file_path` 如果是相对路径，会以 `files.json` 自身所在目录为基准解析；`source_uri` 保留原始云端或外部来源引用，不会被改写。
+
 解包：
 
 ```bash
@@ -112,6 +114,13 @@ GitHub Pages workflow 会把 Reader 发布为静态应用：`https://airalogy.gi
 ## 内部文件结构
 
 `.aira` 文件本质上是一个 ZIP 归档。每个归档都必须包含 `_airalogy_archive/manifest.json`；其他文件都通过这个 manifest 来解释。
+
+需要区分打包输入和归档输出：
+
+- 打包输入可以灵活：文件可以来自任意本地目录、导出包、云端对象下载结果、Source Bridge 或自动化脚本。
+- `.aira` 内部结构必须严格：Reader、AI agent、Bridge 和第三方工具都应该依赖稳定的 manifest、`records/`、`protocols/` 和 `blobs/` 结构读取数据。
+
+因此，Airalogy 不要求用户在打包前把所有来源文件整理成唯一固定的文件夹格式；打包器负责把不同来源规整进标准 `.aira` 结构。仓库示例中的 `sources/records/`、`sources/protocols/`、`sources/payloads/` 和 `sources/file-payloads/` 只是推荐的开发与测试组织方式，不是格式本身的强制输入结构。
 
 单个 Protocol 归档：
 
@@ -238,6 +247,14 @@ Protocol `files/` 和 archive `blobs/` 的含义不同：
 - `blobs`：可选，归档内部保存的真实文件载荷
 - `files`：可选，连接 Record 字段、来源 URI 和 blob 的语义文件引用
 
+Manifest v1 的 JSON Schema 位于仓库顶层：
+
+```text
+schemas/aira/manifest.v1.schema.json
+```
+
+这个 schema 是 `.aira` v1 manifest 的公共格式契约，第三方 Reader、导出器和桥接器可以用它对 `_airalogy_archive/manifest.json` 做结构检查。运行时仍然应该继续校验成员路径、hash、Record JSON 和 blob 字节，因为这些属于归档内容完整性检查。
+
 ## Python API
 
 ```python
@@ -288,6 +305,7 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 - 新生成的归档会为每条打包后的 Record JSON 写入 SHA-256 hash。
 - 当你传入 `--protocol-dir` 时，Airalogy 会先校验该 Protocol，再尝试把每条 record 和对应的内嵌 Protocol 关联起来。
 - 当你传入 file payload spec 时，Airalogy 会把本地文件字节写入 `blobs/sha256/`，按 SHA-256 自动去重，并把语义文件引用写入 `manifest.files[]`。
+- file payload spec 中的相对本地路径会相对于 spec 文件本身解析，而不是相对于执行命令时的当前目录。
 - 如果 file payload spec 没有提供本地 `path`、`local_path` 或 `file_path`，则只会作为 reference-only 文件引用写入 `manifest.files[]`。
 
 ## 安全性与限制

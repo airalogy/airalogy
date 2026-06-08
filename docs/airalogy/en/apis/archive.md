@@ -70,6 +70,8 @@ airalogy pack ./record.json -o record_bundle.aira --file-payload ./files.json
 }
 ```
 
+When `path`, `local_path`, or `file_path` is relative, Airalogy resolves it relative to the `files.json` file itself. `source_uri` remains the original cloud or external source reference and is not rewritten.
+
 Unpack an archive:
 
 ```bash
@@ -112,6 +114,13 @@ These files are useful for testing Airalogy Reader and for checking how differen
 ## Internal file structure
 
 A `.aira` file is a ZIP archive. Every archive must contain `_airalogy_archive/manifest.json`; all other files are interpreted through that manifest.
+
+Distinguish packaging input from archive output:
+
+- Packaging input can be flexible: files may come from any local directory, export package, downloaded cloud object, Source Bridge, or automation script.
+- The `.aira` internal structure must be strict: Readers, AI agents, Bridges, and third-party tools should rely on stable manifest, `records/`, `protocols/`, and `blobs/` structures.
+
+Airalogy therefore does not require users to reorganize every source file into one fixed folder format before packaging. The packer normalizes different sources into the standard `.aira` structure. The repository examples under `sources/records/`, `sources/protocols/`, `sources/payloads/`, and `sources/file-payloads/` are recommended development and testing layouts, not mandatory input structures for the format itself.
 
 Single Protocol archive:
 
@@ -238,6 +247,14 @@ Important manifest fields:
 - `blobs`: optional physical file payloads stored inside the archive
 - `files`: optional semantic file references that connect Record fields, source URIs, and blobs
 
+The Manifest v1 JSON Schema lives at the repository root:
+
+```text
+schemas/aira/manifest.v1.schema.json
+```
+
+This schema is the public structure contract for `.aira` v1 manifests. Third-party Readers, exporters, and bridges can use it to check `_airalogy_archive/manifest.json`. Runtime consumers should still validate member paths, hashes, Record JSON, and blob bytes because those checks cover archive content integrity.
+
 ## Python API
 
 ```python
@@ -288,6 +305,7 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 - New archives include SHA-256 hashes for each packed record JSON payload.
 - If embedded protocol directories are provided, Airalogy validates each protocol first, then tries to link each record to the matching embedded protocol in the manifest.
 - If file payload specs are provided, Airalogy stores local file bytes under `blobs/sha256/`, de-duplicates identical payloads by SHA-256, and writes semantic file references into `manifest.files[]`.
+- Relative local paths in a file payload spec are resolved relative to the spec file itself, not the command's current working directory.
 - File payload specs without a local `path`, `local_path`, or `file_path` are stored as reference-only entries in `manifest.files[]`.
 
 ## Safety and limitations

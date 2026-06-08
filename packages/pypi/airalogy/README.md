@@ -230,6 +230,8 @@ If Records reference local file payloads, embed them through a file payload spec
 airalogy pack ./record.json -o record_bundle.aira --file-payload ./files.json
 ```
 
+Relative `path`, `local_path`, or `file_path` values inside `files.json` are resolved relative to that spec file.
+
 Unpack either archive type:
 
 ```bash
@@ -256,6 +258,7 @@ Notes:
 - Protocol packing excludes `.env` and common cache artifacts by default so local secrets are not bundled accidentally.
 - Record archives bundle JSON records, optional embedded protocol directories, and optional local file payloads under `blobs/`.
 - Remote Airalogy file IDs or OSS objects are not downloaded automatically; exporters should download those bytes first, then pass local paths through `--file-payload`.
+- The public manifest schema is available at `schemas/aira/manifest.v1.schema.json`.
 - Browser users can open `.aira` files locally with the Airalogy Reader app in `apps/aira-reader`; it parses the archive in the browser and does not upload file content.
 - Ready-to-open example archives for Reader testing live in `examples/aira/`.
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { type AiraArchive, AIRA_MANIFEST_PATH, openAiraArchive, prettyPrintJson } from '@airalogy/aira-core'
 
 type ViewMode = 'overview' | 'manifest' | 'protocols' | 'records' | 'files' | 'members'
@@ -10,6 +10,10 @@ const mode = ref<ViewMode>('overview')
 const selectedPath = ref(AIRA_MANIFEST_PATH)
 const selectedContent = ref('')
 const selectedError = ref('')
+const selectedPreviewKind = ref<'text' | 'image' | 'download'>('text')
+const selectedObjectUrl = ref('')
+const selectedDownloadName = ref('')
+const selectedMimeType = ref('')
 const loadError = ref('')
 const isDragging = ref(false)
 const validationIssues = ref<string[]>([])
@@ -21,6 +25,22 @@ const manifest = computed(() => archive.value?.manifest ?? null)
 const records = computed(() => Array.isArray(manifest.value?.records) ? manifest.value.records : [])
 const fileRefs = computed(() => Array.isArray(manifest.value?.files) ? manifest.value.files : [])
 const blobs = computed(() => Array.isArray(manifest.value?.blobs) ? manifest.value.blobs : [])
+const blobPathById = computed(() => {
+  const items = new Map<string, string>()
+  for (const blob of blobs.value) {
+    items.set(blob.blob_id, blob.archive_path)
+  }
+  return items
+})
+const fileRefByBlobId = computed(() => {
+  const items = new Map<string, (typeof fileRefs.value)[number]>()
+  for (const fileRef of fileRefs.value) {
+    if (fileRef.blob_id && !items.has(fileRef.blob_id)) {
+      items.set(fileRef.blob_id, fileRef)
+    }
+  }
+  return items
+})
 const protocols = computed(() => {
   if (!manifest.value) {
     return []
@@ -32,6 +52,22 @@ const protocols = computed(() => {
 })
 const entries = computed(() => [...(archive.value?.entries ?? [])].sort((a, b) => a.name.localeCompare(b.name)))
 
+function clearSelectedObjectUrl(): void {
+  if (selectedObjectUrl.value) {
+    URL.revokeObjectURL(selectedObjectUrl.value)
+  }
+  selectedObjectUrl.value = ''
+}
+
+function resetSelectedPreview(): void {
+  clearSelectedObjectUrl()
+  selectedContent.value = ''
+  selectedError.value = ''
+  selectedPreviewKind.value = 'text'
+  selectedDownloadName.value = ''
+  selectedMimeType.value = ''
+}
+
 function formatBytes(value: number): string {
   if (value < 1024) {
     return `${value} B`
@@ -42,14 +78,91 @@ function formatBytes(value: number): string {
   return `${(value / 1024 / 1024).toFixed(1)} MB`
 }
 
+function blobPathForId(blobId: string | null | undefined): string | null {
+  return blobId ? blobPathById.value.get(blobId) ?? null : null
+}
+
+function loadBlobForId(blobId: string | null | undefined): void {
+  const path = blobPathForId(blobId)
+  if (path) {
+    void loadSelected(path)
+  }
+}
+
+function arrayBufferFromBytes(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength)
+  new Uint8Array(buffer).set(bytes)
+  return buffer
+}
+
+function isTextLikePayload(path: string, fileName: string, mimeType: string): boolean {
+  const mime = mimeType.toLowerCase()
+  if (
+    mime.startsWith('text/')
+    || mime.includes('json')
+    || mime.includes('xml')
+    || mime.includes('csv')
+    || mime.includes('yaml')
+    || mime.includes('toml')
+  ) {
+    return true
+  }
+  const name = `${path} ${fileName}`.toLowerCase()
+  return ['.txt', '.md', '.csv', '.tsv', '.json', '.jsonl', '.xml', '.yaml', '.yml', '.toml', '.aimd']
+    .some(suffix => name.endsWith(suffix))
+}
+
+async function loadSelectedBlob(path: string): Promise<boolean> {
+  if (!archive.value) {
+    return false
+  }
+  const blob = blobs.value.find(item => item.archive_path === path)
+  if (!blob) {
+    return false
+  }
+
+  const fileRef = fileRefByBlobId.value.get(blob.blob_id)
+  const bytes = await archive.value.readBytes(path)
+  const mimeType = fileRef?.mime_type?.trim() || 'application/octet-stream'
+  const fileName = fileRef?.filename?.trim() || blob.blob_id.replace(':', '-')
+  const payload = new Blob([arrayBufferFromBytes(bytes)], { type: mimeType })
+
+  selectedObjectUrl.value = URL.createObjectURL(payload)
+  selectedDownloadName.value = fileName
+  selectedMimeType.value = mimeType
+
+  if (mimeType.toLowerCase().startsWith('image/')) {
+    selectedPreviewKind.value = 'image'
+    return true
+  }
+
+  if (isTextLikePayload(path, fileName, mimeType)) {
+    const text = new TextDecoder('utf-8').decode(bytes)
+    selectedPreviewKind.value = 'text'
+    if (mimeType.toLowerCase().includes('json') || fileName.toLowerCase().endsWith('.json')) {
+      selectedContent.value = prettyPrintJson(JSON.parse(text))
+    }
+    else {
+      selectedContent.value = text
+    }
+    return true
+  }
+
+  selectedPreviewKind.value = 'download'
+  selectedContent.value = `${fileName} · ${mimeType} · ${formatBytes(bytes.byteLength)}`
+  return true
+}
+
 async function loadSelected(path: string): Promise<void> {
   selectedPath.value = path
-  selectedContent.value = ''
-  selectedError.value = ''
+  resetSelectedPreview()
   if (!archive.value) {
     return
   }
   try {
+    if (await loadSelectedBlob(path)) {
+      return
+    }
     const text = await archive.value.readText(path)
     if (path.endsWith('.json')) {
       selectedContent.value = prettyPrintJson(JSON.parse(text))
@@ -66,8 +179,7 @@ async function loadSelected(path: string): Promise<void> {
 async function openFile(file: File): Promise<void> {
   isBusy.value = true
   loadError.value = ''
-  selectedContent.value = ''
-  selectedError.value = ''
+  resetSelectedPreview()
   try {
     const opened = await openAiraArchive(file)
     archive.value = opened
@@ -110,6 +222,10 @@ function onDrop(event: DragEvent): void {
 function selectMode(nextMode: ViewMode): void {
   mode.value = nextMode
 }
+
+onBeforeUnmount(() => {
+  clearSelectedObjectUrl()
+})
 </script>
 
 <template>
@@ -259,7 +375,16 @@ function selectMode(nextMode: ViewMode): void {
                     <span>{{ fileRef.mime_type || 'unknown type' }}</span>
                   </td>
                   <td>{{ fileRef.record_path || 'unlinked' }}<br>{{ fileRef.field_path || '' }}</td>
-                  <td>{{ fileRef.blob_id || 'reference only' }}</td>
+                  <td>
+                    <button
+                      v-if="blobPathForId(fileRef.blob_id)"
+                      class="inline-link"
+                      @click="loadBlobForId(fileRef.blob_id)"
+                    >
+                      {{ fileRef.blob_id }}
+                    </button>
+                    <span v-else>{{ fileRef.blob_id || 'reference only' }}</span>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -317,8 +442,30 @@ function selectMode(nextMode: ViewMode): void {
         <article class="preview-panel">
           <header>
             <h2>{{ selectedPath }}</h2>
+            <a
+              v-if="selectedObjectUrl"
+              class="download-link"
+              :href="selectedObjectUrl"
+              :download="selectedDownloadName"
+            >
+              Download
+            </a>
           </header>
           <p v-if="selectedError" class="error-text">{{ selectedError }}</p>
+          <div v-else-if="selectedPreviewKind === 'image'" class="blob-preview">
+            <img :src="selectedObjectUrl" :alt="selectedDownloadName">
+            <dl>
+              <dt>Name</dt>
+              <dd>{{ selectedDownloadName }}</dd>
+              <dt>Type</dt>
+              <dd>{{ selectedMimeType }}</dd>
+            </dl>
+          </div>
+          <div v-else-if="selectedPreviewKind === 'download'" class="download-panel">
+            <strong>{{ selectedDownloadName }}</strong>
+            <span>{{ selectedMimeType || 'application/octet-stream' }}</span>
+            <a :href="selectedObjectUrl" :download="selectedDownloadName">Download file</a>
+          </div>
           <pre v-else>{{ selectedContent }}</pre>
         </article>
       </section>
