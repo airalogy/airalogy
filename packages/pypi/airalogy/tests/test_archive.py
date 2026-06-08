@@ -9,6 +9,7 @@ from airalogy.archive import (
     ArchiveError,
     inspect_archive,
     pack_protocol_archive,
+    pack_protocols_archive,
     pack_records_archive,
     validate_archive,
     unpack_archive,
@@ -93,6 +94,56 @@ def test_pack_protocol_archive_rejects_model_py_type_conflict(tmp_path: Path):
 
     with pytest.raises(ArchiveError, match="VarModel is incompatible"):
         pack_protocol_archive(protocol_dir, tmp_path / "protocol_demo.aira")
+
+
+def test_pack_protocols_archive_with_multiple_protocols_and_no_records(tmp_path: Path):
+    protocol_a = tmp_path / "protocol_a"
+    protocol_b = tmp_path / "protocol_b"
+    _write_protocol(
+        protocol_a,
+        protocol_id="protocol_a",
+        version="0.0.1",
+        name="Protocol A",
+    )
+    _write_protocol(
+        protocol_b,
+        protocol_id="protocol_b",
+        version="0.0.2",
+        name="Protocol B",
+    )
+
+    archive_path = tmp_path / "protocols.aira"
+    packed_path = pack_protocols_archive([protocol_a, protocol_b], archive_path)
+
+    assert packed_path == archive_path
+    assert archive_path.exists()
+
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        manifest = json.loads(archive.read(ARCHIVE_MANIFEST_PATH).decode("utf-8"))
+        names = set(archive.namelist())
+        assert manifest["kind"] == "protocols"
+        assert len(manifest["protocols"]) == 2
+        roots = {protocol["archive_root"] for protocol in manifest["protocols"]}
+        assert roots == {"protocols/protocol_a__0.0.1", "protocols/protocol_b__0.0.2"}
+        assert "protocols/protocol_a__0.0.1/protocol.aimd" in names
+        assert "protocols/protocol_b__0.0.2/protocol.aimd" in names
+        assert "protocols/protocol_a__0.0.1/.env" not in names
+        assert manifest["protocols"][0]["file_hashes"]["protocol.aimd"]
+
+    summary = inspect_archive(archive_path)
+    assert summary["kind"] == "protocols"
+    assert summary["records"]["count"] == 0
+    assert summary["protocols"]["count"] == 2
+    assert summary["protocols"]["protocol_ids"] == ["protocol_a", "protocol_b"]
+
+    ok, issues = validate_archive(archive_path)
+    assert ok
+    assert issues == []
+
+    unpack_dir, manifest = unpack_archive(archive_path, tmp_path / "unpacked_protocols")
+    assert manifest["kind"] == "protocols"
+    assert (unpack_dir / "protocols" / "protocol_a__0.0.1" / "protocol.aimd").exists()
+    assert (unpack_dir / "protocols" / "protocol_b__0.0.2" / "protocol.aimd").exists()
 
 
 def test_pack_records_archive_with_embedded_protocol_and_record_list(tmp_path: Path):

@@ -1,7 +1,7 @@
 export const AIRA_MANIFEST_PATH = '_airalogy_archive/manifest.json'
 export const AIRA_ARCHIVE_FORMAT = 'airalogy.archive'
 
-export type AiraArchiveKind = 'protocol' | 'records'
+export type AiraArchiveKind = 'protocol' | 'protocols' | 'records'
 
 export interface AiraEntry {
   name: string
@@ -200,7 +200,7 @@ export class AiraArchive {
     if (manifest.format !== AIRA_ARCHIVE_FORMAT) {
       throw new Error(`Unsupported archive format '${String(manifest.format)}'.`)
     }
-    if (manifest.kind !== 'protocol' && manifest.kind !== 'records') {
+    if (manifest.kind !== 'protocol' && manifest.kind !== 'protocols' && manifest.kind !== 'records') {
       throw new Error(`Unsupported archive kind '${String(manifest.kind)}'.`)
     }
     return new AiraArchive(bytes, entries, manifest)
@@ -274,6 +274,9 @@ export class AiraArchive {
     if (this.manifest.kind === 'protocol') {
       await this.validateProtocol(this.manifest.protocol, '', issues)
     }
+    else if (this.manifest.kind === 'protocols') {
+      await this.validateProtocolList(this.manifest.protocols, issues, true)
+    }
     else if (this.manifest.kind === 'records') {
       await this.validateRecords(issues)
     }
@@ -319,14 +322,41 @@ export class AiraArchive {
     }
   }
 
+  private async validateProtocolList(
+    protocols: AiraProtocolManifest[] | undefined,
+    issues: string[],
+    requireNonEmpty = false,
+  ): Promise<Set<string>> {
+    const protocolRoots = new Set<string>()
+    if (!Array.isArray(protocols)) {
+      issues.push('Protocols manifest field must be a list.')
+      return protocolRoots
+    }
+    if (requireNonEmpty && protocols.length === 0) {
+      issues.push('Protocols manifest field must include at least one protocol.')
+    }
+    for (const [index, protocol] of protocols.entries()) {
+      if (!protocol || typeof protocol !== 'object') {
+        issues.push(`Protocol manifest entry #${index + 1} must be an object.`)
+        continue
+      }
+      if (!protocol.archive_root) {
+        issues.push(`Protocol manifest entry #${index + 1} is missing archive_root.`)
+        continue
+      }
+      if (protocolRoots.has(protocol.archive_root)) {
+        issues.push(`Protocol manifest entry #${index + 1} uses duplicate archive_root '${protocol.archive_root}'.`)
+        continue
+      }
+      protocolRoots.add(protocol.archive_root)
+      await this.validateProtocol(protocol, `${protocol.archive_root.replace(/\/+$/, '')}/`, issues)
+    }
+    return protocolRoots
+  }
+
   private async validateRecords(issues: string[]): Promise<void> {
     const records = Array.isArray(this.manifest.records) ? this.manifest.records : []
-    const protocols = Array.isArray(this.manifest.protocols) ? this.manifest.protocols : []
-    const protocolRoots = new Set(
-      protocols
-        .map(protocol => protocol.archive_root)
-        .filter((value): value is string => typeof value === 'string' && value.length > 0),
-    )
+    const protocolRoots = await this.validateProtocolList(this.manifest.protocols, issues)
 
     for (const [index, record] of records.entries()) {
       if (!record || typeof record !== 'object') {
@@ -365,18 +395,6 @@ export class AiraArchive {
       if (record.embedded_protocol_root && !protocolRoots.has(record.embedded_protocol_root)) {
         issues.push(`Record file '${path}' references missing embedded protocol root '${record.embedded_protocol_root}'.`)
       }
-    }
-
-    for (const [index, protocol] of protocols.entries()) {
-      if (!protocol || typeof protocol !== 'object') {
-        issues.push(`Protocol manifest entry #${index + 1} must be an object.`)
-        continue
-      }
-      if (!protocol.archive_root) {
-        issues.push(`Protocol manifest entry #${index + 1} is missing archive_root.`)
-        continue
-      }
-      await this.validateProtocol(protocol, `${protocol.archive_root.replace(/\/+$/, '')}/`, issues)
     }
   }
 }

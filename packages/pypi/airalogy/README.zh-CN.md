@@ -142,7 +142,7 @@ positional arguments:
                         Generate models
     generate_assigner (ga)
                         Generate Assigner
-    pack                Pack a protocol directory or record JSON files into a single-file archive
+    pack                Pack protocol directories or record JSON files into a single-file archive
     unpack              Unpack an Airalogy archive
     inspect             Inspect an Airalogy archive
     validate            Validate an Airalogy archive
@@ -200,6 +200,12 @@ Airalogy 使用统一的归档后缀 `.aira`。实际载荷类型存放在内部
 airalogy pack ./my_protocol -o my_protocol.aira
 ```
 
+把多个 Protocol 目录打成一个不含 Record 的 Protocol bundle：
+
+```bash
+airalogy pack ./protocol_a ./protocol_b -o protocols.aira
+```
+
 将一个或多个记录 JSON 文件打包成 `.aira` 文件：
 
 ```bash
@@ -231,8 +237,9 @@ airalogy validate ./record_bundle.aira --json
 说明：
 
 - 协议归档会保留原始协议目录结构，包括 `files/`。
+- Protocol bundle 归档可以包含多个 Protocol 目录，并且不要求同时包含 Record。
 - 记录归档接受包含单条记录对象或记录对象列表的 JSON 文件。
-- 两种归档都使用 `.aira` 后缀；可以通过 `_airalogy_archive/manifest.json` 判断载荷是协议归档还是记录包。
+- 所有归档都使用 `.aira` 后缀；可以通过 `_airalogy_archive/manifest.json` 判断载荷是单 Protocol 归档、Protocol bundle，还是 Record 包。
 - 新生成的归档会为打包的 Record 和 Protocol 文件写入 SHA-256 hash，便于 Reader 和命令行检测篡改。
 - 协议打包默认排除 `.env` 和常见缓存产物，避免本地敏感信息被误打包。
 - 记录归档目前只会打包 JSON 记录和可选嵌入协议目录，不会自动将远程 Airalogy 文件 ID 解析成原始文件字节。

@@ -12,6 +12,7 @@ from .archive import (
     ArchiveError,
     inspect_archive,
     pack_protocol_archive,
+    pack_protocols_archive,
     pack_records_archive,
     validate_archive,
     unpack_archive,
@@ -144,7 +145,21 @@ def pack_command(args):
         sys.exit(1)
 
     try:
-        if len(input_paths) == 1 and input_paths[0].is_dir():
+        if all(path.is_dir() for path in input_paths):
+            if args.protocol_dir:
+                print(
+                    "Error: --protocol-dir is only supported when packing record JSON files.",
+                    file=sys.stderr,
+                )
+                return 1
+            if len(input_paths) > 1:
+                output_path = pack_protocols_archive(
+                    input_paths,
+                    output_path=args.output,
+                    force=args.force,
+                )
+                print(f"✓ Packed protocols archive: {output_path}")
+                return 0
             output_path = pack_protocol_archive(
                 input_paths[0],
                 output_path=args.output,
@@ -155,8 +170,8 @@ def pack_command(args):
 
         if any(path.is_dir() for path in input_paths):
             print(
-                "Error: When packing records, all inputs must be JSON files. "
-                "To pack a protocol, pass exactly one protocol directory.",
+                "Error: Do not mix protocol directories and record JSON files as positional inputs. "
+                "Use --protocol-dir to embed protocols when packing records.",
                 file=sys.stderr,
             )
             return 1
@@ -213,13 +228,17 @@ def inspect_archive_command(args):
         print(f"Protocol name: {protocol.get('protocol_name') or 'unknown'}")
         print(f"Entrypoint: {protocol.get('entrypoint') or 'protocol.aimd'}")
         print(f"Protocol files: {protocol.get('file_count', 0)}")
-    elif summary["kind"] == "records":
-        records = summary["records"]
+    elif summary["kind"] in {"protocols", "records"}:
         protocols = summary["protocols"]
-        print(f"Records: {records['count']}")
-        print(f"Record protocol IDs: {', '.join(records['protocol_ids']) or 'none'}")
-        print(f"Embedded protocols: {protocols['count']}")
-        print(f"Embedded protocol IDs: {', '.join(protocols['protocol_ids']) or 'none'}")
+        if summary["kind"] == "records":
+            records = summary["records"]
+            print(f"Records: {records['count']}")
+            print(f"Record protocol IDs: {', '.join(records['protocol_ids']) or 'none'}")
+            print(f"Embedded protocols: {protocols['count']}")
+            print(f"Embedded protocol IDs: {', '.join(protocols['protocol_ids']) or 'none'}")
+        else:
+            print(f"Protocols: {protocols['count']}")
+            print(f"Protocol IDs: {', '.join(protocols['protocol_ids']) or 'none'}")
     return 0
 
 
@@ -364,9 +383,10 @@ def main():
     # Pack command
     pack_parser = subparsers.add_parser(
         "pack",
-        help="Pack a protocol directory or record JSON files into a single-file archive",
+        help="Pack protocol directories or record JSON files into a single-file archive",
         description=(
-            "Pack a protocol directory or one/more record JSON files into a "
+            "Pack one protocol directory, multiple protocol directories, "
+            "or one/more record JSON files into a "
             ".aira archive."
         ),
     )
@@ -374,7 +394,7 @@ def main():
         "inputs",
         nargs="+",
         help=(
-            "Either one protocol directory, or one/more record JSON files "
+            "Either one/more protocol directories, or one/more record JSON files "
             "(each file may contain a single record object or a list of records)."
         ),
     )

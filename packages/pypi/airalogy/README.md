@@ -142,7 +142,7 @@ positional arguments:
                         Generate models
     generate_assigner (ga)
                         Generate Assigner
-    pack                Pack a protocol directory or record JSON files into a single-file archive
+    pack                Pack protocol directories or record JSON files into a single-file archive
     unpack              Unpack an Airalogy archive
     inspect             Inspect an Airalogy archive
     validate            Validate an Airalogy archive
@@ -206,6 +206,12 @@ Pack a protocol directory into a shareable `.aira` file:
 airalogy pack ./my_protocol -o my_protocol.aira
 ```
 
+Pack multiple protocol directories into one protocol bundle without records:
+
+```bash
+airalogy pack ./protocol_a ./protocol_b -o protocols.aira
+```
+
 Pack one or more record JSON files into a `.aira` file:
 
 ```bash
@@ -237,8 +243,9 @@ airalogy validate ./record_bundle.aira --json
 Notes:
 
 - Protocol archives preserve the original protocol directory layout, including `files/`.
+- Protocol bundle archives can contain multiple Protocol directories without requiring any Record payloads.
 - Record archives accept JSON files containing either one record object or a list of record objects.
-- Both archive kinds use the same `.aira` suffix; inspect `_airalogy_archive/manifest.json` to determine whether the payload is a protocol archive or a record bundle.
+- All archive kinds use the same `.aira` suffix; inspect `_airalogy_archive/manifest.json` to determine whether the payload is a single protocol archive, a protocols bundle, or a record bundle.
 - New archives include SHA-256 hashes for packed records and protocol files so readers can detect tampering.
 - Protocol packing excludes `.env` and common cache artifacts by default so local secrets are not bundled accidentally.
 - Record archives currently bundle JSON records and optional embedded protocol directories. They do not automatically dereference remote Airalogy file IDs into raw file bytes.

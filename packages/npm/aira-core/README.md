@@ -4,6 +4,8 @@ Core TypeScript parser and validator for Airalogy `.aira` archives.
 
 It opens `.aira` files in browser-compatible JavaScript, reads `_airalogy_archive/manifest.json`, lists archive members, loads JSON/text payloads, and validates manifest references and SHA-256 hashes.
 
+Supported archive kinds are `protocol`, `protocols`, and `records`.
+
 ```ts
 import { openAiraArchive } from '@airalogy/aira-core'
 

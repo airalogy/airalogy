@@ -16,6 +16,7 @@ ARCHIVE_VERSION = 1
 ARCHIVE_METADATA_DIR = "_airalogy_archive"
 ARCHIVE_MANIFEST_PATH = f"{ARCHIVE_METADATA_DIR}/manifest.json"
 ARCHIVE_SUFFIX = ".aira"
+ARCHIVE_KINDS = {"protocol", "protocols", "records"}
 
 _EXCLUDED_FILE_NAMES = {
     ".DS_Store",
@@ -333,6 +334,63 @@ def _validate_output_path_for_write(output_path: Path, force: bool) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
 
+def _collect_protocol_archive_descriptors(
+    protocol_dirs: Iterable[str | Path],
+    *,
+    output_path: Path,
+) -> list[dict[str, Any]]:
+    descriptors: list[dict[str, Any]] = []
+    used_protocol_roots: set[str] = set()
+    for protocol_dir in protocol_dirs:
+        protocol_dir_path = _ensure_protocol_dir(protocol_dir)
+        _validate_protocol_definition(protocol_dir_path)
+        metadata = _load_protocol_metadata(protocol_dir_path)
+        archive_root = _build_protocol_archive_root(
+            metadata=metadata,
+            protocol_dir=protocol_dir_path,
+            used_roots=used_protocol_roots,
+        )
+        descriptors.append(
+            {
+                "protocol_dir": protocol_dir_path,
+                "metadata": metadata,
+                "archive_root": archive_root,
+                "files": _collect_protocol_files(protocol_dir_path, output_path=output_path),
+            }
+        )
+    return descriptors
+
+
+def _protocol_bundle_manifest_entry(protocol: dict[str, Any]) -> dict[str, Any]:
+    protocol_dir = protocol["protocol_dir"]
+    return {
+        **protocol["metadata"],
+        "archive_root": protocol["archive_root"],
+        "files": [
+            path.relative_to(protocol_dir).as_posix()
+            for path in protocol["files"]
+        ],
+        "file_hashes": _relative_protocol_file_hashes(
+            protocol_dir,
+            protocol["files"],
+        ),
+    }
+
+
+def _write_protocol_bundle_files(
+    archive: zipfile.ZipFile,
+    protocols: Iterable[dict[str, Any]],
+) -> None:
+    for protocol in protocols:
+        protocol_dir_path = protocol["protocol_dir"]
+        for file_path in protocol["files"]:
+            relative_path = file_path.relative_to(protocol_dir_path).as_posix()
+            archive.write(
+                file_path,
+                arcname=f"{protocol['archive_root']}/{relative_path}",
+            )
+
+
 def pack_protocol_archive(
     protocol_dir: str | Path,
     output_path: str | Path | None = None,
@@ -381,6 +439,52 @@ def pack_protocol_archive(
     return destination
 
 
+def pack_protocols_archive(
+    protocol_dirs: Iterable[str | Path],
+    output_path: str | Path | None = None,
+    *,
+    force: bool = False,
+) -> Path:
+    protocol_dir_list = [Path(path) for path in protocol_dirs]
+    if not protocol_dir_list:
+        raise ArchiveError("At least one protocol directory is required.")
+
+    destination = (
+        Path(output_path)
+        if output_path is not None
+        else (
+            protocol_dir_list[0].with_suffix(ARCHIVE_SUFFIX)
+            if len(protocol_dir_list) == 1
+            else Path.cwd() / f"protocols{ARCHIVE_SUFFIX}"
+        )
+    )
+    _validate_output_path_for_write(destination, force=force)
+
+    protocols = _collect_protocol_archive_descriptors(
+        protocol_dir_list,
+        output_path=destination,
+    )
+    manifest = {
+        "format": ARCHIVE_FORMAT,
+        "version": ARCHIVE_VERSION,
+        "kind": "protocols",
+        "created_at": _utc_now_iso(),
+        "protocols": [
+            _protocol_bundle_manifest_entry(protocol)
+            for protocol in protocols
+        ],
+    }
+
+    with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(
+            ARCHIVE_MANIFEST_PATH,
+            json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+        )
+        _write_protocol_bundle_files(archive, protocols)
+
+    return destination
+
+
 def pack_records_archive(
     record_paths: Iterable[str | Path],
     output_path: str | Path | None = None,
@@ -420,25 +524,10 @@ def pack_records_archive(
                 )
             )
 
-    embedded_protocols: list[dict[str, Any]] = []
-    used_protocol_roots: set[str] = set()
-    for protocol_dir in protocol_dirs or []:
-        protocol_dir_path = _ensure_protocol_dir(protocol_dir)
-        _validate_protocol_definition(protocol_dir_path)
-        metadata = _load_protocol_metadata(protocol_dir_path)
-        archive_root = _build_protocol_archive_root(
-            metadata=metadata,
-            protocol_dir=protocol_dir_path,
-            used_roots=used_protocol_roots,
-        )
-        embedded_protocols.append(
-            {
-                "protocol_dir": protocol_dir_path,
-                "metadata": metadata,
-                "archive_root": archive_root,
-                "files": _collect_protocol_files(protocol_dir_path, output_path=destination),
-            }
-        )
+    embedded_protocols = _collect_protocol_archive_descriptors(
+        protocol_dirs or [],
+        output_path=destination,
+    )
 
     used_record_names: set[str] = set()
     record_payloads: dict[str, str] = {}
@@ -474,18 +563,7 @@ def pack_records_archive(
         "created_at": _utc_now_iso(),
         "records": manifest_records,
         "protocols": [
-            {
-                **protocol["metadata"],
-                "archive_root": protocol["archive_root"],
-                "files": [
-                    path.relative_to(protocol["protocol_dir"]).as_posix()
-                    for path in protocol["files"]
-                ],
-                "file_hashes": _relative_protocol_file_hashes(
-                    protocol["protocol_dir"],
-                    protocol["files"],
-                ),
-            }
+            _protocol_bundle_manifest_entry(protocol)
             for protocol in embedded_protocols
         ],
     }
@@ -502,14 +580,7 @@ def pack_records_archive(
                 record_payloads[descriptor["archive_path"]],
             )
 
-        for protocol in embedded_protocols:
-            protocol_dir_path = protocol["protocol_dir"]
-            for file_path in protocol["files"]:
-                relative_path = file_path.relative_to(protocol_dir_path).as_posix()
-                archive.write(
-                    file_path,
-                    arcname=f"{protocol['archive_root']}/{relative_path}",
-                )
+        _write_protocol_bundle_files(archive, embedded_protocols)
 
     return destination
 
@@ -547,7 +618,7 @@ def read_archive_manifest(archive_path: str | Path) -> dict[str, Any]:
         raise ArchiveError(
             f"Archive '{archive_file}' has unsupported version '{manifest.get('version')}'."
         )
-    if manifest.get("kind") not in {"protocol", "records"}:
+    if manifest.get("kind") not in ARCHIVE_KINDS:
         raise ArchiveError(
             f"Archive '{archive_file}' has unsupported kind '{manifest.get('kind')}'."
         )
@@ -625,6 +696,42 @@ def _validate_protocol_manifest(
     return issues
 
 
+def _validate_protocols_manifest(
+    archive: zipfile.ZipFile,
+    protocols: Any,
+    *,
+    require_non_empty: bool = False,
+) -> tuple[list[str], set[str]]:
+    issues: list[str] = []
+    if not isinstance(protocols, list):
+        return ["Protocols manifest field must be a list."], set()
+    if require_non_empty and not protocols:
+        issues.append("Protocols manifest field must include at least one protocol.")
+
+    protocol_roots: set[str] = set()
+    for index, protocol in enumerate(protocols, start=1):
+        if not isinstance(protocol, dict):
+            issues.append(f"Protocol manifest entry #{index} must be an object.")
+            continue
+        archive_root = protocol.get("archive_root")
+        if not isinstance(archive_root, str) or not archive_root:
+            issues.append(f"Protocol manifest entry #{index} is missing archive_root.")
+            continue
+        if archive_root in protocol_roots:
+            issues.append(f"Protocol manifest entry #{index} uses duplicate archive_root '{archive_root}'.")
+            continue
+        protocol_roots.add(archive_root)
+        root_prefix = archive_root.rstrip("/") + "/"
+        issues.extend(
+            _validate_protocol_manifest(
+                archive,
+                protocol,
+                prefix=root_prefix,
+            )
+        )
+    return issues, protocol_roots
+
+
 def inspect_archive(archive_path: str | Path) -> dict[str, Any]:
     """Return a stable summary for an Airalogy .aira archive."""
     archive_file = Path(archive_path)
@@ -653,25 +760,27 @@ def inspect_archive(archive_path: str | Path) -> dict[str, Any]:
                 "entrypoint": protocol.get("entrypoint"),
                 "file_count": len(protocol.get("files") or []),
             }
-        elif manifest["kind"] == "records":
+        elif manifest["kind"] in {"protocols", "records"}:
             records = manifest.get("records") or []
             protocols = manifest.get("protocols") or []
+            record_items = records if isinstance(records, list) else []
+            protocol_items = protocols if isinstance(protocols, list) else []
             summary["records"] = {
-                "count": len(records),
+                "count": len(record_items),
                 "protocol_ids": sorted(
                     {
                         item.get("protocol_id")
-                        for item in records
+                        for item in record_items
                         if isinstance(item, dict) and item.get("protocol_id")
                     }
                 ),
             }
             summary["protocols"] = {
-                "count": len(protocols),
+                "count": len(protocol_items),
                 "protocol_ids": sorted(
                     {
                         item.get("protocol_id")
-                        for item in protocols
+                        for item in protocol_items
                         if isinstance(item, dict) and item.get("protocol_id")
                     }
                 ),
@@ -698,21 +807,24 @@ def validate_archive(archive_path: str | Path) -> tuple[bool, list[str]]:
             if manifest["kind"] == "protocol":
                 issues.extend(_validate_protocol_manifest(archive, manifest))
 
+            elif manifest["kind"] == "protocols":
+                protocol_issues, _protocol_roots = _validate_protocols_manifest(
+                    archive,
+                    manifest.get("protocols"),
+                    require_non_empty=True,
+                )
+                issues.extend(protocol_issues)
+
             elif manifest["kind"] == "records":
                 records = manifest.get("records")
                 if not isinstance(records, list):
                     issues.append("Records manifest field must be a list.")
                     records = []
-                protocols = manifest.get("protocols")
-                if not isinstance(protocols, list):
-                    issues.append("Protocols manifest field must be a list.")
-                    protocols = []
-
-                protocol_roots = {
-                    item.get("archive_root")
-                    for item in protocols
-                    if isinstance(item, dict) and isinstance(item.get("archive_root"), str)
-                }
+                protocol_issues, protocol_roots = _validate_protocols_manifest(
+                    archive,
+                    manifest.get("protocols"),
+                )
+                issues.extend(protocol_issues)
                 for index, record in enumerate(records, start=1):
                     if not isinstance(record, dict):
                         issues.append(f"Record manifest entry #{index} must be an object.")
@@ -752,22 +864,6 @@ def validate_archive(archive_path: str | Path) -> tuple[bool, list[str]]:
                             f"Record file '{record_path}' references missing embedded protocol root '{embedded_protocol_root}'."
                         )
 
-                for index, protocol in enumerate(protocols, start=1):
-                    if not isinstance(protocol, dict):
-                        issues.append(f"Protocol manifest entry #{index} must be an object.")
-                        continue
-                    archive_root = protocol.get("archive_root")
-                    if not isinstance(archive_root, str) or not archive_root:
-                        issues.append(f"Protocol manifest entry #{index} is missing archive_root.")
-                        continue
-                    root_prefix = archive_root.rstrip("/") + "/"
-                    issues.extend(
-                        _validate_protocol_manifest(
-                            archive,
-                            protocol,
-                            prefix=root_prefix,
-                        )
-                    )
     except ArchiveError as exc:
         issues.append(str(exc))
     except zipfile.BadZipFile:

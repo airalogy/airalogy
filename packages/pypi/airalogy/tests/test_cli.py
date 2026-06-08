@@ -362,6 +362,80 @@ def test_pack_and_unpack_protocol_commands():
         assert "archive validation passed" in validate_result.stdout
 
 
+def test_pack_multiple_protocol_directories_command():
+    """Test pack command with multiple protocol directories and no records."""
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        protocol_a = tmp_path / "protocol_a"
+        protocol_b = tmp_path / "protocol_b"
+        for protocol_dir, protocol_id, version, name in [
+            (protocol_a, "protocol_a", "0.0.1", "Protocol A"),
+            (protocol_b, "protocol_b", "0.0.2", "Protocol B"),
+        ]:
+            protocol_dir.mkdir()
+            (protocol_dir / "protocol.aimd").write_text(f"# {name}\n\n{{{{var|sample_name}}}}\n")
+            (protocol_dir / "protocol.toml").write_text(
+                "\n".join(
+                    [
+                        "[airalogy_protocol]",
+                        f'id = "{protocol_id}"',
+                        f'version = "{version}"',
+                        f'name = "{name}"',
+                        "",
+                    ]
+                )
+            )
+
+        archive_path = tmp_path / "protocols.aira"
+        pack_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "pack",
+                str(protocol_a),
+                str(protocol_b),
+                "-o",
+                str(archive_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert pack_result.returncode == 0
+        assert "Packed protocols archive" in pack_result.stdout
+
+        inspect_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "inspect",
+                str(archive_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert inspect_result.returncode == 0
+        assert "Kind: protocols" in inspect_result.stdout
+        assert "Protocols: 2" in inspect_result.stdout
+        assert "protocol_a" in inspect_result.stdout
+        assert "protocol_b" in inspect_result.stdout
+
+        validate_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "airalogy.cli",
+                "validate",
+                str(archive_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert validate_result.returncode == 0
+        assert "archive validation passed" in validate_result.stdout
+
+
 def test_import_records_command():
     """Test import-records command with a protocol directory and CSV input."""
     with TemporaryDirectory() as tmpdir:

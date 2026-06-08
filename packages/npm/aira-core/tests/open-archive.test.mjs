@@ -100,6 +100,46 @@ function createProtocolArchive({ expectedHash } = {}) {
   ])
 }
 
+function createProtocolsArchive() {
+  const protocolA = '# Protocol A\n\n{{var|sample_name}}\n'
+  const protocolB = '# Protocol B\n\n{{var|sample_name}}\n'
+  const manifest = {
+    format: AIRA_ARCHIVE_FORMAT,
+    version: 1,
+    kind: 'protocols',
+    created_at: '2026-06-08T00:00:00+00:00',
+    protocols: [
+      {
+        protocol_id: 'protocol_a',
+        protocol_version: '0.1.0',
+        protocol_name: 'Protocol A',
+        entrypoint: 'protocol.aimd',
+        archive_root: 'protocols/protocol_a__0.1.0',
+        files: ['protocol.aimd'],
+        file_hashes: {
+          'protocol.aimd': sha256Hex(protocolA),
+        },
+      },
+      {
+        protocol_id: 'protocol_b',
+        protocol_version: '0.2.0',
+        protocol_name: 'Protocol B',
+        entrypoint: 'protocol.aimd',
+        archive_root: 'protocols/protocol_b__0.2.0',
+        files: ['protocol.aimd'],
+        file_hashes: {
+          'protocol.aimd': sha256Hex(protocolB),
+        },
+      },
+    ],
+  }
+  return createStoredZip([
+    [AIRA_MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`],
+    ['protocols/protocol_a__0.1.0/protocol.aimd', protocolA],
+    ['protocols/protocol_b__0.2.0/protocol.aimd', protocolB],
+  ])
+}
+
 test('opens and validates a protocol .aira archive', async () => {
   const archive = await openAiraArchive(createProtocolArchive())
 
@@ -113,6 +153,21 @@ test('opens and validates a protocol .aira archive', async () => {
     protocolCount: 1,
   })
   assert.equal(await archive.readText('protocol.aimd'), '# Demo Protocol\n\n{{var|sample_name}}\n')
+  assert.deepEqual(await archive.validate(), { ok: true, issues: [] })
+})
+
+test('opens and validates a protocols .aira archive', async () => {
+  const archive = await openAiraArchive(createProtocolsArchive())
+
+  assert.deepEqual(archive.summary(), {
+    format: AIRA_ARCHIVE_FORMAT,
+    version: 1,
+    kind: 'protocols',
+    createdAt: '2026-06-08T00:00:00+00:00',
+    memberCount: 3,
+    recordCount: 0,
+    protocolCount: 2,
+  })
   assert.deepEqual(await archive.validate(), { ok: true, issues: [] })
 })
 

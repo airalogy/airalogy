@@ -9,9 +9,10 @@ Version 1 uses one unified suffix:
 The concrete payload type is stored in the internal manifest via the `kind` field:
 
 - `kind: "protocol"`: a single Airalogy Protocol archive
+- `kind: "protocols"`: a bundle of multiple Airalogy Protocol directories without records
 - `kind: "records"`: a bundle of one or more Airalogy Record JSON payloads, optionally with embedded protocol directories
 
-Both archive types keep a machine-readable manifest at `_airalogy_archive/manifest.json`.
+All archive kinds keep a machine-readable manifest at `_airalogy_archive/manifest.json`.
 
 ## Why this exists
 
@@ -25,6 +26,12 @@ Pack one protocol directory:
 
 ```bash
 airalogy pack ./my_protocol -o my_protocol.aira
+```
+
+Pack multiple protocol directories without records:
+
+```bash
+airalogy pack ./protocol_a ./protocol_b -o protocols.aira
 ```
 
 Pack one or more record JSON files:
@@ -72,6 +79,7 @@ The docs workflow publishes the Reader as a static app at `https://airalogy.gith
 from airalogy.archive import (
     inspect_archive,
     pack_protocol_archive,
+    pack_protocols_archive,
     pack_records_archive,
     read_archive_manifest,
     validate_archive,
@@ -79,6 +87,7 @@ from airalogy.archive import (
 )
 
 pack_protocol_archive("my_protocol", "my_protocol.aira")
+pack_protocols_archive(["protocol_a", "protocol_b"], "protocols.aira")
 pack_records_archive(["record.json"], "records.aira", protocol_dirs=["my_protocol"])
 manifest = read_archive_manifest("records.aira")
 summary = inspect_archive("records.aira")
@@ -95,6 +104,12 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 - `.env` plus common cache artifacts such as `__pycache__/` and `.pyc` files are excluded by default.
 - If `protocol.toml` exists, its metadata is copied into the manifest. Otherwise Airalogy falls back to the directory name and the first `# Heading` in `protocol.aimd` when available.
 
+## Protocol bundle behavior
+
+- A `kind: "protocols"` archive contains multiple Protocol directories and no Record payloads.
+- Each Protocol is stored under its own `archive_root`, for example `protocols/my_protocol__0.1.0/`.
+- This is useful for sharing a protocol pack, organization template pack, or a set of data standards before any records are collected.
+
 ## Record bundle behavior
 
 - Input JSON files may contain either one record object or a list of record objects.
@@ -107,5 +122,5 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 - `airalogy unpack` performs safe extraction checks and rejects archive entries that try to escape the target directory.
 - `airalogy validate` and Airalogy Reader check the manifest, member paths, record JSON payloads, protocol file references, and SHA-256 hashes when present.
 - Because `.aira` is shared by multiple payload kinds, consumers should read `_airalogy_archive/manifest.json` and branch on `kind`.
-- Version 1 bundles JSON records and optional protocol directories only.
+- Version 1 bundles Protocol directories, JSON records, and optional embedded Protocol directories only.
 - Version 1 does not automatically resolve remote Airalogy file IDs into raw file bytes.

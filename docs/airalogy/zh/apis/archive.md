@@ -9,9 +9,10 @@ Airalogy 支持基于 zip 的单文件归档格式，方便通过微信、邮件
 具体内容类型由内部 manifest 的 `kind` 字段决定：
 
 - `kind: "protocol"`：单个 Airalogy Protocol 归档
+- `kind: "protocols"`：多个 Airalogy Protocol 目录组成的 bundle，不包含 Record
 - `kind: "records"`：一个或多个 Airalogy Record JSON 的打包文件，也可以可选内嵌相关 Protocol 目录
 
-这两种归档都会在内部保存一个机器可读的清单文件：`_airalogy_archive/manifest.json`。
+所有归档都会在内部保存一个机器可读的清单文件：`_airalogy_archive/manifest.json`。
 
 ## 为什么需要它
 
@@ -25,6 +26,12 @@ Airalogy archive 的目标就是在不破坏原有目录结构的前提下，把
 
 ```bash
 airalogy pack ./my_protocol -o my_protocol.aira
+```
+
+把多个 Protocol 目录打成一个不含 Record 的 `.aira`：
+
+```bash
+airalogy pack ./protocol_a ./protocol_b -o protocols.aira
 ```
 
 把一个或多个 Record JSON 打成 `.aira`：
@@ -72,6 +79,7 @@ GitHub Pages workflow 会把 Reader 发布为静态应用：`https://airalogy.gi
 from airalogy.archive import (
     inspect_archive,
     pack_protocol_archive,
+    pack_protocols_archive,
     pack_records_archive,
     read_archive_manifest,
     validate_archive,
@@ -79,6 +87,7 @@ from airalogy.archive import (
 )
 
 pack_protocol_archive("my_protocol", "my_protocol.aira")
+pack_protocols_archive(["protocol_a", "protocol_b"], "protocols.aira")
 pack_records_archive(["record.json"], "records.aira", protocol_dirs=["my_protocol"])
 manifest = read_archive_manifest("records.aira")
 summary = inspect_archive("records.aira")
@@ -95,6 +104,12 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 - 默认会排除 `.env` 以及 `__pycache__/`、`.pyc` 等常见缓存产物。
 - 如果存在 `protocol.toml`，其元信息会写入 manifest；如果不存在，则会回退到目录名，以及在可能时回退到 `protocol.aimd` 的第一个 `# Heading`。
 
+## Protocol bundle 的行为
+
+- `kind: "protocols"` 归档包含多个 Protocol 目录，并且不包含 Record payload。
+- 每个 Protocol 都会存放在独立的 `archive_root` 下，例如 `protocols/my_protocol__0.1.0/`。
+- 这适合分享 protocol pack、组织级模板包，或一组还没有采集 Record 的数据标准。
+
 ## Record bundle 的行为
 
 - 输入 JSON 文件既可以是单条 record 对象，也可以是一个 record 对象列表。
@@ -106,6 +121,6 @@ output_dir, manifest = unpack_archive("records.aira", "records_out")
 
 - `airalogy unpack` 会进行安全解包检查，拒绝任何试图逃逸目标目录的归档条目。
 - `airalogy validate` 和 Airalogy Reader 会检查 manifest、成员路径、Record JSON、Protocol 文件引用，以及存在时的 SHA-256 hash。
-- 因为 `.aira` 是统一后缀，所以消费者需要读取 `_airalogy_archive/manifest.json` 并根据 `kind` 判断里面到底是 protocol 还是 records。
-- 第 1 版只打包 JSON records 和可选的 Protocol 目录。
+- 因为 `.aira` 是统一后缀，所以消费者需要读取 `_airalogy_archive/manifest.json` 并根据 `kind` 判断里面到底是单 Protocol、Protocol bundle，还是 Record 包。
+- 第 1 版只打包 Protocol 目录、JSON records 和可选的内嵌 Protocol 目录。
 - 第 1 版不会自动把远端 Airalogy file ID 解析成实际二进制文件内容。
