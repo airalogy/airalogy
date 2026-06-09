@@ -1,6 +1,6 @@
 {
   "name": "airalogy-engine",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": true,
   "description": "Python protocol execution sandbox API",
   "license": "Apache-2.0",
