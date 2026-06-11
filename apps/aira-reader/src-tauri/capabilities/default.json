@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Desktop capability for the Airalogy Reader main window.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}

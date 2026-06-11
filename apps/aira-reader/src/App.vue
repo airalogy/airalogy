@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { type AiraArchive, AIRA_MANIFEST_PATH, openAiraArchive, prettyPrintJson } from '@airalogy/aira-core'
+import { type DesktopBridge, createDesktopBridge } from './desktop'
 
 type ViewMode = 'overview' | 'manifest' | 'protocols' | 'records' | 'files' | 'members'
 
@@ -19,6 +20,7 @@ const isDragging = ref(false)
 const validationIssues = ref<string[]>([])
 const validationOk = ref<boolean | null>(null)
 const isBusy = ref(false)
+const desktopBridge = ref<DesktopBridge | null>(null)
 
 const summary = computed(() => archive.value?.summary() ?? null)
 const manifest = computed(() => archive.value?.manifest ?? null)
@@ -201,6 +203,27 @@ async function openFile(file: File): Promise<void> {
   }
 }
 
+async function openDesktopPath(path: string): Promise<void> {
+  if (!desktopBridge.value) {
+    return
+  }
+  isBusy.value = true
+  loadError.value = ''
+  try {
+    const file = await desktopBridge.value.readFilePath(path)
+    await openFile(file)
+  }
+  catch (error) {
+    archive.value = null
+    validationOk.value = null
+    validationIssues.value = []
+    loadError.value = error instanceof Error ? error.message : String(error)
+  }
+  finally {
+    isBusy.value = false
+  }
+}
+
 function onFileInput(event: Event): void {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -223,7 +246,24 @@ function selectMode(nextMode: ViewMode): void {
   mode.value = nextMode
 }
 
+onMounted(async () => {
+  desktopBridge.value = await createDesktopBridge()
+  if (!desktopBridge.value) {
+    return
+  }
+  await desktopBridge.value.listenOpenFilePaths(paths => {
+    if (paths[0]) {
+      void openDesktopPath(paths[0])
+    }
+  })
+  const initialPaths = await desktopBridge.value.initialFilePaths()
+  if (initialPaths[0]) {
+    await openDesktopPath(initialPaths[0])
+  }
+})
+
 onBeforeUnmount(() => {
+  desktopBridge.value?.dispose()
   clearSelectedObjectUrl()
 })
 </script>

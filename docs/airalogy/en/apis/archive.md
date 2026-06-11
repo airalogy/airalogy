@@ -99,6 +99,21 @@ pnpm build:aira-reader
 
 The docs workflow publishes the Reader as a static app at `https://airalogy.github.io/airalogy/aira-reader/`.
 
+The same Reader can also be packaged as a Tauri desktop app with startup-file handling and `.aira` file association metadata:
+
+```bash
+pnpm dev:aira-reader:desktop
+pnpm build:aira-reader:desktop
+```
+
+On macOS, the default desktop build creates `apps/aira-reader/src-tauri/target/release/bundle/macos/Airalogy Reader.app`. Install it locally with:
+
+```bash
+ditto "apps/aira-reader/src-tauri/target/release/bundle/macos/Airalogy Reader.app" "/Applications/Airalogy Reader.app"
+```
+
+Use Finder's right-click `Open` action for the first launch if macOS blocks the unsigned local build. `pnpm build:aira-reader:desktop:dmg` requests the DMG bundler, and `pnpm build:aira-reader:desktop:all` delegates to the full Tauri target set when installer tooling is available.
+
 ## Example archives
 
 The repository includes ready-to-open sample archives in `examples/aira/`:

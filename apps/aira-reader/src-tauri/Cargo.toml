@@ -1,0 +1,31 @@
+[package]
+name = "aira-reader"
+version = "0.1.0"
+description = "Desktop wrapper for Airalogy Reader"
+authors = ["Airalogy"]
+license = "Apache-2.0"
+repository = "https://github.com/airalogy/airalogy"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "aira_reader_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "aira-reader"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "=2.0.0", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "=2.0.0", features = [] }
+# Tauri CLI 2.0 enables native-tls during desktop builds. tempfile 3.25+
+# can resolve getrandom 0.4, which requires Rust 1.85.
+tempfile = "=3.24.0"
+
+[target.'cfg(target_vendor = "apple")'.dependencies]
+# security-framework 3.7+ requires Rust 1.85 via edition 2024 manifests.
+security-framework = "=3.6.0"

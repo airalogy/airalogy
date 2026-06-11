@@ -99,6 +99,21 @@ pnpm build:aira-reader
 
 GitHub Pages workflow 会把 Reader 发布为静态应用：`https://airalogy.github.io/airalogy/aira-reader/`。
 
+同一个 Reader 也可以打包成 Tauri 桌面应用，桌面版会复用同一套 Vue/Vite app 和 `@airalogy/aira-core` parser，并增加启动文件处理和 `.aira` 文件关联 metadata：
+
+```bash
+pnpm dev:aira-reader:desktop
+pnpm build:aira-reader:desktop
+```
+
+在 macOS 上，默认桌面构建会生成 `apps/aira-reader/src-tauri/target/release/bundle/macos/Airalogy Reader.app`。本机安装可以执行：
+
+```bash
+ditto "apps/aira-reader/src-tauri/target/release/bundle/macos/Airalogy Reader.app" "/Applications/Airalogy Reader.app"
+```
+
+如果 macOS 第一次启动时拦截这个本地未签名构建，可以在 Finder 里右键选择 `Open` 打开一次。`pnpm build:aira-reader:desktop:dmg` 会请求 DMG bundler，`pnpm build:aira-reader:desktop:all` 会在具备 installer tooling 的环境中交给 Tauri 生成完整目标集。
+
 ## 示例归档
 
 仓库中提供了可直接打开的示例归档，位置是 `examples/aira/`：

@@ -1,0 +1,53 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Airalogy Reader",
+  "version": "0.1.0",
+  "identifier": "com.airalogy.reader",
+  "build": {
+    "beforeDevCommand": "pnpm dev -- --host 127.0.0.1 --port 1420",
+    "beforeBuildCommand": "pnpm build:web",
+    "devUrl": "http://127.0.0.1:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Airalogy Reader",
+        "width": 1180,
+        "height": 780,
+        "minWidth": 900,
+        "minHeight": 620,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "DeveloperTool",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "shortDescription": "Open Airalogy .aira archives locally.",
+    "longDescription": "Airalogy Reader opens .aira archives locally and displays archive manifests, protocols, records, file references, offline blobs, member files, and validation results.",
+    "fileAssociations": [
+      {
+        "ext": ["aira"],
+        "name": "Airalogy Archive",
+        "description": "Airalogy .aira archive",
+        "mimeType": "application/vnd.airalogy.aira"
+      }
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    }
+  }
+}

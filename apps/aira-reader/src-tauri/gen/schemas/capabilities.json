@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Desktop capability for the Airalogy Reader main window.","local":true,"windows":["main"],"permissions":["core:default"]}}
