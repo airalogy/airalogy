@@ -1,3 +1,1 @@
-export function normalizeAimdTypeName(type: string | undefined): string {
-  return (type || 'str').trim().toLowerCase().replace(/[\s_-]/g, '')
-}
+export { normalizeAimdTypeName } from '@airalogy/aimd-core/utils'

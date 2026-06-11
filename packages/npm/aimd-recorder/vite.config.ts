@@ -10,6 +10,7 @@ export default defineConfig({
         index: resolve(__dirname, 'src/index.ts'),
         components: resolve(__dirname, 'src/components/index.ts'),
         composables: resolve(__dirname, 'src/composables/index.ts'),
+        record: resolve(__dirname, 'src/record/index.ts'),
       },
       formats: ['es'],
     },

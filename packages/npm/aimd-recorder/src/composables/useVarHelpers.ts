@@ -7,7 +7,19 @@
 
 import { resolveAimdTypePlugin } from '../type-plugins'
 import { isAimdCodeEditorType } from '../code-types'
-import { normalizeAimdTypeName } from '../type-utils'
+import {
+  getAimdFileDisplayName,
+  getAimdFileInputConfig,
+  getAimdFileValueId,
+  isAimdAiralogyFileId,
+  isAimdFileLikeType,
+  isKnownAimdFileTypeName,
+  normalizeAimdTypeName,
+  toAimdBooleanValue,
+  unwrapAimdStructuredValue,
+  type AimdAssetKind,
+  type AimdFileInputConfig,
+} from '@airalogy/aimd-core/utils'
 import type {
   AimdFieldMeta,
   AimdSelectedFileValue,
@@ -53,191 +65,15 @@ export interface NumericInputAttributes {
   step?: number
 }
 
-export type FileInputDisplayKind = "file" | "csv" | "image" | "audio" | "video" | "document" | "text"
-
-export interface FileInputConfig {
-  kind: FileInputDisplayKind
-  accept?: string
-  badge: string
-}
-
-const FILE_CONFIG_BY_NORMALIZED_TYPE: Record<string, FileInputConfig> = {
-  file: { kind: "file", badge: "FILE" },
-  upload: { kind: "file", badge: "FILE" },
-  csv: { kind: "csv", accept: ".csv,text/csv", badge: "CSV" },
-  fileidcsv: { kind: "csv", accept: ".csv,text/csv", badge: "CSV" },
-  image: { kind: "image", accept: "image/*", badge: "IMG" },
-  fileidpng: { kind: "image", accept: ".png,image/png", badge: "IMG" },
-  fileidjpg: { kind: "image", accept: ".jpg,.jpeg,image/jpeg", badge: "IMG" },
-  fileidjpeg: { kind: "image", accept: ".jpg,.jpeg,image/jpeg", badge: "IMG" },
-  fileidsvg: { kind: "image", accept: ".svg,image/svg+xml", badge: "IMG" },
-  fileidwebp: { kind: "image", accept: ".webp,image/webp", badge: "IMG" },
-  fileidtiff: { kind: "image", accept: ".tif,.tiff,image/tiff", badge: "IMG" },
-  audio: { kind: "audio", accept: "audio/*", badge: "AUD" },
-  fileidmp3: { kind: "audio", accept: ".mp3,audio/mpeg", badge: "AUD" },
-  video: { kind: "video", accept: "video/*", badge: "VID" },
-  fileidmp4: { kind: "video", accept: ".mp4,video/mp4", badge: "VID" },
-  fileidaimd: { kind: "text", accept: ".aimd,text/plain", badge: "AIMD" },
-  fileidmd: { kind: "text", accept: ".md,text/markdown,text/plain", badge: "MD" },
-  fileidtxt: { kind: "text", accept: ".txt,text/plain", badge: "TXT" },
-  fileidjson: { kind: "text", accept: ".json,application/json", badge: "JSON" },
-  fileiddocx: { kind: "document", accept: ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document", badge: "DOC" },
-  fileidxlsx: { kind: "document", accept: ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", badge: "XLS" },
-  fileidpptx: { kind: "document", accept: ".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation", badge: "PPT" },
-  fileidpdf: { kind: "document", accept: ".pdf,application/pdf", badge: "PDF" },
-}
-
-const FILE_KIND_BY_EXTENSION: Record<string, FileInputDisplayKind> = {
-  csv: "csv",
-  png: "image",
-  jpg: "image",
-  jpeg: "image",
-  svg: "image",
-  webp: "image",
-  tif: "image",
-  tiff: "image",
-  mp3: "audio",
-  wav: "audio",
-  m4a: "audio",
-  mp4: "video",
-  mov: "video",
-  webm: "video",
-  aimd: "text",
-  md: "text",
-  txt: "text",
-  json: "text",
-  pdf: "document",
-  docx: "document",
-  xlsx: "document",
-  pptx: "document",
-}
-
-const FILE_BADGE_BY_KIND: Record<FileInputDisplayKind, string> = {
-  file: "FILE",
-  csv: "CSV",
-  image: "IMG",
-  audio: "AUD",
-  video: "VID",
-  document: "DOC",
-  text: "TXT",
-}
-
-const MIME_BY_EXTENSION: Record<string, string> = {
-  csv: "text/csv",
-  png: "image/png",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  svg: "image/svg+xml",
-  webp: "image/webp",
-  tif: "image/tiff",
-  tiff: "image/tiff",
-  mp3: "audio/mpeg",
-  wav: "audio/wav",
-  m4a: "audio/mp4",
-  mp4: "video/mp4",
-  webm: "video/webm",
-  md: "text/markdown",
-  txt: "text/plain",
-  aimd: "text/plain",
-  json: "application/json",
-  pdf: "application/pdf",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-}
-
-const AIRALOGY_FILE_ID_RE = /^airalogy\.id\.file\.[A-Za-z0-9_-]+$/i
-
-function getStringFromRecord(record: Record<string, unknown> | undefined, keys: string[]): string | undefined {
-  if (!record) {
-    return undefined
-  }
-  for (const key of keys) {
-    const value = record[key]
-    if (typeof value === "string" && value.trim()) {
-      return value.trim()
-    }
-  }
-  return undefined
-}
-
-function normalizeFileExtension(value: unknown): string | undefined {
-  if (typeof value !== "string") {
-    return undefined
-  }
-  const trimmed = value.trim().toLowerCase()
-  if (!trimmed || trimmed === "*") {
-    return undefined
-  }
-  return trimmed.replace(/^\./, "")
-}
-
-function getConfiguredFileExtension(kwargs?: Record<string, unknown>, fieldMeta?: AimdFieldMeta): string | undefined {
-  const metaExtension = normalizeFileExtension((fieldMeta as { fileExtension?: unknown } | undefined)?.fileExtension)
-  if (metaExtension) {
-    return metaExtension
-  }
-  return normalizeFileExtension(kwargs?.file_extension)
-    ?? normalizeFileExtension(kwargs?.fileExtension)
-    ?? normalizeFileExtension(kwargs?.extension)
-}
-
-function acceptFromExtension(extension: string): string {
-  const ext = extension.replace(/^\./, "").toLowerCase()
-  const mime = MIME_BY_EXTENSION[ext]
-  return mime ? `.${ext},${mime}` : `.${ext}`
-}
-
-function fileKindFromExtension(extension: string | undefined): FileInputDisplayKind {
-  if (!extension) {
-    return "file"
-  }
-  return FILE_KIND_BY_EXTENSION[extension] ?? "file"
-}
-
-function isKnownFileTypeName(normalized: string | undefined): boolean {
-  if (!normalized) {
-    return false
-  }
-  return Boolean(FILE_CONFIG_BY_NORMALIZED_TYPE[normalized])
-    || normalized.startsWith("fileid")
-}
+export type FileInputDisplayKind = AimdAssetKind
+export type FileInputConfig = AimdFileInputConfig
 
 export function getFileInputConfig(
   type: string | undefined,
   kwargs?: Record<string, unknown>,
   fieldMeta?: AimdFieldMeta,
 ): FileInputConfig {
-  const normalizedInputType = normalizeAimdTypeName(fieldMeta?.inputType)
-  const normalized = isKnownFileTypeName(normalizedInputType)
-    ? normalizedInputType
-    : normalizeVarTypeName(type)
-  const configuredExtension = getConfiguredFileExtension(kwargs, fieldMeta)
-  const configuredAccept = normalizeMetaString(fieldMeta?.accept)
-    ?? getStringFromRecord(kwargs, ["accept", "file_accept", "fileAccept"])
-  const base = FILE_CONFIG_BY_NORMALIZED_TYPE[normalized]
-
-  if (configuredExtension) {
-    const kind = fileKindFromExtension(configuredExtension)
-    return {
-      kind,
-      accept: configuredAccept ?? acceptFromExtension(configuredExtension),
-      badge: base?.badge ?? FILE_BADGE_BY_KIND[kind],
-    }
-  }
-
-  if (base) {
-    return {
-      ...base,
-      accept: configuredAccept ?? base.accept,
-    }
-  }
-
-  return {
-    kind: "file",
-    accept: configuredAccept,
-    badge: FILE_BADGE_BY_KIND.file,
-  }
+  return getAimdFileInputConfig(type, kwargs, fieldMeta)
 }
 
 export function isFileLikeVarType(
@@ -245,12 +81,7 @@ export function isFileLikeVarType(
   kwargs?: Record<string, unknown>,
   fieldMeta?: AimdFieldMeta,
 ): boolean {
-  const normalized = normalizeVarTypeName(type)
-  const normalizedInputType = normalizeAimdTypeName(fieldMeta?.inputType)
-  return isKnownFileTypeName(normalized)
-    || isKnownFileTypeName(normalizedInputType)
-    || Boolean(getConfiguredFileExtension(kwargs, fieldMeta))
-    || Boolean(normalizeMetaString(fieldMeta?.accept))
+  return isAimdFileLikeType(type, kwargs, fieldMeta)
 }
 
 export function createSelectedFileValue(file: File): AimdSelectedFileValue {
@@ -264,53 +95,29 @@ export function createSelectedFileValue(file: File): AimdSelectedFileValue {
 }
 
 export function isAiralogyFileId(value: unknown): value is string {
-  return typeof value === "string" && AIRALOGY_FILE_ID_RE.test(value)
+  return isAimdAiralogyFileId(value)
 }
 
 export function getFileValueId(value: unknown): string | undefined {
-  const normalized = unwrapStructuredValue(value)
-  if (typeof normalized === "string") {
-    return normalized.trim() || undefined
-  }
-  if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) {
-    return undefined
-  }
-  return getStringFromRecord(normalized as Record<string, unknown>, [
-    "id",
-    "file_id",
-    "fileId",
-    "src",
-  ])
+  return getAimdFileValueId(value)
 }
 
 export function getFileDisplayName(value: unknown): string {
-  const normalized = unwrapStructuredValue(value)
-  if (typeof normalized === "string") {
-    if (isAiralogyFileId(normalized)) {
-      return ""
-    }
-    return normalized
-  }
-  if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) {
-    return ""
-  }
-  const record = normalized as Record<string, unknown>
-  return getStringFromRecord(record, [
-    "name",
-    "fileName",
-    "file_name",
-    "filename",
-    "originalName",
-    "original_name",
-    "id",
-    "file_id",
-    "src",
-    "url",
-  ]) ?? ""
-}
-
-function normalizeMetaString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined
+  return getAimdFileDisplayName(value, undefined, {
+    hideAiralogyFileIds: true,
+    keys: [
+      "name",
+      "fileName",
+      "file_name",
+      "filename",
+      "originalName",
+      "original_name",
+      "id",
+      "file_id",
+      "src",
+      "url",
+    ],
+  })
 }
 
 export function getVarEnumSelectValue(options: AimdVarEnumOption[], value: unknown): string {
@@ -376,7 +183,7 @@ function resolveOverrideInputKind(inputType: string | undefined, codeLanguage: s
     return 'dna'
   }
 
-  if (isKnownFileTypeName(normalized)) {
+  if (isKnownAimdFileTypeName(normalized)) {
     return 'file'
   }
 
@@ -551,31 +358,11 @@ export function getNumericConstraintViolation(
 // ---------------------------------------------------------------------------
 
 export function unwrapStructuredValue(value: unknown): unknown {
-  if (value && typeof value === "object" && !Array.isArray(value) && "value" in value) {
-    return (value as { value: unknown }).value
-  }
-  return value
+  return unwrapAimdStructuredValue(value)
 }
 
 export function toBooleanValue(value: unknown): boolean {
-  const normalized = unwrapStructuredValue(value)
-
-  if (typeof normalized === "boolean") {
-    return normalized
-  }
-  if (typeof normalized === "number") {
-    return normalized !== 0
-  }
-  if (typeof normalized === "string") {
-    const text = normalized.trim().toLowerCase()
-    if (text === "" || text === "false" || text === "0" || text === "no" || text === "off") {
-      return false
-    }
-    if (text === "true" || text === "1" || text === "yes" || text === "on") {
-      return true
-    }
-  }
-  return Boolean(normalized)
+  return toAimdBooleanValue(value)
 }
 
 export function toDateValue(value: unknown): Date | null {

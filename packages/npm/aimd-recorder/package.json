@@ -33,6 +33,10 @@
       "types": "./src/composables/index.ts",
       "import": "./src/composables/index.ts"
     },
+    "./record": {
+      "types": "./src/record/index.ts",
+      "import": "./src/record/index.ts"
+    },
     "./styles": {
       "import": "./src/styles/aimd.css",
       "default": "./src/styles/aimd.css"
