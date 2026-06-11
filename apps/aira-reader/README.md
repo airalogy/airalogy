@@ -15,6 +15,8 @@ pnpm build:aira-reader
 
 The Tauri desktop wrapper reuses the same Vue/Vite app and `@airalogy/aira-core` parser while adding startup-file handling and `.aira` file association metadata.
 
+The desktop app keeps system-opened `.aira` paths in a Recent list, rejects non-ZIP `.aira` candidates before parsing, and caps direct IPC reads at 512 MB until the reader grows a streaming path.
+
 ```bash
 pnpm dev:aira-reader:desktop
 pnpm build:aira-reader:desktop

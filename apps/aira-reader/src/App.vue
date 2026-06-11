@@ -2,8 +2,11 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { type AiraArchive, AIRA_MANIFEST_PATH, openAiraArchive, prettyPrintJson } from '@airalogy/aira-core'
 import { type DesktopBridge, createDesktopBridge } from './desktop'
+import airalogyLogoUrl from '../src-tauri/icons/icon.svg'
 
 type ViewMode = 'overview' | 'manifest' | 'protocols' | 'records' | 'files' | 'members'
+
+const MAX_RECENT_DESKTOP_PATHS = 8
 
 const archive = ref<AiraArchive | null>(null)
 const fileName = ref('')
@@ -21,6 +24,9 @@ const validationIssues = ref<string[]>([])
 const validationOk = ref<boolean | null>(null)
 const isBusy = ref(false)
 const desktopBridge = ref<DesktopBridge | null>(null)
+const recentDesktopPaths = ref<string[]>([])
+const activeDesktopPath = ref('')
+const desktopOpenNotice = ref('')
 
 const summary = computed(() => archive.value?.summary() ?? null)
 const manifest = computed(() => archive.value?.manifest ?? null)
@@ -53,6 +59,18 @@ const protocols = computed(() => {
   return Array.isArray(manifest.value.protocols) ? manifest.value.protocols : []
 })
 const entries = computed(() => [...(archive.value?.entries ?? [])].sort((a, b) => a.name.localeCompare(b.name)))
+const isDesktopApp = computed(() => Boolean(desktopBridge.value))
+const headerSubtitle = computed(() => {
+  if (fileName.value) {
+    return fileName.value
+  }
+  return isDesktopApp.value
+    ? 'Open a .aira archive from Finder, Open With, or this window.'
+    : 'Open a .aira archive locally in your browser.'
+})
+const dropHelpText = computed(() => isDesktopApp.value
+  ? 'Archive contents stay on this computer and are parsed by the desktop app.'
+  : 'Protocol, records, manifest, lineage, and assets stay on this computer.')
 
 function clearSelectedObjectUrl(): void {
   if (selectedObjectUrl.value) {
@@ -95,6 +113,26 @@ function arrayBufferFromBytes(bytes: Uint8Array): ArrayBuffer {
   const buffer = new ArrayBuffer(bytes.byteLength)
   new Uint8Array(buffer).set(bytes)
   return buffer
+}
+
+function desktopFileName(path: string): string {
+  const normalized = path.replaceAll('\\', '/')
+  return normalized.split('/').filter(Boolean).at(-1) || path
+}
+
+function dedupePathList(paths: string[]): string[] {
+  const deduped: string[] = []
+  for (const path of paths) {
+    if (path && !deduped.includes(path)) {
+      deduped.push(path)
+    }
+  }
+  return deduped
+}
+
+function rememberDesktopPaths(paths: string[]): void {
+  recentDesktopPaths.value = dedupePathList([...paths, ...recentDesktopPaths.value])
+    .slice(0, MAX_RECENT_DESKTOP_PATHS)
 }
 
 function isTextLikePayload(path: string, fileName: string, mimeType: string): boolean {
@@ -178,7 +216,7 @@ async function loadSelected(path: string): Promise<void> {
   }
 }
 
-async function openFile(file: File): Promise<void> {
+async function openFile(file: File, sourcePath = ''): Promise<boolean> {
   isBusy.value = true
   loadError.value = ''
   resetSelectedPreview()
@@ -191,37 +229,65 @@ async function openFile(file: File): Promise<void> {
     validationOk.value = validation.ok
     validationIssues.value = validation.issues
     await loadSelected(AIRA_MANIFEST_PATH)
+    activeDesktopPath.value = sourcePath
+    if (!sourcePath) {
+      desktopOpenNotice.value = ''
+    }
+    return true
   }
   catch (error) {
     archive.value = null
+    fileName.value = ''
+    activeDesktopPath.value = ''
     validationOk.value = null
     validationIssues.value = []
     loadError.value = error instanceof Error ? error.message : String(error)
+    return false
   }
   finally {
     isBusy.value = false
   }
 }
 
-async function openDesktopPath(path: string): Promise<void> {
+async function openDesktopPath(path: string, options: { keepNotice?: boolean } = {}): Promise<boolean> {
   if (!desktopBridge.value) {
-    return
+    return false
   }
   isBusy.value = true
   loadError.value = ''
+  if (!options.keepNotice) {
+    desktopOpenNotice.value = ''
+  }
   try {
     const file = await desktopBridge.value.readFilePath(path)
-    await openFile(file)
+    return await openFile(file, path)
   }
   catch (error) {
     archive.value = null
+    fileName.value = ''
+    activeDesktopPath.value = ''
     validationOk.value = null
     validationIssues.value = []
     loadError.value = error instanceof Error ? error.message : String(error)
+    return false
   }
   finally {
     isBusy.value = false
   }
+}
+
+async function openDesktopPaths(paths: string[]): Promise<void> {
+  const uniquePaths = dedupePathList(paths)
+  if (!uniquePaths.length) {
+    return
+  }
+
+  rememberDesktopPaths(uniquePaths)
+  const firstPath = uniquePaths[0]
+  desktopOpenNotice.value = uniquePaths.length > 1
+    ? `${uniquePaths.length} .aira archives were received. Opened ${desktopFileName(firstPath)}; choose another from Recent .aira.`
+    : ''
+  await openDesktopPath(firstPath, { keepNotice: true })
 }
 
 function onFileInput(event: Event): void {
@@ -252,14 +318,10 @@ onMounted(async () => {
     return
   }
   await desktopBridge.value.listenOpenFilePaths(paths => {
-    if (paths[0]) {
-      void openDesktopPath(paths[0])
-    }
+    void openDesktopPaths(paths)
   })
   const initialPaths = await desktopBridge.value.initialFilePaths()
-  if (initialPaths[0]) {
-    await openDesktopPath(initialPaths[0])
-  }
+  await openDesktopPaths(initialPaths)
 })
 
 onBeforeUnmount(() => {
@@ -271,9 +333,12 @@ onBeforeUnmount(() => {
 <template>
   <main class="reader-shell">
     <header class="topbar">
-      <div>
-        <h1>Airalogy Reader</h1>
-        <p>{{ fileName || 'Open a .aira archive locally in your browser.' }}</p>
+      <div class="brand-lockup">
+        <img class="brand-logo" :src="airalogyLogoUrl" alt="Airalogy logo">
+        <div>
+          <h1>Airalogy Reader</h1>
+          <p>{{ headerSubtitle }}</p>
+        </div>
       </div>
       <label class="upload-button">
         <input type="file" accept=".aira,application/zip" @change="onFileInput">
@@ -291,9 +356,11 @@ onBeforeUnmount(() => {
       @drop="onDrop"
     >
       <div class="drop-content">
+        <img class="drop-logo" :src="airalogyLogoUrl" alt="" aria-hidden="true">
         <strong>{{ isBusy ? 'Opening archive...' : 'Drop a .aira file here' }}</strong>
-        <span>Protocol, records, manifest, lineage, and assets stay on this computer.</span>
+        <span>{{ dropHelpText }}</span>
         <p v-if="loadError" class="error-text">{{ loadError }}</p>
+        <p v-if="desktopOpenNotice" class="notice-text">{{ desktopOpenNotice }}</p>
       </div>
     </section>
 
@@ -304,6 +371,8 @@ onBeforeUnmount(() => {
           <span>{{ validationIssues.length }} issue{{ validationIssues.length === 1 ? '' : 's' }}</span>
         </div>
 
+        <p v-if="desktopOpenNotice" class="notice-text">{{ desktopOpenNotice }}</p>
+
         <nav class="nav-list" aria-label="Reader sections">
           <button :class="{ active: mode === 'overview' }" @click="selectMode('overview')">Overview</button>
           <button :class="{ active: mode === 'manifest' }" @click="selectMode('manifest')">Manifest</button>
@@ -312,6 +381,19 @@ onBeforeUnmount(() => {
           <button :class="{ active: mode === 'files' }" @click="selectMode('files')">Files</button>
           <button :class="{ active: mode === 'members' }" @click="selectMode('members')">Members</button>
         </nav>
+
+        <div v-if="isDesktopApp && recentDesktopPaths.length" class="recent-list">
+          <h2>Recent .aira</h2>
+          <button
+            v-for="path in recentDesktopPaths"
+            :key="path"
+            :class="{ active: activeDesktopPath === path }"
+            @click="openDesktopPath(path)"
+          >
+            <span>{{ desktopFileName(path) }}</span>
+            <small>{{ path }}</small>
+          </button>
+        </div>
 
         <div class="member-list">
           <h2>Archive Files</h2>

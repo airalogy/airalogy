@@ -1,6 +1,7 @@
 use std::{
     env,
     ffi::OsString,
+    io::Read,
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -12,8 +13,9 @@ use serde::Serialize;
 use tauri::{Emitter, Manager};
 
 const OPEN_FILES_EVENT: &str = "aira-reader-open-files";
+const MAX_AIRA_FILE_BYTES: u64 = 512 * 1024 * 1024;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct DesktopFile {
     name: String,
     path: String,
@@ -58,9 +60,7 @@ fn initial_file_paths(state: tauri::State<'_, OpenFileState>) -> Vec<String> {
 #[tauri::command]
 fn read_aira_file(path: String) -> Result<DesktopFile, String> {
     let path = normalize_path(&path, None);
-    if !is_aira_path(&path) {
-        return Err("Airalogy Reader can only open .aira archives.".into());
-    }
+    validate_aira_candidate(&path)?;
 
     let name = path
         .file_name()
@@ -75,6 +75,69 @@ fn read_aira_file(path: String) -> Result<DesktopFile, String> {
         path: path.to_string_lossy().into_owned(),
         bytes,
     })
+}
+
+fn validate_aira_candidate(path: &Path) -> Result<(), String> {
+    if !is_aira_path(path) {
+        return Err("Airalogy Reader can only open .aira archives.".into());
+    }
+
+    let metadata = std::fs::metadata(path)
+        .map_err(|error| format!("Failed to inspect {}: {error}", path.display()))?;
+    if !metadata.is_file() {
+        return Err(format!("{} is not a file.", path.display()));
+    }
+    if metadata.len() > MAX_AIRA_FILE_BYTES {
+        return Err(format!(
+            "{} is too large for this desktop reader ({}). The current limit is {}.",
+            path.display(),
+            format_bytes(metadata.len()),
+            format_bytes(MAX_AIRA_FILE_BYTES),
+        ));
+    }
+
+    let header = read_file_header(path)?;
+    if !is_supported_zip_header(header) {
+        return Err(format!(
+            "{} is not a ZIP-based .aira archive.",
+            path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+fn read_file_header(path: &Path) -> Result<[u8; 4], String> {
+    let mut file = std::fs::File::open(path)
+        .map_err(|error| format!("Failed to open {}: {error}", path.display()))?;
+    let mut header = [0; 4];
+    file.read_exact(&mut header).map_err(|error| {
+        format!(
+            "Failed to inspect {} as a ZIP archive: {error}",
+            path.display()
+        )
+    })?;
+    Ok(header)
+}
+
+fn is_supported_zip_header(header: [u8; 4]) -> bool {
+    matches!(
+        header,
+        [0x50, 0x4b, 0x03, 0x04] | [0x50, 0x4b, 0x05, 0x06] | [0x50, 0x4b, 0x07, 0x08]
+    )
+}
+
+fn format_bytes(value: u64) -> String {
+    if value < 1024 {
+        return format!("{value} B");
+    }
+    if value < 1024 * 1024 {
+        return format!("{:.1} KB", value as f64 / 1024.0);
+    }
+    if value < 1024 * 1024 * 1024 {
+        return format!("{:.1} MB", value as f64 / 1024.0 / 1024.0);
+    }
+    format!("{:.1} GB", value as f64 / 1024.0 / 1024.0 / 1024.0)
 }
 
 fn is_aira_path(path: &Path) -> bool {
@@ -222,6 +285,39 @@ mod tests {
         ]);
 
         assert_eq!(paths, vec!["/tmp/My Archive.aira"]);
+    }
+
+    #[test]
+    fn recognizes_supported_zip_headers() {
+        assert!(is_supported_zip_header([0x50, 0x4b, 0x03, 0x04]));
+        assert!(is_supported_zip_header([0x50, 0x4b, 0x05, 0x06]));
+        assert!(is_supported_zip_header([0x50, 0x4b, 0x07, 0x08]));
+        assert!(!is_supported_zip_header(*b"notz"));
+    }
+
+    #[test]
+    fn reads_zip_backed_aira_files() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("archive.aira");
+        let payload = b"PK\x03\x04payload";
+        std::fs::write(&path, payload).unwrap();
+
+        let file = read_aira_file(path.to_string_lossy().into_owned()).unwrap();
+
+        assert_eq!(file.name, "archive.aira");
+        assert_eq!(file.bytes, payload.to_vec());
+        assert_eq!(file.path, path.to_string_lossy().as_ref());
+    }
+
+    #[test]
+    fn rejects_non_zip_aira_files() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("archive.aira");
+        std::fs::write(&path, b"not a zip").unwrap();
+
+        let error = read_aira_file(path.to_string_lossy().into_owned()).unwrap_err();
+
+        assert!(error.contains("ZIP-based .aira archive"));
     }
 }
 
