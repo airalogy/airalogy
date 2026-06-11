@@ -42,6 +42,23 @@ export {
 
 // Vue renderer exports
 export {
+  AIMD_RECORD_RENDER_SCOPES,
+  createReadonlyRecordAimdRenderers,
+  createReadonlyRecordElementRenderers,
+  createReadonlyRecordRenderContext,
+  normalizeRecordRenderValue,
+  renderReadonlyRecordToVue,
+  type AimdRecordRenderScope,
+  type AimdRecordRenderValue,
+  type ReadonlyRecordAsset,
+  type ReadonlyRecordAssetKind,
+  type ReadonlyRecordAssetResolveContext,
+  type ReadonlyRecordAssetResolver,
+  type ReadonlyRecordRenderContextInput,
+  type ReadonlyRecordVueRendererOptions,
+} from './vue/readonly-record-renderer'
+
+export {
   type AimdComponentRenderer,
   type AimdRendererContext,
   type AssetResolver,

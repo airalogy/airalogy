@@ -96,6 +96,28 @@ const { nodes } = await renderToVue(content, {
 
 Use this when you want a ready-made Vue step-card surface without first mapping AIMD nodes into your own custom elements.
 
+## Readonly Record Rendering
+
+```ts
+import { renderReadonlyRecordToVue } from "@airalogy/aimd-renderer"
+
+const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
+  data: {
+    var: {
+      sample_id: { value: "S-001" },
+      site_photo: "airalogy.id.file.site-photo.png",
+    },
+    check: { prepared: { checked: true } },
+  },
+}, {
+  resolveAsset: ({ fileId, fieldPath }) => assets.get(fileId ?? "") ?? assets.get(fieldPath) ?? null,
+})
+```
+
+Use this when a host app needs to show a completed AIMD protocol as a static document. The helper accepts either a Record payload wrapper with `data` or the `data` object itself, then renders the protocol in a readonly field context.
+
+`resolveAsset` lets the host map Record file ids, field paths, or archive manifest entries to `ReadonlyRecordAsset` objects. The renderer uses that mapping to show image/audio/video fields inline, render ordinary files as readonly links, and resolve Markdown image `src` values that point at Airalogy file ids. Archive readers should keep storage-specific work, such as building `blob:` URLs from `.aira` payloads, in the host app and pass only display-ready URLs into the renderer.
+
 Math styles are loaded automatically when calling async render APIs (`renderToHtml` / `renderToVue`) in browser environments.  
 Use `@airalogy/aimd-renderer/styles` only if you want to preload styles manually.
 

@@ -12,6 +12,7 @@ import {
 } from 'vue'
 import {
   type AiraArchive,
+  type AiraFileManifest,
   type AiralogyRecordPayload,
   AIRA_MANIFEST_PATH,
   type AiraManifest,
@@ -21,6 +22,7 @@ import {
   prettyPrintJson,
 } from '@airalogy/aira-core'
 import '@airalogy/aimd-renderer/styles'
+import type { ReadonlyRecordAsset, ReadonlyRecordAssetResolveContext } from '@airalogy/aimd-renderer'
 import { type DesktopBridge, createDesktopBridge } from './desktop'
 import airalogyLogoUrl from '../src-tauri/icons/icon.svg'
 
@@ -52,9 +54,17 @@ type RecordSection = {
   entries: Array<{ key: string, value: unknown }>
 }
 
+type RecordFileReference = AiraFileManifest & {
+  record_id?: string | null
+  path?: string | null
+}
+
+type RecordAssetResolver = (context: ReadonlyRecordAssetResolveContext) => ReadonlyRecordAsset | null
+
 const MAX_RECENT_DESKTOP_PATHS = 8
 const RECORD_SECTION_LABELS: Record<string, string> = {
   var: 'Variables',
+  var_table: 'Tables',
   step: 'Steps',
   check: 'Checks',
   quiz: 'Quiz',
@@ -98,6 +108,7 @@ const selectedDocumentId = ref('')
 const renderedNodes = shallowRef<VNodeChild[]>([])
 const renderError = ref('')
 let renderRequestId = 0
+const recordAssetObjectUrls = new Set<string>()
 
 const summary = computed(() => archive.value?.summary() ?? null)
 const manifest = computed(() => archive.value?.manifest ?? null)
@@ -153,6 +164,17 @@ function clearSelectedObjectUrl(): void {
   selectedObjectUrl.value = ''
 }
 
+function revokeObjectUrls(urls: Iterable<string>): void {
+  for (const url of urls) {
+    URL.revokeObjectURL(url)
+  }
+}
+
+function clearRecordAssetObjectUrls(): void {
+  revokeObjectUrls(recordAssetObjectUrls)
+  recordAssetObjectUrls.clear()
+}
+
 function resetSelectedPreview(): void {
   clearSelectedObjectUrl()
   selectedContent.value = ''
@@ -163,10 +185,15 @@ function resetSelectedPreview(): void {
 }
 
 function resetDocumentState(): void {
+  clearRecordAssetObjectUrls()
   documentViews.value = []
   selectedDocumentId.value = ''
   renderedNodes.value = []
   renderError.value = ''
+}
+
+function normalizeRecordString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
 
 function formatBytes(value: number): string {
@@ -230,6 +257,207 @@ function arrayBufferFromBytes(bytes: Uint8Array): ArrayBuffer {
   const buffer = new ArrayBuffer(bytes.byteLength)
   new Uint8Array(buffer).set(bytes)
   return buffer
+}
+
+function getFileRefString(fileRef: Record<string, unknown>, key: string): string | undefined {
+  return normalizeRecordString(fileRef[key])
+}
+
+function getFileRefNumber(fileRef: Record<string, unknown>, key: string): number | undefined {
+  const value = fileRef[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+function normalizePayloadFileRef(value: unknown): RecordFileReference | null {
+  if (!isPlainObject(value)) {
+    return null
+  }
+  return {
+    file_id: getFileRefString(value, 'file_id') ?? getFileRefString(value, 'fileId') ?? null,
+    source_uri: getFileRefString(value, 'source_uri') ?? getFileRefString(value, 'sourceUri') ?? null,
+    blob_id: getFileRefString(value, 'blob_id') ?? getFileRefString(value, 'blobId') ?? null,
+    filename: getFileRefString(value, 'filename') ?? getFileRefString(value, 'file_name') ?? getFileRefString(value, 'fileName') ?? null,
+    mime_type: getFileRefString(value, 'mime_type') ?? getFileRefString(value, 'mimeType') ?? null,
+    size: getFileRefNumber(value, 'size') ?? null,
+    record_path: getFileRefString(value, 'record_path') ?? getFileRefString(value, 'recordPath') ?? null,
+    field_path: getFileRefString(value, 'field_path') ?? getFileRefString(value, 'fieldPath') ?? null,
+    record_id: getFileRefString(value, 'record_id') ?? getFileRefString(value, 'recordId') ?? null,
+    path: getFileRefString(value, 'path') ?? null,
+  }
+}
+
+function selectedRecordIds(view: DocumentView): string[] {
+  return [
+    view.record?.record_id,
+    view.recordPayload?.record_id,
+    view.recordPayload?.airalogy_record_id,
+  ]
+    .map(value => normalizeRecordString(value))
+    .filter((value): value is string => Boolean(value))
+}
+
+function fileRefMatchesDocumentView(fileRef: RecordFileReference, view: DocumentView): boolean {
+  if (fileRef.record_path && view.record?.path && fileRef.record_path !== view.record.path) {
+    return false
+  }
+  if (fileRef.record_id) {
+    const recordIds = selectedRecordIds(view)
+    return recordIds.length === 0 || recordIds.includes(fileRef.record_id)
+  }
+  return true
+}
+
+function collectDocumentFileRefs(view: DocumentView): RecordFileReference[] {
+  const manifestFileRefs = fileRefs.value
+    .filter(fileRef => fileRefMatchesDocumentView(fileRef, view))
+  const payloadFileRefs = Array.isArray(view.recordPayload?.files)
+    ? view.recordPayload.files
+        .map(normalizePayloadFileRef)
+        .filter((fileRef): fileRef is RecordFileReference => Boolean(fileRef && fileRefMatchesDocumentView(fileRef, view)))
+    : []
+  return [...manifestFileRefs, ...payloadFileRefs]
+}
+
+function fieldIdFromPath(fieldPath: string | null | undefined): string | undefined {
+  const normalized = normalizeRecordString(fieldPath)
+  if (!normalized) {
+    return undefined
+  }
+  const parts = normalized.split('.').filter(Boolean)
+  return parts.length >= 3 && parts[0] === 'data' ? parts.at(-1) : undefined
+}
+
+function assetKeysForFileRef(fileRef: RecordFileReference): string[] {
+  return [
+    fileRef.file_id,
+    fileRef.blob_id,
+    fileRef.source_uri,
+    fileRef.field_path,
+    fieldIdFromPath(fileRef.field_path),
+  ]
+    .map(value => normalizeRecordString(value))
+    .filter((value): value is string => Boolean(value))
+}
+
+function registerRecordAsset(
+  assets: Map<string, ReadonlyRecordAsset>,
+  fileRef: RecordFileReference,
+  asset: ReadonlyRecordAsset,
+): void {
+  for (const key of assetKeysForFileRef(fileRef)) {
+    if (!assets.has(key)) {
+      assets.set(key, asset)
+    }
+  }
+}
+
+async function createRecordAssetForFileRef(
+  fileRef: RecordFileReference,
+  requestObjectUrls: string[],
+): Promise<ReadonlyRecordAsset | null> {
+  const name = normalizeRecordString(fileRef.filename)
+    ?? normalizeRecordString(fileRef.file_id)
+    ?? normalizeRecordString(fileRef.source_uri)
+    ?? normalizeRecordString(fileRef.blob_id)
+    ?? 'file'
+  const mimeType = normalizeRecordString(fileRef.mime_type) ?? 'application/octet-stream'
+  const blobPath = blobPathForId(fileRef.blob_id)
+  if (archive.value && blobPath) {
+    try {
+      const bytes = await archive.value.readBytes(blobPath)
+      const payload = new Blob([arrayBufferFromBytes(bytes)], { type: mimeType })
+      const url = URL.createObjectURL(payload)
+      requestObjectUrls.push(url)
+      return {
+        url,
+        href: url,
+        name,
+        filename: normalizeRecordString(fileRef.filename) ?? name,
+        mimeType,
+        size: fileRef.size ?? bytes.byteLength,
+        downloadName: normalizeRecordString(fileRef.filename) ?? name,
+      }
+    }
+    catch {
+      // Keep rendering the document even if one referenced blob is unavailable.
+    }
+  }
+
+  const sourceUri = normalizeRecordString(fileRef.source_uri)
+  if (sourceUri) {
+    return {
+      href: sourceUri,
+      name,
+      filename: normalizeRecordString(fileRef.filename) ?? name,
+      mimeType,
+      size: fileRef.size ?? undefined,
+      downloadName: normalizeRecordString(fileRef.filename) ?? name,
+    }
+  }
+
+  return null
+}
+
+async function prepareRecordAssetMap(
+  view: DocumentView,
+  requestObjectUrls: string[],
+): Promise<Map<string, ReadonlyRecordAsset>> {
+  const assets = new Map<string, ReadonlyRecordAsset>()
+  for (const fileRef of collectDocumentFileRefs(view)) {
+    const asset = await createRecordAssetForFileRef(fileRef, requestObjectUrls)
+    if (asset) {
+      registerRecordAsset(assets, fileRef, asset)
+    }
+  }
+  return assets
+}
+
+function readRecordAssetValueKey(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    return normalizeRecordString(value)
+  }
+  if (!isPlainObject(value)) {
+    return undefined
+  }
+  return [
+    value.file_id,
+    value.fileId,
+    value.blob_id,
+    value.blobId,
+    value.source_uri,
+    value.sourceUri,
+    value.id,
+    value.src,
+    value.url,
+    value.href,
+  ]
+    .map(item => normalizeRecordString(item))
+    .find(Boolean)
+}
+
+function createRecordAssetResolver(
+  assets: Map<string, ReadonlyRecordAsset>,
+): RecordAssetResolver {
+  return (context) => {
+    const candidates = [
+      context.fileId,
+      readRecordAssetValueKey(context.normalizedValue),
+      readRecordAssetValueKey(context.value),
+      context.fieldPath,
+      `data.${context.scope}.${context.fieldId}`,
+      context.fieldId,
+    ]
+      .map(value => normalizeRecordString(value))
+      .filter((value): value is string => Boolean(value))
+
+    for (const key of candidates) {
+      const asset = assets.get(key)
+      if (asset) {
+        return asset
+      }
+    }
+    return null
+  }
 }
 
 function desktopFileName(path: string): string {
@@ -406,6 +634,7 @@ async function renderSelectedDocument(): Promise<void> {
   const view = selectedDocument.value
   renderedNodes.value = []
   renderError.value = ''
+  clearRecordAssetObjectUrls()
   if (!view) {
     return
   }
@@ -415,27 +644,43 @@ async function renderSelectedDocument(): Promise<void> {
   }
 
   const requestId = ++renderRequestId
+  const requestObjectUrls: string[] = []
   isRendering.value = true
   try {
-    const { renderToVue } = await import('@airalogy/aimd-renderer')
-    const result = await renderToVue(view.protocolContent, {
+    const { renderReadonlyRecordToVue, renderToVue } = await import('@airalogy/aimd-renderer')
+    const renderOptions = {
       gfm: true,
       math: true,
       breaks: true,
       groupStepBodies: true,
       groupCheckBodies: true,
-      context: {
-        mode: view.recordPayload ? 'edit' : 'preview',
-        readonly: true,
-        value: view.recordPayload?.data as Record<string, Record<string, unknown>> | undefined,
-      },
-    })
+    }
+    const recordAssets = view.recordPayload
+      ? await prepareRecordAssetMap(view, requestObjectUrls)
+      : null
+    if (requestId !== renderRequestId) {
+      revokeObjectUrls(requestObjectUrls)
+      return
+    }
+    const result = view.recordPayload
+      ? await renderReadonlyRecordToVue(view.protocolContent, view.recordPayload, {
+          ...renderOptions,
+          resolveAsset: createRecordAssetResolver(recordAssets ?? new Map()),
+        })
+      : await renderToVue(view.protocolContent, renderOptions)
     if (requestId === renderRequestId) {
+      for (const url of requestObjectUrls) {
+        recordAssetObjectUrls.add(url)
+      }
       renderedNodes.value = result.nodes
       renderError.value = view.loadError || ''
     }
+    else {
+      revokeObjectUrls(requestObjectUrls)
+    }
   }
   catch (error) {
+    revokeObjectUrls(requestObjectUrls)
     if (requestId === renderRequestId) {
       renderError.value = error instanceof Error ? error.message : String(error)
     }
@@ -632,6 +877,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   desktopBridge.value?.dispose()
   clearSelectedObjectUrl()
+  clearRecordAssetObjectUrls()
 })
 </script>
 

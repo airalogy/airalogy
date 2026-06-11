@@ -14,6 +14,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 
 - `renderToHtml(content)`：输出 HTML。
 - `renderToVue(content)`：输出 Vue vnode。
+- `renderReadonlyRecordToVue(content, recordData, { resolveAsset })`：输出带 Record 数据和文件资源的只读 Vue vnode，把数据嵌入匹配的 AIMD 字段。
 - `parseAndExtract(content)`：提取 core 规范字段结构，包括 `fields.var_definitions` 中的普通 `var` 定义。
 - `var` 与 `var_table` 的默认预览会显示 AIMD `title`，保留规范字段 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。
 - `assignerVisibility`：用于作者视图或调试视图下切换 assigner 的可见性。
@@ -33,6 +34,28 @@ const fields = parseAndExtract(content)
 console.log(html)
 console.log(fields)
 ```
+
+## 只读 Record 渲染
+
+```ts
+import { renderReadonlyRecordToVue } from "@airalogy/aimd-renderer"
+
+const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
+  data: {
+    var: {
+      sample_id: { value: "S-001" },
+      site_photo: "airalogy.id.file.site-photo.png",
+    },
+    check: { prepared: { checked: true } },
+  },
+}, {
+  resolveAsset: ({ fileId, fieldPath }) => assets.get(fileId ?? "") ?? assets.get(fieldPath) ?? null,
+})
+```
+
+当查看器需要把已完成的 Protocol 展示成静态文档，而不是可编辑 Recorder 时，可以使用这个 helper。它既接受带 `data` 的 Record payload，也接受 `data` 对象本身，然后在只读字段上下文中渲染协议内容。
+
+`resolveAsset` 是文件字段的宿主集成点。宿主应用把 Record 文件 id、字段路径或 archive manifest 条目映射成 `ReadonlyRecordAsset`；renderer 会把图片、音频、视频字段内嵌渲染，把普通文件渲染成只读链接，并解析指向 Airalogy file id 的 Markdown 图片 `src`。读取 `.aira` blob、创建 `blob:` URL 等存储细节应该留在宿主应用中。
 
 ## Assigner 可见性
 

@@ -14,6 +14,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 
 - `renderToHtml(content)` for HTML output.
 - `renderToVue(content)` for Vue vnode output.
+- `renderReadonlyRecordToVue(content, recordData, { resolveAsset })` for readonly Vue rendering with Record data and file assets embedded in matching AIMD fields.
 - `parseAndExtract(content)` for canonical core field metadata extraction, including simple `var` definitions in `fields.var_definitions`.
 - Default previews for `var` and `var_table` display AIMD `title`, preserve the canonical field id, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus.
 - `assignerVisibility` to show or hide assigner blocks in authoring/debug views.
@@ -33,6 +34,28 @@ const fields = parseAndExtract(content)
 console.log(html)
 console.log(fields)
 ```
+
+## Readonly Record Rendering
+
+```ts
+import { renderReadonlyRecordToVue } from "@airalogy/aimd-renderer"
+
+const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
+  data: {
+    var: {
+      sample_id: { value: "S-001" },
+      site_photo: "airalogy.id.file.site-photo.png",
+    },
+    check: { prepared: { checked: true } },
+  },
+}, {
+  resolveAsset: ({ fileId, fieldPath }) => assets.get(fileId ?? "") ?? assets.get(fieldPath) ?? null,
+})
+```
+
+Use this when a viewer needs to show a completed protocol as a static document rather than as an editable recorder. The helper accepts either a Record payload wrapper with `data` or the `data` object itself, then renders the protocol in a readonly field context.
+
+`resolveAsset` is the host integration point for file-backed fields. Map Record file ids, field paths, or archive manifest entries to `ReadonlyRecordAsset` objects; the renderer will show image/audio/video fields inline, render ordinary files as readonly links, and resolve Markdown image `src` values that point at Airalogy file ids. Storage-specific work, including reading `.aira` blobs and creating `blob:` URLs, should stay in the host app.
 
 ## Assigner Visibility
 

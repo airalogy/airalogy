@@ -9,6 +9,11 @@ import {
   createRenderer,
 } from '../common/processor'
 import { getFinalIndent, parseFieldTag } from '../index'
+import {
+  createReadonlyRecordRenderContext,
+  normalizeRecordRenderValue,
+  renderReadonlyRecordToVue,
+} from '../vue/readonly-record-renderer'
 import { createCodeBlockRenderer, createStepCardRenderer } from '../vue/vue-renderer'
 
 function findVNodeByType(node: any, expectedType: string): any | null {
@@ -540,6 +545,156 @@ describe('renderToVue', () => {
     expect(card.props['data-test-check-id']).toBe('measurement_complete')
     expect(collectVNodeText(card)).toContain('确认所有孔位的量子共振值已记录完毕')
     expect(collectVNodeText(card)).not.toContain('measurement_complete')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// readonly record rendering
+// ---------------------------------------------------------------------------
+
+describe('readonly record rendering', () => {
+  it('normalizes bare record data and full record payload wrappers', () => {
+    expect(normalizeRecordRenderValue({
+      var: { sample_id: { value: 'S-001' } },
+      step: { prepare: { checked: true } },
+      var_table: {
+        samples: [{ sample_id: 'S-001' }],
+      },
+    })).toEqual({
+      var: { sample_id: { value: 'S-001' } },
+      step: { prepare: { checked: true } },
+      check: {},
+      quiz: {},
+      var_table: {
+        samples: [{ sample_id: 'S-001' }],
+      },
+    })
+
+    expect(normalizeRecordRenderValue({
+      record_id: 'rec-001',
+      data: {
+        var: { sample_id: 'S-002' },
+        quiz: { qc: ['A', 'B'] },
+      },
+    })).toEqual({
+      var: { sample_id: 'S-002' },
+      var_table: {},
+      step: {},
+      check: {},
+      quiz: { qc: ['A', 'B'] },
+    })
+  })
+
+  it('creates an edit-mode readonly render context for record-backed documents', () => {
+    const context = createReadonlyRecordRenderContext(
+      { data: { var: { sample_id: 'S-003' } } },
+      { quizPreview: { showAnswers: true } },
+    )
+
+    expect(context.mode).toBe('edit')
+    expect(context.readonly).toBe(true)
+    expect(context.quizPreview).toEqual({ showAnswers: true })
+    expect(context.value?.var.sample_id).toBe('S-003')
+  })
+
+  it('renders record values into AIMD fields without enabling input editing', async () => {
+    const { nodes } = await renderReadonlyRecordToVue(
+      [
+        'Sample {{var|sample_id: str}}',
+        '',
+        '{{check|prepared}} Prepared.',
+      ].join('\n'),
+      {
+        data: {
+          var: { sample_id: { value: 'S-004' } },
+          check: { prepared: { checked: true } },
+        },
+      },
+      {
+        groupCheckBodies: true,
+      },
+    )
+
+    expect(collectVNodeText(nodes)).toContain('S-004')
+    const input = findVNodeByType({ children: nodes }, 'input') as any
+    expect(input).toBeTruthy()
+    expect(input.props.checked).toBe(true)
+    expect(input.props.disabled).toBe(true)
+  })
+
+  it('renders file-backed image fields with resolved assets', async () => {
+    const { nodes } = await renderReadonlyRecordToVue(
+      'Site photo: {{var|site_photo: FileIdPNG}}',
+      {
+        data: {
+          var: {
+            site_photo: 'airalogy.id.file.site-photo.png',
+          },
+        },
+      },
+      {
+        resolveAsset: context => context.fileId === 'airalogy.id.file.site-photo.png'
+          ? {
+              url: 'blob:site-photo',
+              filename: 'site-photo.png',
+              mimeType: 'image/png',
+            }
+          : null,
+      },
+    )
+
+    const img = findVNodeByType({ children: nodes }, 'img') as any
+    expect(img).toBeTruthy()
+    expect(img.props.src).toBe('blob:site-photo')
+    expect(img.props.alt).toBe('site-photo.png')
+  })
+
+  it('renders manifest-resolved file fields even when the protocol did not declare FileId type', async () => {
+    const { nodes } = await renderReadonlyRecordToVue(
+      'Attachment: {{var|sample_file}}',
+      {
+        data: {
+          var: {
+            sample_file: 'airalogy.id.file.sample-note.txt',
+          },
+        },
+      },
+      {
+        resolveAsset: context => context.fieldPath === 'data.var.sample_file'
+          ? {
+              href: 'blob:sample-note',
+              filename: 'sample-note.txt',
+              mimeType: 'text/plain',
+            }
+          : null,
+      },
+    )
+
+    const link = findVNodeByType({ children: nodes }, 'a') as any
+    expect(link).toBeTruthy()
+    expect(link.props.href).toBe('blob:sample-note')
+    expect(collectVNodeText(link)).toContain('sample-note.txt')
+  })
+
+  it('resolves markdown image elements through readonly record assets', async () => {
+    const { nodes } = await renderReadonlyRecordToVue(
+      '![Calibration chart](airalogy.id.file.chart.svg)',
+      { data: { var: {} } },
+      {
+        resolveAsset: context => context.fileId === 'airalogy.id.file.chart.svg'
+          ? {
+              url: 'blob:chart',
+              filename: 'chart.svg',
+              mimeType: 'image/svg+xml',
+            }
+          : null,
+      },
+    )
+
+    const img = findVNodeByType({ children: nodes }, 'img') as any
+    expect(img).toBeTruthy()
+    expect(img.props.src).toBe('blob:chart')
+    expect(img.props.alt).toBe('Calibration chart')
   })
 })
 

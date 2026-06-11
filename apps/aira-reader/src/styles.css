@@ -474,6 +474,166 @@ button {
   color: #24363b;
 }
 
+.rendered-aimd-document .aimd-record-field {
+  margin: 2px 2px;
+  vertical-align: middle;
+}
+
+.rendered-aimd-document .aimd-record-field--scalar {
+  display: inline;
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: #103f46;
+  background: #e8f6f3;
+  overflow-wrap: anywhere;
+}
+
+.rendered-aimd-document .aimd-record-field--empty {
+  display: inline-flex;
+  padding: 2px 6px;
+  border: 1px dashed #b6c8cd;
+  border-radius: 4px;
+  color: #718287;
+  background: #f7fafb;
+}
+
+.rendered-aimd-document .aimd-record-field--boolean,
+.rendered-aimd-document .aimd-record-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #253f38;
+}
+
+.rendered-aimd-document .aimd-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #1f8f63;
+}
+
+.rendered-aimd-document .aimd-record-field--asset {
+  max-width: 100%;
+  margin: 10px 0 16px;
+}
+
+.rendered-aimd-document a.aimd-record-field--asset,
+.rendered-aimd-document span.aimd-record-field--asset {
+  min-height: 42px;
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #cbd9dd;
+  border-radius: 6px;
+  color: #21373d;
+  background: #fbfdfd;
+  text-decoration: none;
+}
+
+.rendered-aimd-document a.aimd-record-field--asset:hover {
+  border-color: #216dff;
+  color: #164eb8;
+}
+
+.rendered-aimd-document .aimd-record-field__badge {
+  flex: 0 0 auto;
+  min-width: 34px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #ffffff;
+  background: #37636b;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.rendered-aimd-document .aimd-record-field__filename {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rendered-aimd-document .aimd-record-field--image,
+.rendered-aimd-document .aimd-record-field--video {
+  display: block;
+}
+
+.rendered-aimd-document .aimd-record-field__image,
+.rendered-aimd-document .aimd-record-field__video {
+  max-width: 100%;
+  max-height: 520px;
+  object-fit: contain;
+  border: 1px solid #d6e3e7;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.rendered-aimd-document .aimd-record-field__audio {
+  width: min(100%, 520px);
+}
+
+.rendered-aimd-document .aimd-record-field__caption {
+  margin-top: 6px;
+  color: #65777d;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.rendered-aimd-document .aimd-record-field--code,
+.rendered-aimd-document .aimd-record-field--dna {
+  display: block;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid #d8e5e8;
+  border-radius: 8px;
+  background: #f8fbfc;
+}
+
+.rendered-aimd-document .aimd-record-field--markdown {
+  display: block;
+  margin: 8px 0 14px;
+  padding: 10px 12px;
+  border-left: 3px solid #7bb7bd;
+  background: #f7fbfb;
+  white-space: pre-wrap;
+}
+
+.rendered-aimd-document .aimd-record-field__sequence {
+  margin: 6px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  white-space: pre-wrap;
+}
+
+.rendered-aimd-document .aimd-record-table {
+  margin: 12px 0 16px;
+  overflow: auto;
+}
+
+.rendered-aimd-document .aimd-record-table table {
+  min-width: 420px;
+}
+
+.rendered-aimd-document .aimd-record-quiz {
+  margin: 12px 0 16px;
+  padding: 12px;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  background: #fbfcff;
+}
+
+.rendered-aimd-document .aimd-record-quiz__stem {
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.rendered-aimd-document .aimd-figure__image,
+.rendered-aimd-document .aimd-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
 .record-data-panel {
   padding: 0;
 }
