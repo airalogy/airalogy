@@ -673,6 +673,27 @@ button {
   padding: 10px 12px;
   border-left: 3px solid #7bb7bd;
   background: #f7fbfb;
+  overflow-wrap: anywhere;
+}
+
+.rendered-aimd-document .aimd-record-field--markdown > :first-child {
+  margin-top: 0;
+}
+
+.rendered-aimd-document .aimd-record-field--markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.rendered-aimd-document .aimd-record-field--markdown img {
+  max-width: 100%;
+  height: auto;
+}
+
+.rendered-aimd-document .aimd-record-field__markdown-fallback {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   white-space: pre-wrap;
 }
 

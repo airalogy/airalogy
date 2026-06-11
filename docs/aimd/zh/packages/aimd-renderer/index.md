@@ -57,6 +57,8 @@ const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
 
 `resolveAsset` 是文件字段的宿主集成点。宿主应用把 Record 文件 id、字段路径或 archive manifest 条目映射成 `ReadonlyRecordAsset`；renderer 会把图片、音频、视频字段内嵌渲染，把普通文件渲染成只读链接，并解析指向 Airalogy file id 的 Markdown 图片 `src`。读取 `.aira` blob、创建 `blob:` URL 等存储细节应该留在宿主应用中。
 
+只读 `AiralogyMarkdown` 值会通过 AIMD Vue renderer 渲染，因此标题、列表、嵌套 AIMD 预览 token，以及已解析的 Markdown 图片资源都会作为文档内容显示，而不是显示原始 Markdown 文本。
+
 ## Assigner 可见性
 
 所有 `assigner` 代码块默认都不会出现在普通渲染输出中，但仍会在上游解析 / 提取阶段参与处理。

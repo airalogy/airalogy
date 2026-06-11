@@ -57,6 +57,8 @@ Use this when a viewer needs to show a completed protocol as a static document r
 
 `resolveAsset` is the host integration point for file-backed fields. Map Record file ids, field paths, or archive manifest entries to `ReadonlyRecordAsset` objects; the renderer will show image/audio/video fields inline, render ordinary files as readonly links, and resolve Markdown image `src` values that point at Airalogy file ids. Storage-specific work, including reading `.aira` blobs and creating `blob:` URLs, should stay in the host app.
 
+Readonly `AiralogyMarkdown` values are rendered through the AIMD Vue renderer, so headings, lists, nested AIMD preview tokens, and resolved Markdown image assets appear as document content instead of raw Markdown source.
+
 ## Assigner Visibility
 
 All `assigner` code blocks are hidden from normal rendered output by default, but they still participate in parsing and extraction upstream.

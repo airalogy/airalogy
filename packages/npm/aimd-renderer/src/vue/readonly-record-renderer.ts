@@ -33,7 +33,7 @@ import {
   type AimdRecordDataScope,
   type AimdRecordDataValue,
 } from '@airalogy/aimd-core/utils'
-import { h, type VNode } from 'vue'
+import { defineComponent, h, ref, shallowRef, watch, type PropType, type VNode, type VNodeChild } from 'vue'
 
 import type { AimdRendererOptions, RenderResult } from '../common/processor'
 import { renderToVue } from '../common/processor'
@@ -80,6 +80,9 @@ export interface ReadonlyRecordVueRendererOptions extends AimdRendererOptions, V
   resolveAsset?: ReadonlyRecordAssetResolver
 }
 
+export type ReadonlyRecordMarkdownRenderOptions = AimdRendererOptions
+  & Pick<VueRendererOptions, 'componentMap' | 'elementRenderers' | 'locale' | 'messages' | 'quizPreview'>
+
 type ReadonlyRecordVarValueRendererKind = 'file' | 'boolean' | 'markdown' | 'code' | 'dna' | 'scalar'
 
 interface ReadonlyRecordVarValueRendererContext {
@@ -88,8 +91,11 @@ interface ReadonlyRecordVarValueRendererContext {
   definition: AimdVarNode['definition']
   kwargs?: Record<string, unknown>
   value: unknown
+  recordValue: RenderContext['value']
   asset: ReadonlyRecordAsset | null | undefined
   fileId?: string
+  resolveAsset?: ReadonlyRecordAssetResolver
+  markdownRenderOptions?: ReadonlyRecordMarkdownRenderOptions
 }
 
 interface ReadonlyRecordVarValueRendererEntry {
@@ -222,12 +228,120 @@ function renderBooleanValue(node: AimdNode, value: unknown): VNode {
   ])
 }
 
-function renderMarkdownValue(node: AimdNode, value: unknown): VNode {
+const ReadonlyRecordMarkdownValue = defineComponent({
+  name: 'ReadonlyRecordMarkdownValue',
+  props: {
+    content: {
+      type: String,
+      required: true,
+    },
+    fieldProps: {
+      type: Object as PropType<Record<string, unknown>>,
+      required: true,
+    },
+    recordValue: {
+      type: Object as PropType<RenderContext['value']>,
+      default: undefined,
+    },
+    resolveAsset: {
+      type: Function as PropType<ReadonlyRecordAssetResolver>,
+      default: undefined,
+    },
+    renderOptions: {
+      type: Object as PropType<ReadonlyRecordMarkdownRenderOptions>,
+      default: () => ({}),
+    },
+  },
+  setup(props) {
+    const nodes = shallowRef<VNodeChild[]>([])
+    const renderError = ref('')
+    let requestId = 0
+
+    async function renderMarkdownContent() {
+      const currentRequestId = ++requestId
+      renderError.value = ''
+
+      try {
+        const nestedElementRenderers = createReadonlyRecordElementRenderers({
+          resolveAsset: props.resolveAsset,
+        })
+        const rendered = await renderToVue(props.content, {
+          ...props.renderOptions,
+          mode: 'preview',
+          aimdRenderers: {
+            fig: createFigRenderer(props.resolveAsset),
+          },
+          elementRenderers: {
+            ...nestedElementRenderers,
+            ...(props.renderOptions.elementRenderers ?? {}),
+          },
+          context: {
+            mode: 'preview',
+            readonly: true,
+            value: props.recordValue,
+            quizPreview: props.renderOptions.quizPreview,
+          },
+        })
+
+        if (currentRequestId !== requestId) {
+          return
+        }
+
+        nodes.value = rendered.nodes
+      }
+      catch (error) {
+        if (currentRequestId !== requestId) {
+          return
+        }
+        nodes.value = []
+        renderError.value = error instanceof Error ? error.message : String(error)
+      }
+    }
+
+    watch(
+      () => [props.content, props.recordValue, props.resolveAsset, props.renderOptions] as const,
+      () => {
+        void renderMarkdownContent()
+      },
+      { immediate: true },
+    )
+
+    return () => {
+      if (renderError.value) {
+        return h('div', {
+          ...props.fieldProps,
+          class: `${props.fieldProps.class ?? ''} aimd-record-field--markdown-error`,
+          'data-render-error': renderError.value,
+        }, [
+          h('pre', { class: 'aimd-record-field__markdown-fallback' }, props.content),
+        ])
+      }
+
+      return h('div', props.fieldProps, nodes.value.length
+        ? nodes.value
+        : [h('pre', { class: 'aimd-record-field__markdown-fallback' }, props.content)])
+    }
+  },
+})
+
+function renderMarkdownValue(
+  node: AimdNode,
+  value: unknown,
+  recordValue: RenderContext['value'],
+  resolveAsset: ReadonlyRecordAssetResolver | undefined,
+  renderOptions: ReadonlyRecordMarkdownRenderOptions | undefined,
+): VNode {
   const displayValue = stringifyAimdDisplayValue(value)
   if (!displayValue) {
     return renderEmptyValue(node)
   }
-  return h('div', recordFieldProps(node, 'aimd-record-field aimd-record-field--markdown'), displayValue)
+  return h(ReadonlyRecordMarkdownValue, {
+    content: displayValue,
+    fieldProps: recordFieldProps(node, 'aimd-record-field aimd-record-field--markdown'),
+    recordValue,
+    resolveAsset,
+    renderOptions,
+  })
 }
 
 function renderCodeValue(node: AimdNode, value: unknown, language?: unknown): VNode {
@@ -347,8 +461,10 @@ function createReadonlyRecordVarValueRendererEntries(): ReadonlyRecordVarValueRe
     },
     {
       kind: 'markdown',
-      render: ({ node, definition, kwargs, value }) =>
-        isAimdMarkdownType(definition?.type, kwargs) ? renderMarkdownValue(node, value) : null,
+      render: ({ node, definition, kwargs, value, recordValue, resolveAsset, markdownRenderOptions }) =>
+        isAimdMarkdownType(definition?.type, kwargs)
+          ? renderMarkdownValue(node, value, recordValue, resolveAsset, markdownRenderOptions)
+          : null,
     },
     {
       kind: 'code',
@@ -381,7 +497,10 @@ function renderReadonlyRecordVarValue(context: ReadonlyRecordVarValueRendererCon
   return renderScalarValue(context.node, context.value)
 }
 
-function createVarRenderer(resolveRecordAsset?: ReadonlyRecordAssetResolver): AimdComponentRenderer {
+function createVarRenderer(
+  resolveRecordAsset?: ReadonlyRecordAssetResolver,
+  markdownRenderOptions?: ReadonlyRecordMarkdownRenderOptions,
+): AimdComponentRenderer {
   return (node, ctx) => {
     const varNode = node as AimdVarNode
     const definition = varNode.definition
@@ -396,8 +515,11 @@ function createVarRenderer(resolveRecordAsset?: ReadonlyRecordAssetResolver): Ai
       definition,
       kwargs,
       value,
+      recordValue: ctx.value,
       asset,
       fileId,
+      resolveAsset: resolveRecordAsset,
+      markdownRenderOptions,
     })
   }
 }
@@ -559,10 +681,12 @@ function createImageElementRenderer(resolveRecordAsset?: ReadonlyRecordAssetReso
 }
 
 export function createReadonlyRecordAimdRenderers(
-  options: Pick<ReadonlyRecordVueRendererOptions, 'resolveAsset'> = {},
+  options: Pick<ReadonlyRecordVueRendererOptions, 'resolveAsset'> & {
+    markdownRenderOptions?: ReadonlyRecordMarkdownRenderOptions
+  } = {},
 ): Record<string, AimdComponentRenderer> {
   return {
-    var: createVarRenderer(options.resolveAsset),
+    var: createVarRenderer(options.resolveAsset, options.markdownRenderOptions),
     var_table: createVarTableRenderer(),
     check: createCheckRenderer(),
     quiz: createQuizRenderer(),
@@ -600,7 +724,13 @@ export async function renderReadonlyRecordToVue(
   options: ReadonlyRecordVueRendererOptions = {},
 ): Promise<RenderResult> {
   const { context, resolveAsset: resolveRecordAsset, aimdRenderers, elementRenderers, ...renderOptions } = options
-  const readonlyAimdRenderers = createReadonlyRecordAimdRenderers({ resolveAsset: resolveRecordAsset })
+  const readonlyAimdRenderers = createReadonlyRecordAimdRenderers({
+    resolveAsset: resolveRecordAsset,
+    markdownRenderOptions: {
+      ...renderOptions,
+      elementRenderers,
+    },
+  })
   const readonlyElementRenderers = createReadonlyRecordElementRenderers({ resolveAsset: resolveRecordAsset })
   return renderToVue(content, {
     ...renderOptions,

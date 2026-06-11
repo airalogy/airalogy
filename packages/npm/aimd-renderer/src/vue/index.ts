@@ -36,6 +36,7 @@ export {
   type ReadonlyRecordAssetKind,
   type ReadonlyRecordAssetResolveContext,
   type ReadonlyRecordAssetResolver,
+  type ReadonlyRecordMarkdownRenderOptions,
   type ReadonlyRecordRenderContextInput,
   type ReadonlyRecordVueRendererOptions,
 } from './readonly-record-renderer'

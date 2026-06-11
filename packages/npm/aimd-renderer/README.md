@@ -118,6 +118,8 @@ Use this when a host app needs to show a completed AIMD protocol as a static doc
 
 `resolveAsset` lets the host map Record file ids, field paths, or archive manifest entries to `ReadonlyRecordAsset` objects. The renderer uses that mapping to show image/audio/video fields inline, render ordinary files as readonly links, and resolve Markdown image `src` values that point at Airalogy file ids. Archive readers should keep storage-specific work, such as building `blob:` URLs from `.aira` payloads, in the host app and pass only display-ready URLs into the renderer.
 
+Readonly `AiralogyMarkdown` values are rendered through the AIMD Vue renderer, so headings, lists, nested AIMD preview tokens, and resolved Markdown image assets appear as document content instead of raw Markdown source.
+
 Math styles are loaded automatically when calling async render APIs (`renderToHtml` / `renderToVue`) in browser environments.  
 Use `@airalogy/aimd-renderer/styles` only if you want to preload styles manually.
 

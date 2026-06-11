@@ -54,6 +54,7 @@ export {
   type ReadonlyRecordAssetKind,
   type ReadonlyRecordAssetResolveContext,
   type ReadonlyRecordAssetResolver,
+  type ReadonlyRecordMarkdownRenderOptions,
   type ReadonlyRecordRenderContextInput,
   type ReadonlyRecordVueRendererOptions,
 } from './vue/readonly-record-renderer'

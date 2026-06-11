@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { h } from 'vue'
+import { describe, expect, it, vi } from 'vitest'
 
 import { resolveQuizPreviewOptions } from '../common/quiz-preview'
 import {
@@ -712,6 +714,45 @@ describe('readonly record rendering', () => {
     expect(img).toBeTruthy()
     expect(img.props.src).toBe('blob:chart')
     expect(img.props.alt).toBe('Calibration chart')
+  })
+
+  it('renders AiralogyMarkdown record values through the AIMD Vue renderer', async () => {
+    const { nodes } = await renderReadonlyRecordToVue(
+      'Report:\n\n{{var|report: AiralogyMarkdown}}',
+      {
+        data: {
+          var: {
+            report: [
+              '# Finding',
+              '',
+              '![Chart](airalogy.id.file.chart.svg)',
+              '',
+              'Nested token: {{var|nested: str, title="Nested value"}}',
+            ].join('\n'),
+          },
+        },
+      },
+      {
+        resolveAsset: context => context.fileId === 'airalogy.id.file.chart.svg'
+          ? {
+              url: 'blob:chart',
+              filename: 'chart.svg',
+              mimeType: 'image/svg+xml',
+            }
+          : null,
+      },
+    )
+
+    const wrapper = mount({
+      render: () => h('div', nodes),
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('.aimd-record-field--markdown h1').text()).toBe('Finding')
+      expect(wrapper.find('.aimd-record-field--markdown img').attributes('src')).toBe('blob:chart')
+    })
+    expect(wrapper.find('.aimd-record-field--markdown').text()).toContain('Nested value')
+    wrapper.unmount()
   })
 })
 
