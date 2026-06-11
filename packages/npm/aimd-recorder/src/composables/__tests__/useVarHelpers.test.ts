@@ -143,6 +143,16 @@ describe('file-like var helpers', () => {
       accept: '.png,image/png',
       badge: 'IMG',
     })
+    expect(getFileInputConfig('FileIdMOV')).toMatchObject({
+      kind: 'video',
+      accept: '.mov,video/quicktime',
+      badge: 'VID',
+    })
+    expect(getFileInputConfig('FileIdWAV')).toMatchObject({
+      kind: 'audio',
+      accept: '.wav,audio/wav',
+      badge: 'AUD',
+    })
     expect(getFileInputConfig('str', undefined, { inputType: 'image' })).toMatchObject({
       kind: 'image',
       accept: 'image/*',

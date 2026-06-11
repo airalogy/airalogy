@@ -40,6 +40,7 @@ export {
   getAimdDisplayValue,
   getAimdFileDisplayName,
   getAimdFileExtension,
+  getAimdFileExtensionFromTypeName,
   getAimdFileInputConfig,
   getAimdFileKindFromExtension,
   getAimdFileKindFromMimeType,

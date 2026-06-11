@@ -79,6 +79,7 @@ export const AIMD_MIME_BY_EXTENSION: Record<string, string> = {
   wav: 'audio/wav',
   m4a: 'audio/mp4',
   mp4: 'video/mp4',
+  mov: 'video/quicktime',
   webm: 'video/webm',
   md: 'text/markdown',
   txt: 'text/plain',
@@ -269,7 +270,24 @@ export function getAimdAcceptFromExtension(extension: string): string {
 }
 
 export function getAimdFileKindFromExtension(extension: string | undefined): AimdAssetKind | undefined {
-  return extension ? AIMD_FILE_KIND_BY_EXTENSION[extension] : undefined
+  const normalized = normalizeAimdFileExtension(extension)
+  return normalized ? AIMD_FILE_KIND_BY_EXTENSION[normalized] : undefined
+}
+
+export function getAimdFileExtensionFromTypeName(type: unknown): string | undefined {
+  const normalized = normalizeAimdOptionalTypeName(type)
+  if (!normalized.startsWith('fileid') || normalized.length <= 'fileid'.length) {
+    return undefined
+  }
+
+  const extension = normalizeAimdFileExtension(normalized.slice('fileid'.length))
+  if (!extension) {
+    return undefined
+  }
+
+  return AIMD_FILE_KIND_BY_EXTENSION[extension] || AIMD_MIME_BY_EXTENSION[extension]
+    ? extension
+    : undefined
 }
 
 export function getAimdFileKindFromMimeType(mimeType: string | undefined): AimdAssetKind | undefined {
@@ -315,6 +333,11 @@ export function getAimdFileKindFromType(
   if (normalized.startsWith('fileidpdf') || normalized.startsWith('fileiddocx') || normalized.startsWith('fileidxlsx') || normalized.startsWith('fileidpptx')) {
     return 'document'
   }
+  const typeExtension = getAimdFileExtensionFromTypeName(normalized)
+  const typeExtensionKind = getAimdFileKindFromExtension(typeExtension)
+  if (typeExtensionKind) {
+    return typeExtensionKind
+  }
   if (normalized === 'file' || normalized === 'upload' || normalized.startsWith('fileid')) {
     return 'file'
   }
@@ -342,6 +365,7 @@ export function getAimdFileInputConfig(
   const configuredAccept = normalizeAimdString(fieldMeta?.accept)
     ?? getAimdStringFromRecord(kwargs, ['accept', 'file_accept', 'fileAccept'])
   const base = AIMD_FILE_INPUT_CONFIG_BY_TYPE[normalized]
+  const typeExtension = getAimdFileExtensionFromTypeName(normalized)
 
   if (configuredExtension) {
     const kind = getAimdFileKindFromExtension(configuredExtension) ?? 'file'
@@ -356,6 +380,15 @@ export function getAimdFileInputConfig(
     return {
       ...base,
       accept: configuredAccept ?? base.accept,
+    }
+  }
+
+  if (typeExtension) {
+    const kind = getAimdFileKindFromExtension(typeExtension) ?? 'file'
+    return {
+      kind,
+      accept: configuredAccept ?? getAimdAcceptFromExtension(typeExtension),
+      badge: AIMD_FILE_BADGE_BY_KIND[kind],
     }
   }
 

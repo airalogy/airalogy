@@ -5,7 +5,9 @@ import {
   AIMD_FILE_REFERENCE_VALUE_KEYS,
   getAimdAssetMediaSource,
   getAimdFileDisplayName,
+  getAimdFileExtensionFromTypeName,
   getAimdFileInputConfig,
+  getAimdFileKindFromExtension,
   getAimdFileValueId,
   inferAimdAssetKind,
   isAimdAiralogyFileId,
@@ -58,12 +60,25 @@ test('infers asset kinds and file input config from shared rules', () => {
     accept: '.png,image/png',
     badge: 'IMG',
   })
+  assert.equal(getAimdFileExtensionFromTypeName('FileIdMOV'), 'mov')
+  assert.deepEqual(getAimdFileInputConfig('FileIdMOV'), {
+    kind: 'video',
+    accept: '.mov,video/quicktime',
+    badge: 'VID',
+  })
+  assert.deepEqual(getAimdFileInputConfig('FileIdWAV'), {
+    kind: 'audio',
+    accept: '.wav,audio/wav',
+    badge: 'AUD',
+  })
+  assert.equal(getAimdFileKindFromExtension('.MOV'), 'video')
   assert.deepEqual(getAimdFileInputConfig('str', { fileExtension: 'csv' }), {
     kind: 'csv',
     accept: '.csv,text/csv',
     badge: 'CSV',
   })
   assert.equal(inferAimdAssetKind({ mimeType: 'image/svg+xml' }, undefined, 'str'), 'image')
+  assert.equal(inferAimdAssetKind(undefined, 'airalogy.id.file.movie.mov', 'FileIdMOV'), 'video')
   assert.equal(inferAimdAssetKind(undefined, { value: 'report.pdf' }, 'str'), 'document')
 })
 
