@@ -1,16 +1,81 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { type AiraArchive, AIRA_MANIFEST_PATH, openAiraArchive, prettyPrintJson } from '@airalogy/aira-core'
+import {
+  computed,
+  defineComponent,
+  h,
+  onBeforeUnmount,
+  onMounted,
+  type PropType,
+  ref,
+  shallowRef,
+  type VNodeChild,
+} from 'vue'
+import {
+  type AiraArchive,
+  type AiralogyRecordPayload,
+  AIRA_MANIFEST_PATH,
+  type AiraManifest,
+  type AiraProtocolManifest,
+  type AiraRecordManifest,
+  openAiraArchive,
+  prettyPrintJson,
+} from '@airalogy/aira-core'
+import '@airalogy/aimd-renderer/styles'
 import { type DesktopBridge, createDesktopBridge } from './desktop'
 import airalogyLogoUrl from '../src-tauri/icons/icon.svg'
 
-type ViewMode = 'overview' | 'manifest' | 'protocols' | 'records' | 'files' | 'members'
+type ViewMode = 'document' | 'data' | 'diagnostics'
+
+type ProtocolEntry = {
+  protocol: AiraProtocolManifest
+  root: string
+  path: string
+  label: string
+}
+
+type DocumentView = {
+  id: string
+  kind: 'protocol' | 'record'
+  label: string
+  subtitle: string
+  protocol?: AiraProtocolManifest
+  protocolPath: string
+  protocolContent: string
+  record?: AiraRecordManifest
+  recordPayload?: AiralogyRecordPayload | null
+  loadError?: string
+}
+
+type RecordSection = {
+  key: string
+  label: string
+  entries: Array<{ key: string, value: unknown }>
+}
 
 const MAX_RECENT_DESKTOP_PATHS = 8
+const RECORD_SECTION_LABELS: Record<string, string> = {
+  var: 'Variables',
+  step: 'Steps',
+  check: 'Checks',
+  quiz: 'Quiz',
+}
+
+const RenderedAimdDocument = defineComponent({
+  name: 'RenderedAimdDocument',
+  props: {
+    nodes: {
+      type: Array as PropType<VNodeChild[]>,
+      required: true,
+    },
+  },
+  setup(props) {
+    return () => h('div', { class: 'rendered-aimd-document' }, props.nodes)
+  },
+})
 
 const archive = ref<AiraArchive | null>(null)
 const fileName = ref('')
-const mode = ref<ViewMode>('overview')
+const mode = ref<ViewMode>('document')
 const selectedPath = ref(AIRA_MANIFEST_PATH)
 const selectedContent = ref('')
 const selectedError = ref('')
@@ -23,16 +88,35 @@ const isDragging = ref(false)
 const validationIssues = ref<string[]>([])
 const validationOk = ref<boolean | null>(null)
 const isBusy = ref(false)
+const isRendering = ref(false)
 const desktopBridge = ref<DesktopBridge | null>(null)
 const recentDesktopPaths = ref<string[]>([])
 const activeDesktopPath = ref('')
 const desktopOpenNotice = ref('')
+const documentViews = ref<DocumentView[]>([])
+const selectedDocumentId = ref('')
+const renderedNodes = shallowRef<VNodeChild[]>([])
+const renderError = ref('')
+let renderRequestId = 0
 
 const summary = computed(() => archive.value?.summary() ?? null)
 const manifest = computed(() => archive.value?.manifest ?? null)
 const records = computed(() => Array.isArray(manifest.value?.records) ? manifest.value.records : [])
 const fileRefs = computed(() => Array.isArray(manifest.value?.files) ? manifest.value.files : [])
 const blobs = computed(() => Array.isArray(manifest.value?.blobs) ? manifest.value.blobs : [])
+const protocolEntries = computed(() => manifest.value ? collectProtocolEntries(manifest.value) : [])
+const protocols = computed(() => protocolEntries.value.map(entry => entry.protocol))
+const entries = computed(() => [...(archive.value?.entries ?? [])].sort((a, b) => a.name.localeCompare(b.name)))
+const selectedDocument = computed(() => documentViews.value.find(view => view.id === selectedDocumentId.value) ?? null)
+const selectedRecordPayload = computed(() => selectedDocument.value?.recordPayload ?? null)
+const recordSections = computed(() => buildRecordSections(selectedRecordPayload.value?.data))
+const selectedRecordTitle = computed(() => {
+  const view = selectedDocument.value
+  if (!view?.record) {
+    return ''
+  }
+  return recordLabel(view.record, view.recordPayload)
+})
 const blobPathById = computed(() => {
   const items = new Map<string, string>()
   for (const blob of blobs.value) {
@@ -49,16 +133,6 @@ const fileRefByBlobId = computed(() => {
   }
   return items
 })
-const protocols = computed(() => {
-  if (!manifest.value) {
-    return []
-  }
-  if (manifest.value.kind === 'protocol') {
-    return manifest.value.protocol ? [manifest.value.protocol] : []
-  }
-  return Array.isArray(manifest.value.protocols) ? manifest.value.protocols : []
-})
-const entries = computed(() => [...(archive.value?.entries ?? [])].sort((a, b) => a.name.localeCompare(b.name)))
 const isDesktopApp = computed(() => Boolean(desktopBridge.value))
 const headerSubtitle = computed(() => {
   if (fileName.value) {
@@ -69,8 +143,8 @@ const headerSubtitle = computed(() => {
     : 'Open a .aira archive locally in your browser.'
 })
 const dropHelpText = computed(() => isDesktopApp.value
-  ? 'Archive contents stay on this computer and are parsed by the desktop app.'
-  : 'Protocol, records, manifest, lineage, and assets stay on this computer.')
+  ? 'Rendered protocol and record data stay on this computer.'
+  : 'Rendered protocol, records, and archive assets stay on this computer.')
 
 function clearSelectedObjectUrl(): void {
   if (selectedObjectUrl.value) {
@@ -88,6 +162,13 @@ function resetSelectedPreview(): void {
   selectedMimeType.value = ''
 }
 
+function resetDocumentState(): void {
+  documentViews.value = []
+  selectedDocumentId.value = ''
+  renderedNodes.value = []
+  renderError.value = ''
+}
+
 function formatBytes(value: number): string {
   if (value < 1024) {
     return `${value} B`
@@ -98,6 +179,41 @@ function formatBytes(value: number): string {
   return `${(value / 1024 / 1024).toFixed(1)} MB`
 }
 
+function formatRecordValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return ''
+  }
+  if (isPlainObject(value) && 'value' in value) {
+    return formatRecordValue(value.value)
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
+  }
+  return prettyPrintJson(value)
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function buildRecordSections(data: AiralogyRecordPayload['data'] | undefined): RecordSection[] {
+  if (!isPlainObject(data)) {
+    return []
+  }
+  return Object.entries(RECORD_SECTION_LABELS)
+    .map(([key, label]) => {
+      const section = data[key]
+      const entries = isPlainObject(section)
+        ? Object.entries(section).map(([entryKey, value]) => ({ key: entryKey, value }))
+        : []
+      return { key, label, entries }
+    })
+    .filter(section => section.entries.length > 0)
+}
+
 function blobPathForId(blobId: string | null | undefined): string | null {
   return blobId ? blobPathById.value.get(blobId) ?? null : null
 }
@@ -106,6 +222,7 @@ function loadBlobForId(blobId: string | null | undefined): void {
   const path = blobPathForId(blobId)
   if (path) {
     void loadSelected(path)
+    mode.value = 'diagnostics'
   }
 }
 
@@ -135,6 +252,63 @@ function rememberDesktopPaths(paths: string[]): void {
     .slice(0, MAX_RECENT_DESKTOP_PATHS)
 }
 
+function normalizeArchiveRoot(root: string | null | undefined): string {
+  return root?.replace(/^\/+|\/+$/g, '') ?? ''
+}
+
+function joinArchivePath(root: string, path: string): string {
+  const normalizedPath = path.replace(/^\/+/g, '')
+  return root ? `${root}/${normalizedPath}` : normalizedPath
+}
+
+function protocolLabel(protocol: AiraProtocolManifest | undefined, fallback = 'Protocol'): string {
+  return protocol?.protocol_name || protocol?.protocol_id || fallback
+}
+
+function recordLabel(record: AiraRecordManifest, payload: AiralogyRecordPayload | null | undefined): string {
+  return payload?.record_id || record.record_id || record.path
+}
+
+function collectProtocolEntries(source: AiraManifest): ProtocolEntry[] {
+  if (source.kind === 'protocol') {
+    if (!source.protocol) {
+      return []
+    }
+    const entrypoint = source.protocol.entrypoint || 'protocol.aimd'
+    return [{
+      protocol: source.protocol,
+      root: '',
+      path: entrypoint,
+      label: protocolLabel(source.protocol),
+    }]
+  }
+  const protocols = Array.isArray(source.protocols) ? source.protocols : []
+  return protocols.map((protocol, index) => {
+    const root = normalizeArchiveRoot(protocol.archive_root)
+    const entrypoint = protocol.entrypoint || 'protocol.aimd'
+    return {
+      protocol,
+      root,
+      path: joinArchivePath(root, entrypoint),
+      label: protocolLabel(protocol, `Protocol ${index + 1}`),
+    }
+  })
+}
+
+function findProtocolForRecord(record: AiraRecordManifest, entries: ProtocolEntry[]): ProtocolEntry | null {
+  const embeddedRoot = normalizeArchiveRoot(record.embedded_protocol_root)
+  if (embeddedRoot) {
+    const match = entries.find(entry => entry.root === embeddedRoot)
+    if (match) {
+      return match
+    }
+  }
+  return entries.find(entry =>
+    entry.protocol.protocol_id === record.protocol_id
+    && entry.protocol.protocol_version === record.protocol_version,
+  ) ?? entries.find(entry => entry.protocol.protocol_id === record.protocol_id) ?? null
+}
+
 function isTextLikePayload(path: string, fileName: string, mimeType: string): boolean {
   const mime = mimeType.toLowerCase()
   if (
@@ -150,6 +324,133 @@ function isTextLikePayload(path: string, fileName: string, mimeType: string): bo
   const name = `${path} ${fileName}`.toLowerCase()
   return ['.txt', '.md', '.csv', '.tsv', '.json', '.jsonl', '.xml', '.yaml', '.yml', '.toml', '.aimd']
     .some(suffix => name.endsWith(suffix))
+}
+
+async function loadProtocolContent(opened: AiraArchive, entry: ProtocolEntry | null): Promise<{ content: string, error?: string }> {
+  if (!entry) {
+    return { content: '', error: 'This record does not reference a protocol included in the archive.' }
+  }
+  try {
+    return { content: await opened.readText(entry.path) }
+  }
+  catch (error) {
+    return {
+      content: '',
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+async function loadDocumentViews(opened: AiraArchive): Promise<void> {
+  const protocolEntries = collectProtocolEntries(opened.manifest)
+  const views: DocumentView[] = []
+
+  if (opened.manifest.kind === 'records') {
+    const records = Array.isArray(opened.manifest.records) ? opened.manifest.records : []
+    for (const record of records) {
+      const protocolEntry = findProtocolForRecord(record, protocolEntries)
+      const payloadResult = await loadRecordPayload(opened, record)
+      const protocolResult = await loadProtocolContent(opened, protocolEntry)
+      const label = recordLabel(record, payloadResult.payload)
+      views.push({
+        id: `record:${record.path}`,
+        kind: 'record',
+        label,
+        subtitle: `${protocolEntry?.label || record.protocol_id || 'Protocol'} · Record`,
+        protocol: protocolEntry?.protocol,
+        protocolPath: protocolEntry?.path ?? '',
+        protocolContent: protocolResult.content,
+        record,
+        recordPayload: payloadResult.payload,
+        loadError: payloadResult.error || protocolResult.error,
+      })
+    }
+  }
+  else {
+    for (const [index, protocolEntry] of protocolEntries.entries()) {
+      const protocolResult = await loadProtocolContent(opened, protocolEntry)
+      views.push({
+        id: `protocol:${protocolEntry.path || index}`,
+        kind: 'protocol',
+        label: protocolEntry.label,
+        subtitle: 'Protocol',
+        protocol: protocolEntry.protocol,
+        protocolPath: protocolEntry.path,
+        protocolContent: protocolResult.content,
+        loadError: protocolResult.error,
+      })
+    }
+  }
+
+  documentViews.value = views
+  selectedDocumentId.value = views[0]?.id ?? ''
+  await renderSelectedDocument()
+}
+
+async function loadRecordPayload(
+  opened: AiraArchive,
+  record: AiraRecordManifest,
+): Promise<{ payload: AiralogyRecordPayload | null, error?: string }> {
+  try {
+    return { payload: await opened.readJson<AiralogyRecordPayload>(record.path) }
+  }
+  catch (error) {
+    return {
+      payload: null,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+async function renderSelectedDocument(): Promise<void> {
+  const view = selectedDocument.value
+  renderedNodes.value = []
+  renderError.value = ''
+  if (!view) {
+    return
+  }
+  if (!view.protocolContent) {
+    renderError.value = view.loadError || 'No renderable AIMD protocol was found in this archive.'
+    return
+  }
+
+  const requestId = ++renderRequestId
+  isRendering.value = true
+  try {
+    const { renderToVue } = await import('@airalogy/aimd-renderer')
+    const result = await renderToVue(view.protocolContent, {
+      gfm: true,
+      math: true,
+      breaks: true,
+      groupStepBodies: true,
+      groupCheckBodies: true,
+      context: {
+        mode: view.recordPayload ? 'edit' : 'preview',
+        readonly: true,
+        value: view.recordPayload?.data as Record<string, Record<string, unknown>> | undefined,
+      },
+    })
+    if (requestId === renderRequestId) {
+      renderedNodes.value = result.nodes
+      renderError.value = view.loadError || ''
+    }
+  }
+  catch (error) {
+    if (requestId === renderRequestId) {
+      renderError.value = error instanceof Error ? error.message : String(error)
+    }
+  }
+  finally {
+    if (requestId === renderRequestId) {
+      isRendering.value = false
+    }
+  }
+}
+
+async function selectDocumentView(id: string): Promise<void> {
+  selectedDocumentId.value = id
+  mode.value = 'document'
+  await renderSelectedDocument()
 }
 
 async function loadSelectedBlob(path: string): Promise<boolean> {
@@ -220,15 +521,17 @@ async function openFile(file: File, sourcePath = ''): Promise<boolean> {
   isBusy.value = true
   loadError.value = ''
   resetSelectedPreview()
+  resetDocumentState()
   try {
     const opened = await openAiraArchive(file)
     archive.value = opened
     fileName.value = file.name
-    mode.value = 'overview'
+    mode.value = 'document'
     const validation = await opened.validate()
     validationOk.value = validation.ok
     validationIssues.value = validation.issues
     await loadSelected(AIRA_MANIFEST_PATH)
+    await loadDocumentViews(opened)
     activeDesktopPath.value = sourcePath
     if (!sourcePath) {
       desktopOpenNotice.value = ''
@@ -241,6 +544,7 @@ async function openFile(file: File, sourcePath = ''): Promise<boolean> {
     activeDesktopPath.value = ''
     validationOk.value = null
     validationIssues.value = []
+    resetDocumentState()
     loadError.value = error instanceof Error ? error.message : String(error)
     return false
   }
@@ -268,6 +572,7 @@ async function openDesktopPath(path: string, options: { keepNotice?: boolean } =
     activeDesktopPath.value = ''
     validationOk.value = null
     validationIssues.value = []
+    resetDocumentState()
     loadError.value = error instanceof Error ? error.message : String(error)
     return false
   }
@@ -374,13 +679,23 @@ onBeforeUnmount(() => {
         <p v-if="desktopOpenNotice" class="notice-text">{{ desktopOpenNotice }}</p>
 
         <nav class="nav-list" aria-label="Reader sections">
-          <button :class="{ active: mode === 'overview' }" @click="selectMode('overview')">Overview</button>
-          <button :class="{ active: mode === 'manifest' }" @click="selectMode('manifest')">Manifest</button>
-          <button :class="{ active: mode === 'protocols' }" @click="selectMode('protocols')">Protocols</button>
-          <button :class="{ active: mode === 'records' }" @click="selectMode('records')">Records</button>
-          <button :class="{ active: mode === 'files' }" @click="selectMode('files')">Files</button>
-          <button :class="{ active: mode === 'members' }" @click="selectMode('members')">Members</button>
+          <button :class="{ active: mode === 'document' }" @click="selectMode('document')">Document</button>
+          <button :class="{ active: mode === 'data' }" @click="selectMode('data')">Data</button>
+          <button :class="{ active: mode === 'diagnostics' }" @click="selectMode('diagnostics')">Diagnostics</button>
         </nav>
+
+        <div v-if="documentViews.length" class="document-list">
+          <h2>Documents</h2>
+          <button
+            v-for="view in documentViews"
+            :key="view.id"
+            :class="{ active: selectedDocumentId === view.id }"
+            @click="selectDocumentView(view.id)"
+          >
+            <span>{{ view.label }}</span>
+            <small>{{ view.subtitle }}</small>
+          </button>
+        </div>
 
         <div v-if="isDesktopApp && recentDesktopPaths.length" class="recent-list">
           <h2>Recent .aira</h2>
@@ -394,202 +709,262 @@ onBeforeUnmount(() => {
             <small>{{ path }}</small>
           </button>
         </div>
-
-        <div class="member-list">
-          <h2>Archive Files</h2>
-          <button
-            v-for="entry in entries"
-            :key="entry.name"
-            :class="{ active: selectedPath === entry.name }"
-            @click="loadSelected(entry.name)"
-          >
-            <span>{{ entry.name }}</span>
-            <small>{{ formatBytes(entry.uncompressedSize) }}</small>
-          </button>
-        </div>
       </aside>
 
       <section class="content">
-        <div v-if="mode === 'overview'" class="panel-grid">
-          <article class="metric">
-            <span>Kind</span>
-            <strong>{{ summary?.kind }}</strong>
+        <div
+          v-if="mode === 'document'"
+          class="document-layout"
+          :class="{ 'document-layout--single': !selectedRecordPayload }"
+        >
+          <article class="document-panel">
+            <header class="document-header">
+              <div>
+                <h2>{{ selectedDocument?.label || 'Document' }}</h2>
+                <p>{{ selectedDocument?.subtitle || 'Rendered .aira content' }}</p>
+              </div>
+              <span v-if="selectedDocument?.protocolPath" class="document-source">{{ selectedDocument.protocolPath }}</span>
+            </header>
+            <p v-if="isRendering" class="notice-text">Rendering protocol...</p>
+            <p v-else-if="renderError" class="error-text">{{ renderError }}</p>
+            <RenderedAimdDocument
+              v-else-if="renderedNodes.length"
+              :nodes="renderedNodes"
+            />
+            <p v-else class="empty-text">This archive does not contain a renderable AIMD protocol.</p>
           </article>
-          <article class="metric">
-            <span>Records</span>
-            <strong>{{ summary?.recordCount }}</strong>
-          </article>
-          <article class="metric">
-            <span>Protocols</span>
-            <strong>{{ summary?.protocolCount }}</strong>
-          </article>
-          <article class="metric">
-            <span>Files</span>
-            <strong>{{ summary?.fileCount }}</strong>
-          </article>
-          <article class="metric">
-            <span>Blobs</span>
-            <strong>{{ summary?.blobCount }}</strong>
-          </article>
-          <article class="metric">
-            <span>Members</span>
-            <strong>{{ summary?.memberCount }}</strong>
-          </article>
-          <article class="wide-panel">
-            <h2>Validation</h2>
-            <ul v-if="validationIssues.length" class="issue-list">
-              <li v-for="issue in validationIssues" :key="issue">{{ issue }}</li>
-            </ul>
-            <p v-else>No manifest, member, JSON, or hash issues found.</p>
-          </article>
+
+          <aside v-if="selectedRecordPayload" class="record-data-panel">
+            <header>
+              <h2>Record Data</h2>
+              <p>{{ selectedRecordTitle }}</p>
+            </header>
+            <div v-if="recordSections.length" class="record-section-list">
+              <section v-for="section in recordSections" :key="section.key">
+                <h3>{{ section.label }}</h3>
+                <dl>
+                  <template v-for="entry in section.entries.slice(0, 8)" :key="`${section.key}-${entry.key}`">
+                    <dt>{{ entry.key }}</dt>
+                    <dd><pre>{{ formatRecordValue(entry.value) }}</pre></dd>
+                  </template>
+                </dl>
+              </section>
+            </div>
+            <p v-else class="empty-text">This record does not contain filled field data.</p>
+          </aside>
         </div>
 
-        <div v-else-if="mode === 'manifest'" class="details-layout">
+        <div v-else-if="mode === 'data'" class="data-layout">
           <article class="wide-panel">
-            <h2>Manifest</h2>
-            <pre>{{ prettyPrintJson(manifest) }}</pre>
-          </article>
-        </div>
-
-        <div v-else-if="mode === 'protocols'" class="details-layout">
-          <article v-for="protocol in protocols" :key="`${protocol.protocol_id}-${protocol.protocol_version}-${protocol.archive_root}`" class="wide-panel">
-            <h2>{{ protocol.protocol_name || protocol.protocol_id || 'Protocol' }}</h2>
-            <dl>
-              <dt>ID</dt>
-              <dd>{{ protocol.protocol_id || 'unknown' }}</dd>
+            <h2>{{ selectedRecordPayload ? 'Record Data' : 'Data' }}</h2>
+            <p v-if="!selectedRecordPayload" class="empty-text">Select a record-backed document to view captured data.</p>
+            <dl v-else>
+              <dt>Record</dt>
+              <dd>{{ selectedRecordTitle }}</dd>
+              <dt>Protocol</dt>
+              <dd>{{ selectedDocument?.protocol?.protocol_name || selectedDocument?.record?.protocol_id || 'unknown' }}</dd>
               <dt>Version</dt>
-              <dd>{{ protocol.protocol_version || 'unversioned' }}</dd>
-              <dt>Entrypoint</dt>
-              <dd>{{ protocol.entrypoint || 'protocol.aimd' }}</dd>
-              <dt>Files</dt>
-              <dd>{{ protocol.files?.length || 0 }}</dd>
+              <dd>{{ selectedDocument?.record?.protocol_version || selectedDocument?.protocol?.protocol_version || 'unversioned' }}</dd>
             </dl>
           </article>
-        </div>
 
-        <div v-else-if="mode === 'records'" class="details-layout">
-          <article v-for="record in records" :key="record.path" class="record-row">
-            <button @click="loadSelected(record.path)">
-              <strong>{{ record.record_id || record.path }}</strong>
-              <span>{{ record.protocol_id || 'no protocol' }} · {{ record.path }}</span>
-            </button>
-          </article>
-          <article v-if="records.length === 0" class="wide-panel">
-            <p>This archive does not contain record entries.</p>
-          </article>
-        </div>
-
-        <div v-else-if="mode === 'files'" class="details-layout">
-          <article class="wide-panel">
-            <h2>File References</h2>
-            <table v-if="fileRefs.length">
-              <thead>
-                <tr>
-                  <th>File</th>
-                  <th>Record</th>
-                  <th>Blob</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(fileRef, index) in fileRefs" :key="`${fileRef.file_id || fileRef.source_uri || index}`">
-                  <td>
-                    <strong>{{ fileRef.filename || fileRef.file_id || fileRef.source_uri || 'file' }}</strong>
-                    <span>{{ fileRef.mime_type || 'unknown type' }}</span>
-                  </td>
-                  <td>{{ fileRef.record_path || 'unlinked' }}<br>{{ fileRef.field_path || '' }}</td>
-                  <td>
-                    <button
-                      v-if="blobPathForId(fileRef.blob_id)"
-                      class="inline-link"
-                      @click="loadBlobForId(fileRef.blob_id)"
-                    >
-                      {{ fileRef.blob_id }}
-                    </button>
-                    <span v-else>{{ fileRef.blob_id || 'reference only' }}</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else>This archive does not contain file reference entries.</p>
-          </article>
-
-          <article class="wide-panel">
-            <h2>Offline Blobs</h2>
-            <table v-if="blobs.length">
-              <thead>
-                <tr>
-                  <th>Blob</th>
-                  <th>Size</th>
-                  <th>Path</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="blob in blobs" :key="blob.blob_id">
-                  <td>{{ blob.blob_id }}</td>
-                  <td>{{ formatBytes(blob.size || 0) }}</td>
-                  <td>
-                    <button class="inline-link" @click="loadSelected(blob.archive_path)">
-                      {{ blob.archive_path }}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-else>This archive does not contain offline blob payloads.</p>
-          </article>
-        </div>
-
-        <div v-else class="details-layout">
-          <article class="wide-panel">
-            <h2>Members</h2>
+          <article
+            v-for="section in recordSections"
+            :key="section.key"
+            class="wide-panel"
+          >
+            <h2>{{ section.label }}</h2>
             <table>
               <thead>
                 <tr>
-                  <th>Path</th>
-                  <th>Size</th>
-                  <th>Compression</th>
+                  <th>Field</th>
+                  <th>Value</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="entry in entries" :key="entry.name">
-                  <td>{{ entry.name }}</td>
-                  <td>{{ formatBytes(entry.uncompressedSize) }}</td>
-                  <td>{{ entry.compressionMethod }}</td>
+                <tr v-for="entry in section.entries" :key="entry.key">
+                  <td>{{ entry.key }}</td>
+                  <td><pre>{{ formatRecordValue(entry.value) }}</pre></td>
                 </tr>
               </tbody>
             </table>
           </article>
+
+          <article v-if="selectedRecordPayload && recordSections.length === 0" class="wide-panel">
+            <p>This record does not contain filled field data.</p>
+          </article>
         </div>
 
-        <article class="preview-panel">
-          <header>
-            <h2>{{ selectedPath }}</h2>
-            <a
-              v-if="selectedObjectUrl"
-              class="download-link"
-              :href="selectedObjectUrl"
-              :download="selectedDownloadName"
-            >
-              Download
-            </a>
-          </header>
-          <p v-if="selectedError" class="error-text">{{ selectedError }}</p>
-          <div v-else-if="selectedPreviewKind === 'image'" class="blob-preview">
-            <img :src="selectedObjectUrl" :alt="selectedDownloadName">
-            <dl>
-              <dt>Name</dt>
-              <dd>{{ selectedDownloadName }}</dd>
-              <dt>Type</dt>
-              <dd>{{ selectedMimeType }}</dd>
-            </dl>
+        <div v-else class="diagnostics-layout">
+          <div class="panel-grid">
+            <article class="metric">
+              <span>Kind</span>
+              <strong>{{ summary?.kind }}</strong>
+            </article>
+            <article class="metric">
+              <span>Records</span>
+              <strong>{{ summary?.recordCount }}</strong>
+            </article>
+            <article class="metric">
+              <span>Protocols</span>
+              <strong>{{ summary?.protocolCount }}</strong>
+            </article>
+            <article class="metric">
+              <span>Files</span>
+              <strong>{{ summary?.fileCount }}</strong>
+            </article>
+            <article class="metric">
+              <span>Blobs</span>
+              <strong>{{ summary?.blobCount }}</strong>
+            </article>
+            <article class="metric">
+              <span>Members</span>
+              <strong>{{ summary?.memberCount }}</strong>
+            </article>
+            <article class="wide-panel">
+              <h2>Validation</h2>
+              <ul v-if="validationIssues.length" class="issue-list">
+                <li v-for="issue in validationIssues" :key="issue">{{ issue }}</li>
+              </ul>
+              <p v-else>No manifest, member, JSON, or hash issues found.</p>
+            </article>
           </div>
-          <div v-else-if="selectedPreviewKind === 'download'" class="download-panel">
-            <strong>{{ selectedDownloadName }}</strong>
-            <span>{{ selectedMimeType || 'application/octet-stream' }}</span>
-            <a :href="selectedObjectUrl" :download="selectedDownloadName">Download file</a>
+
+          <div class="details-layout">
+            <article class="wide-panel">
+              <h2>Protocols</h2>
+              <table v-if="protocols.length">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>ID</th>
+                    <th>Entrypoint</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="entry in protocolEntries" :key="entry.path">
+                    <td>{{ entry.label }}</td>
+                    <td>{{ entry.protocol.protocol_id || 'unknown' }}</td>
+                    <td>{{ entry.path }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p v-else>This archive does not contain protocol entries.</p>
+            </article>
+
+            <article class="wide-panel">
+              <h2>Records</h2>
+              <table v-if="records.length">
+                <thead>
+                  <tr>
+                    <th>Record</th>
+                    <th>Protocol</th>
+                    <th>Path</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="record in records" :key="record.path">
+                    <td>{{ record.record_id || record.path }}</td>
+                    <td>{{ record.protocol_id || 'no protocol' }}</td>
+                    <td>
+                      <button class="inline-link" @click="loadSelected(record.path)">
+                        {{ record.path }}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <p v-else>This archive does not contain record entries.</p>
+            </article>
+
+            <article class="wide-panel">
+              <h2>File References</h2>
+              <table v-if="fileRefs.length">
+                <thead>
+                  <tr>
+                    <th>File</th>
+                    <th>Record</th>
+                    <th>Blob</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(fileRef, index) in fileRefs" :key="`${fileRef.file_id || fileRef.source_uri || index}`">
+                    <td>
+                      <strong>{{ fileRef.filename || fileRef.file_id || fileRef.source_uri || 'file' }}</strong>
+                      <span>{{ fileRef.mime_type || 'unknown type' }}</span>
+                    </td>
+                    <td>{{ fileRef.record_path || 'unlinked' }}<br>{{ fileRef.field_path || '' }}</td>
+                    <td>
+                      <button
+                        v-if="blobPathForId(fileRef.blob_id)"
+                        class="inline-link"
+                        @click="loadBlobForId(fileRef.blob_id)"
+                      >
+                        {{ fileRef.blob_id }}
+                      </button>
+                      <span v-else>{{ fileRef.blob_id || 'reference only' }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <p v-else>This archive does not contain file reference entries.</p>
+            </article>
+
+            <article class="wide-panel">
+              <h2>Members</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Path</th>
+                    <th>Size</th>
+                    <th>Compression</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="entry in entries" :key="entry.name">
+                    <td>
+                      <button class="inline-link" @click="loadSelected(entry.name)">
+                        {{ entry.name }}
+                      </button>
+                    </td>
+                    <td>{{ formatBytes(entry.uncompressedSize) }}</td>
+                    <td>{{ entry.compressionMethod }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </article>
           </div>
-          <pre v-else>{{ selectedContent }}</pre>
-        </article>
+
+          <article class="preview-panel">
+            <header>
+              <h2>{{ selectedPath }}</h2>
+              <a
+                v-if="selectedObjectUrl"
+                class="download-link"
+                :href="selectedObjectUrl"
+                :download="selectedDownloadName"
+              >
+                Download
+              </a>
+            </header>
+            <p v-if="selectedError" class="error-text">{{ selectedError }}</p>
+            <div v-else-if="selectedPreviewKind === 'image'" class="blob-preview">
+              <img :src="selectedObjectUrl" :alt="selectedDownloadName">
+              <dl>
+                <dt>Name</dt>
+                <dd>{{ selectedDownloadName }}</dd>
+                <dt>Type</dt>
+                <dd>{{ selectedMimeType }}</dd>
+              </dl>
+            </div>
+            <div v-else-if="selectedPreviewKind === 'download'" class="download-panel">
+              <strong>{{ selectedDownloadName }}</strong>
+              <span>{{ selectedMimeType || 'application/octet-stream' }}</span>
+              <a :href="selectedObjectUrl" :download="selectedDownloadName">Download file</a>
+            </div>
+            <pre v-else>{{ selectedContent }}</pre>
+          </article>
+        </div>
       </section>
     </section>
   </main>

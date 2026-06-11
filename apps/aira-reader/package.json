@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@airalogy/aira-core": "workspace:*",
+    "@airalogy/aimd-renderer": "workspace:*",
     "@tauri-apps/api": "2.0.0",
     "vue": "^3.5.17"
   },

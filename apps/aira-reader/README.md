@@ -1,8 +1,10 @@
 # Airalogy Reader
 
-Browser and desktop app for opening `.aira` archives locally.
+Browser and desktop app for reading `.aira` archives locally.
 
-The app reads archive contents in the browser, displays the manifest, protocols, records, file references, offline blobs, member files, and validation results, and does not upload file content to a server.
+The app reads archive contents in the browser, renders AIMD protocol content with `@airalogy/aimd-renderer`, injects Record data into matching protocol fields when records are present, and does not upload file content to a server.
+
+Archive details such as the manifest, protocols, records, file references, offline blobs, member files, and validation results remain available in the Diagnostics view for validation and debugging.
 
 ## Browser build
 
@@ -13,7 +15,7 @@ pnpm build:aira-reader
 
 ## Desktop app
 
-The Tauri desktop wrapper reuses the same Vue/Vite app and `@airalogy/aira-core` parser while adding startup-file handling and `.aira` file association metadata.
+The Tauri desktop wrapper reuses the same Vue/Vite app, `@airalogy/aira-core` parser, and `@airalogy/aimd-renderer` document renderer while adding startup-file handling and `.aira` file association metadata.
 
 The desktop app keeps system-opened `.aira` paths in a Recent list, rejects non-ZIP `.aira` candidates before parsing, and caps direct IPC reads at 512 MB until the reader grows a streaming path.
 
