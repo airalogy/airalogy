@@ -77,9 +77,18 @@ const RenderedAimdDocument = defineComponent({
       type: Array as PropType<VNodeChild[]>,
       required: true,
     },
+    showFieldIds: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup(props) {
-    return () => h('div', { class: 'rendered-aimd-document' }, props.nodes)
+    return () => h('div', {
+      class: [
+        'rendered-aimd-document',
+        { 'rendered-aimd-document--show-field-ids': props.showFieldIds },
+      ],
+    }, props.nodes)
   },
 })
 
@@ -107,6 +116,7 @@ const documentViews = ref<DocumentView[]>([])
 const selectedDocumentId = ref('')
 const renderedNodes = shallowRef<VNodeChild[]>([])
 const renderError = ref('')
+const showFieldIds = ref(false)
 let renderRequestId = 0
 const recordAssetObjectUrls = new Set<string>()
 
@@ -969,13 +979,20 @@ onBeforeUnmount(() => {
                 <h2>{{ selectedDocument?.label || 'Document' }}</h2>
                 <p>{{ selectedDocument?.subtitle || 'Rendered .aira content' }}</p>
               </div>
-              <span v-if="selectedDocument?.protocolPath" class="document-source">{{ selectedDocument.protocolPath }}</span>
+              <div class="document-actions">
+                <label v-if="selectedRecordPayload" class="field-id-toggle" title="Show protocol field identifiers">
+                  <input v-model="showFieldIds" type="checkbox">
+                  <span>Show field IDs</span>
+                </label>
+                <span v-if="selectedDocument?.protocolPath" class="document-source">{{ selectedDocument.protocolPath }}</span>
+              </div>
             </header>
             <p v-if="isRendering" class="notice-text">Rendering protocol...</p>
             <p v-else-if="renderError" class="error-text">{{ renderError }}</p>
             <RenderedAimdDocument
               v-else-if="renderedNodes.length"
               :nodes="renderedNodes"
+              :show-field-ids="showFieldIds && !!selectedRecordPayload"
             />
             <p v-else class="empty-text">This archive does not contain a renderable AIMD protocol.</p>
           </article>

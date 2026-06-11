@@ -357,8 +357,37 @@ button {
   font-size: 13px;
 }
 
+.document-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.field-id-toggle {
+  min-height: 30px;
+  padding: 0 9px 0 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #d3e1e5;
+  border-radius: 6px;
+  color: #526970;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.field-id-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: #216dff;
+}
+
 .document-source {
-  max-width: 48%;
+  max-width: min(48vw, 360px);
   padding: 4px 8px;
   border: 1px solid #d3e1e5;
   border-radius: 6px;
@@ -475,26 +504,76 @@ button {
 }
 
 .rendered-aimd-document .aimd-record-field {
-  margin: 2px 2px;
+  margin: 0 1px;
   vertical-align: middle;
+}
+
+.rendered-aimd-document--show-field-ids .aimd-record-field::after,
+.rendered-aimd-document--show-field-ids .aimd-record-check::after,
+.rendered-aimd-document--show-field-ids .aimd-record-quiz::before {
+  content: attr(data-aimd-scope) "." attr(data-aimd-id);
+  margin-left: 6px;
+  padding: 1px 5px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d7e3e6;
+  border-radius: 4px;
+  color: #6d8086;
+  background: #f8fbfc;
+  font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  vertical-align: baseline;
+}
+
+.rendered-aimd-document--show-field-ids .aimd-record-table::before {
+  content: attr(data-aimd-scope) "." attr(data-aimd-id);
+  margin: 0 0 6px;
+  padding: 1px 5px;
+  display: inline-flex;
+  border: 1px solid #d7e3e6;
+  border-radius: 4px;
+  color: #6d8086;
+  background: #f8fbfc;
+  font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.rendered-aimd-document--show-field-ids .aimd-record-field--asset::after,
+.rendered-aimd-document--show-field-ids .aimd-record-field--markdown::after,
+.rendered-aimd-document--show-field-ids .aimd-record-field--code::after,
+.rendered-aimd-document--show-field-ids .aimd-record-field--dna::after {
+  margin: 7px 0 0;
 }
 
 .rendered-aimd-document .aimd-record-field--scalar {
   display: inline;
-  padding: 2px 5px;
-  border-radius: 4px;
-  color: #103f46;
-  background: #e8f6f3;
+  padding: 0 2px;
+  border-bottom: 1px solid rgba(31, 143, 99, 0.28);
+  color: #162f35;
+  background: transparent;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
 .rendered-aimd-document .aimd-record-field--empty {
   display: inline-flex;
-  padding: 2px 6px;
-  border: 1px dashed #b6c8cd;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 7px;
+  border: 1px dashed #c5d2d6;
   border-radius: 4px;
-  color: #718287;
-  background: #f7fafb;
+  color: #6d7c82;
+  background: #fbfdfd;
+  font-size: 13px;
+}
+
+.rendered-aimd-document .aimd-record-field__missing-label {
+  color: #8a6b2b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.rendered-aimd-document .aimd-record-field__missing-name {
+  overflow-wrap: anywhere;
 }
 
 .rendered-aimd-document .aimd-record-field--boolean,
@@ -523,10 +602,10 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid #cbd9dd;
+  border: 1px solid #d5e1e4;
   border-radius: 6px;
   color: #21373d;
-  background: #fbfdfd;
+  background: #ffffff;
   text-decoration: none;
 }
 
@@ -540,8 +619,8 @@ button {
   min-width: 34px;
   padding: 2px 6px;
   border-radius: 4px;
-  color: #ffffff;
-  background: #37636b;
+  color: #275059;
+  background: #e5f0f2;
   font-size: 11px;
   font-weight: 700;
   text-align: center;
@@ -562,7 +641,7 @@ button {
   max-width: 100%;
   max-height: 520px;
   object-fit: contain;
-  border: 1px solid #d6e3e7;
+  border: 1px solid #e0e8ea;
   border-radius: 8px;
   background: #ffffff;
 }
@@ -610,8 +689,24 @@ button {
   overflow: auto;
 }
 
+.rendered-aimd-document .aimd-record-table--empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px dashed #c5d2d6;
+  border-radius: 6px;
+  color: #6d7c82;
+  background: #fbfdfd;
+}
+
 .rendered-aimd-document .aimd-record-table table {
   min-width: 420px;
+}
+
+.rendered-aimd-document .aimd-record-table th {
+  color: #53686f;
+  background: #f7fafb;
 }
 
 .rendered-aimd-document .aimd-record-quiz {
@@ -625,6 +720,11 @@ button {
 .rendered-aimd-document .aimd-record-quiz__stem {
   margin-bottom: 6px;
   font-weight: 700;
+}
+
+.rendered-aimd-document .aimd-record-quiz__answer--empty {
+  color: #748489;
+  font-style: italic;
 }
 
 .rendered-aimd-document .aimd-figure__image,
@@ -980,6 +1080,11 @@ button:focus-visible,
   .document-header,
   .record-data-panel header {
     flex-direction: column;
+  }
+
+  .document-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .sidebar {

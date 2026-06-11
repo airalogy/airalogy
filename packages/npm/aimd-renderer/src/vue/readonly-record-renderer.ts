@@ -7,6 +7,7 @@ import type {
   AimdVarTableNode,
   RenderContext,
 } from '@airalogy/aimd-core/types'
+import { getAimdFieldDisplayLabel } from '@airalogy/aimd-core/utils'
 import { h, type VNode } from 'vue'
 
 import type { AimdRendererOptions, RenderResult } from '../common/processor'
@@ -328,6 +329,38 @@ function fieldPathFor(scope: string, id: string): string {
   return `data.${scope}.${id}`
 }
 
+function fieldDisplayLabel(node: AimdNode): string {
+  if ((node.fieldType === 'var' || node.fieldType === 'var_table') && 'definition' in node) {
+    return getAimdFieldDisplayLabel(node.id, node.definition)
+  }
+  if (node.fieldType === 'check' && 'label' in node && typeof node.label === 'string' && node.label.trim()) {
+    return node.label.trim()
+  }
+  if (node.fieldType === 'quiz' && 'title' in node && typeof node.title === 'string' && node.title.trim()) {
+    return node.title.trim()
+  }
+  return node.id
+}
+
+function fieldMetadataTitle(node: AimdNode): string {
+  const label = fieldDisplayLabel(node)
+  const path = fieldPathFor(node.scope, node.id)
+  return label === node.id ? path : `${label} · ${path}`
+}
+
+function recordFieldProps(node: AimdNode, className: string): Record<string, unknown> {
+  const label = fieldDisplayLabel(node)
+  return {
+    class: className,
+    title: fieldMetadataTitle(node),
+    'aria-label': label,
+    'data-aimd-type': node.fieldType,
+    'data-aimd-id': node.id,
+    'data-aimd-scope': node.scope,
+    'data-aimd-field-label': label,
+  }
+}
+
 function createAssetFallbackNode(id: string): AimdNode {
   return {
     type: 'aimd',
@@ -387,12 +420,10 @@ function resolveAssetForReference(
 }
 
 function renderEmptyValue(node: AimdNode): VNode {
-  return h('span', {
-    class: 'aimd-record-field aimd-record-field--empty',
-    'data-aimd-type': node.fieldType,
-    'data-aimd-id': node.id,
-    'data-aimd-scope': node.scope,
-  }, node.id)
+  return h('span', recordFieldProps(node, 'aimd-record-field aimd-record-field--empty'), [
+    h('span', { class: 'aimd-record-field__missing-label' }, 'Missing'),
+    h('span', { class: 'aimd-record-field__missing-name' }, fieldDisplayLabel(node)),
+  ])
 }
 
 function renderScalarValue(node: AimdNode, value: unknown, className = ''): VNode {
@@ -400,52 +431,43 @@ function renderScalarValue(node: AimdNode, value: unknown, className = ''): VNod
   if (!displayValue) {
     return renderEmptyValue(node)
   }
-  return h('span', {
-    class: ['aimd-record-field', 'aimd-record-field--scalar', className].filter(Boolean).join(' '),
-    'data-aimd-type': node.fieldType,
-    'data-aimd-id': node.id,
-    'data-aimd-scope': node.scope,
-  }, displayValue)
+  return h('span', recordFieldProps(
+    node,
+    ['aimd-record-field', 'aimd-record-field--scalar', className].filter(Boolean).join(' '),
+  ), displayValue)
 }
 
 function renderBooleanValue(node: AimdNode, value: unknown): VNode {
   const checked = booleanDisplayValue(value)
-  return h('span', {
-    class: 'aimd-record-field aimd-record-field--boolean',
-    'data-aimd-type': node.fieldType,
-    'data-aimd-id': node.id,
-    'data-aimd-scope': node.scope,
-  }, [
+  return h('span', recordFieldProps(node, 'aimd-record-field aimd-record-field--boolean'), [
     h('input', {
       type: 'checkbox',
       checked,
       disabled: true,
       class: 'aimd-checkbox',
     }),
-    h('span', { class: 'aimd-record-field__value' }, checked ? 'true' : 'false'),
+    h('span', { class: 'aimd-record-field__value' }, checked ? 'Yes' : 'No'),
   ])
 }
 
 function renderMarkdownValue(node: AimdNode, value: unknown): VNode {
-  return h('div', {
-    class: 'aimd-record-field aimd-record-field--markdown',
-    'data-aimd-type': node.fieldType,
-    'data-aimd-id': node.id,
-    'data-aimd-scope': node.scope,
-  }, stringifyDisplayValue(value))
+  const displayValue = stringifyDisplayValue(value)
+  if (!displayValue) {
+    return renderEmptyValue(node)
+  }
+  return h('div', recordFieldProps(node, 'aimd-record-field aimd-record-field--markdown'), displayValue)
 }
 
 function renderCodeValue(node: AimdNode, value: unknown, language?: unknown): VNode {
   const lang = normalizeString(language)
-  return h('pre', {
-    class: 'aimd-record-field aimd-record-field--code',
-    'data-aimd-type': node.fieldType,
-    'data-aimd-id': node.id,
-    'data-aimd-scope': node.scope,
-  }, [
+  const displayValue = stringifyDisplayValue(value)
+  if (!displayValue) {
+    return renderEmptyValue(node)
+  }
+  return h('pre', recordFieldProps(node, 'aimd-record-field aimd-record-field--code'), [
     h('code', {
       class: lang ? `language-${lang}` : undefined,
-    }, stringifyDisplayValue(value)),
+    }, displayValue),
   ])
 }
 
@@ -454,13 +476,11 @@ function renderDnaValue(node: AimdNode, value: unknown): VNode {
   const sequence = isPlainObject(normalized)
     ? normalizeString(normalized.sequence) ?? stringifyDisplayValue(normalized)
     : stringifyDisplayValue(normalized)
+  if (!sequence) {
+    return renderEmptyValue(node)
+  }
   const name = isPlainObject(normalized) ? normalizeString(normalized.name) : undefined
-  return h('div', {
-    class: 'aimd-record-field aimd-record-field--dna',
-    'data-aimd-type': node.fieldType,
-    'data-aimd-id': node.id,
-    'data-aimd-scope': node.scope,
-  }, [
+  return h('div', recordFieldProps(node, 'aimd-record-field aimd-record-field--dna'), [
     name ? h('div', { class: 'aimd-record-field__label' }, name) : null,
     h('pre', { class: 'aimd-record-field__sequence' }, sequence),
   ])
@@ -472,15 +492,15 @@ function renderFileValue(
   asset: ReadonlyRecordAsset | null | undefined,
   kind: ReadonlyRecordAssetKind,
 ): VNode {
+  if (!asset && !getFileValueId(value)) {
+    return renderEmptyValue(node)
+  }
   const mediaSrc = getAssetMediaSource(asset)
   const href = asset?.href ?? asset?.url
   const name = getFileDisplayName(value, asset) || node.id
   const badge = FILE_BADGE_BY_KIND[kind]
-  const commonProps = {
-    class: `aimd-record-field aimd-record-field--asset aimd-record-field--${kind}`,
-    'data-aimd-type': node.fieldType,
-    'data-aimd-id': node.id,
-    'data-aimd-scope': node.scope,
+  const commonProps: Record<string, unknown> = {
+    ...recordFieldProps(node, `aimd-record-field aimd-record-field--asset aimd-record-field--${kind}`),
     'data-aimd-file-id': getFileValueId(value),
   }
 
@@ -591,23 +611,22 @@ function createVarTableRenderer(): AimdComponentRenderer {
     const columns = tableNode.columns.length
       ? tableNode.columns
       : [...new Set(rows.flatMap(row => Object.keys(row)))]
+    const subvars = tableNode.definition?.subvars
 
     if (!columns.length || !rows.length) {
-      return h('div', {
-        class: 'aimd-record-table aimd-record-table--empty',
-        'data-aimd-type': 'var_table',
-        'data-aimd-id': node.id,
-      }, node.id)
+      return h('div', recordFieldProps(node, 'aimd-record-table aimd-record-table--empty'), [
+        h('span', { class: 'aimd-record-field__missing-label' }, 'Missing'),
+        h('span', { class: 'aimd-record-field__missing-name' }, fieldDisplayLabel(node)),
+      ])
     }
 
-    return h('div', {
-      class: 'aimd-record-table',
-      'data-aimd-type': 'var_table',
-      'data-aimd-id': node.id,
-    }, [
+    return h('div', recordFieldProps(node, 'aimd-record-table'), [
       h('table', [
         h('thead', [
-          h('tr', columns.map(column => h('th', column))),
+          h('tr', columns.map(column => h('th', {
+            'data-column-id': column,
+            title: column,
+          }, getAimdFieldDisplayLabel(column, subvars?.[column])))),
         ]),
         h('tbody', rows.map(row =>
           h('tr', columns.map(column =>
@@ -626,19 +645,17 @@ function createCheckRenderer(): AimdComponentRenderer {
     const normalized = isPlainObject(value) && 'checked' in value ? value.checked : value
     const checked = booleanDisplayValue(normalized)
     const label = checkNode.label ?? node.id
-    return h('label', {
-      class: 'aimd-record-check',
-      'data-aimd-type': 'check',
-      'data-aimd-id': node.id,
-    }, [
+    const bodyChildren = children && children.length > 0
+      ? children
+      : [label]
+    return h('label', recordFieldProps(node, 'aimd-record-check'), [
       h('input', {
         type: 'checkbox',
         checked,
         disabled: true,
         class: 'aimd-checkbox',
       }),
-      h('span', { class: 'aimd-record-check__label' }, label),
-      children && children.length > 0 ? h('span', { class: 'aimd-record-check__body' }, children) : null,
+      h('span', { class: 'aimd-record-check__body' }, bodyChildren),
     ])
   }
 }
@@ -647,13 +664,12 @@ function createQuizRenderer(): AimdComponentRenderer {
   return (node, ctx) => {
     const quizNode = node as AimdQuizNode
     const value = ctx.value?.quiz?.[node.id]
-    return h('div', {
-      class: 'aimd-record-quiz',
-      'data-aimd-type': 'quiz',
-      'data-aimd-id': node.id,
-    }, [
+    const answer = stringifyDisplayValue(value)
+    return h('div', recordFieldProps(node, 'aimd-record-quiz'), [
       h('div', { class: 'aimd-record-quiz__stem' }, quizNode.stem || quizNode.title || node.id),
-      h('div', { class: 'aimd-record-quiz__answer' }, stringifyDisplayValue(value)),
+      answer
+        ? h('div', { class: 'aimd-record-quiz__answer' }, answer)
+        : h('div', { class: 'aimd-record-quiz__answer aimd-record-quiz__answer--empty' }, 'No answer recorded'),
     ])
   }
 }

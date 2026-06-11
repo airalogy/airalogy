@@ -616,10 +616,27 @@ describe('readonly record rendering', () => {
     )
 
     expect(collectVNodeText(nodes)).toContain('S-004')
+    expect(collectVNodeText(nodes)).not.toContain('sample_id')
     const input = findVNodeByType({ children: nodes }, 'input') as any
     expect(input).toBeTruthy()
     expect(input.props.checked).toBe(true)
     expect(input.props.disabled).toBe(true)
+  })
+
+  it('shows readable missing labels only when record values are absent', async () => {
+    const { nodes } = await renderReadonlyRecordToVue(
+      'Sample {{var|sample_id: str, title="Sample ID"}}',
+      {
+        data: {
+          var: {},
+        },
+      },
+    )
+
+    expect(collectVNodeText(nodes)).toContain('Missing')
+    expect(collectVNodeText(nodes)).toContain('Sample ID')
+    const missing = findVNodeByType({ children: nodes }, 'span') as any
+    expect(missing.props.title).toContain('data.var.sample_id')
   })
 
   it('renders file-backed image fields with resolved assets', async () => {

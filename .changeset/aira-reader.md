@@ -12,4 +12,6 @@ Render AIMD protocol content inside Airalogy Reader with `@airalogy/aimd-rendere
 
 Add readonly Record rendering helpers to `@airalogy/aimd-renderer` so Vue hosts can render AIMD protocols with static Record data embedded in the matching fields, including host-resolved file and image assets.
 
+Polish readonly Record rendering so user-facing content defaults to readable labels while keeping field identifiers in metadata for advanced views such as Airalogy Reader's optional Show field IDs toggle.
+
 Add a Tauri desktop wrapper for Airalogy Reader so the same local archive viewer can be packaged as installable macOS, Windows, and Linux apps.
