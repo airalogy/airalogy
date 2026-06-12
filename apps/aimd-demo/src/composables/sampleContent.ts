@@ -1,254 +1,118 @@
 import { ref, type Ref } from 'vue'
-import sampleContentDefault from './sampleContent.aimd?raw'
-import clinicalInformationRecordEn from '../../../../examples/aimd/clinical-information-record/protocol.en-US.aimd?raw'
-import clinicalInformationRecordZh from '../../../../examples/aimd/clinical-information-record/protocol.zh-CN.aimd?raw'
-import meetingNotesEn from '../../../../examples/protocols/meeting-notes/en-US/protocol.aimd?raw'
-import meetingNotesZh from '../../../../examples/protocols/meeting-notes/zh-CN/protocol.aimd?raw'
-import cuaacKineticsEn from '../../../../examples/protocols/cuaac-kinetics/en-US/protocol.aimd?raw'
-import cuaacKineticsZh from '../../../../examples/protocols/cuaac-kinetics/zh-CN/protocol.aimd?raw'
-import fieldWaterSampleObservationZh from '../../../../examples/protocols/field-water-sample-observation/zh-CN/protocol.aimd?raw'
-import literatureReviewAssistantZh from '../../../../examples/protocols/literature-review-assistant/zh-CN/protocol.aimd?raw'
-import stockFundamentalAnalysisAssistantZh from '../../../../examples/protocols/stock-fundamental-analysis-assistant/zh-CN/protocol.aimd?raw'
-import monitoringSiteFlowGraph3dPrintZh from '../../../../examples/protocols/monitoring-site-flow-graph-3d-print/zh-CN/protocol.aimd?raw'
-import drugResponseIc50En from '../../../../examples/protocols/drug-response-ic50/en-US/protocol.aimd?raw'
-import drugResponseIc50Zh from '../../../../examples/protocols/drug-response-ic50/zh-CN/protocol.aimd?raw'
-import diaryEn from '../../../../examples/protocols/diary/en-US/protocol.aimd?raw'
-import diaryZh from '../../../../examples/protocols/diary/zh-CN/protocol.aimd?raw'
+import aimdRegistry from '../../../../examples/aimd/index.json'
+import protocolRegistry from '../../../../examples/protocols/index.json'
 import type { DemoLocale } from './demoI18n'
 
-export const SAMPLE_AIMD = sampleContentDefault
-export const DEFAULT_DEMO_EXAMPLE_ID = 'airalogy-protocol-example'
+export const DEFAULT_DEMO_EXAMPLE_ID = 'aimd-syntax-tour'
 
 type LocalizedDemoValue<T> = Partial<Record<DemoLocale, T>>
+type RegistryLocalizedValue<T> = Partial<Record<string, T>>
+
+interface DemoRegistryExample {
+  id: string
+  kind?: 'example' | 'case' | 'protocol'
+  languages: string[]
+  title: RegistryLocalizedValue<string>
+  description: RegistryLocalizedValue<string>
+  entry: RegistryLocalizedValue<string>
+  tags?: string[]
+}
 
 export interface DemoExample {
   id: string
   kind: 'example' | 'case' | 'protocol'
   source: LocalizedDemoValue<string>
-  title: Record<DemoLocale, string>
-  description: Record<DemoLocale, string>
+  title: LocalizedDemoValue<string>
+  description: LocalizedDemoValue<string>
   content: LocalizedDemoValue<string>
   locales: DemoLocale[]
   tags: string[]
 }
 
+const AIMD_RAW_MODULES = import.meta.glob<string>('../../../../examples/aimd/**/*.aimd', {
+  eager: true,
+  import: 'default',
+  query: '?raw',
+})
+
+const PROTOCOL_RAW_MODULES = import.meta.glob<string>('../../../../examples/protocols/**/*.aimd', {
+  eager: true,
+  import: 'default',
+  query: '?raw',
+})
+
+function isDemoLocale(value: string): value is DemoLocale {
+  return value === 'en-US' || value === 'zh-CN'
+}
+
+function normalizeRegistryLocales(languages: string[]): DemoLocale[] {
+  const locales = languages.filter(isDemoLocale)
+  return locales.length > 0 ? locales : ['en-US']
+}
+
+function normalizeRegistryValue(
+  value: RegistryLocalizedValue<string>,
+  locales: DemoLocale[],
+): LocalizedDemoValue<string> {
+  const normalized: LocalizedDemoValue<string> = {}
+  for (const locale of locales) {
+    const text = value[locale]
+    if (text !== undefined) {
+      normalized[locale] = text
+    }
+  }
+  return normalized
+}
+
+function loadRegistryContent(
+  item: DemoRegistryExample,
+  rootPrefix: string,
+  rawModules: Record<string, string>,
+  locales: DemoLocale[],
+): LocalizedDemoValue<string> {
+  const content: LocalizedDemoValue<string> = {}
+
+  for (const locale of locales) {
+    const entry = item.entry[locale]
+    if (!entry) continue
+
+    const rawContent = rawModules[`${rootPrefix}${entry}`]
+    if (rawContent !== undefined) {
+      content[locale] = rawContent
+    }
+  }
+
+  return content
+}
+
+function createRegistryDemoExample(
+  item: DemoRegistryExample,
+  fallbackKind: 'case' | 'protocol',
+  rootPrefix: string,
+  rawModules: Record<string, string>,
+): DemoExample {
+  const locales = normalizeRegistryLocales(item.languages)
+  return {
+    id: item.id,
+    kind: item.kind ?? fallbackKind,
+    source: normalizeRegistryValue(item.entry, locales),
+    title: normalizeRegistryValue(item.title, locales),
+    description: normalizeRegistryValue(item.description, locales),
+    content: loadRegistryContent(item, rootPrefix, rawModules, locales),
+    locales,
+    tags: item.tags ?? [],
+  }
+}
+
 export const DEMO_EXAMPLES: DemoExample[] = [
-  {
-    id: DEFAULT_DEMO_EXAMPLE_ID,
-    kind: 'example',
-    source: {
-      'en-US': 'apps/aimd-demo/src/composables/sampleContent.aimd',
-      'zh-CN': 'apps/aimd-demo/src/composables/sampleContent.aimd',
-    },
-    title: {
-      'en-US': 'Airalogy protocol example',
-      'zh-CN': 'Airalogy 协议综合示例',
-    },
-    description: {
-      'en-US': 'Covers common AIMD variables, tables, steps, checks, quizzes, references, and client assigners.',
-      'zh-CN': '覆盖常用 AIMD 变量、表格、步骤、检查点、题目、引用和前端 assigner。',
-    },
-    content: {
-      'en-US': sampleContentDefault,
-      'zh-CN': sampleContentDefault,
-    },
-    locales: ['en-US', 'zh-CN'],
-    tags: ['general', 'demo', 'workflow'],
-  },
-  {
-    id: 'clinical-information-record',
-    kind: 'case',
-    source: {
-      'en-US': 'examples/aimd/clinical-information-record/protocol.en-US.aimd',
-      'zh-CN': 'examples/aimd/clinical-information-record/protocol.zh-CN.aimd',
-    },
-    title: {
-      'en-US': 'Clinical information record',
-      'zh-CN': '临床信息记录案例',
-    },
-    description: {
-      'en-US': 'Bilingual case showing structured clinical encounter, assessment, plan, review checkpoints, and BMI auto calculation.',
-      'zh-CN': '用于结构化记录临床就诊、评估、诊疗计划、审核检查点，并包含 BMI 自动计算。',
-    },
-    content: {
-      'en-US': clinicalInformationRecordEn,
-      'zh-CN': clinicalInformationRecordZh,
-    },
-    locales: ['en-US', 'zh-CN'],
-    tags: ['clinical', 'case', 'record'],
-  },
-  {
-    id: 'meeting-notes',
-    kind: 'protocol',
-    source: {
-      'en-US': 'examples/protocols/meeting-notes/en-US/protocol.aimd',
-      'zh-CN': 'examples/protocols/meeting-notes/zh-CN/protocol.aimd',
-    },
-    title: {
-      'en-US': 'Meeting Notes',
-      'zh-CN': '会议记录',
-    },
-    description: {
-      'en-US': 'Official Airalogy Protocol for everyday meeting notes across teams and projects.',
-      'zh-CN': '适用于团队和项目日常会议记录的官方 Airalogy Protocol。',
-    },
-    content: {
-      'en-US': meetingNotesEn,
-      'zh-CN': meetingNotesZh,
-    },
-    locales: ['en-US', 'zh-CN'],
-    tags: ['protocol', 'meeting', 'notes'],
-  },
-  {
-    id: 'cuaac-kinetics',
-    kind: 'protocol',
-    source: {
-      'en-US': 'examples/protocols/cuaac-kinetics/en-US/protocol.aimd',
-      'zh-CN': 'examples/protocols/cuaac-kinetics/zh-CN/protocol.aimd',
-    },
-    title: {
-      'en-US': 'Click Reaction Kinetics (CuAAC)',
-      'zh-CN': '点击化学反应动力学（CuAAC）',
-    },
-    description: {
-      'en-US': 'Official protocol for kinetic data upload, parameter calculation, plotting, and report drafting.',
-      'zh-CN': '用于动力学数据上传、参数计算、绘图和报告生成的官方协议。',
-    },
-    content: {
-      'en-US': cuaacKineticsEn,
-      'zh-CN': cuaacKineticsZh,
-    },
-    locales: ['en-US', 'zh-CN'],
-    tags: ['protocol', 'chemistry', 'kinetics', 'assigner'],
-  },
-  {
-    id: 'field-water-sample-observation',
-    kind: 'protocol',
-    source: {
-      'zh-CN': 'examples/protocols/field-water-sample-observation/zh-CN/protocol.aimd',
-    },
-    title: {
-      'en-US': 'Field water sample observation',
-      'zh-CN': '野外水样观测与环境扰动分析',
-    },
-    description: {
-      'en-US': 'Protocol for field water sampling, weather and site records, biogeochemical interpretation, monsoon and extreme rainfall disturbance analysis.',
-      'zh-CN': '用于野外水样采集、当天气象场地记录、水化学与生化环境判读、季风和极端降雨扰动分析。',
-    },
-    content: {
-      'zh-CN': fieldWaterSampleObservationZh,
-    },
-    locales: ['zh-CN'],
-    tags: ['protocol', 'environment', 'water-quality', 'monsoon', 'rainfall'],
-  },
-  {
-    id: 'literature-review-assistant',
-    kind: 'protocol',
-    source: {
-      'zh-CN': 'examples/protocols/literature-review-assistant/zh-CN/protocol.aimd',
-    },
-    title: {
-      'en-US': 'AI-assisted literature review',
-      'zh-CN': 'AI 辅助文献调研与证据综述',
-    },
-    description: {
-      'en-US': 'Protocol for configuring an OpenAI-compatible web-search model, screening literature, extracting evidence, appraising quality, and drafting a review.',
-      'zh-CN': '用于配置 OpenAI 兼容联网大模型，完成候选文献初筛、人工证据提取、质量评价和综述草稿生成。',
-    },
-    content: {
-      'zh-CN': literatureReviewAssistantZh,
-    },
-    locales: ['zh-CN'],
-    tags: ['protocol', 'research', 'literature-review', 'AI', 'assigner'],
-  },
-  {
-    id: 'stock-fundamental-analysis-assistant',
-    kind: 'protocol',
-    source: {
-      'zh-CN': 'examples/protocols/stock-fundamental-analysis-assistant/zh-CN/protocol.aimd',
-    },
-    title: {
-      'en-US': 'AI-assisted stock fundamental analysis',
-      'zh-CN': 'AI 辅助股票基本面分析',
-    },
-    description: {
-      'en-US': 'Protocol for entering a ticker and company name, configuring an OpenAI-compatible web-search model, and drafting a fundamental research memo from public filings, financial quality, valuation, and risk evidence.',
-      'zh-CN': '用于输入股票代码和公司名称，配置 OpenAI 兼容联网大模型，整理公开财报、财务质量、估值比较、风险证据并生成基本面研究报告草稿。',
-    },
-    content: {
-      'zh-CN': stockFundamentalAnalysisAssistantZh,
-    },
-    locales: ['zh-CN'],
-    tags: ['protocol', 'finance', 'stock-analysis', 'fundamental-analysis', 'AI', 'assigner'],
-  },
-  {
-    id: 'monitoring-site-flow-graph-3d-print',
-    kind: 'protocol',
-    source: {
-      'zh-CN': 'examples/protocols/monitoring-site-flow-graph-3d-print/zh-CN/protocol.aimd',
-    },
-    title: {
-      'en-US': 'Monitoring site physical graph and 3D print parameters',
-      'zh-CN': '监测站点物理约束图与 3D 打印参数',
-    },
-    description: {
-      'en-US': 'Protocol for generating a physics-constrained directed graph from site coordinates and elevation, then deriving node, edge, scale, and structure parameters for 3D printing.',
-      'zh-CN': '用于根据监测站点经纬度和海拔生成物理约束有向图，并推导 3D 打印节点、边、缩放和结构参数。',
-    },
-    content: {
-      'zh-CN': monitoringSiteFlowGraph3dPrintZh,
-    },
-    locales: ['zh-CN'],
-    tags: ['protocol', 'environment', 'monitoring-sites', 'graph', '3d-printing', 'assigner'],
-  },
-  {
-    id: 'drug-response-ic50',
-    kind: 'protocol',
-    source: {
-      'en-US': 'examples/protocols/drug-response-ic50/en-US/protocol.aimd',
-      'zh-CN': 'examples/protocols/drug-response-ic50/zh-CN/protocol.aimd',
-    },
-    title: {
-      'en-US': 'Drug Response IC50 Analysis',
-      'zh-CN': '抗肿瘤候选药物细胞活性剂量-反应分析',
-    },
-    description: {
-      'en-US': 'Official protocol for dose-response upload, IC50 estimation, QC, curve plotting, and report generation.',
-      'zh-CN': '用于剂量-反应数据上传、IC50 估算、质控、曲线绘制和报告生成的官方协议。',
-    },
-    content: {
-      'en-US': drugResponseIc50En,
-      'zh-CN': drugResponseIc50Zh,
-    },
-    locales: ['en-US', 'zh-CN'],
-    tags: ['protocol', 'biomedicine', 'IC50', 'assigner'],
-  },
-  {
-    id: 'diary',
-    kind: 'protocol',
-    source: {
-      'en-US': 'examples/protocols/diary/en-US/protocol.aimd',
-      'zh-CN': 'examples/protocols/diary/zh-CN/protocol.aimd',
-    },
-    title: {
-      'en-US': 'Diary',
-      'zh-CN': '日记',
-    },
-    description: {
-      'en-US': 'Official compact protocol for keeping a structured diary.',
-      'zh-CN': '用于结构化记录日记的轻量官方协议。',
-    },
-    content: {
-      'en-US': diaryEn,
-      'zh-CN': diaryZh,
-    },
-    locales: ['en-US', 'zh-CN'],
-    tags: ['protocol', 'diary', 'notes'],
-  },
+  ...(aimdRegistry.examples as DemoRegistryExample[])
+    .map(item => createRegistryDemoExample(item, 'case', '../../../../examples/aimd/', AIMD_RAW_MODULES)),
+  ...(protocolRegistry.examples as DemoRegistryExample[])
+    .map(item => createRegistryDemoExample(item, 'protocol', '../../../../examples/protocols/', PROTOCOL_RAW_MODULES)),
 ]
 
-export function resolveDemoExampleText(text: Record<DemoLocale, string>, locale: DemoLocale): string {
-  return text[locale] || text['zh-CN'] || text['en-US']
+export function resolveDemoExampleText(text: LocalizedDemoValue<string>, locale: DemoLocale): string {
+  return text[locale] || text['zh-CN'] || text['en-US'] || ''
 }
 
 export function resolveDemoExampleValue<T>(value: LocalizedDemoValue<T>, locale: DemoLocale): T {
@@ -270,6 +134,8 @@ export function getDemoExample(id: string): DemoExample {
 export function getDemoExampleContent(example: DemoExample, locale: DemoLocale): string {
   return resolveDemoExampleValue(example.content, locale)
 }
+
+export const SAMPLE_AIMD = getDemoExampleContent(getDemoExample(DEFAULT_DEMO_EXAMPLE_ID), 'en-US')
 
 export function getDemoExampleSource(example: DemoExample, locale: DemoLocale): string {
   return resolveDemoExampleValue(example.source, locale)

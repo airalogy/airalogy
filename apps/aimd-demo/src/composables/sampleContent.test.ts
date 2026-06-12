@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import { parseAndExtract } from '@airalogy/aimd-renderer'
 
-import sampleContent from './sampleContent.aimd?raw'
+import { DEFAULT_DEMO_EXAMPLE_ID, DEMO_EXAMPLES, getDemoExampleContent } from './sampleContent'
+import sampleContent from '../../../../examples/aimd/aimd-syntax-tour/protocol.aimd?raw'
 
 describe('sampleContent', () => {
   it('demonstrates a browser-side assigner that writes list values', () => {
@@ -24,5 +25,30 @@ describe('sampleContent', () => {
       dependent_fields: ['aimd_content'],
       assigned_fields: ['image_ids'],
     }))
+  })
+
+  it('loads shared AIMD and protocol examples from registries', () => {
+    expect(DEMO_EXAMPLES[0]?.id).toBe(DEFAULT_DEMO_EXAMPLE_ID)
+
+    const syntaxTour = DEMO_EXAMPLES.find(example => example.id === 'aimd-syntax-tour')
+    expect(syntaxTour).toMatchObject({
+      kind: 'example',
+      locales: ['en-US'],
+    })
+    expect(getDemoExampleContent(syntaxTour!, 'en-US')).toContain('# AIMD Syntax Tour')
+
+    const clinicalCase = DEMO_EXAMPLES.find(example => example.id === 'clinical-information-record')
+    expect(clinicalCase).toMatchObject({
+      kind: 'case',
+      locales: ['en-US', 'zh-CN'],
+    })
+    expect(getDemoExampleContent(clinicalCase!, 'en-US')).toContain('# Clinical Information Record Case')
+
+    const protocolExample = DEMO_EXAMPLES.find(example => example.id === 'fiber-endface-process')
+    expect(protocolExample).toMatchObject({
+      kind: 'protocol',
+      locales: ['zh-CN'],
+    })
+    expect(getDemoExampleContent(protocolExample!, 'zh-CN')).toContain('# 光纤端面微纳结构器件工艺路线设计与记录')
   })
 })

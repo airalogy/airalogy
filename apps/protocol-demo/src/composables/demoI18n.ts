@@ -51,6 +51,7 @@ export interface ProtocolDemoMessages {
     engine: string
     static: string
   }
+  sourceKinds: Record<string, string>
   categories: Record<string, string>
   common: {
     protocols: string
@@ -145,9 +146,9 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
   'en-US': {
     app: {
       title: 'Airalogy Protocol Demo',
-      subtitle: '@airalogy/airalogy-engine + official protocol examples',
+      subtitle: 'Official protocol examples and AIMD cases',
       languageLabel: 'Language',
-      protocolLanguageLabel: 'Protocol language',
+      protocolLanguageLabel: 'Example language',
       localeNames: {
         'en-US': 'English',
         'zh-CN': '中文',
@@ -162,16 +163,25 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       engine: 'Engine',
       static: 'Static',
     },
+    sourceKinds: {
+      protocol: 'Protocol',
+      aimd: 'AIMD case',
+    },
     categories: {
       productivity: 'Productivity',
       chemistry: 'Chemistry',
       biomedicine: 'Biomedicine',
+      clinical: 'Clinical',
+      environment: 'Environment',
+      finance: 'Finance',
+      general: 'General',
       photonics: 'Photonics',
       personal: 'Personal',
+      research: 'Research',
     },
     common: {
-      protocols: 'Protocols',
-      protocolDir: 'Protocol dir',
+      protocols: 'Examples',
+      protocolDir: 'Source dir',
       assigner: 'Assigner',
       sampleFiles: 'Sample files',
       none: 'none',
@@ -200,7 +210,7 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       loading: 'Loading assigner graph',
     },
     source: {
-      files: 'Protocol files',
+      files: 'Source files',
       empty: 'No source files',
       loading: 'Loading source viewer',
       draftHint: 'Edits are temporary and run only in this demo.',
@@ -260,9 +270,9 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
   'zh-CN': {
     app: {
       title: 'Airalogy Protocol Demo',
-      subtitle: '@airalogy/airalogy-engine + 官方协议示例',
+      subtitle: '官方 Protocol 示例与 AIMD 案例',
       languageLabel: '界面语言',
-      protocolLanguageLabel: '协议语言',
+      protocolLanguageLabel: '示例语言',
       localeNames: {
         'en-US': 'English',
         'zh-CN': '中文',
@@ -277,16 +287,25 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       engine: '引擎',
       static: '静态',
     },
+    sourceKinds: {
+      protocol: 'Protocol',
+      aimd: 'AIMD 案例',
+    },
     categories: {
       productivity: '生产力',
       chemistry: '化学',
       biomedicine: '生物医学',
+      clinical: '临床',
+      environment: '环境',
+      finance: '金融',
+      general: '通用',
       photonics: '光子学',
       personal: '个人',
+      research: '研究',
     },
     common: {
-      protocols: '协议示例',
-      protocolDir: '协议目录',
+      protocols: '示例',
+      protocolDir: '源目录',
       assigner: '赋值器',
       sampleFiles: '示例文件',
       none: '无',
@@ -315,7 +334,7 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       loading: '正在加载赋值器拓扑',
     },
     source: {
-      files: '协议文件',
+      files: '源文件',
       empty: '没有源码文件',
       loading: '正在加载源码视图',
       draftHint: '源码修改仅保存在当前页面，用于本次试运行。',

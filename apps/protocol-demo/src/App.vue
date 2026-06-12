@@ -68,6 +68,7 @@ interface ProtocolVariant {
 interface ProtocolExample {
   id: string
   category: string
+  source_kind?: string
   languages: string[]
   title: LocaleMap<string>
   description: LocaleMap<string>
@@ -78,6 +79,7 @@ interface ProtocolExample {
 
 interface ProtocolRegistry {
   protocol_root: string
+  source_roots?: Record<string, string>
   examples: ProtocolExample[]
 }
 
@@ -340,6 +342,11 @@ function runtimeKindLabel(engineRequired?: boolean) {
 function categoryLabel(category?: string) {
   if (!category) return ''
   return messages.value.categories[category] ?? category
+}
+
+function sourceKindLabel(sourceKind?: string) {
+  if (!sourceKind) return messages.value.sourceKinds.protocol
+  return messages.value.sourceKinds[sourceKind] ?? sourceKind
 }
 
 function protocolLocaleLabel(locale: string) {
@@ -921,7 +928,7 @@ onMounted(() => {
             {{ protocol.title[selectedLocale] ?? protocol.title['en-US'] ?? protocol.id }}
           </span>
           <span class="protocol-option__meta">
-            {{ protocol.id }} / {{ runtimeKindLabel(protocol.engine_required) }}
+            {{ protocol.id }} / {{ sourceKindLabel(protocol.source_kind) }} / {{ runtimeKindLabel(protocol.engine_required) }}
           </span>
         </button>
       </aside>
@@ -929,7 +936,7 @@ onMounted(() => {
       <section class="protocol-workbench">
         <div class="protocol-header">
           <div>
-            <div class="eyebrow">{{ categoryLabel(selectedProtocol?.category) }} / {{ runtimeLabel }}</div>
+            <div class="eyebrow">{{ categoryLabel(selectedProtocol?.category) }} / {{ sourceKindLabel(selectedProtocol?.source_kind) }} / {{ runtimeLabel }}</div>
             <h2>{{ protocolTitle }}</h2>
             <p>{{ protocolDescription }}</p>
           </div>

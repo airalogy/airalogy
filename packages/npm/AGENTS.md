@@ -26,11 +26,11 @@
 - If no Changesets entry is needed, be ready to state why in the final response.
 - In the final response, summarize the affected packages and the verification commands that were run.
 
-## Demo Sample Expectations
+## Demo Example Expectations
 
-- `apps/aimd-demo/src/composables/sampleContent.aimd` is the canonical interactive sample used across AIMD demos.
-- When adding a new built-in var type, recorder widget, or other user-visible field experience, add a minimal example to `apps/aimd-demo/src/composables/sampleContent.aimd` unless the user explicitly asks not to.
-- Prefer one clear example per built-in type in the sample so users can discover it directly from the demo UI.
+- `examples/aimd/aimd-syntax-tour/protocol.aimd` is the canonical interactive syntax tour used across AIMD demos.
+- When adding a new built-in var type, recorder widget, or other user-visible field experience, add a minimal example to `examples/aimd/aimd-syntax-tour/protocol.aimd` unless the user explicitly asks not to.
+- Prefer one clear example per built-in type in the syntax tour so users can discover it directly from the demo UI.
 
 ## Vue Rendering Stability
 

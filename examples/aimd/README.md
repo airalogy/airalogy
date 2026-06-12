@@ -10,6 +10,7 @@ Preview and fill examples online on the [Demo examples page](https://airalogy.gi
 
 | ID | Scenario | Entry | Summary |
 | --- | --- | --- | --- |
+| `aimd-syntax-tour` | AIMD syntax tour | [protocol.aimd](./aimd-syntax-tour/protocol.aimd) | Interactive syntax tour covering variables, tables, steps, checks, quizzes, references, Markdown, and browser-side client assigners. |
 | `clinical-information-record` | Clinical information record | [protocol.en-US.aimd](./clinical-information-record/protocol.en-US.aimd) / [protocol.zh-CN.aimd](./clinical-information-record/protocol.zh-CN.aimd) | Bilingual case for structured clinical encounter, assessment, plan, and review records. |
 
 The machine-readable registry is [index.json](./index.json).
@@ -17,7 +18,7 @@ The machine-readable registry is [index.json](./index.json).
 ## Conventions
 
 - Use one kebab-case subdirectory per example, such as `clinical-information-record/`.
-- Name the entry file `protocol.<locale>.aimd`.
+- Name single-language or language-neutral entry files `protocol.aimd`; name localized entry files `protocol.<locale>.aimd`.
 - Include a README for each example with scope, covered fields, and usage notes.
 - Update `index.json` whenever adding an example so host applications can discover it.
 - Do not commit real patient, participant, or business data in example files.

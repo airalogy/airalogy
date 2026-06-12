@@ -1,8 +1,39 @@
 {
   "schema_version": "1.0.0",
+  "source_repository": "https://github.com/airalogy/airalogy/tree/main/examples/aimd",
   "examples": [
     {
+      "id": "aimd-syntax-tour",
+      "kind": "example",
+      "category": "general",
+      "languages": [
+        "en-US"
+      ],
+      "title": {
+        "en-US": "AIMD Syntax Tour",
+        "zh-CN": "AIMD 语法导览"
+      },
+      "description": {
+        "en-US": "A compact interactive tour covering AIMD variables, tables, steps, checks, quizzes, references, Markdown rendering, and browser-side client assigners.",
+        "zh-CN": "一个交互式语法导览，覆盖 AIMD 变量、表格、步骤、检查点、题目、引用、Markdown 渲染和浏览器侧 client assigner。"
+      },
+      "protocol_dir": {
+        "en-US": "aimd-syntax-tour"
+      },
+      "entry": {
+        "en-US": "aimd-syntax-tour/protocol.aimd"
+      },
+      "engine_required": false,
+      "tags": [
+        "syntax",
+        "demo",
+        "tour",
+        "client-assigner"
+      ]
+    },
+    {
       "id": "clinical-information-record",
+      "kind": "case",
       "category": "clinical",
       "languages": [
         "en-US",
@@ -10,26 +41,26 @@
       ],
       "title": {
         "en-US": "Clinical information record",
-        "zh-CN": "临床信息记录"
+        "zh-CN": "临床信息记录案例"
       },
       "description": {
-        "en-US": "A bilingual AIMD case for structured clinical encounter, assessment, plan, and review records.",
-        "zh-CN": "用于展示结构化记录临床就诊、评估、诊疗计划和审核信息的中英文双语 AIMD 案例。"
+        "en-US": "Bilingual AIMD case showing structured clinical encounter, assessment, plan, review checkpoints, and browser-side BMI calculation.",
+        "zh-CN": "双语 AIMD 案例，用于结构化记录临床就诊、评估、诊疗计划、审核检查点，并包含浏览器侧 BMI 自动计算。"
+      },
+      "protocol_dir": {
+        "en-US": "clinical-information-record",
+        "zh-CN": "clinical-information-record"
       },
       "entry": {
         "en-US": "clinical-information-record/protocol.en-US.aimd",
         "zh-CN": "clinical-information-record/protocol.zh-CN.aimd"
       },
-      "readme": {
-        "en-US": "clinical-information-record/README.md",
-        "zh-CN": "clinical-information-record/README.zh-CN.md"
-      },
+      "engine_required": false,
       "tags": [
         "clinical",
+        "case",
         "record",
-        "encounter",
-        "en-US",
-        "zh-CN"
+        "client-assigner"
       ]
     }
   ]

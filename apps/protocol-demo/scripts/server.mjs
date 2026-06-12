@@ -11,6 +11,8 @@ const appRoot = path.resolve(__dirname, '..')
 const monorepoRoot = path.resolve(appRoot, '../..')
 const protocolRoot = path.join(monorepoRoot, 'examples/protocols')
 const registryPath = path.join(protocolRoot, 'index.json')
+const aimdRoot = path.join(monorepoRoot, 'examples/aimd')
+const aimdRegistryPath = path.join(aimdRoot, 'index.json')
 const distRoot = path.join(appRoot, 'dist')
 const draftRoot = path.join(monorepoRoot, 'protocol-demo-tmp')
 const fileStoreRoot = path.join(draftRoot, 'files')
@@ -25,6 +27,19 @@ const jsonLimitBytes = 1_000_000
 const uploadLimitBytes = Number(process.env.AIRALOGY_PROTOCOL_DEMO_UPLOAD_LIMIT_BYTES ?? 50 * 1024 * 1024)
 const draftCleanupDelayMs = 60_000
 let engineModulePromise
+
+const catalogSources = [
+  {
+    kind: 'protocol',
+    root: protocolRoot,
+    registryPath,
+  },
+  {
+    kind: 'aimd',
+    root: aimdRoot,
+    registryPath: aimdRegistryPath,
+  },
+]
 
 function sendJson(res, status, payload) {
   const body = JSON.stringify(payload, null, 2)
@@ -351,21 +366,43 @@ async function readTextIfExists(filePath) {
   return readFile(filePath, 'utf8')
 }
 
-async function loadRegistry() {
-  const registry = JSON.parse(await readFile(registryPath, 'utf8'))
+async function loadCatalogExamples() {
+  const entries = []
 
-  const examples = await Promise.all(registry.examples.map(async (item) => {
+  for (const source of catalogSources) {
+    if (!existsSync(source.registryPath)) {
+      continue
+    }
+
+    const registry = JSON.parse(await readFile(source.registryPath, 'utf8'))
+    for (const item of registry.examples ?? []) {
+      entries.push({
+        source,
+        registry,
+        item,
+      })
+    }
+  }
+
+  return entries
+}
+
+async function loadRegistry() {
+  const catalogEntries = await loadCatalogExamples()
+
+  const examples = await Promise.all(catalogEntries.map(async ({ source, item }) => {
     const variants = {}
 
     for (const locale of item.languages) {
-      const protocolDirRelative = item.protocol_dir?.[locale]
       const aimdRelative = item.entry?.[locale]
+      const protocolDirRelative = item.protocol_dir?.[locale]
+        ?? (aimdRelative ? path.posix.dirname(aimdRelative) : undefined)
       const tomlRelative = item.toml?.[locale]
       const assignerRelative = item.assigner?.[locale]
       const sampleDataRelative = item.sample_data?.[locale] ?? []
 
       const sampleData = await Promise.all(sampleDataRelative.map(async (relativePath) => {
-        const absPath = safeResolve(protocolRoot, relativePath)
+        const absPath = safeResolve(source.root, relativePath)
         return {
           path: relativePath,
           content: await readTextIfExists(absPath),
@@ -375,26 +412,32 @@ async function loadRegistry() {
       variants[locale] = {
         locale,
         protocolDir: protocolDirRelative,
-        protocolDirPath: protocolDirRelative ? safeResolve(protocolRoot, protocolDirRelative) : null,
+        protocolDirPath: protocolDirRelative ? safeResolve(source.root, protocolDirRelative) : null,
         aimdPath: aimdRelative,
-        aimd: aimdRelative ? await readTextIfExists(safeResolve(protocolRoot, aimdRelative)) : null,
+        aimd: aimdRelative ? await readTextIfExists(safeResolve(source.root, aimdRelative)) : null,
         tomlPath: tomlRelative,
-        toml: tomlRelative ? await readTextIfExists(safeResolve(protocolRoot, tomlRelative)) : null,
+        toml: tomlRelative ? await readTextIfExists(safeResolve(source.root, tomlRelative)) : null,
         assignerPath: assignerRelative,
-        assigner: assignerRelative ? await readTextIfExists(safeResolve(protocolRoot, assignerRelative)) : null,
+        assigner: assignerRelative ? await readTextIfExists(safeResolve(source.root, assignerRelative)) : null,
         sampleData,
       }
     }
 
     return {
       ...item,
+      source_kind: item.source_kind ?? source.kind,
       variants,
     }
   }))
 
   return {
-    ...registry,
+    schema_version: '1.0.0',
+    source_repository: 'https://github.com/airalogy/airalogy/tree/main/examples',
     protocol_root: protocolRoot,
+    source_roots: {
+      protocol: protocolRoot,
+      aimd: aimdRoot,
+    },
     examples,
   }
 }
@@ -617,8 +660,9 @@ function fileDownloadHeaders(metadata) {
 }
 
 async function resolveProtocolVariant(id, locale) {
-  const registry = JSON.parse(await readFile(registryPath, 'utf8'))
-  const protocol = registry.examples.find((item) => item.id === id)
+  const catalogEntries = await loadCatalogExamples()
+  const match = catalogEntries.find(({ item }) => item.id === id)
+  const protocol = match?.item
 
   if (!protocol) {
     throw new Error(`Unknown protocol example: ${id}`)
@@ -627,14 +671,16 @@ async function resolveProtocolVariant(id, locale) {
     throw new Error(`Protocol example ${id} does not provide locale ${locale}`)
   }
 
+  const aimdRelative = protocol.entry?.[locale]
   const protocolDirRelative = protocol.protocol_dir?.[locale]
+    ?? (aimdRelative ? path.posix.dirname(aimdRelative) : undefined)
   if (!protocolDirRelative) {
     throw new Error(`Protocol example ${id}/${locale} has no protocol directory`)
   }
 
   return {
     protocol,
-    protocolDir: safeResolve(protocolRoot, protocolDirRelative),
+    protocolDir: safeResolve(match.source.root, protocolDirRelative),
   }
 }
 

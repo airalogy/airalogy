@@ -10,6 +10,7 @@
 
 | ID | 场景 | 入口文件 | 说明 |
 | --- | --- | --- | --- |
+| `aimd-syntax-tour` | AIMD 语法导览 | [protocol.aimd](./aimd-syntax-tour/protocol.aimd) | 交互式语法导览，覆盖变量、表格、步骤、检查点、题目、引用、Markdown 和浏览器侧 client assigner。 |
 | `clinical-information-record` | 临床信息记录 | [protocol.en-US.aimd](./clinical-information-record/protocol.en-US.aimd) / [protocol.zh-CN.aimd](./clinical-information-record/protocol.zh-CN.aimd) | 中英文双语案例，用于结构化记录临床就诊、评估、诊疗计划和审核信息。 |
 
 机器可读清单位于 [index.json](./index.json)。
@@ -17,7 +18,7 @@
 ## 目录约定
 
 - 每个案例使用一个 kebab-case 子目录，例如 `clinical-information-record/`。
-- 案例入口文件使用 `protocol.<locale>.aimd` 命名。
+- 单语言或语言中性的案例入口文件使用 `protocol.aimd` 命名；本地化入口文件使用 `protocol.<locale>.aimd` 命名。
 - 每个案例至少提供一个 README，说明适用场景、覆盖字段和使用注意事项。
 - 新增案例时，同步更新 `index.json`，方便宿主应用自动发现案例。
 - 案例文件不要提交真实患者、受试者或业务数据。
