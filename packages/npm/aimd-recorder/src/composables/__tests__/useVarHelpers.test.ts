@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   normalizeVarTypeName,
   getVarInputKind,
+  isStructuredVarType,
   unwrapStructuredValue,
   toBooleanValue,
   toDateValue,
@@ -98,6 +99,14 @@ describe('getVarInputKind', () => {
     expect(getVarInputKind('md')).toBe('textarea')
     expect(getVarInputKind('markdown')).toBe('textarea')
     expect(getVarInputKind('airalogymarkdown')).toBe('textarea')
+  })
+
+  it('returns "textarea" for structured list and object types', () => {
+    expect(getVarInputKind('list')).toBe('textarea')
+    expect(getVarInputKind('list[str]')).toBe('textarea')
+    expect(getVarInputKind('dict[str, int]')).toBe('textarea')
+    expect(getVarInputKind('json')).toBe('textarea')
+    expect(getVarInputKind('Listener')).toBe('text')
   })
 
   it('returns "code" for built-in CodeStr aliases', () => {
@@ -440,6 +449,11 @@ describe('getVarInputDisplayValue', () => {
   it('stringifies non-string for dna kind', () => {
     expect(getVarInputDisplayValue({ seq: 'ATCG' }, 'dna')).toBe(JSON.stringify({ seq: 'ATCG' }))
   })
+
+  it('pretty-prints structured list and object values', () => {
+    expect(getVarInputDisplayValue(['a', 'b'], 'textarea', { type: 'list[str]' })).toBe(JSON.stringify(['a', 'b'], null, 2))
+    expect(getVarInputDisplayValue({ a: 1 }, 'textarea', { type: 'dict[str, int]' })).toBe(JSON.stringify({ a: 1 }, null, 2))
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -470,6 +484,24 @@ describe('parseVarInputValue', () => {
   it('normalizes datetime input', () => {
     const result = parseVarInputValue('2024-06-15T10:30', undefined, 'datetime')
     expect(typeof result).toBe('string')
+  })
+
+  it('parses JSON input for structured list types', () => {
+    expect(parseVarInputValue('["a", "b"]', 'list[str]', 'textarea')).toEqual(['a', 'b'])
+    expect(parseVarInputValue('not json', 'list[str]', 'textarea')).toBe('not json')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// isStructuredVarType
+// ---------------------------------------------------------------------------
+
+describe('isStructuredVarType', () => {
+  it('detects explicit structured types without matching unrelated names', () => {
+    expect(isStructuredVarType('list[str]')).toBe(true)
+    expect(isStructuredVarType('dict[str, int]')).toBe(true)
+    expect(isStructuredVarType('object')).toBe(true)
+    expect(isStructuredVarType('Listener')).toBe(false)
   })
 })
 

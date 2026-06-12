@@ -10,6 +10,10 @@ Record time: {{var|current_time: CurrentTime, title = "Record Time", description
 
 Experiment summary: {{var|summary: AiralogyMarkdown, title = "Experiment Summary", description = "Short Markdown note for context, observations, and review comments", examples = ["Initial sample looked clear before mixing."]}}
 
+AIMD content with image refs: {{var|aimd_content: AiralogyMarkdown = "![Site photo](airalogy.id.file.site-photo.png)", title = "AIMD Content With Image Refs", description = "Paste Airalogy Markdown that contains airalogy.id.file.* image references"}}
+
+Extracted image ids: {{var|image_ids: list[str], title = "Extracted Image IDs", description = "Manual client assigner fills this browser-side list from AIMD content"}}
+
 Plasmid sequence: {{var|plasmid_sequence: DNASequence, title = "Plasmid Sequence", description = "Sequence record with topology and feature annotations", examples = ["ATGCGTACGTAGCTAG"]}}
 
 Python analysis snippet: {{var|python_code: PyStr, title = "Python analysis helper"}}
@@ -56,6 +60,27 @@ assigner(
   function calculate_total_liquid_ml({ water_volume_ml, lemon_juice_ml }) {
     return {
       total_liquid_ml: Math.round((water_volume_ml + lemon_juice_ml) * 100) / 100,
+    };
+  }
+);
+```
+
+## Browser-Side List Assigner
+
+This manual client assigner runs entirely in the browser. Click its assigner button next to "Extracted Image IDs" to extract Airalogy file image ids from the AIMD content field above.
+
+```assigner runtime=client
+assigner(
+  {
+    mode: "manual",
+    dependent_fields: ["aimd_content"],
+    assigned_fields: ["image_ids"],
+  },
+  function extract_airalogy_image_ids(fields) {
+    const text = String(fields.aimd_content || "");
+    const image_ids = text.match(/airalogy\.id\.file\.[^\s)]+/g) || [];
+    return {
+      image_ids: image_ids,
     };
   }
 );

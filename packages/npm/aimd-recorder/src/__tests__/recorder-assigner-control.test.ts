@@ -225,6 +225,67 @@ describe('AimdRecorder assigner controls', () => {
     expect(latestRecord?.var?.ic50).toBe(42)
   })
 
+  it('keeps assigner controls visible after a list var receives assigned data', async () => {
+    currentVarNode = {
+      ...varNode,
+      id: 'image_ids',
+      name: 'image_ids',
+      label: 'image_ids',
+      raw: '{{var|image_ids: list[str]}}',
+      definition: {
+        id: 'image_ids',
+        name: 'image_ids',
+        type: 'list[str]',
+      },
+    }
+    currentFields = {
+      ...fields,
+      var: ['image_ids'],
+      var_definitions: [{ id: 'image_ids', name: 'image_ids', type: 'list[str]' }],
+    }
+    const runServerAssigner = vi.fn(async (_request: AimdAssignerRunnerRequest) => ({
+      data: {
+        assigned_fields: {
+          image_ids: ['airalogy.id.file.image-a.png', 'airalogy.id.file.image-b.png'],
+        },
+      },
+    }))
+
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: '{{var|image_ids: list[str]}}',
+        locale: 'en-US',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+        serverAssigners: {
+          image_ids: {
+            mode: 'manual',
+            dependent_fields: ['aimd_content'],
+          },
+        },
+        runServerAssigner,
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    const button = wrapper.find('.aimd-rec-assigner-field__button')
+    expect(button.exists()).toBe(true)
+
+    await button.trigger('click')
+    await flushPromises()
+    await nextTick()
+    await flushPromises()
+    await nextTick()
+
+    expect(runServerAssigner).toHaveBeenCalledTimes(1)
+    const updates = wrapper.emitted('update:modelValue') ?? []
+    const latestRecord = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    expect(latestRecord?.var?.image_ids).toEqual(['airalogy.id.file.image-a.png', 'airalogy.id.file.image-b.png'])
+    expect(wrapper.find('.aimd-rec-assigner-field__button').exists()).toBe(true)
+    expect((wrapper.find('textarea.aimd-rec-inline__textarea').element as HTMLTextAreaElement).value).toContain('"airalogy.id.file.image-a.png"')
+  })
+
   it('runs auto host assigners when dependent fields become available', async () => {
     const runServerAssigner = vi.fn(async (_request: AimdAssignerRunnerRequest) => ({
       data: {

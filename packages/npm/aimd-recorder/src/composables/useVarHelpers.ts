@@ -207,6 +207,22 @@ export function isNumericVarType(type: string | undefined): boolean {
   return normalized === "float" || normalized === "int" || normalized === "integer" || normalized === "number"
 }
 
+export function isStructuredVarType(type: string | undefined): boolean {
+  const raw = typeof type === "string" ? type.trim().toLowerCase() : ""
+  const normalized = normalizeVarTypeName(type)
+  return normalized === "json"
+    || normalized === "list"
+    || raw.startsWith("list[")
+    || normalized === "array"
+    || raw.startsWith("array[")
+    || normalized === "dict"
+    || raw.startsWith("dict[")
+    || normalized === "map"
+    || raw.startsWith("map[")
+    || normalized === "object"
+    || normalized === "record"
+}
+
 export function getVarInputKind(type: string | undefined, options: VarInputKindOptions = {}): VarInputKind {
   const override = resolveOverrideInputKind(options.inputType, options.codeLanguage)
   if (override) {
@@ -248,6 +264,10 @@ export function getVarInputKind(type: string | undefined, options: VarInputKindO
     return "textarea"
   }
 
+  if (isStructuredVarType(type)) {
+    return "textarea"
+  }
+
   if (isFileLikeVarType(type, options.kwargs, options.fieldMeta)) {
     return "file"
   }
@@ -257,6 +277,20 @@ export function getVarInputKind(type: string | undefined, options: VarInputKindO
   }
 
   return "text"
+}
+
+function stringifyStructuredInputValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value
+  }
+  if (value === null || typeof value === "undefined") {
+    return ""
+  }
+  try {
+    return JSON.stringify(value, null, 2)
+  } catch {
+    return String(value)
+  }
 }
 
 function toFiniteNumber(value: unknown): number | undefined {
@@ -522,6 +556,10 @@ export function getVarInputDisplayValue(
     return getFileDisplayName(normalized)
   }
 
+  if (isStructuredVarType(options.type)) {
+    return stringifyStructuredInputValue(normalized)
+  }
+
   if (typeof normalized === "string") {
     return normalized
   }
@@ -568,6 +606,18 @@ export function parseVarInputValue(
       ? Number.parseInt(text, 10)
       : Number.parseFloat(text)
     return Number.isNaN(parsed) ? rawValue : parsed
+  }
+
+  if (isStructuredVarType(type)) {
+    const text = rawValue.trim()
+    if (!text) {
+      return ""
+    }
+    try {
+      return JSON.parse(text)
+    } catch {
+      return rawValue
+    }
   }
 
   return rawValue

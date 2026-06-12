@@ -44,6 +44,7 @@ export {
 export {
   normalizeVarTypeName,
   getVarInputKind,
+  isStructuredVarType,
   unwrapStructuredValue,
   toBooleanValue,
   toDateValue,

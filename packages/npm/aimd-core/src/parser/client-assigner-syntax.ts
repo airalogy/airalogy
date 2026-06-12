@@ -329,42 +329,6 @@ function splitTopLevelProperty(source: string, delimiter: ":" | "=" = ":"): [str
   return null
 }
 
-function findMatchingDelimiter(source: string, startIndex: number, openChar: string, closeChar: string): number {
-  let quote: string | null = null
-  let depth = 0
-
-  for (let index = startIndex; index < source.length; index += 1) {
-    const char = source[index]
-    const prev = index > 0 ? source[index - 1] : ""
-
-    if (quote) {
-      if (char === quote && prev !== "\\") {
-        quote = null
-      }
-      continue
-    }
-
-    if (char === `"` || char === `'`) {
-      quote = char
-      continue
-    }
-
-    if (char === openChar) {
-      depth += 1
-      continue
-    }
-
-    if (char === closeChar) {
-      depth -= 1
-      if (depth === 0) {
-        return index
-      }
-    }
-  }
-
-  return -1
-}
-
 function parseJsStringLiteral(expression: string, context: string): string {
   const trimmed = expression.trim()
   if (trimmed.length < 2) {
@@ -486,31 +450,36 @@ function parseConfigObjectLiteral(source: string): Record<string, string> {
 
 function parseClientAssignerInvocation(content: string): { configSource: string, functionSource: string } {
   const trimmed = content.trim()
-  const match = /^assigner\s*\(/.exec(trimmed)
-  if (!match) {
+
+  let ast: any
+  try {
+    ast = acorn.parse(trimmed, {
+      ecmaVersion: 2022,
+      sourceType: "script",
+    })
+  } catch {
     throw new Error("client assigner block must contain exactly one assigner(...) call")
   }
 
-  const openParenIndex = trimmed.indexOf("(", match.index)
-  const closeParenIndex = findMatchingDelimiter(trimmed, openParenIndex, "(", ")")
-  if (closeParenIndex === -1) {
-    throw new Error("client assigner call is missing a closing \")\"")
-  }
-
-  const trailing = trimmed.slice(closeParenIndex + 1).trim()
-  if (trailing && trailing !== ";") {
+  const statement = ast.body?.[0]
+  const expression = statement?.type === "ExpressionStatement" ? statement.expression : null
+  if (
+    ast.body?.length !== 1
+    || expression?.type !== "CallExpression"
+    || expression.callee?.type !== "Identifier"
+    || expression.callee.name !== "assigner"
+  ) {
     throw new Error("client assigner block must contain exactly one assigner(...) call")
   }
 
-  const argsSource = trimmed.slice(openParenIndex + 1, closeParenIndex).trim()
-  const args = splitTopLevelSegments(argsSource, ",")
+  const args = expression.arguments ?? []
   if (args.length !== 2) {
     throw new Error("client assigner call must receive exactly two arguments: config and function")
   }
 
   return {
-    configSource: args[0],
-    functionSource: args[1],
+    configSource: trimmed.slice(args[0].start, args[0].end),
+    functionSource: trimmed.slice(args[1].start, args[1].end),
   }
 }
 
@@ -521,39 +490,30 @@ interface ParsedClientAssignerFunction {
 
 function parseClientAssignerFunction(source: string): ParsedClientAssignerFunction {
   const trimmed = source.trim()
-  const match = /^function\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/.exec(trimmed)
-  if (!match) {
+
+  let ast: any
+  try {
+    ast = acorn.parse(trimmed, {
+      ecmaVersion: 2022,
+      sourceType: "script",
+    })
+  } catch {
     throw new Error("client assigner second argument must be a named function")
   }
 
-  const id = match[1]
-  const openParenIndex = trimmed.indexOf("(", match.index)
-  const closeParenIndex = findMatchingDelimiter(trimmed, openParenIndex, "(", ")")
-  if (closeParenIndex === -1) {
-    throw new Error(`client assigner "${id}" function parameters are missing a closing ")"`)
+  const declaration = ast.body?.[0]
+  if (
+    ast.body?.length !== 1
+    || declaration?.type !== "FunctionDeclaration"
+    || declaration.id?.type !== "Identifier"
+  ) {
+    throw new Error("client assigner second argument must be a named function")
   }
-  const paramsSource = trimmed.slice(openParenIndex + 1, closeParenIndex).trim()
-  const params = paramsSource ? splitTopLevelSegments(paramsSource, ",") : []
+
+  const id = declaration.id.name
+  const params = declaration.params ?? []
   if (params.length !== 1) {
     throw new Error(`client assigner "${id}" function must accept exactly one dependent_fields parameter`)
-  }
-
-  let bodyStart = closeParenIndex + 1
-  while (bodyStart < trimmed.length && /\s/.test(trimmed[bodyStart])) {
-    bodyStart += 1
-  }
-  if (bodyStart >= trimmed.length || trimmed[bodyStart] !== "{") {
-    throw new Error(`client assigner "${id}" function must be followed by a body`)
-  }
-
-  const bodyEnd = findMatchingDelimiter(trimmed, bodyStart, "{", "}")
-  if (bodyEnd === -1) {
-    throw new Error(`client assigner "${id}" function body is missing a closing "}"`)
-  }
-
-  const trailing = trimmed.slice(bodyEnd + 1).trim()
-  if (trailing) {
-    throw new Error(`client assigner "${id}" function must not contain trailing statements`)
   }
 
   return {

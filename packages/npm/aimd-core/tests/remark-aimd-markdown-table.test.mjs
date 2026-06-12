@@ -205,6 +205,46 @@ assigner(
   assert.equal(countNodesByType(tree, 'code'), 0)
 })
 
+test('client assigner parser accepts regex literals with closing parens in character classes', () => {
+  const { fields } = parseAimd(`
+Input: {{var|aimd_content: AiralogyMarkdown}}
+Output: {{var|image_ids: list[str]}}
+
+\`\`\`assigner runtime=client
+assigner(
+  {
+    mode: "manual",
+    dependent_fields: ["aimd_content"],
+    assigned_fields: ["image_ids"],
+  },
+  function extract_airalogy_image_ids(fields) {
+    const text = String(fields.aimd_content || "");
+    const image_ids = text.match(/airalogy\\.id\\.file\\.[^\\s)]+/g) || [];
+    return {
+      image_ids: image_ids,
+    };
+  }
+);
+\`\`\`
+`)
+
+  assert.equal(fields.client_assigner.length, 1)
+  assert.deepEqual(fields.client_assigner[0], {
+    id: 'extract_airalogy_image_ids',
+    runtime: 'client',
+    mode: 'manual',
+    dependent_fields: ['aimd_content'],
+    assigned_fields: ['image_ids'],
+    function_source: `function extract_airalogy_image_ids(fields) {
+    const text = String(fields.aimd_content || "");
+    const image_ids = text.match(/airalogy\\.id\\.file\\.[^\\s)]+/g) || [];
+    return {
+      image_ids: image_ids,
+    };
+  }`,
+  })
+})
+
 test('assigner graph validation rejects duplicate assigned fields across runtimes', () => {
   assert.throws(() => parseAimd(`
 Input A: {{var|var_1: float}}
