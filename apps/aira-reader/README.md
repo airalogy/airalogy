@@ -14,6 +14,8 @@ pnpm --filter @airalogy/aira-reader test
 pnpm build:aira-reader
 ```
 
+The Reader test suite opens the repository `.aira` examples, validates each archive, builds document views, and smoke-renders renderable AIMD content.
+
 ## Desktop app
 
 The Tauri desktop wrapper reuses the same Vue/Vite app, `@airalogy/aira-core` parser, and `@airalogy/aimd-renderer` document renderer while adding startup-file handling and `.aira` file association metadata.
