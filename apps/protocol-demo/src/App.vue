@@ -917,20 +917,25 @@ onMounted(() => {
     <main v-else class="workspace">
       <aside class="protocol-list">
         <div class="section-label">{{ messages.common.protocols }}</div>
-        <button
+        <div
           v-for="protocol in protocols"
           :key="protocol.id"
           :class="['protocol-option', { active: protocol.id === selectedProtocolId }]"
-          type="button"
-          @click="selectedProtocolId = protocol.id"
         >
+          <button
+            class="protocol-option__hitbox"
+            type="button"
+            :aria-current="protocol.id === selectedProtocolId ? 'true' : undefined"
+            :aria-label="`${protocol.title[selectedLocale] ?? protocol.title['en-US'] ?? protocol.id} ${protocol.id}`"
+            @click="selectedProtocolId = protocol.id"
+          ></button>
           <span class="protocol-option__name">
             {{ protocol.title[selectedLocale] ?? protocol.title['en-US'] ?? protocol.id }}
           </span>
           <span class="protocol-option__meta">
             {{ protocol.id }} / {{ sourceKindLabel(protocol.source_kind) }} / {{ runtimeKindLabel(protocol.engine_required) }}
           </span>
-        </button>
+        </div>
       </aside>
 
       <section class="protocol-workbench">
@@ -1029,7 +1034,7 @@ onMounted(() => {
             :show-record-data="true"
             :show-field-structure="false"
             :show-visual-edit-toggle="false"
-            :fit-viewport="false"
+            :fit-viewport="true"
             :editor-min-height="520"
             :recorder-min-height="520"
             editor-title="protocol.aimd"
@@ -1153,7 +1158,12 @@ onMounted(() => {
 }
 
 .app-shell {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
+  flex-direction: column;
+  overflow: hidden;
   background: #f4f6f8;
   color: #1f2933;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -1161,6 +1171,7 @@ onMounted(() => {
 
 .topbar {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
@@ -1256,7 +1267,8 @@ onMounted(() => {
 
 .loading-view {
   display: grid;
-  min-height: calc(100vh - 72px);
+  flex: 1 1 auto;
+  min-height: 0;
   place-items: center;
   color: #486581;
   font-size: 14px;
@@ -1268,15 +1280,19 @@ onMounted(() => {
 
 .workspace {
   display: grid;
+  flex: 1 1 auto;
   grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
   gap: 0;
-  min-height: calc(100vh - 72px);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .protocol-list {
   display: flex;
+  min-height: 0;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  overflow: auto;
   padding: 18px;
   border-right: 1px solid #d9e2ec;
   background: #edf2f7;
@@ -1296,21 +1312,22 @@ onMounted(() => {
 }
 
 .protocol-option {
-  display: flex;
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  width: 100%;
   min-height: 70px;
-  flex-direction: column;
-  justify-content: center;
-  gap: 7px;
-  padding: 12px;
+  padding: 12px 13px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   color: #243b53;
-  cursor: pointer;
   text-align: left;
+  white-space: normal;
 }
 
-.protocol-option:hover {
+.protocol-option:hover,
+.protocol-option:focus-within {
   border-color: #9fb3c8;
   background: #ffffff;
 }
@@ -1320,26 +1337,58 @@ onMounted(() => {
   background: #ffffff;
 }
 
+.protocol-option__hitbox {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  appearance: none;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.protocol-option__hitbox:focus-visible {
+  outline: 2px solid rgba(47, 133, 90, 0.32);
+  outline-offset: 2px;
+}
+
 .protocol-option__name {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 14px;
   font-weight: 750;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .protocol-option__meta {
+  display: block;
+  margin-top: 8px;
+  min-width: 0;
   color: #627d98;
   font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .protocol-workbench {
   display: flex;
   min-width: 0;
+  min-height: 0;
   flex-direction: column;
   gap: 16px;
+  overflow: hidden;
   padding: 20px clamp(16px, 2.6vw, 32px) 28px;
 }
 
 .protocol-header {
   display: flex;
+  flex: 0 0 auto;
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
@@ -1397,6 +1446,7 @@ textarea {
 
 .metadata-row {
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
@@ -1431,6 +1481,7 @@ textarea {
 }
 
 .tabbar {
+  flex: 0 0 auto;
   border-bottom: 1px solid #d9e2ec;
 }
 
@@ -1470,10 +1521,13 @@ button:disabled {
 .source-panel,
 .graph-panel,
 .engine-panel {
+  flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
 }
 
 .record-toolbar {
+  flex: 0 0 auto;
   align-items: center;
   justify-content: flex-end;
   margin-bottom: 12px;
@@ -1487,6 +1541,7 @@ button:disabled {
 }
 
 .source-toolbar {
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
 }
@@ -1501,6 +1556,7 @@ button:disabled {
   color: #276749;
 }
 
+.record-panel,
 .source-panel,
 .graph-panel,
 .engine-panel {
@@ -1509,8 +1565,19 @@ button:disabled {
   gap: 12px;
 }
 
-.graph-panel {
-  min-height: 640px;
+.record-panel,
+.graph-panel,
+.engine-panel {
+  overflow: auto;
+}
+
+.source-panel {
+  overflow: hidden;
+}
+
+.source-panel :deep(.protocol-source-browser) {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .json-view {
@@ -1574,15 +1641,28 @@ button:disabled {
 }
 
 @media (max-width: 1100px) {
+  .app-shell {
+    height: auto;
+    overflow: visible;
+  }
+
   .workspace {
     grid-template-columns: 1fr;
+    overflow: visible;
   }
 
   .protocol-list {
     display: grid;
+    align-items: start;
+    overflow: visible;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     border-right: none;
     border-bottom: 1px solid #d9e2ec;
+  }
+
+  .protocol-workbench,
+  .source-panel {
+    overflow: visible;
   }
 
   .section-label {

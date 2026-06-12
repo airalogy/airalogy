@@ -485,6 +485,8 @@ watch(() => props.readonly, (readonly) => {
 <style scoped>
 .protocol-source-browser {
   display: grid;
+  height: 100%;
+  min-height: 0;
   grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
   gap: 12px;
   align-items: stretch;
@@ -493,7 +495,7 @@ watch(() => props.readonly, (readonly) => {
 .protocol-source-browser__tree {
   overflow: auto;
   min-width: 0;
-  max-height: 65vh;
+  min-height: 0;
   padding: 8px;
   border: 1px solid #d9e2ec;
   border-radius: 8px;
@@ -592,12 +594,14 @@ watch(() => props.readonly, (readonly) => {
 .protocol-source-browser__viewer {
   display: flex;
   min-width: 0;
+  min-height: 0;
   flex-direction: column;
   gap: 8px;
 }
 
 .protocol-source-browser__path {
   display: flex;
+  flex: 0 0 auto;
   gap: 12px;
   justify-content: space-between;
   color: #627d98;
@@ -622,17 +626,17 @@ watch(() => props.readonly, (readonly) => {
 
 .protocol-source-browser__editor-shell {
   position: relative;
+  flex: 1 1 auto;
   overflow: hidden;
-  min-height: 460px;
-  max-height: 65vh;
+  min-height: 0;
   border: 1px solid #d9e2ec;
   border-radius: 8px;
   background: #ffffff;
 }
 
 .protocol-source-browser__editor {
-  min-height: 460px;
-  height: 65vh;
+  height: 100%;
+  min-height: 0;
 }
 
 .protocol-source-browser__loading {
@@ -650,8 +654,8 @@ watch(() => props.readonly, (readonly) => {
 .protocol-source-browser__fallback {
   overflow: auto;
   width: 100%;
-  min-height: 460px;
-  max-height: 65vh;
+  height: 100%;
+  min-height: 0;
   margin: 0;
   border: 0;
   padding: 14px;
@@ -667,11 +671,18 @@ watch(() => props.readonly, (readonly) => {
 
 @media (max-width: 1100px) {
   .protocol-source-browser {
+    height: auto;
     grid-template-columns: 1fr;
   }
 
   .protocol-source-browser__tree {
     max-height: 260px;
+  }
+
+  .protocol-source-browser__editor-shell,
+  .protocol-source-browser__editor,
+  .protocol-source-browser__fallback {
+    min-height: 460px;
   }
 }
 </style>
