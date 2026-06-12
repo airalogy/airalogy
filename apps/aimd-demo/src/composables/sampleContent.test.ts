@@ -51,4 +51,16 @@ describe('sampleContent', () => {
     })
     expect(getDemoExampleContent(protocolExample!, 'zh-CN')).toContain('# 光纤端面微纳结构器件工艺路线设计与记录')
   })
+
+  it('keeps every registered demo example loadable and parseable', () => {
+    for (const example of DEMO_EXAMPLES) {
+      expect(example.locales.length).toBeGreaterThan(0)
+
+      for (const locale of example.locales) {
+        const content = getDemoExampleContent(example, locale)
+        expect(content.trim()).toBeTruthy()
+        expect(() => parseAndExtract(content)).not.toThrow()
+      }
+    }
+  })
 })

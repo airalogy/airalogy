@@ -131,6 +131,7 @@ const entries = computed(() => [...(archive.value?.entries ?? [])].sort((a, b) =
 const selectedDocument = computed(() => documentViews.value.find(view => view.id === selectedDocumentId.value) ?? null)
 const selectedRecordPayload = computed(() => selectedDocument.value?.recordPayload ?? null)
 const recordSections = computed(() => buildRecordSections(selectedRecordPayload.value?.data))
+const recordFieldCount = computed(() => recordSections.value.reduce((total, section) => total + section.entries.length, 0))
 const selectedRecordTitle = computed(() => {
   const view = selectedDocument.value
   if (!view?.record) {
@@ -968,11 +969,7 @@ onBeforeUnmount(() => {
       </aside>
 
       <section class="content">
-        <div
-          v-if="mode === 'document'"
-          class="document-layout"
-          :class="{ 'document-layout--single': !selectedRecordPayload }"
-        >
+        <div v-if="mode === 'document'" class="document-layout">
           <article class="document-panel">
             <header class="document-header">
               <div>
@@ -984,6 +981,14 @@ onBeforeUnmount(() => {
                   <input v-model="showFieldIds" type="checkbox">
                   <span>Show field IDs</span>
                 </label>
+                <button
+                  v-if="selectedRecordPayload"
+                  type="button"
+                  class="secondary-action"
+                  @click="selectMode('data')"
+                >
+                  Data
+                </button>
                 <span v-if="selectedDocument?.protocolPath" class="document-source">{{ selectedDocument.protocolPath }}</span>
               </div>
             </header>
@@ -997,12 +1002,18 @@ onBeforeUnmount(() => {
             <p v-else class="empty-text">This archive does not contain a renderable AIMD protocol.</p>
           </article>
 
-          <aside v-if="selectedRecordPayload" class="record-data-panel">
-            <header>
-              <h2>Record Data</h2>
-              <p>{{ selectedRecordTitle }}</p>
-            </header>
-            <div v-if="recordSections.length" class="record-section-list">
+          <details v-if="selectedRecordPayload" class="record-summary-panel">
+            <summary>
+              <span>
+                <strong>Data summary</strong>
+                <small>
+                  {{ recordFieldCount }} field{{ recordFieldCount === 1 ? '' : 's' }}
+                  · {{ recordSections.length }} section{{ recordSections.length === 1 ? '' : 's' }}
+                  · {{ selectedRecordTitle }}
+                </small>
+              </span>
+            </summary>
+            <div v-if="recordSections.length" class="record-section-list record-section-list--summary">
               <section v-for="section in recordSections" :key="section.key">
                 <h3>{{ section.label }}</h3>
                 <dl>
@@ -1014,7 +1025,7 @@ onBeforeUnmount(() => {
               </section>
             </div>
             <p v-else class="empty-text">This record does not contain filled field data.</p>
-          </aside>
+          </details>
         </div>
 
         <div v-else-if="mode === 'data'" class="data-layout">

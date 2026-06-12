@@ -4,7 +4,7 @@ Browser and desktop app for reading `.aira` archives locally.
 
 The app reads archive contents in the browser, renders AIMD protocol content with `@airalogy/aimd-renderer`, injects Record data into matching protocol fields when records are present, and does not upload file content to a server.
 
-Archive details such as the manifest, protocols, records, file references, offline blobs, member files, and validation results remain available in the Diagnostics view for validation and debugging.
+The default Document view is content-first: record-backed archives open as a rendered AIMD document with captured values and embedded files resolved into the protocol. A compact Data summary remains available below the document, while the full Data view and archive details such as the manifest, protocols, records, file references, offline blobs, member files, and validation results remain available for validation and debugging.
 
 ## Browser build
 
