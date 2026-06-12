@@ -12,6 +12,7 @@
     "build:desktop:dmg": "tauri build --bundles dmg",
     "desktop:dev": "tauri dev",
     "preview": "vite preview",
+    "test": "vitest run -c vite.config.ts",
     "tauri": "tauri"
   },
   "dependencies": {

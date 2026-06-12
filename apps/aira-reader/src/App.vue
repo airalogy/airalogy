@@ -12,63 +12,33 @@ import {
 } from 'vue'
 import {
   type AiraArchive,
-  type AiraFileManifest,
-  type AiralogyRecordPayload,
   AIRA_MANIFEST_PATH,
-  type AiraManifest,
-  type AiraProtocolManifest,
-  type AiraRecordManifest,
   openAiraArchive,
   prettyPrintJson,
 } from '@airalogy/aira-core'
 import '@airalogy/aimd-renderer/styles'
-import type { ReadonlyRecordAsset, ReadonlyRecordAssetResolveContext } from '@airalogy/aimd-renderer'
+import type { ReadonlyRecordAsset } from '@airalogy/aimd-renderer'
 import { type DesktopBridge, createDesktopBridge } from './desktop'
+import {
+  createRecordAssetResolver,
+  normalizePayloadFileRef,
+  registerRecordAsset,
+  type RecordFileReference,
+} from './reader-assets'
+import {
+  buildDocumentViews,
+  buildRecordSections,
+  collectProtocolEntries,
+  isPlainObject,
+  normalizeRecordString,
+  recordLabel,
+  type DocumentView,
+} from './reader-model'
 import airalogyLogoUrl from '../src-tauri/icons/icon.svg'
 
 type ViewMode = 'document' | 'data' | 'diagnostics'
 
-type ProtocolEntry = {
-  protocol: AiraProtocolManifest
-  root: string
-  path: string
-  label: string
-}
-
-type DocumentView = {
-  id: string
-  kind: 'protocol' | 'record'
-  label: string
-  subtitle: string
-  protocol?: AiraProtocolManifest
-  protocolPath: string
-  protocolContent: string
-  record?: AiraRecordManifest
-  recordPayload?: AiralogyRecordPayload | null
-  loadError?: string
-}
-
-type RecordSection = {
-  key: string
-  label: string
-  entries: Array<{ key: string, value: unknown }>
-}
-
-type RecordFileReference = AiraFileManifest & {
-  record_id?: string | null
-  path?: string | null
-}
-
-type RecordAssetResolver = (context: ReadonlyRecordAssetResolveContext) => ReadonlyRecordAsset | null
-
 const MAX_RECENT_DESKTOP_PATHS = 8
-const RECORD_SECTION_LABELS: Record<string, string> = {
-  var: 'Variables',
-  var_table: 'Tables',
-  step: 'Steps',
-  check: 'Checks',
-  quiz: 'Quiz',
-}
 
 const RenderedAimdDocument = defineComponent({
   name: 'RenderedAimdDocument',
@@ -203,10 +173,6 @@ function resetDocumentState(): void {
   renderError.value = ''
 }
 
-function normalizeRecordString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined
-}
-
 function formatBytes(value: number): string {
   if (value < 1024) {
     return `${value} B`
@@ -233,25 +199,6 @@ function formatRecordValue(value: unknown): string {
   return prettyPrintJson(value)
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
-
-function buildRecordSections(data: AiralogyRecordPayload['data'] | undefined): RecordSection[] {
-  if (!isPlainObject(data)) {
-    return []
-  }
-  return Object.entries(RECORD_SECTION_LABELS)
-    .map(([key, label]) => {
-      const section = data[key]
-      const entries = isPlainObject(section)
-        ? Object.entries(section).map(([entryKey, value]) => ({ key: entryKey, value }))
-        : []
-      return { key, label, entries }
-    })
-    .filter(section => section.entries.length > 0)
-}
-
 function blobPathForId(blobId: string | null | undefined): string | null {
   return blobId ? blobPathById.value.get(blobId) ?? null : null
 }
@@ -268,33 +215,6 @@ function arrayBufferFromBytes(bytes: Uint8Array): ArrayBuffer {
   const buffer = new ArrayBuffer(bytes.byteLength)
   new Uint8Array(buffer).set(bytes)
   return buffer
-}
-
-function getFileRefString(fileRef: Record<string, unknown>, key: string): string | undefined {
-  return normalizeRecordString(fileRef[key])
-}
-
-function getFileRefNumber(fileRef: Record<string, unknown>, key: string): number | undefined {
-  const value = fileRef[key]
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
-}
-
-function normalizePayloadFileRef(value: unknown): RecordFileReference | null {
-  if (!isPlainObject(value)) {
-    return null
-  }
-  return {
-    file_id: getFileRefString(value, 'file_id') ?? getFileRefString(value, 'fileId') ?? null,
-    source_uri: getFileRefString(value, 'source_uri') ?? getFileRefString(value, 'sourceUri') ?? null,
-    blob_id: getFileRefString(value, 'blob_id') ?? getFileRefString(value, 'blobId') ?? null,
-    filename: getFileRefString(value, 'filename') ?? getFileRefString(value, 'file_name') ?? getFileRefString(value, 'fileName') ?? null,
-    mime_type: getFileRefString(value, 'mime_type') ?? getFileRefString(value, 'mimeType') ?? null,
-    size: getFileRefNumber(value, 'size') ?? null,
-    record_path: getFileRefString(value, 'record_path') ?? getFileRefString(value, 'recordPath') ?? null,
-    field_path: getFileRefString(value, 'field_path') ?? getFileRefString(value, 'fieldPath') ?? null,
-    record_id: getFileRefString(value, 'record_id') ?? getFileRefString(value, 'recordId') ?? null,
-    path: getFileRefString(value, 'path') ?? null,
-  }
 }
 
 function selectedRecordIds(view: DocumentView): string[] {
@@ -327,39 +247,6 @@ function collectDocumentFileRefs(view: DocumentView): RecordFileReference[] {
         .filter((fileRef): fileRef is RecordFileReference => Boolean(fileRef && fileRefMatchesDocumentView(fileRef, view)))
     : []
   return [...manifestFileRefs, ...payloadFileRefs]
-}
-
-function fieldIdFromPath(fieldPath: string | null | undefined): string | undefined {
-  const normalized = normalizeRecordString(fieldPath)
-  if (!normalized) {
-    return undefined
-  }
-  const parts = normalized.split('.').filter(Boolean)
-  return parts.length >= 3 && parts[0] === 'data' ? parts.at(-1) : undefined
-}
-
-function assetKeysForFileRef(fileRef: RecordFileReference): string[] {
-  return [
-    fileRef.file_id,
-    fileRef.blob_id,
-    fileRef.source_uri,
-    fileRef.field_path,
-    fieldIdFromPath(fileRef.field_path),
-  ]
-    .map(value => normalizeRecordString(value))
-    .filter((value): value is string => Boolean(value))
-}
-
-function registerRecordAsset(
-  assets: Map<string, ReadonlyRecordAsset>,
-  fileRef: RecordFileReference,
-  asset: ReadonlyRecordAsset,
-): void {
-  for (const key of assetKeysForFileRef(fileRef)) {
-    if (!assets.has(key)) {
-      assets.set(key, asset)
-    }
-  }
 }
 
 async function createRecordAssetForFileRef(
@@ -423,54 +310,6 @@ async function prepareRecordAssetMap(
   return assets
 }
 
-function readRecordAssetValueKey(value: unknown): string | undefined {
-  if (typeof value === 'string') {
-    return normalizeRecordString(value)
-  }
-  if (!isPlainObject(value)) {
-    return undefined
-  }
-  return [
-    value.file_id,
-    value.fileId,
-    value.blob_id,
-    value.blobId,
-    value.source_uri,
-    value.sourceUri,
-    value.id,
-    value.src,
-    value.url,
-    value.href,
-  ]
-    .map(item => normalizeRecordString(item))
-    .find(Boolean)
-}
-
-function createRecordAssetResolver(
-  assets: Map<string, ReadonlyRecordAsset>,
-): RecordAssetResolver {
-  return (context) => {
-    const candidates = [
-      context.fileId,
-      readRecordAssetValueKey(context.normalizedValue),
-      readRecordAssetValueKey(context.value),
-      context.fieldPath,
-      `data.${context.scope}.${context.fieldId}`,
-      context.fieldId,
-    ]
-      .map(value => normalizeRecordString(value))
-      .filter((value): value is string => Boolean(value))
-
-    for (const key of candidates) {
-      const asset = assets.get(key)
-      if (asset) {
-        return asset
-      }
-    }
-    return null
-  }
-}
-
 function desktopFileName(path: string): string {
   const normalized = path.replaceAll('\\', '/')
   return normalized.split('/').filter(Boolean).at(-1) || path
@@ -491,63 +330,6 @@ function rememberDesktopPaths(paths: string[]): void {
     .slice(0, MAX_RECENT_DESKTOP_PATHS)
 }
 
-function normalizeArchiveRoot(root: string | null | undefined): string {
-  return root?.replace(/^\/+|\/+$/g, '') ?? ''
-}
-
-function joinArchivePath(root: string, path: string): string {
-  const normalizedPath = path.replace(/^\/+/g, '')
-  return root ? `${root}/${normalizedPath}` : normalizedPath
-}
-
-function protocolLabel(protocol: AiraProtocolManifest | undefined, fallback = 'Protocol'): string {
-  return protocol?.protocol_name || protocol?.protocol_id || fallback
-}
-
-function recordLabel(record: AiraRecordManifest, payload: AiralogyRecordPayload | null | undefined): string {
-  return payload?.record_id || record.record_id || record.path
-}
-
-function collectProtocolEntries(source: AiraManifest): ProtocolEntry[] {
-  if (source.kind === 'protocol') {
-    if (!source.protocol) {
-      return []
-    }
-    const entrypoint = source.protocol.entrypoint || 'protocol.aimd'
-    return [{
-      protocol: source.protocol,
-      root: '',
-      path: entrypoint,
-      label: protocolLabel(source.protocol),
-    }]
-  }
-  const protocols = Array.isArray(source.protocols) ? source.protocols : []
-  return protocols.map((protocol, index) => {
-    const root = normalizeArchiveRoot(protocol.archive_root)
-    const entrypoint = protocol.entrypoint || 'protocol.aimd'
-    return {
-      protocol,
-      root,
-      path: joinArchivePath(root, entrypoint),
-      label: protocolLabel(protocol, `Protocol ${index + 1}`),
-    }
-  })
-}
-
-function findProtocolForRecord(record: AiraRecordManifest, entries: ProtocolEntry[]): ProtocolEntry | null {
-  const embeddedRoot = normalizeArchiveRoot(record.embedded_protocol_root)
-  if (embeddedRoot) {
-    const match = entries.find(entry => entry.root === embeddedRoot)
-    if (match) {
-      return match
-    }
-  }
-  return entries.find(entry =>
-    entry.protocol.protocol_id === record.protocol_id
-    && entry.protocol.protocol_version === record.protocol_version,
-  ) ?? entries.find(entry => entry.protocol.protocol_id === record.protocol_id) ?? null
-}
-
 function isTextLikePayload(path: string, fileName: string, mimeType: string): boolean {
   const mime = mimeType.toLowerCase()
   if (
@@ -565,80 +347,11 @@ function isTextLikePayload(path: string, fileName: string, mimeType: string): bo
     .some(suffix => name.endsWith(suffix))
 }
 
-async function loadProtocolContent(opened: AiraArchive, entry: ProtocolEntry | null): Promise<{ content: string, error?: string }> {
-  if (!entry) {
-    return { content: '', error: 'This record does not reference a protocol included in the archive.' }
-  }
-  try {
-    return { content: await opened.readText(entry.path) }
-  }
-  catch (error) {
-    return {
-      content: '',
-      error: error instanceof Error ? error.message : String(error),
-    }
-  }
-}
-
 async function loadDocumentViews(opened: AiraArchive): Promise<void> {
-  const protocolEntries = collectProtocolEntries(opened.manifest)
-  const views: DocumentView[] = []
-
-  if (opened.manifest.kind === 'records') {
-    const records = Array.isArray(opened.manifest.records) ? opened.manifest.records : []
-    for (const record of records) {
-      const protocolEntry = findProtocolForRecord(record, protocolEntries)
-      const payloadResult = await loadRecordPayload(opened, record)
-      const protocolResult = await loadProtocolContent(opened, protocolEntry)
-      const label = recordLabel(record, payloadResult.payload)
-      views.push({
-        id: `record:${record.path}`,
-        kind: 'record',
-        label,
-        subtitle: `${protocolEntry?.label || record.protocol_id || 'Protocol'} · Record`,
-        protocol: protocolEntry?.protocol,
-        protocolPath: protocolEntry?.path ?? '',
-        protocolContent: protocolResult.content,
-        record,
-        recordPayload: payloadResult.payload,
-        loadError: payloadResult.error || protocolResult.error,
-      })
-    }
-  }
-  else {
-    for (const [index, protocolEntry] of protocolEntries.entries()) {
-      const protocolResult = await loadProtocolContent(opened, protocolEntry)
-      views.push({
-        id: `protocol:${protocolEntry.path || index}`,
-        kind: 'protocol',
-        label: protocolEntry.label,
-        subtitle: 'Protocol',
-        protocol: protocolEntry.protocol,
-        protocolPath: protocolEntry.path,
-        protocolContent: protocolResult.content,
-        loadError: protocolResult.error,
-      })
-    }
-  }
-
+  const views = await buildDocumentViews(opened)
   documentViews.value = views
   selectedDocumentId.value = views[0]?.id ?? ''
   await renderSelectedDocument()
-}
-
-async function loadRecordPayload(
-  opened: AiraArchive,
-  record: AiraRecordManifest,
-): Promise<{ payload: AiralogyRecordPayload | null, error?: string }> {
-  try {
-    return { payload: await opened.readJson<AiralogyRecordPayload>(record.path) }
-  }
-  catch (error) {
-    return {
-      payload: null,
-      error: error instanceof Error ? error.message : String(error),
-    }
-  }
 }
 
 async function renderSelectedDocument(): Promise<void> {

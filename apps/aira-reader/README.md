@@ -10,6 +10,7 @@ The default Document view is content-first: record-backed archives open as a ren
 
 ```bash
 pnpm dev:aira-reader
+pnpm --filter @airalogy/aira-reader test
 pnpm build:aira-reader
 ```
 
