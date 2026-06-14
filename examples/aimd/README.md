@@ -10,7 +10,7 @@ Preview and fill examples online on the [Demo examples page](https://airalogy.gi
 
 | ID | Scenario | Entry | Summary |
 | --- | --- | --- | --- |
-| `aimd-syntax-tour` | AIMD syntax tour | [protocol.aimd](./aimd-syntax-tour/protocol.aimd) | Interactive syntax tour covering variables, tables, steps, checks, quizzes, references, Markdown review marks, and browser-side client assigners. |
+| `aimd-syntax-tour` | AIMD syntax tour | [protocol.aimd](./aimd-syntax-tour/protocol.aimd) | Interactive syntax tour covering variables, tables, figures, citations, steps, checks, quizzes, references, Markdown review marks, and browser-side client assigners. |
 | `clinical-information-record` | Clinical information record | [protocol.en-US.aimd](./clinical-information-record/protocol.en-US.aimd) / [protocol.zh-CN.aimd](./clinical-information-record/protocol.zh-CN.aimd) | Bilingual case for structured clinical encounter, assessment, plan, and review records. |
 
 The machine-readable registry is [index.json](./index.json).

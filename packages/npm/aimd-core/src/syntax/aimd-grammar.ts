@@ -18,6 +18,10 @@ export const AIMD_SCOPES = {
   KEYWORD_CHECK: "keyword.control.check.aimd",
   KEYWORD_REF_STEP: "keyword.control.ref-step.aimd",
   KEYWORD_REF_VAR: "keyword.control.ref-var.aimd",
+  KEYWORD_REF_FIG: "keyword.control.ref-fig.aimd",
+  KEYWORD_CITE: "keyword.control.cite.aimd",
+  KEYWORD_FIG: "keyword.control.fig.aimd",
+  KEYWORD_REFS: "keyword.control.refs.aimd",
 
   // Variables and types
   VARIABLE_NAME: "variable.other.aimd",
@@ -32,6 +36,14 @@ export const AIMD_SCOPES = {
   MARKUP_STEP: "markup.aimd.step",
   MARKUP_CHECK: "markup.aimd.check",
   MARKUP_REF: "markup.aimd.reference",
+  MARKUP_CITE: "markup.aimd.citation",
+  MARKUP_FIG_BLOCK: "markup.aimd.figure-block",
+  MARKUP_REFS_BLOCK: "markup.aimd.refs-block",
+  MARKUP_CRITIC_ADDITION: "markup.inserted.critic.aimd",
+  MARKUP_CRITIC_DELETION: "markup.deleted.critic.aimd",
+  MARKUP_CRITIC_SUBSTITUTION: "markup.changed.critic.aimd",
+  MARKUP_CRITIC_COMMENT: "comment.block.critic.aimd",
+  MARKUP_CRITIC_HIGHLIGHT: "markup.highlight.critic.aimd",
 } as const
 
 /**
@@ -164,6 +176,59 @@ const aimdRepository = {
           5: { name: AIMD_SCOPES.BRACKET_CLOSE },
         },
       },
+      {
+        match: "(\\{\\{)\\s*(ref_fig)\\s*(\\|)\\s*([^}]+?)\\s*(\\}\\})",
+        name: AIMD_SCOPES.MARKUP_REF,
+        captures: {
+          1: { name: AIMD_SCOPES.BRACKET_OPEN },
+          2: { name: AIMD_SCOPES.KEYWORD_REF_FIG },
+          3: { name: AIMD_SCOPES.DELIMITER_PIPE },
+          4: { name: AIMD_SCOPES.VARIABLE_NAME },
+          5: { name: AIMD_SCOPES.BRACKET_CLOSE },
+        },
+      },
+      {
+        match: "(\\{\\{)\\s*(cite)\\s*(\\|)\\s*([^}]+?)\\s*(\\}\\})",
+        name: AIMD_SCOPES.MARKUP_CITE,
+        captures: {
+          1: { name: AIMD_SCOPES.BRACKET_OPEN },
+          2: { name: AIMD_SCOPES.KEYWORD_CITE },
+          3: { name: AIMD_SCOPES.DELIMITER_PIPE },
+          4: { name: AIMD_SCOPES.VARIABLE_NAME },
+          5: { name: AIMD_SCOPES.BRACKET_CLOSE },
+        },
+      },
+    ],
+  },
+
+  "aimd-fenced-block": {
+    patterns: [
+      {
+        begin: "^\\s*(```|~~~)\\s*(fig)\\b.*$",
+        end: "^\\s*\\1\\s*$",
+        name: AIMD_SCOPES.MARKUP_FIG_BLOCK,
+        beginCaptures: {
+          2: { name: AIMD_SCOPES.KEYWORD_FIG },
+        },
+      },
+      {
+        begin: "^\\s*(```|~~~)\\s*(refs)\\b.*$",
+        end: "^\\s*\\1\\s*$",
+        name: AIMD_SCOPES.MARKUP_REFS_BLOCK,
+        beginCaptures: {
+          2: { name: AIMD_SCOPES.KEYWORD_REFS },
+        },
+      },
+    ],
+  },
+
+  "aimd-critic-markup": {
+    patterns: [
+      { match: "\\{\\+\\+[\\s\\S]*?\\+\\+\\}", name: AIMD_SCOPES.MARKUP_CRITIC_ADDITION },
+      { match: "\\{--[\\s\\S]*?--\\}", name: AIMD_SCOPES.MARKUP_CRITIC_DELETION },
+      { match: "\\{~~[\\s\\S]*?~>[\\s\\S]*?~~\\}", name: AIMD_SCOPES.MARKUP_CRITIC_SUBSTITUTION },
+      { match: "\\{>>[\\s\\S]*?<<\\}", name: AIMD_SCOPES.MARKUP_CRITIC_COMMENT },
+      { match: "\\{==[\\s\\S]*?==\\}", name: AIMD_SCOPES.MARKUP_CRITIC_HIGHLIGHT },
     ],
   },
 }
@@ -181,6 +246,8 @@ export const aimdLanguage: LanguageRegistration = {
     { include: "#aimd-step" },
     { include: "#aimd-check" },
     { include: "#aimd-ref" },
+    { include: "#aimd-fenced-block" },
+    { include: "#aimd-critic-markup" },
     // Inherit Markdown syntax
     { include: "text.html.markdown" },
   ],
@@ -202,6 +269,8 @@ export const aimdInjection: LanguageRegistration = {
     { include: "#aimd-step" },
     { include: "#aimd-check" },
     { include: "#aimd-ref" },
+    { include: "#aimd-fenced-block" },
+    { include: "#aimd-critic-markup" },
   ],
   repository: aimdRepository,
 }
@@ -245,8 +314,18 @@ export const aimdTheme: ThemeRegistration = {
     },
     // Reference keywords - cyan
     {
-      scope: [AIMD_SCOPES.KEYWORD_REF_STEP, AIMD_SCOPES.KEYWORD_REF_VAR],
+      scope: [AIMD_SCOPES.KEYWORD_REF_STEP, AIMD_SCOPES.KEYWORD_REF_VAR, AIMD_SCOPES.KEYWORD_REF_FIG],
       settings: { foreground: "#0891B2", fontStyle: "italic" },
+    },
+    // Citation keyword - purple
+    {
+      scope: AIMD_SCOPES.KEYWORD_CITE,
+      settings: { foreground: "#6D28D9", fontStyle: "italic" },
+    },
+    // Block keywords - teal
+    {
+      scope: [AIMD_SCOPES.KEYWORD_FIG, AIMD_SCOPES.KEYWORD_REFS],
+      settings: { foreground: "#0F766E", fontStyle: "italic" },
     },
     // Variable names - purple
     {
@@ -272,6 +351,27 @@ export const aimdTheme: ThemeRegistration = {
     {
       scope: AIMD_SCOPES.CONSTANT_BOOLEAN,
       settings: { foreground: "#1D4ED8" },
+    },
+    // CriticMarkup review marks
+    {
+      scope: AIMD_SCOPES.MARKUP_CRITIC_ADDITION,
+      settings: { foreground: "#166534" },
+    },
+    {
+      scope: AIMD_SCOPES.MARKUP_CRITIC_DELETION,
+      settings: { foreground: "#991B1B", fontStyle: "strikethrough" },
+    },
+    {
+      scope: AIMD_SCOPES.MARKUP_CRITIC_SUBSTITUTION,
+      settings: { foreground: "#92400E" },
+    },
+    {
+      scope: AIMD_SCOPES.MARKUP_CRITIC_COMMENT,
+      settings: { foreground: "#6B7280", fontStyle: "italic" },
+    },
+    {
+      scope: AIMD_SCOPES.MARKUP_CRITIC_HIGHLIGHT,
+      settings: { foreground: "#854D0E", background: "#FEF3C7" },
     },
   ],
   colors: {},

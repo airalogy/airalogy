@@ -26,13 +26,14 @@ import {
   rehypeAimd,
   protectAimdInlineTemplates,
   protectCriticMarkupSubstitutions,
+  parseRefsContent,
   restoreAimdInlineTemplates,
   validateClientAssignerFunctionSource,
   validateVarDefaultType,
 } from "@airalogy/aimd-core/parser"
 ```
 
-**`remarkAimd`**：用于 Unified remark 流水线的插件，把 AIMD 行内模板与 fenced `quiz` / `fig` / `assigner` 块解析成带类型的 AST 节点。
+**`remarkAimd`**：用于 Unified remark 流水线的插件，把 AIMD 行内模板与 fenced `quiz` / `fig` / `refs` / `assigner` 块解析成带类型的 AST 节点。
 
 **`rehypeAimd`**：HTML AST 阶段对应的 rehype 插件。
 
@@ -43,6 +44,8 @@ import {
 **`remarkCriticMarkup`**：用于 Unified remark 流水线的插件，把 CriticMarkup 审阅标记解析成自定义 MDAST 节点（`criticAddition`、`criticDeletion`、`criticSubstitution`、`criticComment`、`criticHighlight`），但不会增加 AIMD 字段。
 
 **`protectCriticMarkupSubstitutions(content: string)`**：在 GFM 前保护 `{~~旧表述~>新表述~~}` 替换语法，避免被当作 strikethrough。运行 `remarkCriticMarkup` 前，把返回的 `substitutions` 存到 `file.data[CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY]`。
+
+**`parseRefsContent(content: string): AimdReferenceField[]`**：解析 fenced `refs` 代码块里的 BibTeX 内容，返回结构化 reference 条目，包括标准化后的 `title`、`author`、`year`、`doi`、`url` 等字段。
 
 **`validateClientAssignerFunctionSource(functionSource: string, id: string): void`**：校验前端 `client_assigner` 函数体；若包含不支持或不安全结构会直接抛错。
 
@@ -160,7 +163,23 @@ interface ExtractedAimdFields {
   ref_fig?: string[]
   cite?: string[]
   fig?: AimdFigField[]
+  refs?: AimdReferenceField[]
   step_hierarchy?: AimdStepField[]
+}
+
+interface AimdReferenceField {
+  id: string
+  entry_type: string
+  raw: string
+  fields: Record<string, string>
+  title?: string
+  author?: string
+  year?: string
+  journal?: string
+  booktitle?: string
+  publisher?: string
+  doi?: string
+  url?: string
 }
 
 // 解析后的变量定义
@@ -201,6 +220,7 @@ type AimdNode =
   | AimdRefNode
   | AimdCiteNode
   | AimdFigNode
+  | AimdRefsNode
 ```
 
 ---

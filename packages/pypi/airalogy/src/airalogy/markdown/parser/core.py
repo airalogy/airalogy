@@ -4,7 +4,7 @@ import re
 import textwrap
 from typing import Any, Dict, List, Optional
 
-from ..ast_nodes import AssignerBlockNode, CheckNode, StepNode, VarNode
+from ..ast_nodes import AssignerBlockNode, CheckNode, ReferenceNode, StepNode, VarNode
 from ..errors import (
     AimdParseError,
     DuplicateNameError,
@@ -15,6 +15,7 @@ from ..lexer import Lexer
 from ..tokens import Position, Token, TokenType
 from .common import BLANK_PLACEHOLDER_PATTERN, NAME_PATTERN
 from .quiz import QuizParserMixin
+from .refs import parse_refs_content
 from .step import StepParserMixin
 from .var import VarParserMixin
 
@@ -185,6 +186,27 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
 
         return blocks
 
+    def _parse_refs_blocks(self) -> List[ReferenceNode]:
+        """
+        Extract refs code blocks from AIMD content.
+
+        Returns:
+            List of ReferenceNode objects.
+        """
+        references: List[ReferenceNode] = []
+        for match in self.lexer.CODE_BLOCK_PATTERN.finditer(self.content):
+            lang = (match.group("lang") or "").strip().lower()
+            if lang != "refs":
+                continue
+
+            raw = match.group(0)
+            code = match.group("code").rstrip("\n\r")
+            code = textwrap.dedent(code)
+            position = self._get_position_from_offset(match.start(), len(raw))
+            references.extend(parse_refs_content(code, position))
+
+        return references
+
     def parse(self) -> Dict[str, Any]:
         """
         Parse all tokens into AST nodes.
@@ -202,6 +224,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
                     "ref_step": [RefStepNode, ...],
                     "ref_fig": [RefFigNode, ...],
                     "cite": [CiteNode, ...],
+                    "refs": [ReferenceNode, ...],
                     "assigner": [AssignerBlockNode, ...],
                 }
             }
@@ -220,6 +243,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
         ref_steps = []
         ref_figs = []
         cites = []
+        refs = self._parse_refs_blocks()
         assigners = self._parse_assigner_blocks()
 
         for token in self.tokens:
@@ -258,6 +282,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
             "ref_step": ref_steps,
             "ref_fig": ref_figs,
             "cite": cites,
+            "refs": refs,
             "assigner": assigners,
         }
 
@@ -386,6 +411,7 @@ def parse_aimd(aimd_content: str) -> dict:
             "ref_step": [ref_step.to_dict() for ref_step in result["templates"]["ref_step"]],
             "ref_fig": [ref_fig.to_dict() for ref_fig in result["templates"]["ref_fig"]],
             "cite": [cite.to_dict() for cite in result["templates"]["cite"]],
+            "refs": [ref.to_dict() for ref in result["templates"]["refs"]],
             "assigner": [
                 assigner.to_dict() for assigner in result["templates"]["assigner"]
             ],

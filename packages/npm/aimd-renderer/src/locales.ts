@@ -43,6 +43,9 @@ export interface AimdRendererMessages {
     reference: (value: string | number) => string
     captionTitle: (sequence: number, title?: string) => string
   }
+  references: {
+    title: string
+  }
   assigner: {
     clientSummary: string
     serverSummary: string
@@ -104,6 +107,9 @@ const EN_US_MESSAGES: AimdRendererMessages = {
     reference: value => `figure ${value}`,
     captionTitle: (sequence, title) => title ? `figure ${sequence}: ${title}` : `figure ${sequence}`,
   },
+  references: {
+    title: "References",
+  },
   assigner: {
     clientSummary: "Client assigner",
     serverSummary: "Server assigner",
@@ -140,6 +146,9 @@ const ZH_CN_MESSAGES: AimdRendererMessages = {
   figure: {
     reference: value => `图 ${value}`,
     captionTitle: (sequence, title) => title ? `图 ${sequence}：${title}` : `图 ${sequence}`,
+  },
+  references: {
+    title: "参考文献",
   },
   assigner: {
     clientSummary: "前端 assigner",

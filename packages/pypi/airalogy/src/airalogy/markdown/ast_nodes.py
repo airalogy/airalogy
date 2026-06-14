@@ -288,6 +288,49 @@ class CiteNode(ASTNode):
 
 
 @dataclass
+class ReferenceNode(ASTNode):
+    """Reference entry parsed from a fenced refs BibTeX block."""
+
+    id: str
+    entry_type: str
+    raw: str
+    fields: Dict[str, str] = field(default_factory=dict)
+    title: Optional[str] = None
+    author: Optional[str] = None
+    year: Optional[str] = None
+    journal: Optional[str] = None
+    booktitle: Optional[str] = None
+    publisher: Optional[str] = None
+    doi: Optional[str] = None
+    url: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        result = super().to_dict()
+        result.update(
+            {
+                "id": self.id,
+                "entry_type": self.entry_type,
+                "raw": self.raw,
+                "fields": self.fields,
+            }
+        )
+        for key in (
+            "title",
+            "author",
+            "year",
+            "journal",
+            "booktitle",
+            "publisher",
+            "doi",
+            "url",
+        ):
+            value = getattr(self, key)
+            if value:
+                result[key] = value
+        return result
+
+
+@dataclass
 class AssignerBlockNode(ASTNode):
     """Inline assigner block: ```assigner ... ```"""
 

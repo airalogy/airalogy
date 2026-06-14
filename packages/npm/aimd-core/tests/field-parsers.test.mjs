@@ -500,6 +500,37 @@ test('cite: multiple citations', () => {
   assert.ok(fields.cite.includes('jones2023'))
 })
 
+test('refs: parses BibTeX references from fenced blocks', () => {
+  const { tree, fields } = parseAimd(`
+\`\`\`refs
+@article{yang2025airalogy,
+  title = {Airalogy: Universal Research Automation},
+  author = {Yang, Zijie and Chen, Mei},
+  journal = {Airalogy Journal},
+  year = {2025},
+  doi = {10.1234/airalogy.2025}
+}
+
+@misc{doe2024protocol,
+  title = "Protocol Notes",
+  author = "Doe, Jane",
+  year = "2024",
+  url = "https://example.com/protocol"
+}
+\`\`\`
+`)
+  const node = findAimdNode(tree)
+  assert.equal(node?.fieldType, 'refs')
+  assert.equal(node?.entries.length, 2)
+  assert.equal(node?.entries[0].id, 'yang2025airalogy')
+  assert.equal(node?.entries[0].entry_type, 'article')
+  assert.equal(node?.entries[0].title, 'Airalogy: Universal Research Automation')
+  assert.equal(node?.entries[0].doi, '10.1234/airalogy.2025')
+  assert.equal(fields.refs.length, 2)
+  assert.equal(fields.refs[1].id, 'doe2024protocol')
+  assert.equal(fields.refs[1].url, 'https://example.com/protocol')
+})
+
 // ── multiple fields in one document ──────────────────────────────────────────
 
 test('multiple var fields are collected', () => {

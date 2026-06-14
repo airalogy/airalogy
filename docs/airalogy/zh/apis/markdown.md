@@ -68,10 +68,13 @@ result = aimd.parse_aimd(content)
     "ref_step": [],
     "ref_fig": [],
     "cite": [],
+    "refs": [],
     "assigner": []
   }
 }
 ```
+
+Fenced `refs` 代码块会按 BibTeX 解析到 `templates.refs`。每个条目包含 `id`、`entry_type`、`raw`、标准化 `fields`，以及 `title`、`author`、`year`、`doi`、`url` 等常用展示字段。
 
 最小案例（`var` + `quiz`）：
 

@@ -9,6 +9,7 @@ from .ast_nodes import (
     AssignerBlockNode,
     CheckNode,
     CiteNode,
+    ReferenceNode,
     RefFigNode,
     RefStepNode,
     RefVarNode,
@@ -50,6 +51,7 @@ __all__ = [
     "RefStepNode",
     "RefFigNode",
     "CiteNode",
+    "ReferenceNode",
     "AssignerBlockNode",
     # Errors
     "InvalidNameError",

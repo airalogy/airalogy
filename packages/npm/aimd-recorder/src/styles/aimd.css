@@ -657,6 +657,44 @@
   font-weight: 500;
 }
 
+.aimd-cite__ref {
+  color: inherit;
+  text-decoration: none;
+}
+
+.aimd-cite__ref:hover {
+  text-decoration: underline;
+}
+
+.aimd-refs {
+  margin: 24px 0;
+  padding-top: 16px;
+  border-top: 1px solid #d8dee8;
+  color: #1f2937;
+}
+
+.aimd-refs__title {
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.aimd-refs__list {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.aimd-refs__item {
+  margin: 8px 0;
+  line-height: 1.55;
+}
+
+.aimd-refs__doi,
+.aimd-refs__url {
+  color: #1976d2;
+  overflow-wrap: anywhere;
+}
+
 /* Editable state */
 .aimd-field--editable {
   cursor: text;

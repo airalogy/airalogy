@@ -756,6 +756,29 @@ button {
   border-radius: 8px;
 }
 
+.rendered-aimd-document .aimd-refs {
+  margin: 24px 0;
+  padding-top: 16px;
+  border-top: 1px solid #d8e0ea;
+}
+
+.rendered-aimd-document .aimd-refs__title {
+  margin-bottom: 10px;
+  font-weight: 800;
+}
+
+.rendered-aimd-document .aimd-refs__item {
+  margin: 8px 0;
+  line-height: 1.55;
+}
+
+.rendered-aimd-document .aimd-cite__ref,
+.rendered-aimd-document .aimd-refs__doi,
+.rendered-aimd-document .aimd-refs__url {
+  color: #216167;
+  overflow-wrap: anywhere;
+}
+
 .record-summary-panel {
   padding: 0;
   overflow: hidden;

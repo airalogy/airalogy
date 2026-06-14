@@ -1,4 +1,4 @@
-import type { AimdClientAssignerField } from "../types/aimd"
+import type { AimdClientAssignerField, AimdReferenceField } from "../types/aimd"
 import type { AimdStepNode, AimdStepTimerMode, AimdVarDefinition } from "../types/nodes"
 export { validateClientAssigners } from "./assigner-graph"
 import { parseClientAssignerContent as parseClientAssignerContentImpl } from "./client-assigner-syntax"
@@ -487,6 +487,248 @@ export function parseCheckContent(content: string): {
  */
 export function parseClientAssignerContent(content: string): AimdClientAssignerField {
   return parseClientAssignerContentImpl(content)
+}
+
+function splitBibtexEntries(content: string): string[] {
+  const entries: string[] = []
+  let index = 0
+
+  while (index < content.length) {
+    const atIndex = content.indexOf("@", index)
+    if (atIndex === -1) {
+      break
+    }
+
+    let openIndex = -1
+    for (let cursor = atIndex + 1; cursor < content.length; cursor += 1) {
+      const char = content[cursor]
+      if (char === "{" || char === "(") {
+        openIndex = cursor
+        break
+      }
+      if (!/[\w\s-]/.test(char)) {
+        break
+      }
+    }
+
+    if (openIndex === -1) {
+      index = atIndex + 1
+      continue
+    }
+
+    const openChar = content[openIndex]
+    const closeChar = openChar === "{" ? "}" : ")"
+    let depth = 0
+    let quote = false
+    let escaped = false
+    let closeIndex = -1
+
+    for (let cursor = openIndex; cursor < content.length; cursor += 1) {
+      const char = content[cursor]
+
+      if (escaped) {
+        escaped = false
+        continue
+      }
+
+      if (char === "\\") {
+        escaped = true
+        continue
+      }
+
+      if (char === "\"") {
+        quote = !quote
+        continue
+      }
+
+      if (quote) {
+        continue
+      }
+
+      if (char === openChar) {
+        depth += 1
+        continue
+      }
+
+      if (char === closeChar) {
+        depth -= 1
+        if (depth === 0) {
+          closeIndex = cursor
+          break
+        }
+      }
+    }
+
+    if (closeIndex === -1) {
+      entries.push(content.slice(atIndex).trim())
+      break
+    }
+
+    entries.push(content.slice(atIndex, closeIndex + 1).trim())
+    index = closeIndex + 1
+  }
+
+  return entries.filter(Boolean)
+}
+
+function stripBibtexOuterBraces(value: string): string {
+  let trimmed = value.trim()
+  while (
+    (trimmed.startsWith("{") && trimmed.endsWith("}"))
+    || (trimmed.startsWith("\"") && trimmed.endsWith("\""))
+  ) {
+    trimmed = trimmed.slice(1, -1).trim()
+  }
+  return trimmed
+}
+
+function normalizeBibtexValue(value: string): string {
+  return stripBibtexOuterBraces(value)
+    .replace(/\\(["'{}])/g, "$1")
+    .replace(/[{}]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function readBibtexValue(body: string, startIndex: number): { value: string, nextIndex: number } {
+  let index = startIndex
+  while (index < body.length && /\s/.test(body[index])) {
+    index += 1
+  }
+
+  const opener = body[index]
+  if (opener === "{" || opener === "\"") {
+    const closer = opener === "{" ? "}" : "\""
+    let depth = opener === "{" ? 1 : 0
+    let escaped = false
+    let cursor = index + 1
+
+    for (; cursor < body.length; cursor += 1) {
+      const char = body[cursor]
+
+      if (escaped) {
+        escaped = false
+        continue
+      }
+
+      if (char === "\\") {
+        escaped = true
+        continue
+      }
+
+      if (opener === "{" && char === "{") {
+        depth += 1
+        continue
+      }
+
+      if (char === closer) {
+        if (opener === "\"") {
+          return { value: body.slice(index, cursor + 1), nextIndex: cursor + 1 }
+        }
+
+        depth -= 1
+        if (depth === 0) {
+          return { value: body.slice(index, cursor + 1), nextIndex: cursor + 1 }
+        }
+      }
+    }
+
+    return { value: body.slice(index), nextIndex: body.length }
+  }
+
+  let cursor = index
+  while (cursor < body.length && body[cursor] !== ",") {
+    cursor += 1
+  }
+  return { value: body.slice(index, cursor), nextIndex: cursor }
+}
+
+function parseBibtexFields(body: string): Record<string, string> {
+  const fields: Record<string, string> = {}
+  let index = 0
+
+  while (index < body.length) {
+    while (index < body.length && /[\s,]/.test(body[index])) {
+      index += 1
+    }
+    if (index >= body.length) {
+      break
+    }
+
+    const keyMatch = body.slice(index).match(/^([A-Za-z][\w-]*)\s*=/)
+    if (!keyMatch) {
+      break
+    }
+
+    const key = keyMatch[1].toLowerCase()
+    index += keyMatch[0].length
+    const parsed = readBibtexValue(body, index)
+    const value = normalizeBibtexValue(parsed.value)
+    if (value) {
+      fields[key] = value
+    }
+    index = parsed.nextIndex
+
+    while (index < body.length && /\s/.test(body[index])) {
+      index += 1
+    }
+    if (body[index] === ",") {
+      index += 1
+    }
+  }
+
+  return fields
+}
+
+function parseBibtexEntry(rawEntry: string): AimdReferenceField | null {
+  const raw = rawEntry.trim()
+  const entryMatch = raw.match(/^@([A-Za-z][\w-]*)\s*([({])/)
+  if (!entryMatch) {
+    return null
+  }
+
+  const entry_type = entryMatch[1].toLowerCase()
+  const openIndex = raw.indexOf(entryMatch[2], entryMatch[0].length - 1)
+  const closeIndex = raw.length - 1
+  if (openIndex === -1 || closeIndex <= openIndex) {
+    return null
+  }
+
+  const body = raw.slice(openIndex + 1, closeIndex).trim()
+  const commaIndex = body.indexOf(",")
+  if (commaIndex === -1) {
+    return null
+  }
+
+  const id = body.slice(0, commaIndex).trim()
+  if (!id) {
+    return null
+  }
+
+  const fields = parseBibtexFields(body.slice(commaIndex + 1))
+  return {
+    id,
+    entry_type,
+    raw,
+    fields,
+    title: fields.title,
+    author: fields.author,
+    year: fields.year,
+    journal: fields.journal,
+    booktitle: fields.booktitle,
+    publisher: fields.publisher,
+    doi: fields.doi,
+    url: fields.url,
+  }
+}
+
+/**
+ * Parse refs code block content in BibTeX format.
+ */
+export function parseRefsContent(content: string): AimdReferenceField[] {
+  return splitBibtexEntries(content)
+    .map(parseBibtexEntry)
+    .filter((entry): entry is AimdReferenceField => Boolean(entry))
 }
 
 /**

@@ -38,6 +38,14 @@ function findClientAssigner(fields: ExtractedAimdFields | null, id: string) {
   return fields?.client_assigner.find(assigner => assigner.id === id)
 }
 
+function findFigure(fields: ExtractedAimdFields | null, id: string) {
+  return fields?.fig?.find(figure => figure.id === id)
+}
+
+function findReference(fields: ExtractedAimdFields | null, id: string) {
+  return fields?.refs?.find(reference => reference.id === id)
+}
+
 function hasHeading(content: string, level: number): boolean {
   const marker = '#'.repeat(level)
   const pattern = new RegExp(`(^|\\n)${marker}\\s+\\S+`)
@@ -47,6 +55,8 @@ function hasHeading(content: string, level: number): boolean {
 function hasBulletItem(content: string): boolean {
   return /(^|\n)-\s+\S+/.test(content)
 }
+
+const DEMO_FIGURE_SRC = 'files/workflow-diagram.svg'
 
 export interface TutorialEvaluationState {
   content: string
@@ -122,11 +132,50 @@ const STEP_TIMER_PATTERN = lines([
   '{{check|checkpoint_id}}',
 ])
 
+const FIGURE_CITATION_PATTERN = lines([
+  'As shown in {{ref_fig|figure_id}}, cite {{cite|ref_id}}.',
+  '',
+  '```fig',
+  'id: figure_id',
+  'src: "image-or-file-url"',
+  'title: Figure title',
+  'legend: Figure legend',
+  '```',
+  '',
+  '```refs',
+  '@article{ref_id,',
+  '  title = {Reference title},',
+  '  author = {Author Name},',
+  '  year = {2026}',
+  '}',
+  '```',
+])
+
 const QUIZ_VARIANTS_PATTERN = lines([
   '```quiz',
   'id: quiz_id',
   'type: true_false | blank | scale',
   'stem: Question text',
+  '```',
+])
+
+const QUIZ_GRADING_PATTERN = lines([
+  '```quiz',
+  'id: quiz_id',
+  'type: choice',
+  'mode: single',
+  'score: 2',
+  'options:',
+  '  - key: A',
+  '    text: Option with followups',
+  '    followups:',
+  '      - key: detail_field',
+  '        type: int',
+  '        title: Detail field',
+  'grading:',
+  '  strategy: option_points',
+  '  option_points:',
+  '    A: 2',
   '```',
 ])
 
@@ -455,6 +504,116 @@ const LESSON_DEFINITIONS: TutorialLessonDefinition[] = [
     ],
   },
   {
+    id: 'figures-citations',
+    title: lt('Figures and Citations', '图与文献引用'),
+    summary: lt(
+      'Define figure metadata, reference the figure in prose, and attach BibTeX references.',
+      '定义图的元数据，在正文中引用图，并附上 BibTeX 文献。',
+    ),
+    intro: lt(
+      'Create a figure named workflow_diagram, reference it with ref_fig, cite yang2025airalogy, and define that reference in a refs block.',
+      '创建名为 `workflow_diagram` 的图，用 `ref_fig` 引用它，引用 `yang2025airalogy`，并在 `refs` 代码块中定义该文献。',
+    ),
+    focus: [
+      lt('Figures', '图'),
+      lt('Citations', '文献引用'),
+      lt('BibTeX refs', 'BibTeX refs'),
+    ],
+    pattern: FIGURE_CITATION_PATTERN,
+    starter: lt(
+      lines([
+        '## Evidence',
+        '',
+        'Describe the workflow and add one figure plus one citation.',
+      ]),
+      lines([
+        '## 证据',
+        '',
+        '描述流程，并添加一个图和一个文献引用。',
+      ]),
+    ),
+    solution: lt(
+      lines([
+        '## Evidence',
+        '',
+        'The workflow is summarized in {{ref_fig|workflow_diagram}} and follows the Airalogy protocol model {{cite|yang2025airalogy}}.',
+        '',
+        '```fig',
+        'id: workflow_diagram',
+        `src: "${DEMO_FIGURE_SRC}"`,
+        'title: Workflow Diagram',
+        'legend: A compact flow showing sample preparation, review, and reporting.',
+        '```',
+        '',
+        '```refs',
+        '@article{yang2025airalogy,',
+        '  title = {Airalogy: Universal Research Automation},',
+        '  author = {Yang, Zijie and Chen, Mei},',
+        '  journal = {Airalogy Journal},',
+        '  year = {2025},',
+        '  doi = {10.1234/airalogy.2025}',
+        '}',
+        '```',
+      ]),
+      lines([
+        '## 证据',
+        '',
+        '流程见 {{ref_fig|workflow_diagram}}，并参考 Airalogy protocol model {{cite|yang2025airalogy}}。',
+        '',
+        '```fig',
+        'id: workflow_diagram',
+        `src: "${DEMO_FIGURE_SRC}"`,
+        'title: Workflow Diagram',
+        'legend: 一个简洁流程图，展示样本准备、审阅和报告。',
+        '```',
+        '',
+        '```refs',
+        '@article{yang2025airalogy,',
+        '  title = {Airalogy: Universal Research Automation},',
+        '  author = {Yang, Zijie and Chen, Mei},',
+        '  journal = {Airalogy Journal},',
+        '  year = {2025},',
+        '  doi = {10.1234/airalogy.2025}',
+        '}',
+        '```',
+      ]),
+    ),
+    hints: [
+      lt('Figures are fenced ```fig blocks with id, src, title, and legend.', '图使用 fenced ` ```fig ` 代码块，并写入 `id`、`src`、`title`、`legend`。'),
+      lt('Use ref_fig in prose so the renderer can show a numbered figure reference.', '正文中用 `ref_fig`，renderer 会显示可点击的图编号。'),
+      lt('Use cite for in-text citation markers, and put BibTeX entries in a refs block.', '正文引用用 `cite`，详细文献信息放在 `refs` 代码块中。'),
+    ],
+    checks: [
+      {
+        id: 'figure-block',
+        label: lt('Define a figure named workflow_diagram', '定义名为 `workflow_diagram` 的图'),
+        evaluate: state => Boolean(findFigure(state.fields, 'workflow_diagram')),
+      },
+      {
+        id: 'figure-reference',
+        label: lt('Reference workflow_diagram with ref_fig', '用 `ref_fig` 引用 `workflow_diagram`'),
+        evaluate: state => state.fields?.ref_fig?.includes('workflow_diagram') ?? false,
+      },
+      {
+        id: 'citation-marker',
+        label: lt('Cite yang2025airalogy in the text', '在正文中引用 `yang2025airalogy`'),
+        evaluate: state => state.fields?.cite?.includes('yang2025airalogy') ?? false,
+      },
+      {
+        id: 'reference-entry',
+        label: lt('Define yang2025airalogy in a refs block', '在 `refs` 代码块中定义 `yang2025airalogy`'),
+        evaluate: state => findReference(state.fields, 'yang2025airalogy')?.title === 'Airalogy: Universal Research Automation',
+      },
+      {
+        id: 'rendered-refs',
+        label: lt('Render the figure, citation link, and references list', '渲染图、文献链接和参考文献列表'),
+        evaluate: state => state.html.includes('aimd-figure')
+          && state.html.includes('aimd-cite__ref')
+          && state.html.includes('aimd-refs'),
+      },
+    ],
+  },
+  {
     id: 'step-checks-timers',
     title: lt('Checks and Timers', '检查点与计时'),
     summary: lt(
@@ -676,6 +835,134 @@ const LESSON_DEFINITIONS: TutorialLessonDefinition[] = [
         evaluate: (state) => {
           const quiz = findQuiz(state.fields, 'storage_temp')
           return quiz?.answer === 'B'
+        },
+      },
+    ],
+  },
+  {
+    id: 'quiz-followups-grading',
+    title: lt('Quiz Followups and Grading', '题目追问与评分'),
+    summary: lt(
+      'Attach structured followup fields to quiz options and use option_points for partial credit.',
+      '给题目选项添加结构化追问，并用 `option_points` 表达部分得分。',
+    ),
+    intro: lt(
+      'Create a single-choice quiz named storage_method. Option A should ask for transfer_duration_min, and grading should award A = 2, B = 1, C = 0.',
+      '创建一个名为 `storage_method` 的单选题。选项 A 需要追问 `transfer_duration_min`，评分规则为 A = 2、B = 1、C = 0。',
+    ),
+    focus: [
+      lt('Followups', '追问字段'),
+      lt('option_points', 'option_points'),
+      lt('Partial credit', '部分得分'),
+    ],
+    pattern: QUIZ_GRADING_PATTERN,
+    starter: lt(
+      lines([
+        '## Scored Check',
+      ]),
+      lines([
+        '## 评分检查',
+      ]),
+    ),
+    solution: lt(
+      lines([
+        '## Scored Check',
+        '',
+        '```quiz',
+        'id: storage_method',
+        'type: choice',
+        'mode: single',
+        'stem: Which transfer method was used?',
+        'score: 2',
+        'options:',
+        '  - key: A',
+        '    text: Ice box transfer',
+        '    followups:',
+        '      - key: transfer_duration_min',
+        '        type: int',
+        '        title: Transfer duration',
+        '        unit: min',
+        '  - key: B',
+        '    text: Pre-chilled container transfer',
+        '  - key: C',
+        '    text: Room-temperature transfer',
+        'answer: A',
+        'grading:',
+        '  strategy: option_points',
+        '  option_points:',
+        '    A: 2',
+        '    B: 1',
+        '    C: 0',
+        '```',
+      ]),
+      lines([
+        '## 评分检查',
+        '',
+        '```quiz',
+        'id: storage_method',
+        'type: choice',
+        'mode: single',
+        'stem: 本次使用了哪种转移方式？',
+        'score: 2',
+        'options:',
+        '  - key: A',
+        '    text: 冰盒转移',
+        '    followups:',
+        '      - key: transfer_duration_min',
+        '        type: int',
+        '        title: Transfer duration',
+        '        unit: min',
+        '  - key: B',
+        '    text: 预冷容器转移',
+        '  - key: C',
+        '    text: 室温转移',
+        'answer: A',
+        'grading:',
+        '  strategy: option_points',
+        '  option_points:',
+        '    A: 2',
+        '    B: 1',
+        '    C: 0',
+        '```',
+      ]),
+    ),
+    hints: [
+      lt('followups live under a specific option and become structured sub-questions in recorder contexts.', '`followups` 写在具体选项下面，在 recorder 中会成为结构化追问。'),
+      lt('score defines the maximum score for the quiz item.', '`score` 定义这一题的满分。'),
+      lt('grading.strategy: option_points maps each option key to its earned score.', '`grading.strategy: option_points` 会把每个选项 key 映射到对应得分。'),
+    ],
+    checks: [
+      {
+        id: 'storage-method-quiz',
+        label: lt('Create storage_method as a single-choice quiz', '创建 `storage_method` 单选题'),
+        evaluate: (state) => {
+          const quiz = findQuiz(state.fields, 'storage_method')
+          return quiz?.type === 'choice' && quiz.mode === 'single'
+        },
+      },
+      {
+        id: 'option-followup',
+        label: lt('Add transfer_duration_min as a followup under option A', '在选项 A 下添加 `transfer_duration_min` 追问'),
+        evaluate: (state) => {
+          const quiz = findQuiz(state.fields, 'storage_method')
+          const optionA = quiz?.options?.find(option => option.key === 'A')
+          return optionA?.followups?.some(followup => followup.key === 'transfer_duration_min' && followup.type === 'int') ?? false
+        },
+      },
+      {
+        id: 'score-max',
+        label: lt('Set the quiz score to 2', '把题目满分设置为 2'),
+        evaluate: state => findQuiz(state.fields, 'storage_method')?.score === 2,
+      },
+      {
+        id: 'option-points',
+        label: lt('Use option_points with A = 2, B = 1, C = 0', '使用 `option_points`，并设置 A = 2、B = 1、C = 0'),
+        evaluate: (state) => {
+          const grading = findQuiz(state.fields, 'storage_method')?.grading
+          return grading?.strategy === 'option_points'
+            && grading.option_points?.A === 2
+            && grading.option_points?.B === 1
+            && grading.option_points?.C === 0
         },
       },
     ],

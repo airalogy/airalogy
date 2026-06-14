@@ -8,7 +8,7 @@
 - Markdown、代码、JSON、YAML 和序列字段。
 - 变量表格，以及 Markdown 表格中的内联变量。
 - 浏览器侧 client assigner，包括自动计算和手动列表赋值。
-- 步骤、嵌套步骤、检查点、计时器、引用和题目。
+- 图、文献引用、BibTeX refs、步骤、嵌套步骤、检查点、计时器、引用和题目。
 - Markdown 表格、引用块、CriticMarkup 审阅标记、行内公式和块级公式等渲染能力。
 
 ## 使用方式

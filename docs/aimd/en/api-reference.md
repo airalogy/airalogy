@@ -26,13 +26,14 @@ import {
   rehypeAimd,
   protectAimdInlineTemplates,
   protectCriticMarkupSubstitutions,
+  parseRefsContent,
   restoreAimdInlineTemplates,
   validateClientAssignerFunctionSource,
   validateVarDefaultType,
 } from "@airalogy/aimd-core/parser"
 ```
 
-**`remarkAimd`** — Unified remark plugin that parses AIMD inline templates and fenced blocks (`quiz`, `fig`, `assigner`) into typed AST nodes. Attach to a `unified().use(remarkParse)` pipeline.
+**`remarkAimd`** — Unified remark plugin that parses AIMD inline templates and fenced blocks (`quiz`, `fig`, `refs`, `assigner`) into typed AST nodes. Attach to a `unified().use(remarkParse)` pipeline.
 
 **`rehypeAimd`** — Rehype plugin counterpart for the HTML AST stage.
 
@@ -43,6 +44,8 @@ import {
 **`remarkCriticMarkup`** — Unified remark plugin that parses CriticMarkup review marks into custom MDAST nodes (`criticAddition`, `criticDeletion`, `criticSubstitution`, `criticComment`, `criticHighlight`) without adding AIMD fields.
 
 **`protectCriticMarkupSubstitutions(content: string)`** — Protects `{~~old~>new~~}` substitutions before GFM so they are not parsed as strikethrough. Store the returned `substitutions` under `CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY` on `file.data` before running `remarkCriticMarkup`.
+
+**`parseRefsContent(content: string): AimdReferenceField[]`** — Parses fenced `refs` block content in BibTeX format and returns structured reference entries with normalized fields such as `title`, `author`, `year`, `doi`, and `url`.
 
 **`validateClientAssignerFunctionSource(functionSource: string, id: string): void`** — Validates frontend `client_assigner` function bodies and throws when unsupported or unsafe constructs are present.
 
@@ -160,7 +163,23 @@ interface ExtractedAimdFields {
   ref_fig?: string[]
   cite?: string[]
   fig?: AimdFigField[]
+  refs?: AimdReferenceField[]
   step_hierarchy?: AimdStepField[]
+}
+
+interface AimdReferenceField {
+  id: string
+  entry_type: string
+  raw: string
+  fields: Record<string, string>
+  title?: string
+  author?: string
+  year?: string
+  journal?: string
+  booktitle?: string
+  publisher?: string
+  doi?: string
+  url?: string
 }
 
 // Variable definition (from parsed AST)
@@ -201,6 +220,7 @@ type AimdNode =
   | AimdRefNode
   | AimdCiteNode
   | AimdFigNode
+  | AimdRefsNode
 ```
 
 ---

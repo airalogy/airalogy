@@ -15,8 +15,9 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `renderToHtml(content)` for HTML output.
 - `renderToVue(content)` for Vue vnode output.
 - `renderReadonlyRecordToVue(content, recordData, { resolveAsset })` for readonly Vue rendering with Record data and file assets embedded in matching AIMD fields.
-- `parseAndExtract(content)` for canonical core field metadata extraction, including simple `var` definitions in `fields.var_definitions`.
+- `parseAndExtract(content)` for canonical core field metadata extraction, including simple `var` definitions in `fields.var_definitions` and BibTeX references in `fields.refs`.
 - Default previews for `var` and `var_table` display AIMD `title`, preserve the canonical field id, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus.
+- Linked citation markers and generated references lists for `{{cite|...}}` plus fenced `refs` blocks.
 - `assignerVisibility` to show or hide assigner blocks in authoring/debug views.
 - Built-in quiz preview controls.
 - Built-in locale support via `locale`.
@@ -34,6 +35,23 @@ const fields = parseAndExtract(content)
 console.log(html)
 console.log(fields)
 ```
+
+## Citations and References
+
+`renderToHtml` and `renderToVue` render `{{cite|ref_id}}` markers as links to the generated references list. Fenced `refs` blocks use BibTeX syntax and are extracted into `fields.refs` as structured entries.
+
+````aimd
+This protocol follows {{cite|yang2025airalogy}}.
+
+```refs
+@article{yang2025airalogy,
+  title = {Airalogy: Universal Research Automation},
+  author = {Yang, Zijie},
+  year = {2025},
+  doi = {10.1234/airalogy.2025}
+}
+```
+````
 
 ## Review Marks
 

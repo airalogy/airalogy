@@ -6,6 +6,7 @@ import type {
   AimdFieldType,
   AimdFigNode,
   AimdNode,
+  AimdRefsNode,
   AimdScope,
   AimdStepNode,
   AimdVarNode,
@@ -24,6 +25,7 @@ import {
   parseCheckContent,
   parseFenceMeta,
   parseFigContent,
+  parseRefsContent,
   parseStepContent,
   parseTableColumns,
   parseVarDefinition,
@@ -181,6 +183,9 @@ function createAimdNode(
     case "fig":
       throw new Error("Inline fig syntax is not supported. Use a fig code block instead.")
 
+    case "refs":
+      throw new Error("Inline refs syntax is not supported. Use a refs code block instead.")
+
     default: {
       const exhaustiveCheck: never = fieldType
       throw new Error(`Unsupported AIMD field type: ${String(exhaustiveCheck)}`)
@@ -305,6 +310,7 @@ export interface RemarkAimdOptions {
  * - {{ref_var|id}} - Variable reference
  * - ```quiz blocks - Quiz definitions (choice / blank / open)
  * - ```fig blocks - Figure definitions
+ * - ```refs blocks - BibTeX reference definitions
  */
 const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
   const { extractFields = true } = options
@@ -324,6 +330,7 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
       ref_fig: [],
       cite: [],
       fig: [],
+      refs: [],
     }
 
     const stepContext = createStepContext()
@@ -338,7 +345,7 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
       }
     })
 
-    // First pass: process fig/quiz code blocks.
+    // First pass: process fig/quiz/refs code blocks.
     visit(tree, "code", (node: Code, index, parent) => {
       if (index === undefined || !parent)
         return
@@ -389,6 +396,35 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
         }
         catch (error) {
           console.error("Failed to parse fig block:", error)
+        }
+      }
+
+      if (lang === "refs") {
+        try {
+          const entries = parseRefsContent(node.value)
+
+          const refsNode: AimdRefsNode = {
+            type: "aimd",
+            fieldType: "refs",
+            id: entries[0]?.id ?? "refs",
+            scope: "refs",
+            raw: node.value,
+            entries,
+          }
+
+          parent.children[index] = refsNode as any
+
+          if (extractFields && fields.refs) {
+            for (const entry of entries) {
+              const existingRef = fields.refs.find(ref => ref.id === entry.id)
+              if (!existingRef) {
+                fields.refs.push(entry)
+              }
+            }
+          }
+        }
+        catch (error) {
+          console.error("Failed to parse refs block:", error)
         }
       }
 

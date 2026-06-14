@@ -64,3 +64,24 @@ def test_critic_markup_fixture_keeps_review_marks_out_of_python_templates():
     assert [field_name(field) for field in parsed["templates"]["var"]] == [
         "review_summary"
     ]
+
+
+def test_refs_fixture_extracts_python_refs_templates():
+    content = (
+        PROTOCOL_FIXTURES_ROOT
+        / "refs/protocol/protocol.aimd"
+    ).read_text(encoding="utf-8")
+
+    parsed = parse_aimd(content)
+
+    assert parsed["templates"]["cite"][0]["ref_ids"] == [
+        "yang2025airalogy",
+        "doe2024protocol",
+    ]
+    assert len(parsed["templates"]["refs"]) == 2
+    assert parsed["templates"]["refs"][0]["id"] == "yang2025airalogy"
+    assert (
+        parsed["templates"]["refs"][0]["title"]
+        == "Airalogy: Universal Research Automation"
+    )
+    assert parsed["templates"]["refs"][1]["url"] == "https://example.com/protocol"

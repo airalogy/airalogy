@@ -1352,6 +1352,38 @@ subvars=[
         cite = result["templates"]["cite"][0]
         assert cite.ref_ids == ["ref1", "ref2", "ref3"]
 
+    def test_parse_refs_block(self):
+        content = """
+```refs
+@article{yang2025airalogy,
+  title = {Airalogy: Universal Research Automation},
+  author = {Yang, Zijie and Chen, Mei},
+  journal = {Airalogy Journal},
+  year = {2025},
+  doi = {10.1234/airalogy.2025}
+}
+
+@misc{doe2024protocol,
+  title = "Protocol Notes",
+  author = "Doe, Jane",
+  year = "2024",
+  url = "https://example.com/protocol"
+}
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["refs"]) == 2
+        first_ref = result["templates"]["refs"][0]
+        assert first_ref.id == "yang2025airalogy"
+        assert first_ref.entry_type == "article"
+        assert first_ref.title == "Airalogy: Universal Research Automation"
+        assert first_ref.doi == "10.1234/airalogy.2025"
+        second_ref = result["templates"]["refs"][1]
+        assert second_ref.id == "doe2024protocol"
+        assert second_ref.url == "https://example.com/protocol"
+
     def test_invalid_name_starting_with_underscore(self):
         content = "{{var|_invalid}}"
         parser = AimdParser(content)

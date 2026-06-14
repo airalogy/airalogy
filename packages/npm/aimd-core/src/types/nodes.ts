@@ -22,6 +22,7 @@ export type AimdFieldType =
   | "ref_fig"
   | "cite"
   | "fig"
+  | "refs"
 
 /**
  * AIMD scopes
@@ -37,6 +38,7 @@ export type AimdScope =
   | "ref_fig"
   | "cite"
   | "fig"
+  | "refs"
 
 /**
  * AIMD quiz metadata
@@ -312,6 +314,37 @@ export interface AimdFigNode extends BaseNode {
 }
 
 /**
+ * Reference entry parsed from a fenced `refs` BibTeX block.
+ */
+export interface AimdReferenceEntry {
+  /** Citation key used by `{{cite|...}}` */
+  id: string
+  /** BibTeX entry type, such as article, book, inproceedings, misc. */
+  entry_type: string
+  /** Raw BibTeX entry. */
+  raw: string
+  /** Full normalized BibTeX fields keyed by lower-case field name. */
+  fields: Record<string, string>
+  /** Common display fields normalized from `fields`. */
+  title?: string
+  author?: string
+  year?: string
+  journal?: string
+  booktitle?: string
+  publisher?: string
+  doi?: string
+  url?: string
+}
+
+/**
+ * AIMD references node (from ```refs code blocks).
+ */
+export interface AimdRefsNode extends BaseNode {
+  fieldType: "refs"
+  entries: AimdReferenceEntry[]
+}
+
+/**
  * Union type of all AIMD nodes
  */
 export type AimdNode = 
@@ -323,6 +356,7 @@ export type AimdNode =
   | AimdRefNode 
   | AimdCiteNode 
   | AimdFigNode
+  | AimdRefsNode
 
 /**
  * Processor options

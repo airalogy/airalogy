@@ -68,10 +68,13 @@ Output shape (simplified):
     "ref_step": [],
     "ref_fig": [],
     "cite": [],
+    "refs": [],
     "assigner": []
   }
 }
 ```
+
+Fenced `refs` blocks are parsed from BibTeX into `templates.refs`. Each entry includes `id`, `entry_type`, `raw`, normalized `fields`, and common display fields such as `title`, `author`, `year`, `doi`, and `url`.
 
 Minimal example (`var` + `quiz`):
 

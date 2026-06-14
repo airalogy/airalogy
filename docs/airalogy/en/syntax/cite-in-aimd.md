@@ -20,6 +20,8 @@ Airalogy is the world’s first universal platform for research digitization, au
 
 In the example above, `{{cite|yang2025airalogy}}` inserts an in-text citation marker, and the reference details are provided in BibTeX within a fenced code block whose **info string must be** `refs`. AIMD will automatically process these citations and generate a references list in the final rendered document.
 
+`parse_aimd` and `@airalogy/aimd-core` expose citation ids in `cite` and structured BibTeX entries in `refs`, while `@airalogy/aimd-renderer` links citation markers to the generated references list.
+
 Within a single `cite` tag, you can cite one or multiple references separated by commas. For example:
 
 ```aimd

@@ -12,6 +12,7 @@ export {
   parseStepTimerMode,
   parseVarEnumValues,
   parseVarDefinition,
+  parseRefsContent,
   validateVarDefaultType,
   validateVarDefinition,
   validateVarKwargs,

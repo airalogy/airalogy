@@ -237,6 +237,50 @@ describe('renderToHtmlSync', () => {
     expect(html).toContain('temperature')
   })
 
+  it('renders linked citations and refs blocks', () => {
+    const content = [
+      'Cite the method {{cite|yang2025airalogy, doe2024protocol}}.',
+      '',
+      '```refs',
+      '@article{yang2025airalogy,',
+      '  title = {Airalogy: Universal Research Automation},',
+      '  author = {Yang, Zijie and Chen, Mei},',
+      '  journal = {Airalogy Journal},',
+      '  year = {2025},',
+      '  doi = {10.1234/airalogy.2025}',
+      '}',
+      '',
+      '@misc{doe2024protocol,',
+      '  title = "Protocol Notes",',
+      '  author = "Doe, Jane",',
+      '  year = "2024",',
+      '  url = "https://example.com/protocol"',
+      '}',
+      '```',
+    ].join('\n')
+
+    const { html, fields } = renderToHtmlSync(content)
+
+    expect(fields.cite).toEqual(['yang2025airalogy', 'doe2024protocol'])
+    expect(fields.refs?.[0]).toMatchObject({
+      id: 'yang2025airalogy',
+      entry_type: 'article',
+      title: 'Airalogy: Universal Research Automation',
+      doi: '10.1234/airalogy.2025',
+    })
+    expect(fields.refs?.[1]).toMatchObject({
+      id: 'doe2024protocol',
+      url: 'https://example.com/protocol',
+    })
+    expect(html).toContain('class="aimd-cite__ref" href="#ref-yang2025airalogy"')
+    expect(html).toContain('href="#ref-doe2024protocol"')
+    expect(html).toContain('<section class="aimd-refs"')
+    expect(html).toContain('id="ref-yang2025airalogy"')
+    expect(html).toContain('Airalogy: Universal Research Automation')
+    expect(html).toContain('href="https://doi.org/10.1234/airalogy.2025"')
+    expect(html).toContain('href="https://example.com/protocol"')
+  })
+
   it('renders AIMD var field display metadata', () => {
     const { html, fields } = renderToHtmlSync('{{var|record_date: str, title="Record date", description="ISO date", examples=["2026-05-26", "2026-05-27"]}}')
     expect(fields.var_definitions?.[0]?.title).toBe('Record date')
@@ -442,6 +486,32 @@ describe('renderToHtmlSync', () => {
 })
 
 describe('renderToVue', () => {
+  it('renders references as Vue nodes', async () => {
+    const { nodes } = await renderToVue(
+      [
+        'Cite {{cite|yang2025airalogy}}.',
+        '',
+        '```refs',
+        '@article{yang2025airalogy,',
+        '  title = {Airalogy: Universal Research Automation},',
+        '  author = {Yang, Zijie},',
+        '  year = {2025}',
+        '}',
+        '```',
+      ].join('\n'),
+    )
+
+    const refsNode = nodes
+      .map(node => findVNodeByType(node, 'section'))
+      .find(Boolean) as any
+
+    expect(refsNode).toBeTruthy()
+    expect(refsNode.props.class).toBe('aimd-refs')
+    expect(refsNode.props.id).toBe('refs')
+    expect(collectVNodeText(nodes)).toContain('References')
+    expect(collectVNodeText(nodes)).toContain('Airalogy: Universal Research Automation')
+  })
+
   it('renders code blocks with line numbers and wrapping classes', async () => {
     const { nodes } = await renderToVue(
       '```json\n{\n  "model":"qwen3.6-flash","enable_search":true\n}\n```',

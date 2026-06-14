@@ -5,6 +5,7 @@ import type {
   AimdFieldType,
   AimdNode,
   AimdQuizNode,
+  AimdReferenceEntry,
   AimdStepNode,
   ProcessorOptions,
   RenderContext,
@@ -557,6 +558,7 @@ const EMPTY_EXTRACTED_FIELDS: ExtractedAimdFields = {
   ref_fig: [],
   cite: [],
   fig: [],
+  refs: [],
 }
 
 async function ensureMathStylesLoaded(mathEnabled: boolean | undefined): Promise<void> {
@@ -602,6 +604,7 @@ function createEmptyExtractedFields(): ExtractedAimdFields {
     ref_fig: [...(EMPTY_EXTRACTED_FIELDS.ref_fig || [])],
     cite: [...(EMPTY_EXTRACTED_FIELDS.cite || [])],
     fig: [...(EMPTY_EXTRACTED_FIELDS.fig || [])],
+    refs: [...(EMPTY_EXTRACTED_FIELDS.refs || [])],
   }
 }
 
@@ -807,6 +810,94 @@ function buildScaleBandChildren(quizNode: AimdQuizNode): Array<Element | HastTex
   } as Element]
 }
 
+function getReferenceContainer(entry: AimdReferenceEntry): string | undefined {
+  return entry.journal || entry.booktitle || entry.publisher
+}
+
+function createReferenceTextChildren(entry: AimdReferenceEntry): Array<Element | HastText> {
+  const children: Array<Element | HastText> = []
+  const pushText = (value: string | undefined, suffix = "") => {
+    const normalized = value?.trim()
+    if (!normalized) {
+      return
+    }
+    if (children.length > 0) {
+      children.push(createTextNode(" "))
+    }
+    children.push(createTextNode(`${normalized}${suffix}`))
+  }
+
+  pushText(entry.author)
+  pushText(entry.year ? `(${entry.year})` : undefined)
+  pushText(entry.title, entry.title && !/[.!?]$/.test(entry.title) ? "." : "")
+  pushText(getReferenceContainer(entry), ".")
+
+  if (entry.doi) {
+    if (children.length > 0) {
+      children.push(createTextNode(" "))
+    }
+    const doiHref = entry.doi.startsWith("http")
+      ? entry.doi
+      : `https://doi.org/${entry.doi}`
+    children.push({
+      type: "element",
+      tagName: "a",
+      properties: {
+        className: ["aimd-refs__doi"],
+        href: doiHref,
+      },
+      children: [createTextNode(`doi:${entry.doi}`)],
+    } as Element)
+  }
+  else if (entry.url) {
+    if (children.length > 0) {
+      children.push(createTextNode(" "))
+    }
+    children.push({
+      type: "element",
+      tagName: "a",
+      properties: {
+        className: ["aimd-refs__url"],
+        href: entry.url,
+      },
+      children: [createTextNode(entry.url)],
+    } as Element)
+  }
+
+  if (children.length === 0) {
+    children.push(createTextNode(entry.id))
+  }
+
+  return children
+}
+
+function buildReferencesChildren(entries: AimdReferenceEntry[], title: string): Array<Element | HastText> {
+  return [
+    {
+      type: "element",
+      tagName: "div",
+      properties: { className: ["aimd-refs__title"] },
+      children: [createTextNode(title)],
+    } as Element,
+    {
+      type: "element",
+      tagName: "ol",
+      properties: { className: ["aimd-refs__list"] },
+      children: entries.map(entry => ({
+        type: "element",
+        tagName: "li",
+        properties: {
+          id: `ref-${entry.id}`,
+          className: ["aimd-refs__item"],
+          "data-aimd-ref-id": entry.id,
+          "data-aimd-ref-type": entry.entry_type,
+        },
+        children: createReferenceTextChildren(entry),
+      } as Element)),
+    } as Element,
+  ]
+}
+
 function createTextNode(value: string): HastText {
   return { type: "text", value }
 }
@@ -994,6 +1085,11 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     nodeData.sequence = figNode.sequence
   }
 
+  // Add refs-specific fields
+  if (node.fieldType === "refs") {
+    nodeData.entries = (node as any).entries
+  }
+
   // Add step-specific fields
   if (node.fieldType === "step") {
     const stepNode = node as AimdStepNode
@@ -1026,12 +1122,13 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
   const isCite = fieldType === "cite"
   const isQuiz = fieldType === "quiz"
   const isFig = fieldType === "fig"
+  const isRefs = fieldType === "refs"
   const baseClass = isRef
     ? "aimd-ref"
-    : (isCite ? "aimd-cite" : (isFig ? "aimd-figure" : "aimd-field"))
+    : (isCite ? "aimd-cite" : (isFig ? "aimd-figure" : (isRefs ? "aimd-refs" : "aimd-field")))
   const modifierClass = isRef
     ? `aimd-ref--${fieldType === "ref_step" ? "step" : (fieldType === "ref_var" ? "var" : "fig")}`
-    : (isCite ? "" : (isFig ? "" : `aimd-field--${typeClass}`))
+    : (isCite ? "" : (isFig || isRefs ? "" : `aimd-field--${typeClass}`))
 
   // Generate children based on field type
   const children: (Element | HastText)[] = []
@@ -1091,27 +1188,46 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     }
   }
   else if (isCite) {
-    // Citation: [refs]
+    // Citation: linked [refs]
     const refs = "refs" in node ? (node as any).refs : [id]
+    children.push(createTextNode("["))
+    refs.forEach((ref: string, index: number) => {
+      if (index > 0) {
+        children.push(createTextNode(", "))
+      }
+      children.push({
+        type: "element",
+        tagName: "a",
+        properties: {
+          className: ["aimd-cite__ref"],
+          href: `#ref-${ref}`,
+        },
+        children: [createTextNode(ref)],
+      } as Element)
+    })
+    children.push(createTextNode("]"))
+  }
+  else if (isRefs) {
+    const entries = Array.isArray((node as any).entries) ? (node as any).entries : []
     children.push({
       type: "element",
-      tagName: "span",
-      properties: { className: ["aimd-cite__refs"] },
-      children: [{ type: "text", value: `[${refs.join(", ")}]` }],
+      tagName: "div",
+      properties: { className: ["aimd-refs__content"] },
+      children: buildReferencesChildren(entries, messages.references.title),
     } as Element)
   }
-	  else if (fieldType === "var") {
-	    // Variable: type label + id + optional type annotation
-	    const definition = "definition" in node ? node.definition : undefined
-	    children.push(
+  else if (fieldType === "var") {
+    // Variable: type label + id + optional type annotation
+    const definition = "definition" in node ? node.definition : undefined
+    children.push(
       {
         type: "element",
         tagName: "span",
-	        properties: { className: ["aimd-field__scope"] },
-	        children: [{ type: "text", value: getAimdRendererScopeLabel("var", messages) }],
-	      } as Element,
-	      createFieldNameElement(id, definition),
-	    )
+        properties: { className: ["aimd-field__scope"] },
+        children: [{ type: "text", value: getAimdRendererScopeLabel("var", messages) }],
+      } as Element,
+      createFieldNameElement(id, definition),
+    )
     if (definition?.type) {
       children.push({
         type: "element",
@@ -1463,6 +1579,15 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     properties["data-aimd-fig-src"] = figNode.src
   }
 
+  if (node.fieldType === "cite") {
+    const refs = "refs" in node ? (node as any).refs : [id]
+    properties["data-aimd-refs"] = refs.join(",")
+  }
+
+  if (node.fieldType === "refs") {
+    properties.id = "refs"
+  }
+
   // Add quiz metadata for fallback reconstruction
   if (node.fieldType === "quiz") {
     const quizNode = node as AimdQuizNode
@@ -1475,7 +1600,7 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     type: "element",
     tagName: isRef
       ? "a"
-      : (isFig ? "figure" : ((fieldType === "var_table" || isQuiz || isGroupedStepContainer) ? "div" : "span")),
+      : (isFig ? "figure" : (isRefs ? "section" : ((fieldType === "var_table" || isQuiz || isGroupedStepContainer) ? "div" : "span"))),
     properties,
     children,
   }, node)

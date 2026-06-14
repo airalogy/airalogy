@@ -21,6 +21,8 @@
 - `var_table[].subvars[]` 提供规范字段 `id`，以及可选的列级 `title`、`description`、`examples`
 - `client_assigner[]` 提供 `id`、`mode`、`dependent_fields`、`assigned_fields`、`function_source`，它们来自 `assigner(config, function ...)` 形式的前端代码块
 - `quiz[]` 本来就使用 `id`
+- `fig[]` 提供 fenced `fig` 代码块中的 `id`、`src`、`title`、`legend`
+- `refs[]` 提供 fenced `refs` 代码块中的 BibTeX 条目，包含 `id`、`entry_type`、`raw`、标准化 `fields`，以及 `title`、`author`、`year`、`doi`、`url` 等展示字段
 - `step_hierarchy[]` 提供 `id`、`step`、`parent_id`、`prev_id`、`next_id`、`estimated_duration_ms`、`timer_mode`、`has_check`、`has_children`
 
 ## 示例
@@ -74,6 +76,16 @@
       "dependent_fields": ["a", "b"],
       "assigned_fields": ["total"],
       "function_source": "function calculate_total({ a, b }) { return { total: a + b }; }"
+    }
+  ],
+  "refs": [
+    {
+      "id": "yang2025airalogy",
+      "entry_type": "article",
+      "title": "Airalogy: Universal Research Automation",
+      "author": "Yang, Zijie",
+      "year": "2025",
+      "doi": "10.1234/airalogy.2025"
     }
   ],
   "step_hierarchy": [

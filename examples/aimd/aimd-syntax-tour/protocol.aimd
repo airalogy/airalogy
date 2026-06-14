@@ -90,6 +90,34 @@ assigner(
 );
 ```
 
+## Figures and Citations
+
+The protocol workflow is summarized in {{ref_fig|workflow_diagram}} and can cite inline references such as {{cite|yang2025airalogy,doe2024protocol}}.
+
+```fig
+id: workflow_diagram
+src: files/workflow-diagram.svg
+title: Workflow Diagram
+legend: A compact local SVG figure used to demonstrate fig metadata and ref_fig links.
+```
+
+```refs
+@article{yang2025airalogy,
+  title = {Airalogy: Universal Research Automation},
+  author = {Yang, Zijie and Chen, Mei},
+  journal = {Airalogy Journal},
+  year = {2025},
+  doi = {10.1234/airalogy.2025}
+}
+
+@misc{doe2024protocol,
+  title = {Protocol Notes},
+  author = {Doe, Jane},
+  year = {2024},
+  url = {https://example.com/protocol}
+}
+```
+
 ## Experiment Steps
 
 {{step|sample_preparation}} Prepare the sample and confirm sample name {{ref_var|sample_name}}. This step does not enable a checkpoint, so it should render without a checkbox.

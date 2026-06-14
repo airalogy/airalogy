@@ -14,6 +14,8 @@ let initPromise: Promise<typeof Monaco> | null = null
 const CLIENT_ASSIGNER_FENCE = /^\s*(```|~~~)\s*assigner(?:\s+.*\bruntime\s*=\s*(?:"client"|'client'|client)\b.*)\s*$/
 const SERVER_ASSIGNER_FENCE = /^\s*(```|~~~)\s*assigner(?:\s+.*)?\s*$/
 const QUIZ_FENCE = /^\s*(```|~~~)\s*quiz(?:\s+.*)?\s*$/
+const FIG_FENCE = /^\s*(```|~~~)\s*fig(?:\s+.*)?\s*$/
+const REFS_FENCE = /^\s*(```|~~~)\s*refs(?:\s+.*)?\s*$/
 const GENERIC_CODE_FENCE = /^\s*(```|~~~)\s*((?:\w|[/#-])+)(?:\s+.*)?\s*$/
 const EMPTY_CODE_FENCE = /^\s*(```|~~~)\s*$/
 
@@ -69,13 +71,20 @@ function registerAimdLanguage(monaco: typeof Monaco) {
   monaco.languages.setMonarchTokensProvider('aimd', {
     defaultToken: '',
     tokenPostfix: '.aimd',
-    aimdKeywords: ['var', 'var_table', 'step', 'check', 'ref_step', 'ref_var'],
-    aimdTypes: ['str', 'int', 'float', 'bool', 'list', 'dict', 'any'],
+    aimdKeywords: ['var', 'var_table', 'step', 'check', 'ref_step', 'ref_var', 'ref_fig', 'cite'],
+    aimdTypes: ['str', 'int', 'float', 'bool', 'list', 'dict', 'any', 'date', 'file', 'CurrentTime', 'UserName', 'AiralogyMarkdown', 'DNASequence', 'PyStr', 'JsStr', 'JsonStr', 'YamlStr', 'CodeStr'],
     tokenizer: {
       root: [
         [/\{\{/, { token: 'delimiter.bracket.aimd', next: '@aimdField' }],
+        [/\{\+\+[^]*?\+\+\}/, 'markup.inserted.aimd'],
+        [/\{--[^]*?--\}/, 'markup.deleted.aimd'],
+        [/\{~~[^]*?~>[^]*?~~\}/, 'markup.changed.aimd'],
+        [/\{>>[^]*?<<\}/, 'comment.aimd'],
+        [/\{==[^]*?==\}/, 'markup.highlight.aimd'],
         [/^#{1,6}\s.*$/, 'keyword.md'],
         [QUIZ_FENCE, { token: 'string.code', next: '@embeddedCodeblock', nextEmbedded: 'yaml' }],
+        [FIG_FENCE, { token: 'string.code', next: '@embeddedCodeblock', nextEmbedded: 'yaml' }],
+        [REFS_FENCE, { token: 'string.code', next: '@embeddedCodeblock', nextEmbedded: 'bibtex' }],
         [CLIENT_ASSIGNER_FENCE, { token: 'string.code', next: '@embeddedCodeblock', nextEmbedded: 'javascript' }],
         [SERVER_ASSIGNER_FENCE, { token: 'string.code', next: '@embeddedCodeblock', nextEmbedded: 'python' }],
         [GENERIC_CODE_FENCE, { token: 'string.code', next: '@embeddedCodeblock', nextEmbedded: '$2' }],
@@ -95,7 +104,7 @@ function registerAimdLanguage(monaco: typeof Monaco) {
       ],
       aimdField: [
         [/\}\}/, { token: 'delimiter.bracket.aimd', next: '@pop' }],
-        [/\b(var_table|var|step|check|ref_step|ref_var)\b/, 'keyword.aimd'],
+        [/\b(var_table|var|step|check|ref_step|ref_var|ref_fig|cite)\b/, 'keyword.aimd'],
         [/\|/, 'delimiter.aimd'],
         [/:/, 'delimiter'],
         [/\b(str|int|float|bool|list|dict|any)\b/, 'type.aimd'],
@@ -126,7 +135,7 @@ function registerAimdLanguage(monaco: typeof Monaco) {
 
   monaco.languages.registerCompletionItemProvider('aimd', {
     provideCompletionItems: () => {
-      const keywords = ['var', 'var_table', 'step', 'check', 'ref_step', 'ref_var']
+      const keywords = ['var', 'var_table', 'step', 'check', 'ref_step', 'ref_var', 'ref_fig', 'cite']
       const suggestions = keywords.map(keyword => ({
         label: `{{${keyword}|}}`,
         kind: monaco.languages.CompletionItemKind.Snippet,
@@ -134,6 +143,22 @@ function registerAimdLanguage(monaco: typeof Monaco) {
         insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
         documentation: `Insert AIMD ${keyword} field`,
       }))
+      suggestions.push(
+        {
+          label: 'fig block',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: '```fig\nid: ${1:fig_id}\nsrc: ${2:path-or-url}\ntitle: ${3:Figure title}\nlegend: ${4:Figure legend}\n```',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: 'Insert an AIMD figure block',
+        },
+        {
+          label: 'refs block',
+          kind: monaco.languages.CompletionItemKind.Snippet,
+          insertText: '```refs\n@article{${1:ref_id},\n  title = {${2:Title}},\n  author = {${3:Author}},\n  year = {${4:2026}}\n}\n```',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: 'Insert an AIMD BibTeX references block',
+        },
+      )
       return { suggestions } as any
     },
   })
@@ -153,6 +178,10 @@ function registerAimdLanguage(monaco: typeof Monaco) {
       { token: 'emphasis', fontStyle: 'italic' },
       { token: 'string.link', foreground: '2563eb' },
       { token: 'comment.quote', foreground: '6b7280', fontStyle: 'italic' },
+      { token: 'markup.inserted.aimd', foreground: '166534' },
+      { token: 'markup.deleted.aimd', foreground: '991b1b', fontStyle: 'strikethrough' },
+      { token: 'markup.changed.aimd', foreground: '92400e' },
+      { token: 'markup.highlight.aimd', foreground: '854d0e', background: 'fef3c7' },
     ],
     colors: {},
   })
@@ -172,6 +201,10 @@ function registerAimdLanguage(monaco: typeof Monaco) {
       { token: 'emphasis', fontStyle: 'italic' },
       { token: 'string.link', foreground: '60a5fa' },
       { token: 'comment.quote', foreground: '9ca3af', fontStyle: 'italic' },
+      { token: 'markup.inserted.aimd', foreground: '86efac' },
+      { token: 'markup.deleted.aimd', foreground: 'fca5a5', fontStyle: 'strikethrough' },
+      { token: 'markup.changed.aimd', foreground: 'fbbf24' },
+      { token: 'markup.highlight.aimd', foreground: 'fde68a', background: '713f12' },
     ],
     colors: {},
   })

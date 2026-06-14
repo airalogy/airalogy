@@ -1,6 +1,6 @@
 import type { Element, Root as HastRoot, Text as HastText, RootContent } from "hast"
 import type { Component, VNode, VNodeChild } from "vue"
-import type { AimdNode, AimdQuizNode, AimdStepNode, RenderContext } from "@airalogy/aimd-core/types"
+import type { AimdNode, AimdQuizNode, AimdReferenceEntry, AimdStepNode, RenderContext } from "@airalogy/aimd-core/types"
 import {
   formatAimdExampleValue,
   getAimdFieldDescription,
@@ -157,6 +157,47 @@ function buildScaleBandChildren(quizNode: AimdQuizNode): VNodeChild[] {
       h("li", `${band.min}-${band.max}: ${band.label}${band.interpretation ? ` · ${band.interpretation}` : ""}`),
     )),
   ]
+}
+
+function getReferenceContainer(entry: AimdReferenceEntry): string | undefined {
+  return entry.journal || entry.booktitle || entry.publisher
+}
+
+function buildReferenceChildren(entry: AimdReferenceEntry): VNodeChild[] {
+  const children: VNodeChild[] = []
+  const pushText = (value: string | undefined, suffix = "") => {
+    const normalized = value?.trim()
+    if (!normalized) {
+      return
+    }
+    if (children.length > 0) {
+      children.push(" ")
+    }
+    children.push(`${normalized}${suffix}`)
+  }
+
+  pushText(entry.author)
+  pushText(entry.year ? `(${entry.year})` : undefined)
+  pushText(entry.title, entry.title && !/[.!?]$/.test(entry.title) ? "." : "")
+  pushText(getReferenceContainer(entry), ".")
+
+  if (entry.doi) {
+    if (children.length > 0) {
+      children.push(" ")
+    }
+    const doiHref = entry.doi.startsWith("http")
+      ? entry.doi
+      : `https://doi.org/${entry.doi}`
+    children.push(h("a", { class: "aimd-refs__doi", href: doiHref }, `doi:${entry.doi}`))
+  }
+  else if (entry.url) {
+    if (children.length > 0) {
+      children.push(" ")
+    }
+    children.push(h("a", { class: "aimd-refs__url", href: entry.url }, entry.url))
+  }
+
+  return children.length > 0 ? children : [entry.id]
 }
 
 interface FieldMetadataHelp {
@@ -626,7 +667,12 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
       "data-aimd-type": "cite",
       "data-aimd-refs": refs.join(","),
     }, [
-      h("span", { class: "aimd-cite__refs" }, `[${refs.join(", ")}]`),
+      "[",
+      ...refs.flatMap((ref: string, index: number) => [
+        index > 0 ? ", " : "",
+        h("a", { class: "aimd-cite__ref", href: `#ref-${ref}` }, ref),
+      ]),
+      "]",
     ])
   },
 
@@ -683,6 +729,29 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
       "data-aimd-fig-src": figSrc,
       "id": `fig-${figId}`,
     }, children)
+  },
+
+  refs: (node, ctx) => {
+    const entries = Array.isArray((node as any).entries)
+      ? (node as any).entries as AimdReferenceEntry[]
+      : []
+
+    return h("section", {
+      "class": "aimd-refs",
+      "data-aimd-type": "refs",
+      "data-aimd-id": node.id,
+      "id": "refs",
+    }, [
+      h("div", { class: "aimd-refs__title" }, ctx.messages.references.title),
+      h("ol", { class: "aimd-refs__list" }, entries.map(entry =>
+        h("li", {
+          id: `ref-${entry.id}`,
+          class: "aimd-refs__item",
+          "data-aimd-ref-id": entry.id,
+          "data-aimd-ref-type": entry.entry_type,
+        }, buildReferenceChildren(entry)),
+      )),
+    ])
   },
 }
 

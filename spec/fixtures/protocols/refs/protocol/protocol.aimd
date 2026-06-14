@@ -1,0 +1,22 @@
+# Refs AIMD Test
+
+This fixture validates inline citations such as {{cite|yang2025airalogy,doe2024protocol}} and a fenced refs block.
+
+{{step|review_references}} Confirm that the rendered bibliography links back to the citation markers.
+
+```refs
+@article{yang2025airalogy,
+  title = {Airalogy: Universal Research Automation},
+  author = {Yang, Zijie and Chen, Mei},
+  journal = {Airalogy Journal},
+  year = {2025},
+  doi = {10.1234/airalogy.2025}
+}
+
+@misc{doe2024protocol,
+  title = "Protocol Notes",
+  author = "Doe, Jane",
+  year = "2024",
+  url = "https://example.com/protocol"
+}
+```

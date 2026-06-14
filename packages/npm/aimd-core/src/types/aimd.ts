@@ -150,6 +150,7 @@ export type AimdScopeKey =
   | "ref_fig"
   | "cite"
   | "fig"
+  | "refs"
 
 /**
  * High-level scope names for semantic grouping
@@ -175,6 +176,7 @@ export type AimdFieldType =
   | "ref_fig"
   | "cite"
   | "fig"
+  | "refs"
 
 /**
  * Variable type annotation (e.g., str, int, float, bool, list)
@@ -384,6 +386,29 @@ export interface AimdFigField {
 }
 
 /**
+ * Reference entry parsed from a fenced `refs` BibTeX block.
+ */
+export interface AimdReferenceField {
+  /** Citation key used by `{{cite|...}}` */
+  id: string
+  /** BibTeX entry type, such as article, book, inproceedings, misc. */
+  entry_type: string
+  /** Raw BibTeX entry for lossless display/debugging. */
+  raw: string
+  /** Full normalized BibTeX fields keyed by lower-case field name. */
+  fields: Record<string, string>
+  /** Common display fields normalized from `fields`. */
+  title?: string
+  author?: string
+  year?: string
+  journal?: string
+  booktitle?: string
+  publisher?: string
+  doi?: string
+  url?: string
+}
+
+/**
  * Client runtime assigner modes currently supported by the recorder runtime.
  */
 export type AimdClientAssignerMode = "auto" | "auto_first" | "manual"
@@ -436,6 +461,8 @@ export interface ExtractedAimdFields {
   cite?: string[]
   /** Figures with full definitions */
   fig?: AimdFigField[]
+  /** References parsed from fenced `refs` BibTeX blocks */
+  refs?: AimdReferenceField[]
   /** Step hierarchy for nested steps */
   step_hierarchy?: AimdStepField[]
 }

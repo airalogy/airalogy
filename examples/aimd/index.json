@@ -14,8 +14,8 @@
         "zh-CN": "AIMD 语法导览"
       },
       "description": {
-        "en-US": "A compact interactive tour covering AIMD variables, tables, steps, checks, quizzes, references, Markdown review marks, and browser-side client assigners.",
-        "zh-CN": "一个交互式语法导览，覆盖 AIMD 变量、表格、步骤、检查点、题目、引用、Markdown 审阅标记和浏览器侧 client assigner。"
+        "en-US": "A compact interactive tour covering AIMD variables, tables, figures, citations, steps, checks, quizzes, references, Markdown review marks, and browser-side client assigners.",
+        "zh-CN": "一个交互式语法导览，覆盖 AIMD 变量、表格、图、文献引用、步骤、检查点、题目、引用、Markdown 审阅标记和浏览器侧 client assigner。"
       },
       "protocol_dir": {
         "en-US": "aimd-syntax-tour"
@@ -28,6 +28,8 @@
         "syntax",
         "demo",
         "tour",
+        "figures",
+        "citations",
         "critic-markup",
         "client-assigner"
       ]

@@ -15,8 +15,9 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `renderToHtml(content)`：输出 HTML。
 - `renderToVue(content)`：输出 Vue vnode。
 - `renderReadonlyRecordToVue(content, recordData, { resolveAsset })`：输出带 Record 数据和文件资源的只读 Vue vnode，把数据嵌入匹配的 AIMD 字段。
-- `parseAndExtract(content)`：提取 core 规范字段结构，包括 `fields.var_definitions` 中的普通 `var` 定义。
+- `parseAndExtract(content)`：提取 core 规范字段结构，包括 `fields.var_definitions` 中的普通 `var` 定义，以及 `fields.refs` 中的 BibTeX 文献条目。
 - `var` 与 `var_table` 的默认预览会显示 AIMD `title`，保留规范字段 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。
+- `{{cite|...}}` 与 fenced `refs` 代码块会渲染为可点击引用标记和参考文献列表。
 - `assignerVisibility`：用于作者视图或调试视图下切换 assigner 的可见性。
 - 内建 quiz 预览控制。
 - 支持通过 `locale` 切换渲染标签语言。
@@ -34,6 +35,23 @@ const fields = parseAndExtract(content)
 console.log(html)
 console.log(fields)
 ```
+
+## 文献引用与参考文献
+
+`renderToHtml` 和 `renderToVue` 会把 `{{cite|ref_id}}` 渲染成指向参考文献列表的链接。fenced `refs` 代码块使用 BibTeX 语法，并会被提取到 `fields.refs` 结构化条目中。
+
+````aimd
+This protocol follows {{cite|yang2025airalogy}}.
+
+```refs
+@article{yang2025airalogy,
+  title = {Airalogy: Universal Research Automation},
+  author = {Yang, Zijie},
+  year = {2025},
+  doi = {10.1234/airalogy.2025}
+}
+```
+````
 
 ## 审阅标记
 

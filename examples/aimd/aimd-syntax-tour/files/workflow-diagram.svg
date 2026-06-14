@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="320" viewBox="0 0 640 320" role="img" aria-labelledby="title desc">
+  <title id="title">AIMD workflow diagram</title>
+  <desc id="desc">A compact workflow diagram showing preparation, review, and report stages.</desc>
+  <rect width="640" height="320" fill="#f2f7ff"/>
+  <path d="M160 160h320" stroke="#2f6f9f" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="160" cy="160" r="44" fill="#2f6f9f"/>
+  <circle cx="320" cy="160" r="44" fill="#0f9f6e"/>
+  <circle cx="480" cy="160" r="44" fill="#d66f3f"/>
+  <g fill="#1f2f46" font-family="Arial, sans-serif" text-anchor="middle">
+    <text x="160" y="238" font-size="22">Prepare</text>
+    <text x="320" y="238" font-size="22">Review</text>
+    <text x="480" y="238" font-size="22">Report</text>
+  </g>
+</svg>

@@ -21,6 +21,8 @@ These scopes are still simple `string[]`, and each string is an identifier:
 - `var_table[].subvars[]` exposes canonical `id` plus optional column-level `title`, `description`, and `examples`
 - `client_assigner[]` exposes `id`, `mode`, `dependent_fields`, `assigned_fields`, and `function_source` extracted from `assigner(config, function ...)` client blocks
 - `quiz[]` already exposes `id`
+- `fig[]` exposes `id`, `src`, `title`, and `legend` from fenced `fig` blocks
+- `refs[]` exposes BibTeX entries from fenced `refs` blocks with `id`, `entry_type`, `raw`, normalized `fields`, and display fields such as `title`, `author`, `year`, `doi`, and `url`
 - `step_hierarchy[]` exposes `id`, `step`, `parent_id`, `prev_id`, `next_id`, `estimated_duration_ms`, `timer_mode`, `has_check`, and `has_children`
 
 ## Example
@@ -74,6 +76,16 @@ These scopes are still simple `string[]`, and each string is an identifier:
       "dependent_fields": ["a", "b"],
       "assigned_fields": ["total"],
       "function_source": "function calculate_total({ a, b }) { return { total: a + b }; }"
+    }
+  ],
+  "refs": [
+    {
+      "id": "yang2025airalogy",
+      "entry_type": "article",
+      "title": "Airalogy: Universal Research Automation",
+      "author": "Yang, Zijie",
+      "year": "2025",
+      "doi": "10.1234/airalogy.2025"
     }
   ],
   "step_hierarchy": [
