@@ -14,9 +14,13 @@ const router = createRouter({
     { path: '/editor', component: () => import('./pages/EditorDemo.vue') },
     { path: '/renderer', component: () => import('./pages/RendererDemo.vue') },
     { path: '/recorder', component: () => import('./pages/RecorderDemo.vue') },
+    { path: '/:pathMatch(.*)*', redirect: '/tutorial' },
   ],
 })
 
 const app = createApp(App)
 app.use(router)
-app.mount('#app')
+
+void router.isReady().finally(() => {
+  app.mount('#app')
+})

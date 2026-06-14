@@ -3,22 +3,22 @@
 在AIMD中，你可以引用文献。例如：
 
 ````aimd
-Airalogy是世界上第一个全学科通用的科研数字化、自动化和加速平台{{cite|yang2025airalogy}}。
+Airalogy是世界上第一个全学科通用的科研数字化、自动化和加速平台{{cite|yang2025airalogyaiempowereduniversaldata}}。
 
 ```refs
-@misc{yang2025airalogy,
-      title={Airalogy: AI-empowered universal data digitization for research automation}, 
+@misc{yang2025airalogyaiempowereduniversaldata,
+      title={Airalogy: AI-empowered universal data digitization for research automation},
       author={Zijie Yang and Qiji Zhou and Fang Guo and Sijie Zhang and Yexun Xi and Jinglei Nie and Yudian Zhu and Liping Huang and Chou Wu and Yonghe Xia and Xiaoyu Ma and Yingming Pu and Panzhong Lu and Junshu Pan and Mingtao Chen and Tiannan Guo and Yanmei Dou and Hongyu Chen and Anping Zeng and Jiaxing Huang and Tian Xu and Yue Zhang},
       year={2025},
       eprint={2506.18586},
       archivePrefix={arXiv},
       primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2506.18586}, 
+      url={https://arxiv.org/abs/2506.18586},
 }
 ```
 ````
 
-在上面的例子中，`{{cite|yang2025airalogy}}`用于在文本中插入引用标记，而引用的详细信息以BibTeX格式放在代码块中的`refs`部分（该代码块的注释名必须为`refs`）。AIMD会自动处理这些引用，并在最终渲染的文档中生成参考文献列表。
+在上面的例子中，`{{cite|yang2025airalogyaiempowereduniversaldata}}`用于在文本中插入引用标记，而引用的详细信息以BibTeX格式放在代码块中的`refs`部分（该代码块的注释名必须为`refs`）。AIMD会自动处理这些引用，并在最终渲染的文档中生成参考文献列表。渲染器会把正文引用显示为 `[1]` 这类紧凑编号，同时在链接目标和元数据中保留原始 BibTeX key。
 
 `parse_aimd` 和 `@airalogy/aimd-core` 会把正文引用 id 提取到 `cite`，把 BibTeX 条目提取到结构化 `refs`；`@airalogy/aimd-renderer` 会把正文引用标记链接到生成的参考文献列表。
 

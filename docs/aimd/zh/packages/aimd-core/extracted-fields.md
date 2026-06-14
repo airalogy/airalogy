@@ -80,12 +80,12 @@
   ],
   "refs": [
     {
-      "id": "yang2025airalogy",
-      "entry_type": "article",
-      "title": "Airalogy: Universal Research Automation",
-      "author": "Yang, Zijie",
+      "id": "yang2025airalogyaiempowereduniversaldata",
+      "entry_type": "misc",
+      "title": "Airalogy: AI-empowered universal data digitization for research automation",
+      "author": "Zijie Yang and Qiji Zhou and Fang Guo and Sijie Zhang and Yexun Xi and Jinglei Nie and Yudian Zhu and Liping Huang and Chou Wu and Yonghe Xia and Xiaoyu Ma and Yingming Pu and Panzhong Lu and Junshu Pan and Mingtao Chen and Tiannan Guo and Yanmei Dou and Hongyu Chen and Anping Zeng and Jiaxing Huang and Tian Xu and Yue Zhang",
       "year": "2025",
-      "doi": "10.1234/airalogy.2025"
+      "url": "https://arxiv.org/abs/2506.18586"
     }
   ],
   "step_hierarchy": [

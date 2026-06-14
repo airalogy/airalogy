@@ -366,6 +366,131 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
 
 .examples-render-preview {
   padding: 24px;
+  color: #243247;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.examples-render-preview :deep(h1) {
+  margin: 0.45em 0 0.35em;
+  color: #162033;
+  font-size: 2em;
+  font-weight: 760;
+  line-height: 1.2;
+}
+
+.examples-render-preview :deep(h2) {
+  margin: 1em 0 0.45em;
+  padding-bottom: 0.24em;
+  border-bottom: 1px solid #e3e9f2;
+  color: #243247;
+  font-size: 1.52em;
+  font-weight: 720;
+  line-height: 1.25;
+}
+
+.examples-render-preview :deep(h3) {
+  margin: 0.85em 0 0.35em;
+  color: #2d3d55;
+  font-size: 1.22em;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.examples-render-preview :deep(h4),
+.examples-render-preview :deep(h5),
+.examples-render-preview :deep(h6) {
+  margin: 0.75em 0 0.3em;
+  color: #34445c;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.examples-render-preview :deep(p) {
+  margin: 0.55em 0;
+}
+
+.examples-render-preview :deep(ul),
+.examples-render-preview :deep(ol) {
+  margin: 0.55em 0;
+  padding-left: 24px;
+}
+
+.examples-render-preview :deep(li) {
+  margin: 0.18em 0;
+}
+
+.examples-render-preview :deep(blockquote) {
+  margin: 0.8em 0;
+  padding: 8px 14px;
+  border-left: 4px solid #d3ddea;
+  background: #f8fbff;
+  color: #56667d;
+}
+
+.examples-render-preview :deep(table) {
+  width: 100%;
+  margin: 0.85em 0;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.examples-render-preview :deep(th),
+.examples-render-preview :deep(td) {
+  padding: 7px 12px;
+  border: 1px solid #d8e1ee;
+  text-align: left;
+}
+
+.examples-render-preview :deep(th) {
+  background: #f4f7fb;
+  color: #25344a;
+  font-weight: 700;
+}
+
+.examples-render-preview :deep(code) {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #eef3f8;
+  color: #223247;
+  font-family: 'SFMono-Regular', 'SF Mono', 'Fira Code', 'Menlo', monospace;
+  font-size: 0.9em;
+}
+
+.examples-render-preview :deep(pre) {
+  margin: 0.9em 0;
+  padding: 14px 16px;
+  overflow: auto;
+  border-radius: 10px;
+  background: #101827;
+  color: #dbeafe;
+}
+
+.examples-render-preview :deep(pre code) {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.examples-render-preview :deep(hr) {
+  margin: 18px 0;
+  border: 0;
+  border-top: 1px solid #e1e8f2;
+}
+
+.examples-render-preview :deep(a) {
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+.examples-render-preview :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.examples-render-preview :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
 }
 
 .examples-error {

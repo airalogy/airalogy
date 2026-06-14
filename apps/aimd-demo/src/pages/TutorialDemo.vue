@@ -44,11 +44,12 @@ const currentLesson = computed(() => {
 const canGoPrevious = computed(() => currentIndex.value > 0)
 const canGoNext = computed(() => currentIndex.value < lessons.value.length - 1)
 
-watch([lessonIds, lessonQueryId], ([ids, lessonId]) => {
+watch([lessonIds, lessonQueryId, () => route.path], ([ids, lessonId, path]) => {
+  if (path !== '/tutorial') return
   if (!ids.length) return
   if (!lessonId || !ids.includes(lessonId)) {
     void router.replace({
-      path: route.path,
+      path: '/tutorial',
       query: {
         ...route.query,
         lesson: ids[0],
@@ -126,7 +127,7 @@ const fieldsOutput = computed(() => JSON.stringify(extractedFields.value ?? {}, 
 function goToLesson(lessonId: string) {
   if (!lessonId || lessonId === currentLesson.value.id) return
   void router.push({
-    path: route.path,
+    path: '/tutorial',
     query: {
       ...route.query,
       lesson: lessonId,

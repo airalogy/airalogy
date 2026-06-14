@@ -14,12 +14,13 @@ const normalizeBase = (value?: string) => {
 }
 
 const base = normalizeBase(process.env.DEMO_BASE)
+const enableVueDevTools = process.env.VUE_DEVTOOLS === 'true'
 
 export default defineConfig(({ command }) => ({
   base,
   plugins: [
     vue(),
-    command === 'serve' ? VueDevTools() : null,
+    command === 'serve' && enableVueDevTools ? VueDevTools() : null,
     tsconfigPaths({ root: '../..' }),
   ].filter(Boolean),
   server: {

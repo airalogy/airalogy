@@ -17,7 +17,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `renderReadonlyRecordToVue(content, recordData, { resolveAsset })` for readonly Vue rendering with Record data and file assets embedded in matching AIMD fields.
 - `parseAndExtract(content)` for canonical core field metadata extraction, including simple `var` definitions in `fields.var_definitions` and BibTeX references in `fields.refs`.
 - Default previews for `var` and `var_table` display AIMD `title`, preserve the canonical field id, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus.
-- Linked citation markers and generated references lists for `{{cite|...}}` plus fenced `refs` blocks.
+- Numbered linked citation markers and generated references lists for `{{cite|...}}` plus fenced `refs` blocks.
 - `assignerVisibility` to show or hide assigner blocks in authoring/debug views.
 - Built-in quiz preview controls.
 - Built-in locale support via `locale`.
@@ -38,17 +38,20 @@ console.log(fields)
 
 ## Citations and References
 
-`renderToHtml` and `renderToVue` render `{{cite|ref_id}}` markers as links to the generated references list. Fenced `refs` blocks use BibTeX syntax and are extracted into `fields.refs` as structured entries.
+`renderToHtml` and `renderToVue` render `{{cite|ref_id}}` markers as numbered links to the generated references list. The visible citation marker uses refs-list order, such as `[1]`, while the link target and metadata keep the original BibTeX key. Fenced `refs` blocks use BibTeX syntax and are extracted into `fields.refs` as structured entries.
 
 ````aimd
-This protocol follows {{cite|yang2025airalogy}}.
+This protocol follows {{cite|yang2025airalogyaiempowereduniversaldata}}.
 
 ```refs
-@article{yang2025airalogy,
-  title = {Airalogy: Universal Research Automation},
-  author = {Yang, Zijie},
-  year = {2025},
-  doi = {10.1234/airalogy.2025}
+@misc{yang2025airalogyaiempowereduniversaldata,
+      title={Airalogy: AI-empowered universal data digitization for research automation},
+      author={Zijie Yang and Qiji Zhou and Fang Guo and Sijie Zhang and Yexun Xi and Jinglei Nie and Yudian Zhu and Liping Huang and Chou Wu and Yonghe Xia and Xiaoyu Ma and Yingming Pu and Panzhong Lu and Junshu Pan and Mingtao Chen and Tiannan Guo and Yanmei Dou and Hongyu Chen and Anping Zeng and Jiaxing Huang and Tian Xu and Yue Zhang},
+      year={2025},
+      eprint={2506.18586},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2506.18586},
 }
 ```
 ````

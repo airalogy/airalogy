@@ -17,7 +17,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `renderReadonlyRecordToVue(content, recordData, { resolveAsset })`：输出带 Record 数据和文件资源的只读 Vue vnode，把数据嵌入匹配的 AIMD 字段。
 - `parseAndExtract(content)`：提取 core 规范字段结构，包括 `fields.var_definitions` 中的普通 `var` 定义，以及 `fields.refs` 中的 BibTeX 文献条目。
 - `var` 与 `var_table` 的默认预览会显示 AIMD `title`，保留规范字段 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。
-- `{{cite|...}}` 与 fenced `refs` 代码块会渲染为可点击引用标记和参考文献列表。
+- `{{cite|...}}` 与 fenced `refs` 代码块会渲染为带编号的可点击引用标记和参考文献列表。
 - `assignerVisibility`：用于作者视图或调试视图下切换 assigner 的可见性。
 - 内建 quiz 预览控制。
 - 支持通过 `locale` 切换渲染标签语言。
@@ -38,17 +38,20 @@ console.log(fields)
 
 ## 文献引用与参考文献
 
-`renderToHtml` 和 `renderToVue` 会把 `{{cite|ref_id}}` 渲染成指向参考文献列表的链接。fenced `refs` 代码块使用 BibTeX 语法，并会被提取到 `fields.refs` 结构化条目中。
+`renderToHtml` 和 `renderToVue` 会把 `{{cite|ref_id}}` 渲染成指向参考文献列表的编号链接。正文可见引用标记按 refs 列表顺序显示为 `[1]` 这类编号，链接目标和元数据仍保留原始 BibTeX key。fenced `refs` 代码块使用 BibTeX 语法，并会被提取到 `fields.refs` 结构化条目中。
 
 ````aimd
-This protocol follows {{cite|yang2025airalogy}}.
+This protocol follows {{cite|yang2025airalogyaiempowereduniversaldata}}.
 
 ```refs
-@article{yang2025airalogy,
-  title = {Airalogy: Universal Research Automation},
-  author = {Yang, Zijie},
-  year = {2025},
-  doi = {10.1234/airalogy.2025}
+@misc{yang2025airalogyaiempowereduniversaldata,
+      title={Airalogy: AI-empowered universal data digitization for research automation},
+      author={Zijie Yang and Qiji Zhou and Fang Guo and Sijie Zhang and Yexun Xi and Jinglei Nie and Yudian Zhu and Liping Huang and Chou Wu and Yonghe Xia and Xiaoyu Ma and Yingming Pu and Panzhong Lu and Junshu Pan and Mingtao Chen and Tiannan Guo and Yanmei Dou and Hongyu Chen and Anping Zeng and Jiaxing Huang and Tian Xu and Yue Zhang},
+      year={2025},
+      eprint={2506.18586},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2506.18586},
 }
 ```
 ````

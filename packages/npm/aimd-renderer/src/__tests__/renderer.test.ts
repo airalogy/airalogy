@@ -43,6 +43,37 @@ function findVNodeByType(node: any, expectedType: string): any | null {
   return null
 }
 
+function findVNodeByClass(node: any, expectedClass: string): any | null {
+  if (!node || typeof node !== 'object') {
+    return null
+  }
+
+  const className = node.props?.class
+  const classes = Array.isArray(className)
+    ? className
+    : typeof className === 'string'
+      ? className.split(/\s+/)
+      : []
+  if (classes.includes(expectedClass)) {
+    return node
+  }
+
+  const children = Array.isArray(node.children)
+    ? node.children
+    : Array.isArray(node.component?.subTree?.children)
+      ? node.component.subTree.children
+      : []
+
+  for (const child of children) {
+    const match = findVNodeByClass(child, expectedClass)
+    if (match) {
+      return match
+    }
+  }
+
+  return null
+}
+
 function collectVNodeText(node: any): string {
   if (node == null) {
     return ''
@@ -239,15 +270,17 @@ describe('renderToHtmlSync', () => {
 
   it('renders linked citations and refs blocks', () => {
     const content = [
-      'Cite the method {{cite|yang2025airalogy, doe2024protocol}}.',
+      'Cite the method {{cite|yang2025airalogyaiempowereduniversaldata, doe2024protocol}}.',
       '',
       '```refs',
-      '@article{yang2025airalogy,',
-      '  title = {Airalogy: Universal Research Automation},',
-      '  author = {Yang, Zijie and Chen, Mei},',
-      '  journal = {Airalogy Journal},',
-      '  year = {2025},',
-      '  doi = {10.1234/airalogy.2025}',
+      '@misc{yang2025airalogyaiempowereduniversaldata,',
+      '      title={Airalogy: AI-empowered universal data digitization for research automation},',
+      '      author={Zijie Yang and Qiji Zhou and Fang Guo and Sijie Zhang and Yexun Xi and Jinglei Nie and Yudian Zhu and Liping Huang and Chou Wu and Yonghe Xia and Xiaoyu Ma and Yingming Pu and Panzhong Lu and Junshu Pan and Mingtao Chen and Tiannan Guo and Yanmei Dou and Hongyu Chen and Anping Zeng and Jiaxing Huang and Tian Xu and Yue Zhang},',
+      '      year={2025},',
+      '      eprint={2506.18586},',
+      '      archivePrefix={arXiv},',
+      '      primaryClass={cs.AI},',
+      '      url={https://arxiv.org/abs/2506.18586},',
       '}',
       '',
       '@misc{doe2024protocol,',
@@ -261,23 +294,28 @@ describe('renderToHtmlSync', () => {
 
     const { html, fields } = renderToHtmlSync(content)
 
-    expect(fields.cite).toEqual(['yang2025airalogy', 'doe2024protocol'])
+    expect(fields.cite).toEqual(['yang2025airalogyaiempowereduniversaldata', 'doe2024protocol'])
     expect(fields.refs?.[0]).toMatchObject({
-      id: 'yang2025airalogy',
-      entry_type: 'article',
-      title: 'Airalogy: Universal Research Automation',
-      doi: '10.1234/airalogy.2025',
+      id: 'yang2025airalogyaiempowereduniversaldata',
+      entry_type: 'misc',
+      title: 'Airalogy: AI-empowered universal data digitization for research automation',
+      url: 'https://arxiv.org/abs/2506.18586',
     })
     expect(fields.refs?.[1]).toMatchObject({
       id: 'doe2024protocol',
       url: 'https://example.com/protocol',
     })
-    expect(html).toContain('class="aimd-cite__ref" href="#ref-yang2025airalogy"')
+    expect(html).toContain('href="#ref-yang2025airalogyaiempowereduniversaldata"')
+    expect(html).toContain('title="yang2025airalogyaiempowereduniversaldata"')
+    expect(html).toContain('data-aimd-citation-labels="1,2"')
+    expect(html).toContain('>1</a>')
+    expect(html).toContain('>2</a>')
+    expect(html).not.toContain('>yang2025airalogyaiempowereduniversaldata</a>')
     expect(html).toContain('href="#ref-doe2024protocol"')
     expect(html).toContain('<section class="aimd-refs"')
-    expect(html).toContain('id="ref-yang2025airalogy"')
-    expect(html).toContain('Airalogy: Universal Research Automation')
-    expect(html).toContain('href="https://doi.org/10.1234/airalogy.2025"')
+    expect(html).toContain('id="ref-yang2025airalogyaiempowereduniversaldata"')
+    expect(html).toContain('Airalogy: AI-empowered universal data digitization for research automation')
+    expect(html).toContain('href="https://arxiv.org/abs/2506.18586"')
     expect(html).toContain('href="https://example.com/protocol"')
   })
 
@@ -489,13 +527,17 @@ describe('renderToVue', () => {
   it('renders references as Vue nodes', async () => {
     const { nodes } = await renderToVue(
       [
-        'Cite {{cite|yang2025airalogy}}.',
+        'Cite {{cite|yang2025airalogyaiempowereduniversaldata}}.',
         '',
         '```refs',
-        '@article{yang2025airalogy,',
-        '  title = {Airalogy: Universal Research Automation},',
-        '  author = {Yang, Zijie},',
-        '  year = {2025}',
+        '@misc{yang2025airalogyaiempowereduniversaldata,',
+        '      title={Airalogy: AI-empowered universal data digitization for research automation},',
+        '      author={Zijie Yang and Qiji Zhou and Fang Guo and Sijie Zhang and Yexun Xi and Jinglei Nie and Yudian Zhu and Liping Huang and Chou Wu and Yonghe Xia and Xiaoyu Ma and Yingming Pu and Panzhong Lu and Junshu Pan and Mingtao Chen and Tiannan Guo and Yanmei Dou and Hongyu Chen and Anping Zeng and Jiaxing Huang and Tian Xu and Yue Zhang},',
+        '      year={2025},',
+        '      eprint={2506.18586},',
+        '      archivePrefix={arXiv},',
+        '      primaryClass={cs.AI},',
+        '      url={https://arxiv.org/abs/2506.18586},',
         '}',
         '```',
       ].join('\n'),
@@ -504,12 +546,18 @@ describe('renderToVue', () => {
     const refsNode = nodes
       .map(node => findVNodeByType(node, 'section'))
       .find(Boolean) as any
+    const citeNode = nodes
+      .map(node => findVNodeByClass(node, 'aimd-cite'))
+      .find(Boolean) as any
 
     expect(refsNode).toBeTruthy()
     expect(refsNode.props.class).toBe('aimd-refs')
     expect(refsNode.props.id).toBe('refs')
+    expect(citeNode).toBeTruthy()
+    expect(collectVNodeText(citeNode).replace(/\s+/g, '')).toBe('[1]')
     expect(collectVNodeText(nodes)).toContain('References')
-    expect(collectVNodeText(nodes)).toContain('Airalogy: Universal Research Automation')
+    expect(collectVNodeText(nodes)).toContain('Airalogy: AI-empowered universal data digitization for research automation')
+    expect(collectVNodeText(citeNode)).not.toContain('yang2025airalogyaiempowereduniversaldata')
   })
 
   it('renders code blocks with line numbers and wrapping classes', async () => {

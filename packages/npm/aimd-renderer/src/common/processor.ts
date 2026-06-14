@@ -22,6 +22,7 @@ import { resolveQuizPreviewOptions } from "./quiz-preview"
 import { remarkInsertVisibleAssigners, remarkStripAssignerCodeBlocks } from "./assignerVisibility"
 import { highlightVisibleAssigners } from "./assignerHighlighting"
 import { annotateStepReferenceSequence } from "./annotateStepReferences"
+import { annotateCitationReferenceLabels } from "./citationNumbering"
 import { criticMarkupHandlers } from "./criticMarkup"
 import { buildFigureChildren, assignFigureSequenceNumbers } from "./figureNumbering"
 
@@ -1703,6 +1704,7 @@ export async function renderToHtml(
   const fields = getExtractedFields(file)
   annotateStepReferenceSequence(hastTree, fields, options)
   assignFigureSequenceNumbers(hastTree, fields)
+  annotateCitationReferenceLabels(hastTree, fields)
   liftBlockVarElements(hastTree, options.blockVarTypes)
   if (options.groupStepBodies) {
     groupStepBodies(hastTree)
@@ -1733,6 +1735,7 @@ export async function renderToVue(
   const fields = getExtractedFields(file)
   annotateStepReferenceSequence(hastTree, fields, options)
   assignFigureSequenceNumbers(hastTree, fields)
+  annotateCitationReferenceLabels(hastTree, fields)
   liftBlockVarElements(hastTree, options.blockVarTypes)
   if (options.groupStepBodies) {
     groupStepBodies(hastTree)
@@ -1778,6 +1781,7 @@ export function renderToHtmlSync(
   const fields = getExtractedFields(file)
   annotateStepReferenceSequence(hastTree, fields, options)
   assignFigureSequenceNumbers(hastTree, fields)
+  annotateCitationReferenceLabels(hastTree, fields)
   liftBlockVarElements(hastTree, options.blockVarTypes)
   if (options.groupStepBodies) {
     groupStepBodies(hastTree)

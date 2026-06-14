@@ -1,6 +1,7 @@
 import type { Element, Root as HastRoot, Text as HastText, RootContent } from "hast"
 import type { Component, VNode, VNodeChild } from "vue"
 import type { AimdNode, AimdQuizNode, AimdReferenceEntry, AimdStepNode, RenderContext } from "@airalogy/aimd-core/types"
+import type { AimdCitationReferenceDisplay } from "../common/citationNumbering"
 import {
   formatAimdExampleValue,
   getAimdFieldDescription,
@@ -198,6 +199,24 @@ function buildReferenceChildren(entry: AimdReferenceEntry): VNodeChild[] {
   }
 
   return children.length > 0 ? children : [entry.id]
+}
+
+function getCitationReferenceDisplays(node: AimdNode): AimdCitationReferenceDisplay[] {
+  const citationRefs = (node as any).citationRefs
+  if (Array.isArray(citationRefs) && citationRefs.length > 0) {
+    return citationRefs
+      .map(ref => ({
+        id: String(ref?.id || "").trim(),
+        label: String(ref?.label || ref?.id || "").trim(),
+      }))
+      .filter(ref => ref.id && ref.label)
+  }
+
+  const refs: unknown[] = Array.isArray((node as any).refs) ? (node as any).refs : [node.id]
+  return refs
+    .map((ref: unknown) => String(ref).trim())
+    .filter(Boolean)
+    .map((ref: string) => ({ id: ref, label: ref }))
 }
 
 interface FieldMetadataHelp {
@@ -660,17 +679,26 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
   },
 
   cite: (node, ctx) => {
-    const refs = "refs" in node ? (node as any).refs : [node.id]
+    const citationRefs = getCitationReferenceDisplays(node)
 
     return h("span", {
       "class": "aimd-cite",
       "data-aimd-type": "cite",
-      "data-aimd-refs": refs.join(","),
+      "data-aimd-refs": citationRefs.map(ref => ref.id).join(","),
+      "data-aimd-citation-labels": citationRefs.map(ref => ref.label).join(","),
     }, [
       "[",
-      ...refs.flatMap((ref: string, index: number) => [
+      ...citationRefs.flatMap((ref, index) => [
         index > 0 ? ", " : "",
-        h("a", { class: "aimd-cite__ref", href: `#ref-${ref}` }, ref),
+        h("a", {
+          class: "aimd-cite__ref",
+          href: `#ref-${ref.id}`,
+          title: ref.id,
+          "data-aimd-ref-id": ref.id,
+          "aria-label": ref.label === ref.id
+            ? `Reference ${ref.id}`
+            : `Reference ${ref.label}: ${ref.id}`,
+        }, ref.label),
       ]),
       "]",
     ])
@@ -886,6 +914,13 @@ function preprocessFigures(node: HastRoot | RootContent, figCtx: FigureContext):
 /**
  * Parse AIMD node from HAST element properties
  */
+function splitCsvProp(value: unknown): string[] {
+  return String(value || "")
+    .split(",")
+    .map(part => part.trim())
+    .filter(Boolean)
+}
+
 function parseAimdFromProps(props: Record<string, unknown>): AimdNode | undefined {
   let parsedFromJson: Record<string, unknown> | undefined
 
@@ -919,9 +954,20 @@ function parseAimdFromProps(props: Record<string, unknown>): AimdNode | undefine
   }
 
   const stepSequence = props["data-aimd-step-sequence"] || props.dataAimdStepSequence
+  const citationRefIds = splitCsvProp(props["data-aimd-refs"] || props.dataAimdRefs)
+  const citationLabels = splitCsvProp(props["data-aimd-citation-labels"] || props.dataAimdCitationLabels)
+  const citationRefs = citationRefIds.map((refId, index) => ({
+    id: refId,
+    label: citationLabels[index] || refId,
+  }))
+
   if (parsedFromJson) {
     if (typeof stepSequence === "string" && stepSequence.trim()) {
       parsedFromJson.stepSequence = stepSequence
+    }
+    if (fieldType === "cite" && citationRefs.length > 0) {
+      parsedFromJson.refs = citationRefs.map(ref => ref.id)
+      parsedFromJson.citationRefs = citationRefs
     }
     return parsedFromJson as unknown as AimdNode
   }
@@ -955,6 +1001,16 @@ function parseAimdFromProps(props: Record<string, unknown>): AimdNode | undefine
       title: undefined,
       legend: undefined,
     } as AimdNode
+  }
+
+  if (fieldType === "cite") {
+    const refs = citationRefIds.length > 0 ? citationRefIds : [id]
+    return {
+      ...baseNode,
+      fieldType: "cite",
+      refs,
+      ...(citationRefs.length > 0 ? { citationRefs } : {}),
+    } as unknown as AimdNode
   }
 
   // Add quiz-specific properties
