@@ -48,3 +48,19 @@ def test_protocol_fixtures_parse_with_python_parser():
     assert aimd_paths
     for aimd_path in aimd_paths:
         parse_aimd(aimd_path.read_text(encoding="utf-8"))
+
+
+def test_critic_markup_fixture_keeps_review_marks_out_of_python_templates():
+    content = (
+        PROTOCOL_FIXTURES_ROOT
+        / "critic-markup/protocol/protocol.aimd"
+    ).read_text(encoding="utf-8")
+
+    parsed = parse_aimd(content)
+
+    assert [field_name(field) for field in parsed["templates"]["step"]] == [
+        "review_protocol_text"
+    ]
+    assert [field_name(field) for field in parsed["templates"]["var"]] == [
+        "review_summary"
+    ]

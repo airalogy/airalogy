@@ -16,6 +16,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const monorepoRoot = path.resolve(__dirname, '../../../..')
 const basicFixture = path.join(monorepoRoot, 'spec/fixtures/basic-protocol')
+const criticMarkupFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/critic-markup/protocol/protocol.aimd')
 
 function parseAimd(content) {
   const processor = unified()
@@ -41,4 +42,12 @@ test('basic protocol fixture fields match AIMD core parser', () => {
   assert.deepEqual(fields.var, expected.var)
   assert.deepEqual(fields.step, expected.step)
   assert.deepEqual(fields.check, expected.check)
+})
+
+test('critic markup fixture remains plain markdown for AIMD core parser', () => {
+  const content = readFileSync(criticMarkupFixture, 'utf8')
+  const fields = parseAimd(content)
+
+  assert.deepEqual(fields.step, ['review_protocol_text'])
+  assert.deepEqual(fields.var, ['review_summary'])
 })

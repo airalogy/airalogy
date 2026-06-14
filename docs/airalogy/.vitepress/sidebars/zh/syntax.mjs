@@ -9,6 +9,7 @@ export default [
       { text: '前端赋值器设计', link: '/zh/syntax/assigner-client-runtime' },
       { text: '协议 TOML', link: '/zh/syntax/protocol_toml' },
       { text: '变量表', link: '/zh/syntax/var_table' },
+      { text: '审阅标记', link: '/zh/syntax/review-marks' },
       { text: '多媒体', link: '/zh/syntax/multimedia' },
       { text: '图', link: '/zh/syntax/fig' },
       { text: '引用', link: '/zh/syntax/ref' },

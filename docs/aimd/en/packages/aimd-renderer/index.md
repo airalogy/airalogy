@@ -35,6 +35,20 @@ console.log(html)
 console.log(fields)
 ```
 
+## Review Marks
+
+`renderToHtml`, `renderToVue`, and readonly `AiralogyMarkdown` rendering support CriticMarkup-style review marks in normal Markdown text. These marks are for document review display and do not add AIMD fields to `parseAndExtract`.
+
+| Purpose | AIMD source | Rendered element |
+| --- | --- | --- |
+| Addition | `{++added text++}` | `<ins class="aimd-critic aimd-critic--addition">` |
+| Deletion | `{--deleted text--}` | `<del class="aimd-critic aimd-critic--deletion">` |
+| Substitution | `{~~old wording~>new wording~~}` | deletion plus insertion inside `.aimd-critic--substitution` |
+| Comment | `{>>review note<<}` | inline `.aimd-critic--comment` annotation |
+| Highlight | `{==important text==}` | `<mark class="aimd-critic aimd-critic--highlight">` |
+
+CriticMarkup inside inline code and fenced code blocks remains literal source text.
+
 ## Readonly Record Rendering
 
 ```ts

@@ -20,9 +20,12 @@
 
 ```ts
 import {
+  CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY,
   remarkAimd,
+  remarkCriticMarkup,
   rehypeAimd,
   protectAimdInlineTemplates,
+  protectCriticMarkupSubstitutions,
   restoreAimdInlineTemplates,
   validateClientAssignerFunctionSource,
   validateVarDefaultType,
@@ -36,6 +39,10 @@ import {
 **`protectAimdInlineTemplates(content: string): ProtectedAimdInlineTemplates`**：保护 Markdown 表格中的 AIMD `{{...}}` 模板，避免 GFM 按 `|` 误切分。返回 `{ content, templates }`。
 
 **`restoreAimdInlineTemplates(content: string, templates: AimdInlineTemplateMap): string`**：在解析后恢复被保护的模板。
+
+**`remarkCriticMarkup`**：用于 Unified remark 流水线的插件，把 CriticMarkup 审阅标记解析成自定义 MDAST 节点（`criticAddition`、`criticDeletion`、`criticSubstitution`、`criticComment`、`criticHighlight`），但不会增加 AIMD 字段。
+
+**`protectCriticMarkupSubstitutions(content: string)`**：在 GFM 前保护 `{~~旧表述~>新表述~~}` 替换语法，避免被当作 strikethrough。运行 `remarkCriticMarkup` 前，把返回的 `substitutions` 存到 `file.data[CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY]`。
 
 **`validateClientAssignerFunctionSource(functionSource: string, id: string): void`**：校验前端 `client_assigner` 函数体；若包含不支持或不安全结构会直接抛错。
 
@@ -315,7 +322,7 @@ import {
 | Root | `@airalogy/aimd-renderer` |
 | HTML | `@airalogy/aimd-renderer/html` |
 | Vue | `@airalogy/aimd-renderer/vue` |
-| Styles | `@airalogy/aimd-renderer/styles`（KaTeX CSS） |
+| Styles | `@airalogy/aimd-renderer/styles`（KaTeX 和 renderer UI CSS） |
 
 ### 渲染函数
 

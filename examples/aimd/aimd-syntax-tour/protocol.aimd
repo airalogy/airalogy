@@ -32,6 +32,10 @@ Concentration setting: {{var|concentration: float = 1.0, title = "Concentration 
 
 Is active: {{var|is_active: bool = true}}
 
+## Review Marks
+
+AIMD supports CriticMarkup-style review marks for editorial review: {++added text++}, {--deleted text--}, {~~old wording~>new wording~~}, {>>review note<<}, and {==highlighted text==}.
+
 ## Variable Table
 
 {{var|samples, title = "Sample Measurements", description = "One row per prepared sample", examples = ["S-001 row"], subvars=[

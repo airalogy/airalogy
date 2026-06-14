@@ -35,6 +35,20 @@ console.log(html)
 console.log(fields)
 ```
 
+## 审阅标记
+
+`renderToHtml`、`renderToVue` 和只读 `AiralogyMarkdown` 渲染支持普通 Markdown 文本中的 CriticMarkup 风格审阅标记。这些标记用于文档审阅展示，不会向 `parseAndExtract` 增加 AIMD 字段。
+
+| 用途 | AIMD 源码 | 渲染元素 |
+| --- | --- | --- |
+| 添加 | `{++新增文字++}` | `<ins class="aimd-critic aimd-critic--addition">` |
+| 删除 | `{--删除文字--}` | `<del class="aimd-critic aimd-critic--deletion">` |
+| 替换 | `{~~旧表述~>新表述~~}` | `.aimd-critic--substitution` 内的删除和添加 |
+| 注释 | `{>>审阅备注<<}` | 行内 `.aimd-critic--comment` 注释 |
+| 高亮 | `{==重点文字==}` | `<mark class="aimd-critic aimd-critic--highlight">` |
+
+行内代码和 fenced 代码块中的 CriticMarkup 会保留为原始文本。
+
 ## 只读 Record 渲染
 
 ```ts

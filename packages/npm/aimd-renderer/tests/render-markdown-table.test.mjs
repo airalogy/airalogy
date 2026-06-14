@@ -71,6 +71,8 @@ const TRUE_FALSE_SAMPLE = [
   '```',
 ].join('\n')
 
+const CRITIC_MARKUP_SAMPLE = 'Add {++new++}, delete {--old--}, replace {~~old~>new~~}, comment {>>check units<<}, highlight {==important==}. Literal `{++code++}` and `{~~old~>new~~}`.'
+
 const ASSIGNER_VISIBILITY_SAMPLE = [
   '{{var|water_volume_ml: float}}',
   '{{var|lemon_juice_ml: float}}',
@@ -242,6 +244,28 @@ test('renderToHtml renders true/false quiz labels and default options', async ()
   assert.match(html, /\(True\/false\)/)
   assert.match(html, /true\. True/)
   assert.match(html, /false\. False/)
+})
+
+test('renderToHtml renders CriticMarkup review marks while preserving code spans', async () => {
+  const { html } = await renderToHtml(CRITIC_MARKUP_SAMPLE)
+
+  assert.match(html, /<ins class="aimd-critic aimd-critic--addition"/)
+  assert.match(html, /data-critic-kind="addition"/)
+  assert.match(html, /<del class="aimd-critic aimd-critic--deletion"/)
+  assert.match(html, /<span class="aimd-critic aimd-critic--substitution"/)
+  assert.match(html, /aimd-critic--substitution-old/)
+  assert.match(html, /aimd-critic--substitution-new/)
+  assert.match(html, /<span class="aimd-critic aimd-critic--comment"/)
+  assert.match(html, /check units/)
+  assert.match(html, /<mark class="aimd-critic aimd-critic--highlight"/)
+  assert.match(html, /important/)
+  assert.match(html, /<code>\{\+\+code\+\+\}<\/code>/)
+  assert.match(html, /<code>\{~~old~>new~~\}<\/code>/)
+  assert.equal((html.match(/\{~~old~>new~~\}/g) ?? []).length, 1)
+  assert.doesNotMatch(html, /\{\+\+new\+\+\}/)
+  assert.doesNotMatch(html, /\{--old--\}/)
+  assert.doesNotMatch(html, /\{>>check units<<\}/)
+  assert.doesNotMatch(html, /\{==important==\}/)
 })
 
 test('renderToHtml hides assigner blocks by default while preserving client assigner metadata', async () => {

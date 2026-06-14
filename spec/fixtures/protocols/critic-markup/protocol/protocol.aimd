@@ -1,0 +1,13 @@
+# CriticMarkup Review Marks
+
+{{step|review_protocol_text}} Review the drafted protocol text and keep AIMD fields extractable.
+
+Draft note: The sample {++must stay chilled++}, {--can warm briefly--}, and {~~room temperature~>4°C storage~~} should be documented.
+
+Reviewer note: {>>Confirm the exact storage window before release.<<}
+
+Important phrase: {==documented storage condition==}
+
+Literal source inside code remains unchanged: `{++not an addition++}`.
+
+Review summary: {{var|review_summary: AiralogyMarkdown, title = "Review Summary", description = "Markdown review summary that may include CriticMarkup marks"}}

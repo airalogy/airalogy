@@ -22,4 +22,11 @@ export {
   type AimdInlineTemplateMap,
   type ProtectedAimdInlineTemplates,
 } from './inline-template-protection'
+export {
+  CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY,
+  default as remarkCriticMarkup,
+  protectCriticMarkupSubstitutions,
+  splitCriticMarkupText,
+  type ProtectedCriticMarkupSubstitution,
+} from './critic-markup'
 export { DOM_ATTR_NAME, type DomAttrName } from './constants'

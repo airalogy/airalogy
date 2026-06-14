@@ -9,7 +9,7 @@ This example is the canonical interactive syntax tour used by `apps/aimd-demo`. 
 - Variable tables and inline variables inside Markdown tables.
 - Browser-side client assigners, including an auto calculator and a manual list assigner.
 - Steps, nested steps, checkpoints, timers, references, and quizzes.
-- Markdown rendering features such as tables, blockquotes, inline math, and display math.
+- Markdown rendering features such as tables, blockquotes, CriticMarkup review marks, inline math, and display math.
 
 ## Usage
 

@@ -1,3 +1,4 @@
+import type { PhrasingContent } from "mdast"
 import type { AimdQuizGradingConfig } from "./grading"
 
 /**
@@ -45,6 +46,68 @@ export type AimdQuizMode = "single" | "multiple"
 export type AimdStepTimerMode = "elapsed" | "countdown" | "both"
 export type AimdScaleDisplay = "matrix" | "list"
 export type AimdQuizFollowupType = "str" | "int" | "float" | "bool"
+
+export type AimdCriticMarkupKind =
+  | "addition"
+  | "deletion"
+  | "substitution"
+  | "comment"
+  | "highlight"
+
+export type AimdCriticMarkupNodeType =
+  | "criticAddition"
+  | "criticDeletion"
+  | "criticSubstitution"
+  | "criticComment"
+  | "criticHighlight"
+
+export type AimdCriticMarkupChild = PhrasingContent | AimdCriticMarkupNode
+
+export interface AimdCriticMarkupBaseNode {
+  type: Exclude<AimdCriticMarkupNodeType, "criticSubstitution">
+  kind: Exclude<AimdCriticMarkupKind, "substitution">
+  raw: string
+  value: string
+  children: AimdCriticMarkupChild[]
+}
+
+export interface AimdCriticAdditionNode extends AimdCriticMarkupBaseNode {
+  type: "criticAddition"
+  kind: "addition"
+}
+
+export interface AimdCriticDeletionNode extends AimdCriticMarkupBaseNode {
+  type: "criticDeletion"
+  kind: "deletion"
+}
+
+export interface AimdCriticCommentNode extends AimdCriticMarkupBaseNode {
+  type: "criticComment"
+  kind: "comment"
+}
+
+export interface AimdCriticHighlightNode extends AimdCriticMarkupBaseNode {
+  type: "criticHighlight"
+  kind: "highlight"
+}
+
+export interface AimdCriticSubstitutionNode {
+  type: "criticSubstitution"
+  kind: "substitution"
+  raw: string
+  value: string
+  oldValue: string
+  newValue: string
+  oldChildren: AimdCriticMarkupChild[]
+  newChildren: AimdCriticMarkupChild[]
+}
+
+export type AimdCriticMarkupNode =
+  | AimdCriticAdditionNode
+  | AimdCriticDeletionNode
+  | AimdCriticSubstitutionNode
+  | AimdCriticCommentNode
+  | AimdCriticHighlightNode
 
 export interface AimdQuizFollowupField {
   key: string

@@ -21,6 +21,7 @@ import { resolveQuizPreviewOptions } from "./quiz-preview"
 import { remarkInsertVisibleAssigners, remarkStripAssignerCodeBlocks } from "./assignerVisibility"
 import { highlightVisibleAssigners } from "./assignerHighlighting"
 import { annotateStepReferenceSequence } from "./annotateStepReferences"
+import { criticMarkupHandlers } from "./criticMarkup"
 import { buildFigureChildren, assignFigureSequenceNumbers } from "./figureNumbering"
 
 // ---------------------------------------------------------------------------
@@ -511,7 +512,13 @@ import remarkParse from "remark-parse"
 import remarkRehype from "remark-rehype"
 import { unified } from "unified"
 
-import { protectAimdInlineTemplates, remarkAimd } from "@airalogy/aimd-core/parser"
+import {
+  CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY,
+  protectAimdInlineTemplates,
+  protectCriticMarkupSubstitutions,
+  remarkAimd,
+  remarkCriticMarkup,
+} from "@airalogy/aimd-core/parser"
 import {
   formatAimdExampleValue,
   formatAimdExamples,
@@ -567,14 +574,16 @@ async function ensureMathStylesLoaded(mathEnabled: boolean | undefined): Promise
 
 function createAimdParseInput(content: string) {
   const { content: protectedContent, templates } = protectAimdInlineTemplates(content)
+  const { content: criticProtectedContent, substitutions } = protectCriticMarkupSubstitutions(protectedContent)
   const file: VFile = {
     data: {
       aimdInlineTemplates: templates,
+      [CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY]: substitutions,
     },
   } as unknown as VFile
 
   return {
-    content: protectedContent,
+    content: criticProtectedContent,
     file,
   }
 }
@@ -1512,6 +1521,7 @@ function createBaseProcessor(options: AimdRendererOptions = {}) {
   // to properly parse multiline AIMD syntax like var_table with subvars
   processor.use(remarkAimd)
   processor.use(remarkStripAssignerCodeBlocks)
+  processor.use(remarkCriticMarkup)
 
   // Single line break to <br> conversion (default enabled for AIMD)
   if (breaks) {
@@ -1534,6 +1544,7 @@ export function createHtmlProcessor(options: AimdRendererOptions = {}) {
       handlers: {
         // Custom handler for AIMD nodes
         aimd: aimdHandler,
+        ...criticMarkupHandlers,
       },
     } as any)
     .use(rehypeRaw)

@@ -20,9 +20,12 @@ Core AIMD parser, type definitions, syntax grammar, and utilities.
 
 ```ts
 import {
+  CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY,
   remarkAimd,
+  remarkCriticMarkup,
   rehypeAimd,
   protectAimdInlineTemplates,
+  protectCriticMarkupSubstitutions,
   restoreAimdInlineTemplates,
   validateClientAssignerFunctionSource,
   validateVarDefaultType,
@@ -36,6 +39,10 @@ import {
 **`protectAimdInlineTemplates(content: string): ProtectedAimdInlineTemplates`** — Escapes AIMD `{{...}}` templates inside Markdown tables so GFM pipe parsing does not break them. Returns `{ content, templates }`.
 
 **`restoreAimdInlineTemplates(content: string, templates: AimdInlineTemplateMap): string`** — Reverses protection after parsing.
+
+**`remarkCriticMarkup`** — Unified remark plugin that parses CriticMarkup review marks into custom MDAST nodes (`criticAddition`, `criticDeletion`, `criticSubstitution`, `criticComment`, `criticHighlight`) without adding AIMD fields.
+
+**`protectCriticMarkupSubstitutions(content: string)`** — Protects `{~~old~>new~~}` substitutions before GFM so they are not parsed as strikethrough. Store the returned `substitutions` under `CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY` on `file.data` before running `remarkCriticMarkup`.
 
 **`validateClientAssignerFunctionSource(functionSource: string, id: string): void`** — Validates frontend `client_assigner` function bodies and throws when unsupported or unsafe constructs are present.
 
@@ -315,7 +322,7 @@ HTML and Vue rendering engines for AIMD content.
 | Root | `@airalogy/aimd-renderer` |
 | HTML | `@airalogy/aimd-renderer/html` |
 | Vue | `@airalogy/aimd-renderer/vue` |
-| Styles | `@airalogy/aimd-renderer/styles` (KaTeX CSS) |
+| Styles | `@airalogy/aimd-renderer/styles` (KaTeX and renderer UI CSS) |
 
 ### Rendering Functions
 

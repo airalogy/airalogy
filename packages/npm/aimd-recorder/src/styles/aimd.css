@@ -175,6 +175,71 @@
   transform: translateY(0);
 }
 
+.aimd-critic {
+  border-radius: 4px;
+  padding: 0 0.14em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.aimd-critic--addition {
+  background: rgba(22, 163, 74, 0.13);
+  color: #166534;
+  text-decoration: none;
+}
+
+.aimd-critic--deletion {
+  background: rgba(220, 38, 38, 0.1);
+  color: #991b1b;
+  text-decoration-line: line-through;
+  text-decoration-thickness: 0.08em;
+}
+
+.aimd-critic--highlight {
+  background: rgba(250, 204, 21, 0.36);
+  color: inherit;
+}
+
+.aimd-critic--substitution {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.aimd-critic--substitution .aimd-critic {
+  margin-inline: 0.04em;
+}
+
+.aimd-critic__replacement-arrow {
+  color: #64748b;
+  font-size: 0.86em;
+  font-weight: 600;
+}
+
+.aimd-critic--comment {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.34em;
+  padding: 0.03em 0.44em;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.09);
+  color: #1e3a8a;
+  font-size: 0.92em;
+  line-height: 1.5;
+  vertical-align: baseline;
+}
+
+.aimd-critic__comment-label {
+  color: #2563eb;
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.aimd-critic__comment-body {
+  color: inherit;
+}
+
 .aimd-field--var .aimd-field__type {
   font-size: 12px;
   color: #7b1fa2;

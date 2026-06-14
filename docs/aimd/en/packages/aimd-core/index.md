@@ -15,6 +15,7 @@ pnpm add @airalogy/aimd-core
 - Parse AIMD templates and fenced `quiz` / `fig` blocks.
 - Parse fenced `assigner runtime=client` blocks into frontend assigner metadata.
 - Build MDAST-compatible AIMD nodes.
+- Build MDAST-compatible CriticMarkup review nodes for additions, deletions, substitutions, comments, and highlights.
 - Extract normalized field metadata for downstream renderer/editor/recorder, including simple `var` definitions in `fields.var_definitions`.
 
 ## Example
@@ -106,6 +107,31 @@ const file = { data: { aimdInlineTemplates: templates } } as any
 const tree = processor.parse(protectedContent)
 processor.runSync(tree, file)
 ```
+
+## CriticMarkup Review Nodes
+
+Use `remarkCriticMarkup` when a host needs CriticMarkup-style review marks in the Markdown AST. This parser produces custom MDAST nodes such as `criticAddition`, `criticDeletion`, `criticSubstitution`, `criticComment`, and `criticHighlight`; it does not add entries to `fields` or change `remarkAimd` field extraction.
+
+```ts
+import { unified } from "unified"
+import remarkParse from "remark-parse"
+import remarkGfm from "remark-gfm"
+import {
+  CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY,
+  protectCriticMarkupSubstitutions,
+  remarkCriticMarkup,
+} from "@airalogy/aimd-core/parser"
+
+const { content: protectedContent, substitutions } = protectCriticMarkupSubstitutions(
+  "Replace {~~old wording~>new wording~~} and mark {==important text==}.",
+)
+const file = { data: { [CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY]: substitutions } } as any
+const processor = unified().use(remarkParse).use(remarkGfm).use(remarkCriticMarkup)
+const tree = processor.parse(protectedContent)
+processor.runSync(tree, file)
+```
+
+`protectCriticMarkupSubstitutions()` should run before GFM because CriticMarkup substitutions also use `~~`, which would otherwise be interpreted as strikethrough. Inline code and fenced code blocks remain literal source text.
 
 ## Validation Helpers
 

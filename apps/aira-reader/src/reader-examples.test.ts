@@ -16,7 +16,7 @@ async function readExampleNames(): Promise<string[]> {
     .sort((a, b) => a.localeCompare(b))
 }
 
-describe('Aira Reader examples', () => {
+describe('Airalogy Reader examples', () => {
   it('opens, validates, builds views, and smoke-renders repository .aira examples', async () => {
     const names = await readExampleNames()
     expect(names.length).toBeGreaterThan(0)

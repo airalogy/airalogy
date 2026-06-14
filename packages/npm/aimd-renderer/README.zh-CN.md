@@ -30,6 +30,20 @@ console.log(html)
 console.log(fields)
 ```
 
+## 审阅标记
+
+Renderer 输出支持普通 Markdown 文本中的 CriticMarkup 风格审阅标记：
+
+| 用途 | AIMD 源码 |
+| --- | --- |
+| 添加 | `{++新增文字++}` |
+| 删除 | `{--删除文字--}` |
+| 替换 | `{~~旧表述~>新表述~~}` |
+| 注释 | `{>>审阅备注<<}` |
+| 高亮 | `{==重点文字==}` |
+
+这些标记会通过 `renderToHtml`、`renderToVue` 和只读 `AiralogyMarkdown` 字段渲染出来。行内代码和 fenced 代码块会保留原始文本。
+
 ## Assigner 可见性
 
 ```ts

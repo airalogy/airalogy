@@ -14,11 +14,16 @@
 export { default as remarkAimd } from './parser/remark-aimd'
 export { default as rehypeAimd } from './parser/rehype-aimd'
 export {
+  CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY,
+  remarkCriticMarkup,
+  protectCriticMarkupSubstitutions,
+  splitCriticMarkupText,
+  type ProtectedCriticMarkupSubstitution,
   protectAimdInlineTemplates,
   restoreAimdInlineTemplates,
   type AimdInlineTemplateMap,
   type ProtectedAimdInlineTemplates,
-} from './parser/inline-template-protection'
+} from './parser'
 export { DOM_ATTR_NAME, type DomAttrName } from './parser/constants'
 
 // Type exports
@@ -46,6 +51,16 @@ export type {
   // Node types
   AimdCheckNode,
   AimdCiteNode,
+  AimdCriticAdditionNode,
+  AimdCriticCommentNode,
+  AimdCriticDeletionNode,
+  AimdCriticHighlightNode,
+  AimdCriticMarkupBaseNode,
+  AimdCriticMarkupChild,
+  AimdCriticMarkupKind,
+  AimdCriticMarkupNode,
+  AimdCriticMarkupNodeType,
+  AimdCriticSubstitutionNode,
   AimdFigNode,
   AimdNode,
   AimdQuizBlank,

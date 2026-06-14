@@ -6,6 +6,20 @@ Airalogy ships a small helper for working with **Airalogy Markdown (AIMD)** stri
 from airalogy import markdown as aimd
 ```
 
+## Review Marks
+
+Airalogy Markdown content can include CriticMarkup-style review marks for editorial workflows. The Python helpers treat these marks as ordinary Markdown text; frontend renderers such as `@airalogy/aimd-renderer`, recorder previews, and Airalogy Reader display them as semantic review annotations.
+
+| Purpose | AIMD source |
+| --- | --- |
+| Addition | `{++added text++}` |
+| Deletion | `{--deleted text--}` |
+| Substitution | `{~~old wording~>new wording~~}` |
+| Comment | `{>>review note<<}` |
+| Highlight | `{==important text==}` |
+
+Inline code and fenced code blocks keep CriticMarkup source text literal. For the normative syntax rules, see [Review Mark Syntax](../syntax/review-marks.md).
+
 ## Extract Airalogy image IDs
 
 Use `aimd.get_airalogy_image_ids(content: str) -> list[str]` to pull out every Airalogy File ID that appears as an image source inside an AIMD document. Supported forms:

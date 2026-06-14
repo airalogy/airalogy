@@ -8,6 +8,7 @@ Core parser and canonical field extraction for AIMD (Airalogy Markdown).
 It also extracts frontend-only assigners from fenced `assigner runtime=client` blocks into `fields.client_assigner`.
 Simple `var` ids remain available in `fields.var`; their parsed type, default, and kwargs metadata are also exposed through `fields.var_definitions`.
 Display metadata such as `title`, `description`, and `example`/`examples` is extracted for `var` and `var_table` fields so renderer and recorder packages can show human-friendly labels while keeping canonical ids stable.
+It also exposes `remarkCriticMarkup` for CriticMarkup-style review marks in the Markdown AST without adding those marks to extracted AIMD fields.
 
 > Protocol-level AIMD syntax, assigner semantics, and validation rules are normative in Airalogy docs. `@airalogy/aimd-*` docs describe how the frontend parser, renderer, and recorder implement those rules.
 
@@ -62,6 +63,29 @@ const file = { data: { aimdInlineTemplates: templates } } as any
 const tree = processor.parse(protectedContent)
 processor.runSync(tree, file)
 ```
+
+## CriticMarkup Review Nodes
+
+```ts
+import { unified } from "unified"
+import remarkParse from "remark-parse"
+import remarkGfm from "remark-gfm"
+import {
+  CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY,
+  protectCriticMarkupSubstitutions,
+  remarkCriticMarkup,
+} from "@airalogy/aimd-core/parser"
+
+const { content: protectedContent, substitutions } = protectCriticMarkupSubstitutions(
+  "Replace {~~old wording~>new wording~~} and mark {==important text==}.",
+)
+const file = { data: { [CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY]: substitutions } } as any
+const processor = unified().use(remarkParse).use(remarkGfm).use(remarkCriticMarkup)
+const tree = processor.parse(protectedContent)
+processor.runSync(tree, file)
+```
+
+`remarkCriticMarkup` produces `criticAddition`, `criticDeletion`, `criticSubstitution`, `criticComment`, and `criticHighlight` nodes. It does not change AIMD field extraction.
 
 ## Choice Followups
 

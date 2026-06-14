@@ -15,6 +15,7 @@ pnpm add @airalogy/aimd-core
 - 解析 AIMD 模板语法与 `quiz` / `fig` 代码块。
 - 解析 fenced `assigner runtime=client` 代码块并提取前端 assigner 元数据。
 - 构建兼容 MDAST 的 AIMD 节点。
+- 构建兼容 MDAST 的 CriticMarkup 审阅节点，包括添加、删除、替换、注释和高亮。
 - 输出标准化字段结构，供 renderer/editor/recorder 复用，包括 `fields.var_definitions` 中的普通 `var` 定义。
 
 ## 示例
@@ -106,6 +107,31 @@ const file = { data: { aimdInlineTemplates: templates } } as any
 const tree = processor.parse(protectedContent)
 processor.runSync(tree, file)
 ```
+
+## CriticMarkup 审阅节点
+
+当宿主需要在 Markdown AST 中保留 CriticMarkup 风格审阅标记时，可以使用 `remarkCriticMarkup`。该 parser 会生成 `criticAddition`、`criticDeletion`、`criticSubstitution`、`criticComment`、`criticHighlight` 等自定义 MDAST 节点；它不会向 `fields` 增加条目，也不会改变 `remarkAimd` 的字段提取结果。
+
+```ts
+import { unified } from "unified"
+import remarkParse from "remark-parse"
+import remarkGfm from "remark-gfm"
+import {
+  CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY,
+  protectCriticMarkupSubstitutions,
+  remarkCriticMarkup,
+} from "@airalogy/aimd-core/parser"
+
+const { content: protectedContent, substitutions } = protectCriticMarkupSubstitutions(
+  "替换 {~~旧表述~>新表述~~}，并标记 {==重点文字==}。",
+)
+const file = { data: { [CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY]: substitutions } } as any
+const processor = unified().use(remarkParse).use(remarkGfm).use(remarkCriticMarkup)
+const tree = processor.parse(protectedContent)
+processor.runSync(tree, file)
+```
+
+`protectCriticMarkupSubstitutions()` 应在 GFM 前执行，因为 CriticMarkup 替换语法同样使用 `~~`，否则会被 GFM 当作 strikethrough。行内代码和 fenced 代码块会保留原始文本。
 
 ## 校验辅助函数
 

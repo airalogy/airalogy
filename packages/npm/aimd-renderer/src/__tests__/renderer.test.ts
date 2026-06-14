@@ -201,6 +201,36 @@ describe('renderToHtmlSync', () => {
     expect(html).toContain('Hello')
   })
 
+  it('renders CriticMarkup review marks to semantic HTML', () => {
+    const { html } = renderToHtmlSync('Add {++new++}, delete {--old--}, replace {~~old~>new~~}, comment {>>check units<<}, highlight {==important==}.')
+
+    expect(html).toContain('<ins class="aimd-critic aimd-critic--addition"')
+    expect(html).toContain('data-critic-kind="addition"')
+    expect(html).toContain('<del class="aimd-critic aimd-critic--deletion"')
+    expect(html).toContain('data-critic-kind="deletion"')
+    expect(html).toContain('<span class="aimd-critic aimd-critic--substitution"')
+    expect(html).toContain('aimd-critic--substitution-old')
+    expect(html).toContain('aimd-critic--substitution-new')
+    expect(html).toContain('<span class="aimd-critic aimd-critic--comment"')
+    expect(html).toContain('check units')
+    expect(html).toContain('<mark class="aimd-critic aimd-critic--highlight"')
+    expect(html).toContain('important')
+    expect(html).not.toContain('{++new++}')
+    expect(html).not.toContain('{--old--}')
+    expect(html).not.toContain('{~~old~>new~~}')
+    expect(html).not.toContain('{>>check units<<}')
+    expect(html).not.toContain('{==important==}')
+  })
+
+  it('does not parse CriticMarkup inside inline code', () => {
+    const { html } = renderToHtmlSync('Literal `{++not a mark++}` and `{~~old~>new~~}` remain code.')
+
+    expect(html).toContain('<code>{++not a mark++}</code>')
+    expect(html).toContain('<code>{~~old~>new~~}</code>')
+    expect(html).not.toContain('aimd-critic--addition')
+    expect(html).not.toContain('aimd-critic--substitution')
+  })
+
   it('renders AIMD var fields', () => {
     const { html, fields } = renderToHtmlSync('{{var|temperature}}')
     expect(fields.var).toContain('temperature')

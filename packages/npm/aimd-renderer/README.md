@@ -30,6 +30,20 @@ console.log(html)
 console.log(fields)
 ```
 
+## Review Marks
+
+Renderer output supports CriticMarkup-style review marks in normal Markdown text:
+
+| Purpose | AIMD source |
+| --- | --- |
+| Addition | `{++added text++}` |
+| Deletion | `{--deleted text--}` |
+| Substitution | `{~~old wording~>new wording~~}` |
+| Comment | `{>>review note<<}` |
+| Highlight | `{==important text==}` |
+
+These marks render through `renderToHtml`, `renderToVue`, and readonly `AiralogyMarkdown` fields. Inline code and fenced code blocks keep the source text literal.
+
 ## Assigner Visibility
 
 ```ts

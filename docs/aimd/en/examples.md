@@ -10,6 +10,7 @@ Open the [Demo examples page](/demo/#/examples) to switch, edit, and fill these 
 
 | ID | Scenario | Summary |
 | --- | --- | --- |
+| `aimd-syntax-tour` | AIMD syntax tour | Interactive syntax tour covering variables, tables, steps, checks, quizzes, references, Markdown review marks, and browser-side client assigners. |
 | `clinical-information-record` | Clinical information record | Bilingual case for structured clinical encounter, assessment, plan, and review records. |
 
 ## Protocol Examples

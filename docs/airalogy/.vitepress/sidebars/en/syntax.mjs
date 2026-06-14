@@ -9,6 +9,7 @@ export default [
       { text: 'Client Runtime Assigner', link: '/en/syntax/assigner-client-runtime' },
       { text: 'Protocol TOML', link: '/en/syntax/protocol_toml' },
       { text: 'Variable Table', link: '/en/syntax/var_table' },
+      { text: 'Review Marks', link: '/en/syntax/review-marks' },
       { text: 'Multimedia', link: '/en/syntax/multimedia' },
       { text: 'Figures', link: '/en/syntax/fig' },
       { text: 'References', link: '/en/syntax/ref' },

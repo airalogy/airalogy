@@ -8,6 +8,7 @@ AIMD（Airalogy Markdown）的核心解析器与规范化字段提取能力。
 它也会把 fenced `assigner runtime=client` 代码块提取为 `fields.client_assigner` 前端元数据。
 普通 `var` 的 id 仍然保留在 `fields.var`；其解析出的类型、默认值和 kwargs 元数据也会通过 `fields.var_definitions` 暴露。
 `title`、`description`、`example`/`examples` 这类显示元数据会被提取到 `var` 和 `var_table` 字段结构里，renderer 与 recorder 可以显示更友好的标签，同时保留稳定的规范 id。
+它也暴露 `remarkCriticMarkup`，用于把 CriticMarkup 风格审阅标记解析进 Markdown AST，但不会把这些审阅标记加入 AIMD 字段提取结果。
 
 > 协议级 AIMD 语法、assigner 语义与校验规则以 Airalogy 文档为准；`@airalogy/aimd-*` 文档只描述前端 parser、renderer、recorder 如何实现这些规范。
 
@@ -62,6 +63,29 @@ const file = { data: { aimdInlineTemplates: templates } } as any
 const tree = processor.parse(protectedContent)
 processor.runSync(tree, file)
 ```
+
+## CriticMarkup 审阅节点
+
+```ts
+import { unified } from "unified"
+import remarkParse from "remark-parse"
+import remarkGfm from "remark-gfm"
+import {
+  CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY,
+  protectCriticMarkupSubstitutions,
+  remarkCriticMarkup,
+} from "@airalogy/aimd-core/parser"
+
+const { content: protectedContent, substitutions } = protectCriticMarkupSubstitutions(
+  "替换 {~~旧表述~>新表述~~}，并标记 {==重点文字==}。",
+)
+const file = { data: { [CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY]: substitutions } } as any
+const processor = unified().use(remarkParse).use(remarkGfm).use(remarkCriticMarkup)
+const tree = processor.parse(protectedContent)
+processor.runSync(tree, file)
+```
+
+`remarkCriticMarkup` 会生成 `criticAddition`、`criticDeletion`、`criticSubstitution`、`criticComment` 和 `criticHighlight` 节点。它不会改变 AIMD 字段提取结果。
 
 ## Choice 后续字段
 
