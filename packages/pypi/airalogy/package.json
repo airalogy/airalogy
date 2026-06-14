@@ -1,6 +1,6 @@
 {
   "name": "airalogy",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "description": "Python protocol core, AIMD parsing, validation, records, and CLI",
   "license": "Apache-2.0",

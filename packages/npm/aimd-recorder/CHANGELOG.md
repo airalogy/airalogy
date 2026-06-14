@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.19.0
+
+### Minor Changes
+
+- b1d713e: Add shared AIMD Record display utilities for field value normalization, FileId detection, file input metadata, asset kind inference, and readonly display coercion.
+
+  Reuse the shared utilities from AIMD readonly rendering and Recorder var helpers so Record-backed document views and interactive field controls resolve file, code, markdown, DNA, boolean, and scalar values through the same semantics.
+
+  Organize readonly Record var rendering behind an internal value-renderer registry so future field displays can be added without expanding a single conditional chain.
+
+  Add a lightweight `@airalogy/aimd-recorder/record` entry for Record state, timer, DNA value, and display utility helpers without importing the full Recorder component surface.
+
+### Patch Changes
+
+- 565f785: Add CriticMarkup-style review mark parsing and rendering for Airalogy Markdown additions, deletions, substitutions, comments, and highlights.
+- b8a3fbe: Keep assigner controls visible for structured `list[...]` and object-like var fields after assigners populate them, and render those values as editable JSON text instead of lossy string coercions.
+- f7adb0c: Tighten card-style table row spacing, controls, and input heights for denser recorder tables.
+
+  Show visible row numbers in both table and card var_table layouts.
+
+  Show the running assigner state across every field in the same shared server assigner batch.
+
+  Unify completed assigner status colors across normal and Markdown-backed fields.
+
+  Add a reusable AIMD assigner topology graph component for package consumers.
+
+- Updated dependencies [c1903cd]
+- Updated dependencies [b1d713e]
+- Updated dependencies [0355d77]
+- Updated dependencies [b8a3fbe]
+- Updated dependencies [565f785]
+- Updated dependencies [dea7d73]
+  - @airalogy/aimd-core@2.9.0
+  - @airalogy/aimd-renderer@2.7.0
+
 ## 1.18.0
 
 ### Minor Changes
