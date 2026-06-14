@@ -1,5 +1,40 @@
 # Changelog
 
+## 2.7.0
+
+### Minor Changes
+
+- 0355d77: Add SHA-256-backed `.aira` archive inspection and validation for the Python archive API and CLI.
+
+  Add the browser-readable `@airalogy/aira-core` parser/validator package and a static Airalogy Reader app for opening `.aira` files locally.
+
+  Render AIMD protocol content inside Airalogy Reader with `@airalogy/aimd-renderer`, including Record-backed field values when a `.aira` archive carries protocol records.
+
+  Add readonly Record rendering helpers to `@airalogy/aimd-renderer` so Vue hosts can render AIMD protocols with static Record data embedded in the matching fields, including host-resolved file and image assets.
+
+  Polish readonly Record rendering so user-facing content defaults to readable labels while keeping field identifiers in metadata for advanced views such as Airalogy Reader's optional Show field IDs toggle.
+
+  Add a Tauri desktop wrapper for Airalogy Reader so the same local archive viewer can be packaged as installable macOS, Windows, and Linux apps.
+
+- 565f785: Add CriticMarkup-style review mark parsing and rendering for Airalogy Markdown additions, deletions, substitutions, comments, and highlights.
+
+### Patch Changes
+
+- b1d713e: Add shared AIMD Record display utilities for field value normalization, FileId detection, file input metadata, asset kind inference, and readonly display coercion.
+
+  Reuse the shared utilities from AIMD readonly rendering and Recorder var helpers so Record-backed document views and interactive field controls resolve file, code, markdown, DNA, boolean, and scalar values through the same semantics.
+
+  Organize readonly Record var rendering behind an internal value-renderer registry so future field displays can be added without expanding a single conditional chain.
+
+  Add a lightweight `@airalogy/aimd-recorder/record` entry for Record state, timer, DNA value, and display utility helpers without importing the full Recorder component surface.
+
+- dea7d73: Render readonly `AiralogyMarkdown` record values through the AIMD Vue renderer so completed records display Markdown structure, nested AIMD preview tokens, and resolved Markdown image assets instead of raw Markdown text.
+- Updated dependencies [c1903cd]
+- Updated dependencies [b1d713e]
+- Updated dependencies [b8a3fbe]
+- Updated dependencies [565f785]
+  - @airalogy/aimd-core@2.9.0
+
 ## 2.6.0
 
 ### Minor Changes
