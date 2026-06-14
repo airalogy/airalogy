@@ -6,8 +6,7 @@ const demoRoot = import.meta.env.DEV
   : withBase('/demo')
 
 const demoPages = [
-  { label: 'Examples', path: '/examples', desc: 'Repository AIMD examples and protocol AIMD previews' },
-  { label: 'Full Workflow', path: '/full', desc: 'Editor + render + record in one page' },
+  { label: 'Examples', path: '/examples', desc: 'Repository AIMD examples with source editing, render preview, recorder entry, fields, and record data' },
   { label: 'Core Parser', path: '/core', desc: 'AST and extracted AIMD fields' },
   { label: 'Editor', path: '/editor', desc: 'AIMD authoring experience' },
   { label: 'Renderer', path: '/renderer', desc: 'HTML / Vue render output preview' },
@@ -22,7 +21,7 @@ const linkTo = path => `${demoRoot}/#${path}`
 Use the Airalogy Markdown Demo in a separate page for a cleaner reading experience. Protocol entries on the examples page preview and fill the `protocol.aimd` source; engine-backed assigner execution belongs in the higher-level Airalogy Protocol demo.
 
 <div class="aimd-demo-actions">
-  <a :href="linkTo('/full')" class="aimd-demo-button" target="_blank" rel="noreferrer">
+  <a :href="linkTo('/examples')" class="aimd-demo-button" target="_blank" rel="noreferrer">
     Open Airalogy Markdown Demo
   </a>
 </div>

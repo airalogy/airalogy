@@ -12,12 +12,13 @@ import {
   useEditorContent,
 } from '@airalogy/aimd-editor/vue'
 import type { AimdVarTypePresetOption } from '@airalogy/aimd-editor/vue'
-import type { ExtractedAimdFields } from '@airalogy/aimd-core/types'
+import type { AimdQuizGradeResult, ExtractedAimdFields } from '@airalogy/aimd-core/types'
 import type { AimdComponentRenderer } from '@airalogy/aimd-renderer'
 import type { AimdRecorderMessagesInput } from '../locales'
 import type {
   AimdAssignerMap,
   AimdAssignerRunner,
+  AimdChoiceOptionExplanationMode,
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
   AimdFileInfoResolver,
@@ -26,6 +27,7 @@ import type {
   AimdFieldState,
   AimdProtocolRecordData,
   AimdRecorderFieldAdapters,
+  AimdScaleGradeDisplayMode,
   AimdStepDetailDisplay,
   AimdTypePlugin,
   FieldEventPayload,
@@ -57,6 +59,10 @@ const props = withDefaults(defineProps<{
   currentUserName?: string
   now?: Date | string | number
   messages?: AimdRecorderMessagesInput
+  quizGrades?: Record<string, AimdQuizGradeResult | null | undefined>
+  submitted?: boolean
+  choiceOptionExplanationMode?: AimdChoiceOptionExplanationMode
+  scaleGradeDisplayMode?: AimdScaleGradeDisplayMode
   stepDetailDisplay?: AimdStepDetailDisplay
   fieldMeta?: Record<string, AimdFieldMeta>
   serverAssigners?: AimdServerAssignerMap
@@ -82,6 +88,10 @@ const props = withDefaults(defineProps<{
   currentUserName: undefined,
   now: undefined,
   messages: undefined,
+  quizGrades: undefined,
+  submitted: false,
+  choiceOptionExplanationMode: 'hidden',
+  scaleGradeDisplayMode: 'hidden',
   stepDetailDisplay: 'auto',
   fieldMeta: undefined,
   serverAssigners: undefined,
@@ -184,6 +194,10 @@ const surfaceState = reactive<RecorderMilkdownSurfaceState>({
   now: props.now,
   locale: props.locale,
   messages: props.messages,
+  quizGrades: props.quizGrades,
+  submitted: props.submitted,
+  choiceOptionExplanationMode: props.choiceOptionExplanationMode,
+  scaleGradeDisplayMode: props.scaleGradeDisplayMode,
   stepDetailDisplay: props.stepDetailDisplay,
   fieldMeta: props.fieldMeta,
   serverAssigners: props.serverAssigners,
@@ -214,6 +228,10 @@ watchEffect(() => {
   surfaceState.now = props.now
   surfaceState.locale = props.locale
   surfaceState.messages = props.messages
+  surfaceState.quizGrades = props.quizGrades
+  surfaceState.submitted = props.submitted
+  surfaceState.choiceOptionExplanationMode = props.choiceOptionExplanationMode
+  surfaceState.scaleGradeDisplayMode = props.scaleGradeDisplayMode
   surfaceState.stepDetailDisplay = props.stepDetailDisplay
   surfaceState.fieldMeta = props.fieldMeta
   surfaceState.serverAssigners = props.serverAssigners

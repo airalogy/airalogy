@@ -8,6 +8,9 @@ function createSurfaceState(): RecorderMilkdownSurfaceState {
   return {
     record: createEmptyProtocolRecordData(),
     readonly: false,
+    submitted: false,
+    choiceOptionExplanationMode: 'hidden',
+    scaleGradeDisplayMode: 'hidden',
     stepDetailDisplay: 'auto',
     onUpdateRecord: () => {},
   }

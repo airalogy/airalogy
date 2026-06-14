@@ -49,7 +49,6 @@ export interface DemoMessages {
   nav: {
     tutorial: string
     examples: string
-    full: string
     core: string
     editor: string
     renderer: string
@@ -74,22 +73,6 @@ export interface DemoMessages {
     protocolBadge: string
   }
   pages: {
-    full: {
-      title: string
-      desc: string
-      stats: {
-        var: string
-        table: string
-        step: string
-        check: string
-        refs: string
-      }
-      tabs: {
-        preview: string
-        form: string
-        data: string
-      }
-    }
     core: {
       desc: string
     }
@@ -112,6 +95,31 @@ export interface DemoMessages {
       title: string
       desc: string
       workbenchTitle: string
+      panelLabel: string
+      stats: {
+        var: string
+        table: string
+        step: string
+        check: string
+        refs: string
+      }
+      tabs: {
+        workbench: string
+        preview: string
+        fields: string
+      }
+      quiz: {
+        score: string
+        review: string
+        explanations: string
+        submitted: string
+        explanationModes: {
+          hidden: string
+          selected: string
+          submitted: string
+          graded: string
+        }
+      }
     }
     tutorial: {
       title: string
@@ -169,7 +177,6 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
     nav: {
       tutorial: 'Interactive Tutorial',
       examples: 'Examples',
-      full: 'Full Workflow',
       core: 'Core Parser',
       editor: 'Editor',
       renderer: 'Renderer',
@@ -194,22 +201,6 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       protocolBadge: 'Protocol',
     },
     pages: {
-      full: {
-        title: 'AIMD Full Workflow',
-        desc: 'Edit AIMD -> live preview -> fill field values -> collect record data',
-        stats: {
-          var: 'Vars',
-          table: 'Tables',
-          step: 'Steps',
-          check: 'Checks',
-          refs: 'Refs',
-        },
-        tabs: {
-          preview: 'Preview',
-          form: 'Fill Data',
-          data: 'Collected Result',
-        },
-      },
       core: {
         desc: 'AIMD core parser that converts AIMD source into AST and extracted field metadata',
       },
@@ -230,8 +221,33 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       },
       examples: {
         title: 'AIMD Examples',
-        desc: 'Load repository AIMD cases, official protocol AIMD sources, and demo examples into the recorder to inspect their structure, form UI, and collected record data.',
+        desc: 'Load repository AIMD cases, official protocol AIMD sources, and demo examples into one workbench for source editing, rendered preview, recorder entry, extracted fields, and collected record data.',
         workbenchTitle: 'Case Workbench',
+        panelLabel: 'Example view',
+        stats: {
+          var: 'Vars',
+          table: 'Tables',
+          step: 'Steps',
+          check: 'Checks',
+          refs: 'Refs',
+        },
+        tabs: {
+          workbench: 'Workbench',
+          preview: 'Render Preview',
+          fields: 'Extracted Fields',
+        },
+        quiz: {
+          score: 'Score',
+          review: 'Review',
+          explanations: 'Explanations',
+          submitted: 'Submitted',
+          explanationModes: {
+            hidden: 'Hidden',
+            selected: 'Selected',
+            submitted: 'Submitted',
+            graded: 'Graded',
+          },
+        },
       },
       tutorial: {
         title: 'Interactive AIMD Tutorial',
@@ -287,7 +303,6 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
     nav: {
       tutorial: '交互式教程',
       examples: '案例',
-      full: '完整工作流',
       core: 'Core 解析器',
       editor: 'Editor 编辑器',
       renderer: 'Renderer 渲染器',
@@ -312,22 +327,6 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       protocolBadge: '协议',
     },
     pages: {
-      full: {
-        title: 'AIMD 完整工作流',
-        desc: '编辑 AIMD -> 实时预览 -> 填写字段值 -> 收集数据',
-        stats: {
-          var: '变量',
-          table: '变量表',
-          step: '步骤',
-          check: '检查',
-          refs: '引用',
-        },
-        tabs: {
-          preview: '渲染预览',
-          form: '填写数据',
-          data: '收集结果',
-        },
-      },
       core: {
         desc: 'AIMD 核心解析器 — 将 AIMD 源码解析为 AST 并提取字段信息',
       },
@@ -348,8 +347,33 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       },
       examples: {
         title: 'AIMD 案例',
-        desc: '把仓库中的 AIMD 案例、官方协议 AIMD 源码和 demo 示例直接载入记录器，快速查看结构、表单界面和收集到的数据。',
+        desc: '把仓库中的 AIMD 案例、官方协议 AIMD 源码和 demo 示例载入一个工作台，统一完成源码编辑、渲染预览、数据填写、字段查看和 Record 数据收集。',
         workbenchTitle: '案例工作台',
+        panelLabel: '案例视图',
+        stats: {
+          var: '变量',
+          table: '变量表',
+          step: '步骤',
+          check: '检查',
+          refs: '引用',
+        },
+        tabs: {
+          workbench: '工作台',
+          preview: '渲染预览',
+          fields: '提取字段',
+        },
+        quiz: {
+          score: '得分',
+          review: '需复核',
+          explanations: '解析',
+          submitted: '已提交',
+          explanationModes: {
+            hidden: '隐藏',
+            selected: '选中项',
+            submitted: '提交后',
+            graded: '评分后',
+          },
+        },
       },
       tutorial: {
         title: 'AIMD 交互式教程',

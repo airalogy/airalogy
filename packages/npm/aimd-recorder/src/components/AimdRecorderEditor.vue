@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { ExtractedAimdFields } from '@airalogy/aimd-core/types'
+import type { AimdQuizGradeResult, ExtractedAimdFields } from '@airalogy/aimd-core/types'
 import { AimdEditor } from '@airalogy/aimd-editor/vue'
 import type { AimdEditorProps } from '@airalogy/aimd-editor/vue'
 import type { AimdComponentRenderer } from '@airalogy/aimd-renderer'
@@ -8,6 +8,7 @@ import type { AimdRecorderMessagesInput } from '../locales'
 import type {
   AimdAssignerMap,
   AimdAssignerRunner,
+  AimdChoiceOptionExplanationMode,
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
   AimdFileInfoResolver,
@@ -16,6 +17,7 @@ import type {
   AimdFieldState,
   AimdProtocolRecordData,
   AimdRecorderFieldAdapters,
+  AimdScaleGradeDisplayMode,
   AimdStepDetailDisplay,
   AimdTypePlugin,
   FieldEventPayload,
@@ -58,6 +60,10 @@ const props = withDefaults(defineProps<{
   currentUserName?: string
   now?: Date | string | number
   messages?: AimdRecorderMessagesInput
+  quizGrades?: Record<string, AimdQuizGradeResult | null | undefined>
+  submitted?: boolean
+  choiceOptionExplanationMode?: AimdChoiceOptionExplanationMode
+  scaleGradeDisplayMode?: AimdScaleGradeDisplayMode
   stepDetailDisplay?: AimdStepDetailDisplay
   fieldMeta?: Record<string, AimdFieldMeta>
   serverAssigners?: AimdServerAssignerMap
@@ -101,6 +107,10 @@ const props = withDefaults(defineProps<{
   currentUserName: undefined,
   now: undefined,
   messages: undefined,
+  quizGrades: undefined,
+  submitted: false,
+  choiceOptionExplanationMode: 'hidden',
+  scaleGradeDisplayMode: 'hidden',
   stepDetailDisplay: 'auto',
   fieldMeta: undefined,
   serverAssigners: undefined,
@@ -189,6 +199,7 @@ const isPanelResizing = ref(false)
 const viewportEditorMinHeight = ref(props.editorMinHeight)
 const viewportSideBodyHeight = ref(props.recorderMinHeight)
 const viewportVisualEditorMinHeight = ref(Math.max(320, props.recorderMinHeight))
+const viewportWorkbenchMainHeight = ref<number | null>(null)
 const activeFieldEditor = ref<AimdWorkbenchFieldDescriptor | null>(null)
 const fieldEditorRawDraft = ref('')
 const fieldInsertMenuIndex = ref<number | null>(null)
@@ -478,6 +489,8 @@ function updateViewportPanelHeights() {
   if (!props.fitViewport || typeof window === 'undefined') {
     viewportEditorMinHeight.value = props.editorMinHeight
     viewportSideBodyHeight.value = props.recorderMinHeight
+    viewportVisualEditorMinHeight.value = Math.max(320, props.recorderMinHeight)
+    viewportWorkbenchMainHeight.value = null
     return
   }
 
@@ -501,6 +514,10 @@ function updateViewportPanelHeights() {
   viewportVisualEditorMinHeight.value = Math.max(
     320,
     Math.floor(sideBodyHeight - recorderToolbarHeight - visualEditorToolbarHeight),
+  )
+  viewportWorkbenchMainHeight.value = Math.max(
+    sideHeaderHeight + sideBodyHeight,
+    editorHeaderHeight + editorToolbarHeight + viewportEditorMinHeight.value,
   )
 }
 
@@ -625,9 +642,14 @@ const hasDetachedData = computed(() => detachedEntryCount.value > 0)
 const recordJson = computed(() => JSON.stringify(recordSnapshot.value, null, 2))
 const detachedRecordJson = computed(() => JSON.stringify(detachedRecord.value, null, 2))
 const workbenchMainStyle = computed(() => (
-  sourcePanelCollapsed.value
-    ? {}
-    : { '--aimd-recorder-source-panel-width': `${sourcePanelWidthPercent.value}%` }
+  {
+    ...(sourcePanelCollapsed.value
+      ? {}
+      : { '--aimd-recorder-source-panel-width': `${sourcePanelWidthPercent.value}%` }),
+    ...(viewportWorkbenchMainHeight.value === null
+      ? {}
+      : { '--aimd-recorder-workbench-main-height': `${viewportWorkbenchMainHeight.value}px` }),
+  }
 ))
 const sidePanelBodyStyle = computed(() => ({
   height: `${viewportSideBodyHeight.value}px`,
@@ -1399,6 +1421,10 @@ defineExpose({
             :current-user-name="currentUserName"
             :now="now"
             :messages="messages"
+            :quiz-grades="quizGrades"
+            :submitted="submitted"
+            :choice-option-explanation-mode="choiceOptionExplanationMode"
+            :scale-grade-display-mode="scaleGradeDisplayMode"
             :step-detail-display="stepDetailDisplay"
             :field-meta="fieldMeta"
             :server-assigners="serverAssigners"
@@ -1439,6 +1465,10 @@ defineExpose({
             :now="now"
             :locale="locale"
             :messages="messages"
+            :quiz-grades="quizGrades"
+            :submitted="submitted"
+            :choice-option-explanation-mode="choiceOptionExplanationMode"
+            :scale-grade-display-mode="scaleGradeDisplayMode"
             :step-detail-display="stepDetailDisplay"
             :field-meta="fieldMeta"
             :server-assigners="serverAssigners"
@@ -1701,6 +1731,8 @@ defineExpose({
   grid-template-columns: minmax(260px, var(--aimd-recorder-source-panel-width, 50%)) 12px minmax(0, 1fr);
   gap: 0;
   align-items: stretch;
+  height: var(--aimd-recorder-workbench-main-height, auto);
+  min-height: 0;
 }
 
 .aimd-recorder-workbench__main--source-collapsed {
@@ -1713,7 +1745,10 @@ defineExpose({
 }
 
 .aimd-recorder-workbench__panel {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid #dbe4ef;
   border-radius: 14px;
@@ -1735,6 +1770,7 @@ defineExpose({
 }
 
 .aimd-recorder-workbench__panel-head {
+  flex: 0 0 auto;
   padding: 12px 16px;
   border-bottom: 1px solid #e7edf5;
   background: linear-gradient(180deg, #fbfdff 0%, #f5f9ff 100%);
@@ -1835,7 +1871,13 @@ defineExpose({
 }
 
 .aimd-recorder-workbench__panel-body {
+  flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
+}
+
+.aimd-recorder-workbench__panel-body--editor {
+  overflow: hidden;
 }
 
 .aimd-recorder-workbench__panel-body--editor :deep(.aimd-editor) {
@@ -2513,6 +2555,7 @@ defineExpose({
   .aimd-recorder-workbench__main {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
+    height: auto;
   }
 
   .aimd-recorder-workbench__splitter {

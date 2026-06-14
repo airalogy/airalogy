@@ -7,7 +7,7 @@ import type { EditorView, NodeView } from '@milkdown/kit/prose/view'
 import { NodeSelection } from '@milkdown/kit/prose/state'
 import { hardbreakAttr, hardbreakSchema } from '@milkdown/kit/preset/commonmark'
 import { $node, $prose, $remark, $view } from '@milkdown/kit/utils'
-import type { ExtractedAimdFields } from '@airalogy/aimd-core/types'
+import type { AimdQuizGradeResult, ExtractedAimdFields } from '@airalogy/aimd-core/types'
 import {
   aimdFieldInputRule,
   aimdFieldNode,
@@ -18,6 +18,7 @@ import type { AimdRecorderMessagesInput } from '../locales'
 import type {
   AimdAssignerMap,
   AimdAssignerRunner,
+  AimdChoiceOptionExplanationMode,
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
   AimdFileInfoResolver,
@@ -26,6 +27,7 @@ import type {
   AimdFieldState,
   AimdProtocolRecordData,
   AimdRecorderFieldAdapters,
+  AimdScaleGradeDisplayMode,
   AimdStepDetailDisplay,
   AimdTypePlugin,
   FieldEventPayload,
@@ -48,6 +50,10 @@ export interface RecorderMilkdownSurfaceState {
   now?: Date | string | number
   locale?: string
   messages?: AimdRecorderMessagesInput
+  quizGrades?: Record<string, AimdQuizGradeResult | null | undefined>
+  submitted: boolean
+  choiceOptionExplanationMode: AimdChoiceOptionExplanationMode
+  scaleGradeDisplayMode: AimdScaleGradeDisplayMode
   stepDetailDisplay: AimdStepDetailDisplay
   fieldMeta?: Record<string, AimdFieldMeta>
   serverAssigners?: AimdServerAssignerMap

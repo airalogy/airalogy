@@ -14,7 +14,6 @@ const githubHref = 'https://github.com/airalogy/airalogy'
 const navItems = computed(() => [
   { path: '/tutorial', label: messages.value.nav.tutorial },
   { path: '/examples', label: messages.value.nav.examples },
-  { path: '/full', label: messages.value.nav.full },
   { path: '/core', label: messages.value.nav.core },
   { path: '/editor', label: messages.value.nav.editor },
   { path: '/renderer', label: messages.value.nav.renderer },

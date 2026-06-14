@@ -6,8 +6,7 @@ const demoRoot = import.meta.env.DEV
   : withBase('/demo')
 
 const demoPages = [
-  { label: '案例', path: '/examples', desc: '查看仓库内 AIMD 案例和协议 AIMD 预览' },
-  { label: '完整工作流', path: '/full', desc: '编辑、渲染、记录一体化页面' },
+  { label: '案例', path: '/examples', desc: '在一个工作台中查看 AIMD 案例、源码编辑、渲染预览、数据录入、字段和 Record 数据' },
   { label: 'Core 解析器', path: '/core', desc: '查看 AST 与字段提取结果' },
   { label: 'Editor 编辑器', path: '/editor', desc: 'AIMD 编写与插入交互' },
   { label: 'Renderer 渲染器', path: '/renderer', desc: 'HTML / Vue 渲染预览' },
@@ -22,7 +21,7 @@ const linkTo = path => `${demoRoot}/#${path}`
 为避免文档页面过于拥挤，Airalogy Markdown Demo 改为单独打开。案例页里的 Protocol 条目用于预览和填写 `protocol.aimd` 源码；需要引擎（Engine）执行赋值器（Assigner）的完整演示应放在更高一层的 Airalogy Protocol Demo。
 
 <div class="aimd-demo-actions">
-  <a :href="linkTo('/full')" class="aimd-demo-button" target="_blank" rel="noreferrer">
+  <a :href="linkTo('/examples')" class="aimd-demo-button" target="_blank" rel="noreferrer">
     打开 Airalogy Markdown Demo
   </a>
 </div>
