@@ -457,7 +457,7 @@ function loadSolution() {
 
 .lesson-strip {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
 }
 
@@ -926,10 +926,6 @@ function loadSolution() {
 }
 
 @media (max-width: 1200px) {
-  .lesson-strip {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
   .tutorial-layout {
     grid-template-columns: 1fr;
   }
@@ -949,7 +945,7 @@ function loadSolution() {
   }
 
   .lesson-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
   }
 
   .panel-header,

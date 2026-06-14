@@ -22,8 +22,16 @@ function findVarTable(fields: ExtractedAimdFields | null, id: string) {
   return fields?.var_table.find(table => table.id === id)
 }
 
+function findVarDefinition(fields: ExtractedAimdFields | null, id: string) {
+  return fields?.var_definitions?.find(field => field.id === id)
+}
+
 function findQuiz(fields: ExtractedAimdFields | null, id: string) {
   return fields?.quiz.find(quiz => quiz.id === id)
+}
+
+function findStepField(fields: ExtractedAimdFields | null, id: string) {
+  return fields?.step_hierarchy?.find(step => step.id === id)
 }
 
 function findClientAssigner(fields: ExtractedAimdFields | null, id: string) {
@@ -100,6 +108,34 @@ const QUIZ_PATTERN = lines([
   '    text: Second option',
   'answer: B',
   '```',
+])
+
+const FIELD_METADATA_PATTERN = lines([
+  '{{var|field_id: type, title = "Readable label", description = "Help text", examples = ["Example"]}}',
+  '{{var|notes: AiralogyMarkdown}}',
+  '{{var|sequence: DNASequence}}',
+])
+
+const STEP_TIMER_PATTERN = lines([
+  '{{step|step_id, check=True, duration="2m"}} Step text.',
+  '{{step|timed_step, duration="30s", timer="countdown"}} Finish within the time window.',
+  '{{check|checkpoint_id}}',
+])
+
+const QUIZ_VARIANTS_PATTERN = lines([
+  '```quiz',
+  'id: quiz_id',
+  'type: true_false | blank | scale',
+  'stem: Question text',
+  '```',
+])
+
+const REVIEW_MARKS_PATTERN = lines([
+  '{++added text++}',
+  '{--deleted text--}',
+  '{~~old wording~>new wording~~}',
+  '{>>review note<<}',
+  '{==highlighted text==}',
 ])
 
 const CLIENT_ASSIGNER_PATTERN = lines([
@@ -252,6 +288,95 @@ const LESSON_DEFINITIONS: TutorialLessonDefinition[] = [
     ],
   },
   {
+    id: 'field-metadata-types',
+    title: lt('Field Metadata and Built-in Types', '字段元数据与内置类型'),
+    summary: lt(
+      'Use title, description, examples, and built-in AIMD field types to make recorder forms clearer.',
+      '用 `title`、`description`、`examples` 和内置 AIMD 字段类型，让 recorder 表单更清晰。',
+    ),
+    intro: lt(
+      'Add readable metadata to operator, then define AiralogyMarkdown, DNASequence, and PyStr fields.',
+      '给 `operator` 添加可读元数据，然后定义 `AiralogyMarkdown`、`DNASequence` 和 `PyStr` 字段。',
+    ),
+    focus: [
+      lt('Field metadata', '字段元数据'),
+      lt('Built-in types', '内置类型'),
+      lt('Recorder labels', 'Recorder 标签'),
+    ],
+    pattern: FIELD_METADATA_PATTERN,
+    starter: lt(
+      lines([
+        '## Rich Field Types',
+        '',
+        'Operator:',
+        'Experiment note:',
+        'Plasmid sequence:',
+        'Analysis script:',
+      ]),
+      lines([
+        '## 丰富字段类型',
+        '',
+        '操作者：',
+        '实验记录：',
+        '质粒序列：',
+        '分析脚本：',
+      ]),
+    ),
+    solution: lt(
+      lines([
+        '## Rich Field Types',
+        '',
+        'Operator: {{var|operator: UserName, title = "Operator", description = "Person responsible for this record", examples = ["Dr. Chen"]}}',
+        'Experiment note: {{var|experiment_note: AiralogyMarkdown, title = "Experiment Note", description = "Markdown note with review comments"}}',
+        'Plasmid sequence: {{var|plasmid_sequence: DNASequence, title = "Plasmid Sequence"}}',
+        'Analysis script: {{var|analysis_script: PyStr, title = "Analysis Script"}}',
+      ]),
+      lines([
+        '## 丰富字段类型',
+        '',
+        '操作者：{{var|operator: UserName, title = "Operator", description = "Person responsible for this record", examples = ["Dr. Chen"]}}',
+        '实验记录：{{var|experiment_note: AiralogyMarkdown, title = "Experiment Note", description = "Markdown note with review comments"}}',
+        '质粒序列：{{var|plasmid_sequence: DNASequence, title = "Plasmid Sequence"}}',
+        '分析脚本：{{var|analysis_script: PyStr, title = "Analysis Script"}}',
+      ]),
+    ),
+    hints: [
+      lt('title, description, and examples are kwargs inside the var template.', '`title`、`description` 和 `examples` 都是 `var` 模板里的 kwargs。'),
+      lt('AiralogyMarkdown renders as a Markdown field in recorder contexts.', '`AiralogyMarkdown` 在 recorder 中会渲染为 Markdown 字段。'),
+      lt('DNASequence and PyStr are type annotations; they do not need quotes.', '`DNASequence` 和 `PyStr` 是类型标注，不需要加引号。'),
+    ],
+    checks: [
+      {
+        id: 'operator-type',
+        label: lt('Define operator as UserName', '把 `operator` 定义为 `UserName`'),
+        evaluate: state => findVarDefinition(state.fields, 'operator')?.type === 'UserName',
+      },
+      {
+        id: 'operator-metadata',
+        label: lt('Give operator a title, description, and examples', '给 `operator` 添加 title、description 和 examples'),
+        evaluate: (state) => {
+          const field = findVarDefinition(state.fields, 'operator')
+          return Boolean(field?.title && field.description && field.examples?.length)
+        },
+      },
+      {
+        id: 'markdown-type',
+        label: lt('Define experiment_note as AiralogyMarkdown', '把 `experiment_note` 定义为 `AiralogyMarkdown`'),
+        evaluate: state => findVarDefinition(state.fields, 'experiment_note')?.type === 'AiralogyMarkdown',
+      },
+      {
+        id: 'dna-type',
+        label: lt('Define plasmid_sequence as DNASequence', '把 `plasmid_sequence` 定义为 `DNASequence`'),
+        evaluate: state => findVarDefinition(state.fields, 'plasmid_sequence')?.type === 'DNASequence',
+      },
+      {
+        id: 'code-type',
+        label: lt('Define analysis_script as PyStr', '把 `analysis_script` 定义为 `PyStr`'),
+        evaluate: state => findVarDefinition(state.fields, 'analysis_script')?.type === 'PyStr',
+      },
+    ],
+  },
+  {
     id: 'steps-and-refs',
     title: lt('Steps and References', '步骤与引用'),
     summary: lt(
@@ -326,6 +451,84 @@ const LESSON_DEFINITIONS: TutorialLessonDefinition[] = [
         id: 'step-ref',
         label: lt('Reference prepare_sample with ref_step', '用 `ref_step` 引用 `prepare_sample`'),
         evaluate: state => state.fields?.ref_step.includes('prepare_sample') ?? false,
+      },
+    ],
+  },
+  {
+    id: 'step-checks-timers',
+    title: lt('Checks and Timers', '检查点与计时'),
+    summary: lt(
+      'Add checkboxes and timing metadata to procedural steps.',
+      '给流程步骤添加检查框和计时元数据。',
+    ),
+    intro: lt(
+      'Create one checked preparation step, one countdown step, and one standalone check.',
+      '创建一个带检查框的准备步骤、一个倒计时步骤，以及一个独立检查点。',
+    ),
+    focus: [
+      lt('check=True', 'check=True'),
+      lt('duration', 'duration'),
+      lt('timer', 'timer'),
+    ],
+    pattern: STEP_TIMER_PATTERN,
+    starter: lt(
+      lines([
+        '## Timed Workflow',
+      ]),
+      lines([
+        '## 计时流程',
+      ]),
+    ),
+    solution: lt(
+      lines([
+        '## Timed Workflow',
+        '',
+        '{{step|prepare_sample, check=True, duration="2m"}} Prepare the sample and confirm the label.',
+        '{{step|wash_window, duration="30s", timer="countdown"}} Complete the wash within the time window.',
+        '{{step|transfer_sample, check=True, duration="90s", timer="both"}} Transfer the sample and track overtime if needed.',
+        '',
+        '{{check|review_record}} Confirm all timed steps have been recorded.',
+      ]),
+      lines([
+        '## 计时流程',
+        '',
+        '{{step|prepare_sample, check=True, duration="2m"}} 准备样本并确认标签。',
+        '{{step|wash_window, duration="30s", timer="countdown"}} 在时间窗口内完成清洗。',
+        '{{step|transfer_sample, check=True, duration="90s", timer="both"}} 转移样本，并在需要时继续记录超时。',
+        '',
+        '{{check|review_record}} 确认所有计时步骤都已记录。',
+      ]),
+    ),
+    hints: [
+      lt('check=True makes a step render with a completion checkbox in recorder contexts.', '`check=True` 会让步骤在 recorder 中显示完成检查框。'),
+      lt('duration accepts compact strings such as 30s, 2m, and 1h.', '`duration` 支持 `30s`、`2m`、`1h` 这类紧凑写法。'),
+      lt('timer can be elapsed, countdown, or both.', '`timer` 可以是 `elapsed`、`countdown` 或 `both`。'),
+    ],
+    checks: [
+      {
+        id: 'checked-step',
+        label: lt('Create prepare_sample as a checked step', '创建带检查框的 `prepare_sample` 步骤'),
+        evaluate: state => findStepField(state.fields, 'prepare_sample')?.has_check === true,
+      },
+      {
+        id: 'prepare-duration',
+        label: lt('Give prepare_sample a two-minute duration', '给 `prepare_sample` 设置两分钟时长'),
+        evaluate: state => findStepField(state.fields, 'prepare_sample')?.estimated_duration_ms === 120000,
+      },
+      {
+        id: 'countdown-step',
+        label: lt('Create wash_window with countdown timer mode', '创建 `timer=countdown` 的 `wash_window` 步骤'),
+        evaluate: state => findStepField(state.fields, 'wash_window')?.timer_mode === 'countdown',
+      },
+      {
+        id: 'both-timer-step',
+        label: lt('Create transfer_sample with timer both', '创建 `timer=both` 的 `transfer_sample` 步骤'),
+        evaluate: state => findStepField(state.fields, 'transfer_sample')?.timer_mode === 'both',
+      },
+      {
+        id: 'standalone-check',
+        label: lt('Add a standalone check named review_record', '添加名为 `review_record` 的独立检查点'),
+        evaluate: state => state.fields?.check.includes('review_record') ?? false,
       },
     ],
   },
@@ -478,6 +681,150 @@ const LESSON_DEFINITIONS: TutorialLessonDefinition[] = [
     ],
   },
   {
+    id: 'quiz-variants',
+    title: lt('Quiz Variants', '题目类型扩展'),
+    summary: lt(
+      'Use true/false, blank, and scale quizzes for richer structured checks.',
+      '使用判断题、填空题和量表题表达更丰富的结构化检查。',
+    ),
+    intro: lt(
+      'Create one true/false quiz, one blank quiz, and one scale quiz.',
+      '创建一个判断题、一个填空题和一个量表题。',
+    ),
+    focus: [
+      lt('true_false', 'true_false'),
+      lt('blank', 'blank'),
+      lt('scale', 'scale'),
+    ],
+    pattern: QUIZ_VARIANTS_PATTERN,
+    starter: lt(
+      lines([
+        '## Quiz Variants',
+      ]),
+      lines([
+        '## 题目类型扩展',
+      ]),
+    ),
+    solution: lt(
+      lines([
+        '## Quiz Variants',
+        '',
+        '```quiz',
+        'id: cold_chain_ok',
+        'type: true_false',
+        'stem: The sample stayed at 4°C before transfer.',
+        'answer: true',
+        '```',
+        '',
+        '```quiz',
+        'id: target_concentration',
+        'type: blank',
+        'stem: The target NaCl concentration is [[c1]].',
+        'blanks:',
+        '  - key: c1',
+        '    answer: 0.9%',
+        '```',
+        '',
+        '```quiz',
+        'id: handling_score',
+        'type: scale',
+        'stem: Rate the handling quality.',
+        'display: matrix',
+        'items:',
+        '  - key: labeling',
+        '    stem: Labeling was clear',
+        '  - key: timing',
+        '    stem: Timing stayed within protocol',
+        'options:',
+        '  - key: no',
+        '    text: No',
+        '    points: 0',
+        '  - key: yes',
+        '    text: Yes',
+        '    points: 1',
+        'grading:',
+        '  strategy: sum',
+        '```',
+      ]),
+      lines([
+        '## 题目类型扩展',
+        '',
+        '```quiz',
+        'id: cold_chain_ok',
+        'type: true_false',
+        'stem: 转移前样本一直保持在 4°C。',
+        'answer: true',
+        '```',
+        '',
+        '```quiz',
+        'id: target_concentration',
+        'type: blank',
+        'stem: 目标 NaCl 浓度是 [[c1]]。',
+        'blanks:',
+        '  - key: c1',
+        '    answer: 0.9%',
+        '```',
+        '',
+        '```quiz',
+        'id: handling_score',
+        'type: scale',
+        'stem: 评价样本处理质量。',
+        'display: matrix',
+        'items:',
+        '  - key: labeling',
+        '    stem: 标签清晰',
+        '  - key: timing',
+        '    stem: 时间控制符合 protocol',
+        'options:',
+        '  - key: no',
+        '    text: 否',
+        '    points: 0',
+        '  - key: yes',
+        '    text: 是',
+        '    points: 1',
+        'grading:',
+        '  strategy: sum',
+        '```',
+      ]),
+    ),
+    hints: [
+      lt('true_false quizzes use type: true_false and usually store a boolean answer.', '`true_false` 题通常用布尔值存储答案。'),
+      lt('blank quizzes need placeholders in stem, such as [[c1]], and matching entries under blanks.', '`blank` 题需要在 `stem` 中写 `[[c1]]`，并在 `blanks` 下提供同名条目。'),
+      lt('scale quizzes combine items, options, and a grading strategy.', '`scale` 题由 `items`、`options` 和 `grading` 策略组合而成。'),
+    ],
+    checks: [
+      {
+        id: 'true-false-quiz',
+        label: lt('Create cold_chain_ok as a true_false quiz', '创建 `true_false` 类型的 `cold_chain_ok` 题'),
+        evaluate: state => findQuiz(state.fields, 'cold_chain_ok')?.type === 'true_false',
+      },
+      {
+        id: 'blank-quiz',
+        label: lt('Create target_concentration as a blank quiz with c1', '创建带 `c1` 空位的 `target_concentration` 填空题'),
+        evaluate: (state) => {
+          const quiz = findQuiz(state.fields, 'target_concentration')
+          return quiz?.type === 'blank' && Boolean(quiz.blanks?.some(blank => blank.key === 'c1'))
+        },
+      },
+      {
+        id: 'scale-quiz',
+        label: lt('Create handling_score as a matrix scale quiz', '创建 matrix 显示的 `handling_score` 量表题'),
+        evaluate: (state) => {
+          const quiz = findQuiz(state.fields, 'handling_score')
+          return quiz?.type === 'scale' && quiz.display === 'matrix'
+        },
+      },
+      {
+        id: 'scale-items-options',
+        label: lt('Give the scale quiz at least two items and two options', '给量表题设置至少两个 items 和两个 options'),
+        evaluate: (state) => {
+          const quiz = findQuiz(state.fields, 'handling_score')
+          return (quiz?.items?.length ?? 0) >= 2 && (quiz?.options?.length ?? 0) >= 2
+        },
+      },
+    ],
+  },
+  {
     id: 'inline-vars-table',
     title: lt('Inline Vars in Markdown Tables', 'Markdown 表格中的行内变量'),
     summary: lt(
@@ -546,6 +893,80 @@ const LESSON_DEFINITIONS: TutorialLessonDefinition[] = [
         id: 'buffer-inline-var',
         label: lt('Add buffer_volume_ml as an inline var', '把 `buffer_volume_ml` 加成行内变量'),
         evaluate: state => state.fields?.var.includes('buffer_volume_ml') ?? false,
+      },
+    ],
+  },
+  {
+    id: 'review-marks',
+    title: lt('Review Marks', '审阅标记'),
+    summary: lt(
+      'Use CriticMarkup-style marks for additions, deletions, substitutions, comments, and highlights.',
+      '用 CriticMarkup 风格标记表达添加、删除、替换、注释和高亮。',
+    ),
+    intro: lt(
+      'Revise the sentence with all five review mark forms. These marks render in preview but do not create AIMD fields.',
+      '用五种审阅标记修订句子。这些标记会在预览中渲染，但不会生成 AIMD 字段。',
+    ),
+    focus: [
+      lt('CriticMarkup', 'CriticMarkup'),
+      lt('Review display', '审阅展示'),
+      lt('Markdown layer', 'Markdown 层'),
+    ],
+    pattern: REVIEW_MARKS_PATTERN,
+    starter: lt(
+      lines([
+        'The sample is usually stable. Add a reviewer note and highlight the risky wording.',
+      ]),
+      lines([
+        '样本通常稳定。请添加审阅备注，并高亮需要注意的表述。',
+      ]),
+    ),
+    solution: lt(
+      lines([
+        'The sample is {~~usually~>always~~} stable {++after pre-chilling++}. {--Skip this sentence if the run is exploratory.--} {>>Confirm the storage window.<<} Mark {==risky wording==} for review.',
+      ]),
+      lines([
+        '样本{~~通常~>始终~~}稳定{++，前提是已经预冷++}。{--探索性实验可以删除这句话。--}{>>确认储存时间窗口。<<}请高亮{==需要注意的表述==}。',
+      ]),
+    ),
+    hints: [
+      lt('Additions use {++...++}; deletions use {--...--}.', '添加用 `{++...++}`，删除用 `{--...--}`。'),
+      lt('Substitutions use {~~old~>new~~}; the arrow separates old and new text.', '替换用 `{~~旧文字~>新文字~~}`，箭头左旧右新。'),
+      lt('Comments and highlights render visually, but extracted fields should stay empty.', '注释和高亮会被渲染出来，但字段提取结果应保持为空。'),
+    ],
+    checks: [
+      {
+        id: 'addition-mark',
+        label: lt('Render an addition mark', '渲染添加标记'),
+        evaluate: state => state.html.includes('aimd-critic--addition'),
+      },
+      {
+        id: 'deletion-mark',
+        label: lt('Render a deletion mark', '渲染删除标记'),
+        evaluate: state => state.html.includes('aimd-critic--deletion'),
+      },
+      {
+        id: 'substitution-mark',
+        label: lt('Render a substitution mark', '渲染替换标记'),
+        evaluate: state => state.html.includes('aimd-critic--substitution'),
+      },
+      {
+        id: 'comment-mark',
+        label: lt('Render a comment mark', '渲染注释标记'),
+        evaluate: state => state.html.includes('aimd-critic--comment'),
+      },
+      {
+        id: 'highlight-mark',
+        label: lt('Render a highlight mark', '渲染高亮标记'),
+        evaluate: state => state.html.includes('aimd-critic--highlight'),
+      },
+      {
+        id: 'no-fields',
+        label: lt('Keep review marks out of extracted AIMD fields', '审阅标记不进入 AIMD 字段提取结果'),
+        evaluate: state => Boolean(state.fields)
+          && state.fields!.var.length === 0
+          && state.fields!.step.length === 0
+          && state.fields!.quiz.length === 0,
       },
     ],
   },
