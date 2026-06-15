@@ -756,6 +756,24 @@ button {
   border-radius: 8px;
 }
 
+.rendered-aimd-document .aimd-figure .aimd-figure__image {
+  border-radius: 0;
+}
+
+.rendered-aimd-document .aimd-internal-ref-target--active {
+  animation: aimd-reader-internal-ref-target-flash 1200ms ease-out;
+}
+
+@keyframes aimd-reader-internal-ref-target-flash {
+  0% {
+    box-shadow: 0 0 0 4px rgba(33, 97, 103, 0.22);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(33, 97, 103, 0);
+  }
+}
+
 .rendered-aimd-document .aimd-refs {
   margin: 24px 0;
   padding-top: 16px;

@@ -1,6 +1,5 @@
-import { defineComponent, h, type PropType, type VNodeChild } from 'vue'
-
 const INTERNAL_REF_SELECTOR = '.aimd-ref[data-aimd-ref-target], .aimd-ref[data-aimd-ref]'
+const INTERNAL_REF_ROOT_SELECTOR = '.examples-workbench, .examples-panel, .tab-content, .render-preview, .examples-render-preview'
 
 function getRefElement(target: EventTarget | null): HTMLElement | null {
   return target instanceof Element
@@ -53,19 +52,7 @@ function findScrollContainer(target: HTMLElement, root: HTMLElement): HTMLElemen
     current = current.parentElement
   }
 
-  if (canScroll(root)) {
-    return root
-  }
-
-  let outer: HTMLElement | null = root.parentElement
-  while (outer) {
-    if (canScroll(outer)) {
-      return outer
-    }
-    outer = outer.parentElement
-  }
-
-  return root
+  return canScroll(root) ? root : (root.closest<HTMLElement>('.aimd-recorder-workbench__panel-body--recorder, .examples-panel') ?? root)
 }
 
 function scrollTargetIntoContainer(target: HTMLElement, container: HTMLElement): void {
@@ -86,7 +73,7 @@ function scrollToInternalRefTarget(refElement: HTMLElement): boolean {
     return false
   }
 
-  const root = refElement.closest<HTMLElement>('.rendered-aimd-document')
+  const root = refElement.closest<HTMLElement>(INTERNAL_REF_ROOT_SELECTOR)
   const target = (root ? findElementById(root, targetId) : null) ?? document.getElementById(targetId)
   if (!target) {
     return false
@@ -102,54 +89,30 @@ function scrollToInternalRefTarget(refElement: HTMLElement): boolean {
   return true
 }
 
-export default defineComponent({
-  name: 'RenderedAimdDocument',
-  props: {
-    nodes: {
-      type: Array as PropType<VNodeChild[]>,
-      required: true,
-    },
-    showFieldIds: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  setup(props) {
-    function handleInternalRefClick(event: MouseEvent): void {
-      const refElement = getRefElement(event.target)
-      if (!refElement) {
-        return
-      }
+export function handleAimdInternalRefClick(event: MouseEvent): void {
+  const refElement = getRefElement(event.target)
+  if (!refElement) {
+    return
+  }
 
-      if (scrollToInternalRefTarget(refElement)) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
-    }
+  if (scrollToInternalRefTarget(refElement)) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+}
 
-    function handleInternalRefKeydown(event: KeyboardEvent): void {
-      if (event.key !== 'Enter' && event.key !== ' ') {
-        return
-      }
+export function handleAimdInternalRefKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Enter' && event.key !== ' ') {
+    return
+  }
 
-      const refElement = getRefElement(event.target)
-      if (!refElement) {
-        return
-      }
+  const refElement = getRefElement(event.target)
+  if (!refElement) {
+    return
+  }
 
-      if (scrollToInternalRefTarget(refElement)) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
-    }
-
-    return () => h('div', {
-      class: [
-        'rendered-aimd-document',
-        { 'rendered-aimd-document--show-field-ids': props.showFieldIds },
-      ],
-      onClick: handleInternalRefClick,
-      onKeydown: handleInternalRefKeydown,
-    }, props.nodes)
-  },
-})
+  if (scrollToInternalRefTarget(refElement)) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+}

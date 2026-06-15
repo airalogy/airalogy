@@ -63,7 +63,7 @@ legend: This is an example figure legend.
 ```
 ````
 
-After parsing, `{{ref_fig|fig_1}}` will be replaced with the figure number (e.g., “Figure 1”), and that number will link to the figure’s location.
+After parsing, `{{ref_fig|fig_1}}` will be rendered as a numbered figure reference marker (for example, “Figure 1”) with target metadata. Host applications can use that metadata to scroll to the figure without rewriting their own route state.
 
 ## Syntax Design Rationale
 

@@ -1,9 +1,10 @@
 import type { Element, Root as HastRoot, RootContent, Text as HastText } from "hast"
-import type { AimdNode, ExtractedAimdFields } from "@airalogy/aimd-core/types"
+import type { AimdNode, AimdReferenceEntry, ExtractedAimdFields } from "@airalogy/aimd-core/types"
 
 export interface AimdCitationReferenceDisplay {
   id: string
   label: string
+  summary: string
 }
 
 type AimdCitationNodeWithDisplay = AimdNode & {
@@ -47,11 +48,41 @@ function hasClass(element: Element, className: string): boolean {
   return false
 }
 
+function isReferenceSectionElement(element: Element): boolean {
+  const properties = element.properties || {}
+  const aimdType = properties["data-aimd-type"] || properties.dataAimdType
+  const aimdData = (element.data as { aimd?: AimdNode } | undefined)?.aimd
+  return aimdType === "refs" || aimdData?.fieldType === "refs" || hasClass(element, "aimd-refs")
+}
+
 function isCitationElement(element: Element): boolean {
   const properties = element.properties || {}
   const aimdType = properties["data-aimd-type"] || properties.dataAimdType
   const aimdData = (element.data as { aimd?: AimdNode } | undefined)?.aimd
   return aimdType === "cite" || aimdData?.fieldType === "cite" || hasClass(element, "aimd-cite")
+}
+
+function getReferenceContainer(entry: AimdReferenceEntry): string | undefined {
+  return entry.journal || entry.booktitle || entry.publisher
+}
+
+export function formatCitationReferenceSummary(entry: AimdReferenceEntry | undefined, fallbackId: string): string {
+  if (!entry) {
+    return fallbackId
+  }
+
+  const parts = [
+    entry.author,
+    entry.year ? `(${entry.year})` : undefined,
+    entry.title,
+    getReferenceContainer(entry),
+    entry.doi ? `doi:${entry.doi}` : undefined,
+    entry.url,
+  ]
+    .map(part => part?.trim())
+    .filter((part): part is string => Boolean(part))
+
+  return parts.length > 0 ? parts.join(" ") : fallbackId
 }
 
 function getCitationRefIds(element: Element): string[] {
@@ -82,11 +113,62 @@ function buildCitationLabelMap(fields: ExtractedAimdFields): Map<string, string>
   return labels
 }
 
-function buildCitationRefs(refIds: string[], labelByRefId: Map<string, string>): AimdCitationReferenceDisplay[] {
+function buildCitationSummaryMap(fields: ExtractedAimdFields): Map<string, string> {
+  const summaries = new Map<string, string>()
+  for (const entry of fields.refs || []) {
+    const id = entry.id?.trim()
+    if (id && !summaries.has(id)) {
+      summaries.set(id, formatCitationReferenceSummary(entry, id))
+    }
+  }
+  return summaries
+}
+
+function buildCitationRefs(
+  refIds: string[],
+  labelByRefId: Map<string, string>,
+  summaryByRefId: Map<string, string>,
+): AimdCitationReferenceDisplay[] {
   return refIds.map(id => ({
     id,
     label: labelByRefId.get(id) || id,
+    summary: summaryByRefId.get(id) || id,
   }))
+}
+
+function createCitationReferenceElement(citationRef: AimdCitationReferenceDisplay): Element {
+  return {
+    type: "element",
+    tagName: "span",
+    properties: {
+      className: ["aimd-cite__ref"],
+      role: "doc-noteref",
+      tabIndex: 0,
+      title: citationRef.summary,
+      "data-aimd-ref-id": citationRef.id,
+      "data-aimd-ref-summary": citationRef.summary,
+      "aria-label": citationRef.label === citationRef.id
+        ? `Reference ${citationRef.summary}`
+        : `Reference ${citationRef.label}: ${citationRef.summary}`,
+    },
+    children: [
+      {
+        type: "element",
+        tagName: "span",
+        properties: { className: ["aimd-cite__label"] },
+        children: [createTextNode(citationRef.label)],
+      } as Element,
+      {
+        type: "element",
+        tagName: "span",
+        properties: {
+          className: ["aimd-cite__popover"],
+          role: "tooltip",
+        },
+        children: [createTextNode(citationRef.summary)],
+      } as Element,
+    ],
+  } as Element
 }
 
 function createCitationChildren(citationRefs: AimdCitationReferenceDisplay[]): Array<Element | HastText> {
@@ -97,20 +179,7 @@ function createCitationChildren(citationRefs: AimdCitationReferenceDisplay[]): A
       children.push(createTextNode(", "))
     }
 
-    children.push({
-      type: "element",
-      tagName: "a",
-      properties: {
-        className: ["aimd-cite__ref"],
-        href: `#ref-${citationRef.id}`,
-        title: citationRef.id,
-        "data-aimd-ref-id": citationRef.id,
-        "aria-label": citationRef.label === citationRef.id
-          ? `Reference ${citationRef.id}`
-          : `Reference ${citationRef.label}: ${citationRef.id}`,
-      },
-      children: [createTextNode(citationRef.label)],
-    } as Element)
+    children.push(createCitationReferenceElement(citationRef))
   })
 
   children.push(createTextNode("]"))
@@ -122,6 +191,7 @@ function annotateCitationElement(element: Element, citationRefs: AimdCitationRef
   element.properties = {
     ...properties,
     "data-aimd-citation-labels": citationRefs.map(ref => ref.label).join(","),
+    "data-aimd-citation-summaries": JSON.stringify(citationRefs.map(ref => ref.summary)),
   }
 
   const data = ((element as any).data || {}) as { aimd?: AimdCitationNodeWithDisplay }
@@ -149,8 +219,36 @@ function walk(node: HastRoot | RootContent, visitor: (element: Element) => void)
   }
 }
 
+function extractReferenceSections(children: RootContent[], sections: Element[]): RootContent[] {
+  const nextChildren: RootContent[] = []
+
+  for (const child of children) {
+    if (isElementNode(child)) {
+      if (isReferenceSectionElement(child)) {
+        sections.push(child)
+        continue
+      }
+
+      child.children = extractReferenceSections(child.children || [], sections) as Element["children"]
+    }
+
+    nextChildren.push(child)
+  }
+
+  return nextChildren
+}
+
+export function moveReferenceSectionsToEnd(tree: HastRoot): void {
+  const sections: Element[] = []
+  tree.children = extractReferenceSections(tree.children, sections)
+  if (sections.length > 0) {
+    tree.children.push(...sections)
+  }
+}
+
 export function annotateCitationReferenceLabels(tree: HastRoot, fields: ExtractedAimdFields): void {
   const labelByRefId = buildCitationLabelMap(fields)
+  const summaryByRefId = buildCitationSummaryMap(fields)
 
   walk(tree, (element) => {
     if (!isCitationElement(element)) {
@@ -162,6 +260,6 @@ export function annotateCitationReferenceLabels(tree: HastRoot, fields: Extracte
       return
     }
 
-    annotateCitationElement(element, buildCitationRefs(refIds, labelByRefId))
+    annotateCitationElement(element, buildCitationRefs(refIds, labelByRefId, summaryByRefId))
   })
 }

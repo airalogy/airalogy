@@ -22,6 +22,8 @@ export interface DemoExample {
   id: string
   kind: 'example' | 'case' | 'protocol'
   source: LocalizedDemoValue<string>
+  assetBase: LocalizedDemoValue<string>
+  assetModules: Record<string, string>
   title: LocalizedDemoValue<string>
   description: LocalizedDemoValue<string>
   content: LocalizedDemoValue<string>
@@ -39,6 +41,18 @@ const PROTOCOL_RAW_MODULES = import.meta.glob<string>('../../../../examples/prot
   eager: true,
   import: 'default',
   query: '?raw',
+})
+
+const AIMD_ASSET_MODULES = import.meta.glob<string>('../../../../examples/aimd/**/*.{svg,png,jpg,jpeg,gif,webp,avif}', {
+  eager: true,
+  import: 'default',
+  query: '?url',
+})
+
+const PROTOCOL_ASSET_MODULES = import.meta.glob<string>('../../../../examples/protocols/**/*.{svg,png,jpg,jpeg,gif,webp,avif}', {
+  eager: true,
+  import: 'default',
+  query: '?url',
 })
 
 function isDemoLocale(value: string): value is DemoLocale {
@@ -85,17 +99,59 @@ function loadRegistryContent(
   return content
 }
 
+function getEntryAssetBase(
+  item: DemoRegistryExample,
+  rootPrefix: string,
+  locales: DemoLocale[],
+): LocalizedDemoValue<string> {
+  const assetBase: LocalizedDemoValue<string> = {}
+
+  for (const locale of locales) {
+    const entry = item.entry[locale]
+    if (!entry) continue
+
+    const lastSlash = entry.lastIndexOf('/')
+    assetBase[locale] = lastSlash >= 0
+      ? `${rootPrefix}${entry.slice(0, lastSlash + 1)}`
+      : rootPrefix
+  }
+
+  return assetBase
+}
+
+function isExternalOrAbsoluteAsset(src: string): boolean {
+  return /^(?:[a-z][a-z0-9+.-]*:|\/|#)/i.test(src)
+}
+
+function normalizeRelativeAssetPath(src: string): string {
+  const parts: string[] = []
+  for (const part of src.split('/')) {
+    if (!part || part === '.') {
+      continue
+    }
+    if (part === '..') {
+      parts.pop()
+      continue
+    }
+    parts.push(part)
+  }
+  return parts.join('/')
+}
+
 function createRegistryDemoExample(
   item: DemoRegistryExample,
   fallbackKind: 'case' | 'protocol',
   rootPrefix: string,
   rawModules: Record<string, string>,
+  assetModules: Record<string, string>,
 ): DemoExample {
   const locales = normalizeRegistryLocales(item.languages)
   return {
     id: item.id,
     kind: item.kind ?? fallbackKind,
     source: normalizeRegistryValue(item.entry, locales),
+    assetBase: getEntryAssetBase(item, rootPrefix, locales),
+    assetModules,
     title: normalizeRegistryValue(item.title, locales),
     description: normalizeRegistryValue(item.description, locales),
     content: loadRegistryContent(item, rootPrefix, rawModules, locales),
@@ -106,9 +162,9 @@ function createRegistryDemoExample(
 
 export const DEMO_EXAMPLES: DemoExample[] = [
   ...(aimdRegistry.examples as DemoRegistryExample[])
-    .map(item => createRegistryDemoExample(item, 'case', '../../../../examples/aimd/', AIMD_RAW_MODULES)),
+    .map(item => createRegistryDemoExample(item, 'case', '../../../../examples/aimd/', AIMD_RAW_MODULES, AIMD_ASSET_MODULES)),
   ...(protocolRegistry.examples as DemoRegistryExample[])
-    .map(item => createRegistryDemoExample(item, 'protocol', '../../../../examples/protocols/', PROTOCOL_RAW_MODULES)),
+    .map(item => createRegistryDemoExample(item, 'protocol', '../../../../examples/protocols/', PROTOCOL_RAW_MODULES, PROTOCOL_ASSET_MODULES)),
 ]
 
 export function resolveDemoExampleText(text: LocalizedDemoValue<string>, locale: DemoLocale): string {
@@ -139,6 +195,17 @@ export const SAMPLE_AIMD = getDemoExampleContent(getDemoExample(DEFAULT_DEMO_EXA
 
 export function getDemoExampleSource(example: DemoExample, locale: DemoLocale): string {
   return resolveDemoExampleValue(example.source, locale)
+}
+
+export function resolveDemoExampleAsset(example: DemoExample, locale: DemoLocale, src: string): string | null {
+  const normalizedSrc = src.trim()
+  if (!normalizedSrc || isExternalOrAbsoluteAsset(normalizedSrc)) {
+    return null
+  }
+
+  const assetBase = resolveDemoExampleValue(example.assetBase, locale)
+  const assetKey = `${assetBase}${normalizeRelativeAssetPath(normalizedSrc)}`
+  return example.assetModules[assetKey] ?? null
 }
 
 export function useDemoExampleContent(initialId = DEFAULT_DEMO_EXAMPLE_ID, locale?: DemoLocale | Ref<DemoLocale>) {

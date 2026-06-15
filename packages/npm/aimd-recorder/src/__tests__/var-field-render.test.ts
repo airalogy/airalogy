@@ -61,6 +61,28 @@ describe('AimdVarField render behavior', () => {
     expect(styles).toContain('.aimd-field--var-table .aimd-field__table-preview th:has(.aimd-field__metadata-host:hover)')
   })
 
+  it('keeps figure images and captions visually attached without card elevation', () => {
+    expect(styles).toMatch(/\.aimd-figure \{[\s\S]*?width: fit-content;/)
+    expect(styles).toMatch(/\.aimd-figure \{[\s\S]*?overflow: hidden;/)
+    expect(styles).not.toContain('box-shadow: 0 10px 28px')
+    expect(styles).toMatch(/\.aimd-figure__caption \{[\s\S]*?border-top: 1px solid #d8e2ef;/)
+    expect(styles).toMatch(/\.aimd-figure__legend \{[\s\S]*?margin: 4px 0 0;/)
+  })
+
+  it('uses selectable citation popovers instead of pseudo-element tooltips', () => {
+    expect(styles).toContain('.aimd-cite__popover')
+    expect(styles).not.toContain('.aimd-cite__ref::after')
+    expect(styles).toMatch(/\.aimd-cite__popover \{[\s\S]*?pointer-events: none;/)
+    expect(styles).toMatch(/\.aimd-cite__popover \{[\s\S]*?user-select: text;/)
+    expect(styles).toMatch(/\.aimd-cite__popover::before \{[\s\S]*?height: 10px;/)
+    expect(styles).toMatch(/\.aimd-cite__ref:hover \.aimd-cite__popover,[\s\S]*?pointer-events: auto;/)
+  })
+
+  it('marks internal references as focusable route-safe targets', () => {
+    expect(styles).toMatch(/\.aimd-ref\[data-aimd-ref-target\] \{[\s\S]*?cursor: pointer;/)
+    expect(styles).toMatch(/\.aimd-ref\[data-aimd-ref-target\]:focus-visible \{[\s\S]*?outline: 2px solid rgba\(25, 118, 210, 0\.36\);/)
+  })
+
   it('renders editable table cell values without inherited italic preview styling', () => {
     expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-table-cell-input\) \{[\s\S]*?font-style: normal;/)
   })

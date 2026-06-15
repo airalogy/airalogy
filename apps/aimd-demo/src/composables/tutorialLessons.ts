@@ -584,7 +584,7 @@ const LESSON_DEFINITIONS: TutorialLessonDefinition[] = [
     ),
     hints: [
       lt('Figures are fenced ```fig blocks with id, src, title, and legend.', '图使用 fenced ` ```fig ` 代码块，并写入 `id`、`src`、`title`、`legend`。'),
-      lt('Use ref_fig in prose so the renderer can show a numbered figure reference.', '正文中用 `ref_fig`，renderer 会显示可点击的图编号。'),
+      lt('Use ref_fig in prose so the renderer can show a numbered figure reference.', '正文中用 `ref_fig`，renderer 会显示带编号的图引用标记。'),
       lt('Use cite for in-text citation markers, and put BibTeX entries in a refs block.', '正文引用用 `cite`，详细文献信息放在 `refs` 代码块中。'),
     ],
     checks: [
@@ -610,7 +610,7 @@ const LESSON_DEFINITIONS: TutorialLessonDefinition[] = [
       },
       {
         id: 'rendered-refs',
-        label: lt('Render the figure, citation link, and references list', '渲染图、文献链接和参考文献列表'),
+        label: lt('Render the figure, citation marker, and references list', '渲染图、文献标记和参考文献列表'),
         evaluate: state => state.html.includes('aimd-figure')
           && state.html.includes('aimd-cite__ref')
           && state.html.includes('aimd-refs'),

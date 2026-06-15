@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs'
 import { mount } from '@vue/test-utils'
 import { h } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
@@ -17,6 +18,11 @@ import {
   renderReadonlyRecordToVue,
 } from '../vue/readonly-record-renderer'
 import { createCodeBlockRenderer, createStepCardRenderer } from '../vue/vue-renderer'
+
+const rendererStylesPath = existsSync('src/styles/katex.css')
+  ? 'src/styles/katex.css'
+  : 'packages/npm/aimd-renderer/src/styles/katex.css'
+const rendererStyles = readFileSync(rendererStylesPath, 'utf8')
 
 function findVNodeByType(node: any, expectedType: string): any | null {
   if (!node || typeof node !== 'object') {
@@ -268,7 +274,76 @@ describe('renderToHtmlSync', () => {
     expect(html).toContain('temperature')
   })
 
-  it('renders linked citations and refs blocks', () => {
+  it('resolves figure asset URLs during HTML rendering', () => {
+    const seenContexts: Array<{ src: string, kind: string, id?: string, title?: string }> = []
+    const { html } = renderToHtmlSync([
+      '```fig',
+      'id: workflow_diagram',
+      'src: files/workflow-diagram.svg',
+      'title: Workflow Diagram',
+      '```',
+    ].join('\n'), {
+      resolveAssetUrl: (src, context) => {
+        seenContexts.push({ src, ...context })
+        return `/assets/${src.split('/').pop()}`
+      },
+    })
+
+    expect(seenContexts).toEqual([{
+      src: 'files/workflow-diagram.svg',
+      kind: 'fig',
+      id: 'workflow_diagram',
+      title: 'Workflow Diagram',
+    }])
+    expect(html).toContain('src="/assets/workflow-diagram.svg"')
+  })
+
+  it('renders internal references without route-breaking bare hash hrefs', () => {
+    const { html } = renderToHtmlSync([
+      'As shown in {{ref_fig|workflow_diagram}}, follow {{ref_step|prepare_sample}}.',
+      '',
+      '```fig',
+      'id: workflow_diagram',
+      'src: files/workflow-diagram.svg',
+      'title: Workflow Diagram',
+      '```',
+      '',
+      '{{step|prepare_sample}}',
+    ].join('\n'))
+
+    expect(html).not.toContain('href="#fig-workflow_diagram"')
+    expect(html).not.toContain('href="#step-prepare_sample"')
+    expect(html).toContain('<span class="aimd-ref aimd-ref--fig"')
+    expect(html).toContain('data-aimd-ref-target="workflow_diagram"')
+    expect(html).toContain('data-aimd-ref-kind="fig"')
+    expect(html).toContain('<span class="aimd-ref aimd-ref--step"')
+    expect(html).toContain('data-aimd-ref-target="prepare_sample"')
+    expect(html).toContain('data-aimd-ref-kind="step"')
+  })
+
+  it('styles rendered figures as attached image-caption blocks', () => {
+    expect(rendererStyles).toMatch(/\.aimd-figure \{[\s\S]*?width: fit-content;/)
+    expect(rendererStyles).toMatch(/\.aimd-figure \{[\s\S]*?overflow: hidden;/)
+    expect(rendererStyles).not.toContain('box-shadow: 0 10px 28px')
+    expect(rendererStyles).toMatch(/\.aimd-figure__caption \{[\s\S]*?border-top: 1px solid #d8e2ef;/)
+    expect(rendererStyles).toMatch(/\.aimd-figure__legend \{[\s\S]*?margin: 4px 0 0;/)
+  })
+
+  it('styles citation popovers as selectable hoverable content', () => {
+    expect(rendererStyles).toContain('.aimd-cite__popover')
+    expect(rendererStyles).not.toContain('.aimd-cite__ref::after')
+    expect(rendererStyles).toMatch(/\.aimd-cite__popover \{[\s\S]*?pointer-events: none;/)
+    expect(rendererStyles).toMatch(/\.aimd-cite__popover \{[\s\S]*?user-select: text;/)
+    expect(rendererStyles).toMatch(/\.aimd-cite__popover::before \{[\s\S]*?height: 10px;/)
+    expect(rendererStyles).toMatch(/\.aimd-cite__ref:hover \.aimd-cite__popover,[\s\S]*?pointer-events: auto;/)
+  })
+
+  it('styles internal references as focusable route-safe targets', () => {
+    expect(rendererStyles).toMatch(/\.aimd-ref\[data-aimd-ref-target\] \{[\s\S]*?cursor: pointer;/)
+    expect(rendererStyles).toMatch(/\.aimd-ref\[data-aimd-ref-target\]:focus-visible \{[\s\S]*?outline: 2px solid rgba\(25, 118, 210, 0\.36\);/)
+  })
+
+  it('renders citation markers with reference tooltips and refs blocks', () => {
     const content = [
       'Cite the method {{cite|yang2025airalogyaiempowereduniversaldata, doe2024protocol}}.',
       '',
@@ -305,18 +380,39 @@ describe('renderToHtmlSync', () => {
       id: 'doe2024protocol',
       url: 'https://example.com/protocol',
     })
-    expect(html).toContain('href="#ref-yang2025airalogyaiempowereduniversaldata"')
-    expect(html).toContain('title="yang2025airalogyaiempowereduniversaldata"')
+    expect(html).not.toContain('href="#ref-yang2025airalogyaiempowereduniversaldata"')
+    expect(html).not.toContain('href="#ref-doe2024protocol"')
+    expect(html).toContain('role="doc-noteref"')
+    expect(html).toContain('data-aimd-ref-id="yang2025airalogyaiempowereduniversaldata"')
+    expect(html).toContain('data-aimd-ref-summary="Zijie Yang')
     expect(html).toContain('data-aimd-citation-labels="1,2"')
-    expect(html).toContain('>1</a>')
-    expect(html).toContain('>2</a>')
-    expect(html).not.toContain('>yang2025airalogyaiempowereduniversaldata</a>')
-    expect(html).toContain('href="#ref-doe2024protocol"')
+    expect(html).toContain('<span class="aimd-cite__label">1</span>')
+    expect(html).toContain('<span class="aimd-cite__label">2</span>')
+    expect(html).toContain('<span class="aimd-cite__popover" role="tooltip">Zijie Yang')
+    expect(html).not.toContain('<span class="aimd-cite__label">yang2025airalogyaiempowereduniversaldata</span>')
     expect(html).toContain('<section class="aimd-refs"')
     expect(html).toContain('id="ref-yang2025airalogyaiempowereduniversaldata"')
     expect(html).toContain('Airalogy: AI-empowered universal data digitization for research automation')
     expect(html).toContain('href="https://arxiv.org/abs/2506.18586"')
     expect(html).toContain('href="https://example.com/protocol"')
+  })
+
+  it('moves refs blocks to the end of the rendered document', () => {
+    const content = [
+      '```refs',
+      '@misc{doe2024protocol,',
+      '  title = "Protocol Notes",',
+      '  author = "Doe, Jane",',
+      '  year = "2024"',
+      '}',
+      '```',
+      '',
+      'The body continues after the refs declaration.',
+    ].join('\n')
+
+    const { html } = renderToHtmlSync(content)
+
+    expect(html.indexOf('<p>The body continues after the refs declaration.</p>')).toBeLessThan(html.indexOf('<section class="aimd-refs"'))
   })
 
   it('renders AIMD var field display metadata', () => {
@@ -554,10 +650,88 @@ describe('renderToVue', () => {
     expect(refsNode.props.class).toBe('aimd-refs')
     expect(refsNode.props.id).toBe('refs')
     expect(citeNode).toBeTruthy()
-    expect(collectVNodeText(citeNode).replace(/\s+/g, '')).toBe('[1]')
+    const citeRefNode = findVNodeByClass(citeNode, 'aimd-cite__ref') as any
+    const citeLabelNode = findVNodeByClass(citeNode, 'aimd-cite__label') as any
+    const citePopoverNode = findVNodeByClass(citeNode, 'aimd-cite__popover') as any
+    expect(citeRefNode.type).toBe('span')
+    expect(citeRefNode.props.href).toBeUndefined()
+    expect(citeRefNode.props['data-aimd-ref-summary']).toContain('Airalogy: AI-empowered universal data digitization for research automation')
+    expect(collectVNodeText(citeLabelNode).trim()).toBe('1')
+    expect(citePopoverNode.type).toBe('span')
+    expect(citePopoverNode.props.role).toBe('tooltip')
+    expect(collectVNodeText(citePopoverNode)).toContain('Airalogy: AI-empowered universal data digitization for research automation')
     expect(collectVNodeText(nodes)).toContain('References')
     expect(collectVNodeText(nodes)).toContain('Airalogy: AI-empowered universal data digitization for research automation')
     expect(collectVNodeText(citeNode)).not.toContain('yang2025airalogyaiempowereduniversaldata')
+  })
+
+  it('resolves figure asset URLs during Vue rendering', async () => {
+    const { nodes } = await renderToVue([
+      '```fig',
+      'id: workflow_diagram',
+      'src: files/workflow-diagram.svg',
+      'title: Workflow Diagram',
+      '```',
+    ].join('\n'), {
+      resolveAssetUrl: (src, context) => {
+        expect(context).toMatchObject({
+          kind: 'fig',
+          id: 'workflow_diagram',
+          title: 'Workflow Diagram',
+        })
+        return `/assets/${src.split('/').pop()}`
+      },
+    })
+
+    const img = findVNodeByType({ children: nodes }, 'img') as any
+    expect(img).toBeTruthy()
+    expect(img.props.src).toBe('/assets/workflow-diagram.svg')
+  })
+
+  it('renders Vue figure references as route-safe internal markers', async () => {
+    const { nodes } = await renderToVue([
+      'As shown in {{ref_fig|workflow_diagram}}.',
+      '',
+      '```fig',
+      'id: workflow_diagram',
+      'src: files/workflow-diagram.svg',
+      'title: Workflow Diagram',
+      '```',
+    ].join('\n'))
+
+    const figRefNode = findVNodeByClass({ children: nodes }, 'aimd-ref--fig') as any
+    expect(figRefNode).toBeTruthy()
+    expect(figRefNode.type).toBe('span')
+    expect(figRefNode.props.href).toBeUndefined()
+    expect(figRefNode.props['data-aimd-ref-target']).toBe('workflow_diagram')
+    expect(figRefNode.props['data-aimd-ref-kind']).toBe('fig')
+    expect(figRefNode.props.tabindex).toBe(0)
+  })
+
+  it('moves refs Vue nodes to the end of the rendered document', async () => {
+    const { nodes } = await renderToVue(
+      [
+        '```refs',
+        '@misc{doe2024protocol,',
+        '  title = "Protocol Notes",',
+        '  author = "Doe, Jane",',
+        '  year = "2024"',
+        '}',
+        '```',
+        '',
+        'The body continues after the refs declaration.',
+      ].join('\n'),
+    )
+
+    const rootChildren = Array.isArray((nodes[0] as any)?.children)
+      ? (nodes[0] as any).children
+      : nodes
+    const refsIndex = rootChildren.findIndex((node: any) => Boolean(findVNodeByClass(node, 'aimd-refs')))
+    const bodyIndex = rootChildren.findIndex((node: any) => collectVNodeText(node).includes('The body continues after the refs declaration.'))
+
+    expect(bodyIndex).toBeGreaterThanOrEqual(0)
+    expect(refsIndex).toBeGreaterThanOrEqual(0)
+    expect(bodyIndex).toBeLessThan(refsIndex)
   })
 
   it('renders code blocks with line numbers and wrapping classes', async () => {

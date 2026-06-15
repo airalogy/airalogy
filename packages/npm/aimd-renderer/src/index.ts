@@ -23,6 +23,11 @@ export {
   resolveAimdRendererLocale,
 } from './locales'
 
+export type {
+  AimdAssetUrlResolver,
+  AimdAssetUrlResolveContext,
+} from './common/assetUrls'
+
 export {
   bubbleMenuEventKey,
   draftEventKey,

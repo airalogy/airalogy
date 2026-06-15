@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const source = readFileSync(resolve(__dirname, './ExamplesDemo.vue'), 'utf8')
+const internalRefsSource = readFileSync(resolve(__dirname, '../composables/aimdInternalRefs.ts'), 'utf8')
 
 describe('ExamplesDemo', () => {
   it('styles v-html Markdown headings in the render preview', () => {
@@ -33,5 +34,13 @@ describe('ExamplesDemo', () => {
     expect(source).toMatch(/\.examples-control-area \{[\s\S]*min-height: 48px;/)
     expect(source).toMatch(/\.examples-picker-popover \{[\s\S]*position: absolute;[\s\S]*max-height: min\(54vh, 430px\);/)
     expect(source).toMatch(/\.examples-toolbar \{[\s\S]*gap: 8px;/)
+  })
+
+  it('keeps internal reference navigation inside the current scroll panel', () => {
+    expect(source).toContain('@click="handleAimdInternalRefClick"')
+    expect(source).toContain('@keydown="handleAimdInternalRefKeydown"')
+    expect(internalRefsSource).toContain('function scrollTargetIntoContainer')
+    expect(internalRefsSource).toContain('container.scrollTo')
+    expect(internalRefsSource).not.toContain('scrollIntoView')
   })
 })

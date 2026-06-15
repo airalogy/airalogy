@@ -1,6 +1,7 @@
 import type { Element, Properties, Root as HastRoot, Text as HastText } from "hast"
 import type { VFile } from "vfile"
 import type { VNode } from "vue"
+import type { AimdAssetUrlResolver } from "./assetUrls"
 import type {
   AimdFieldType,
   AimdNode,
@@ -14,6 +15,7 @@ import type { ExtractedAimdFields } from "@airalogy/aimd-core/types"
 import type { AimdRendererI18nOptions } from "../locales"
 import type { VueRendererOptions } from "../vue/vue-renderer"
 import { resolveQuizPreviewOptions } from "./quiz-preview"
+import { resolveAimdAssetUrl } from "./assetUrls"
 
 // ---------------------------------------------------------------------------
 // Sub-module imports
@@ -22,7 +24,7 @@ import { resolveQuizPreviewOptions } from "./quiz-preview"
 import { remarkInsertVisibleAssigners, remarkStripAssignerCodeBlocks } from "./assignerVisibility"
 import { highlightVisibleAssigners } from "./assignerHighlighting"
 import { annotateStepReferenceSequence } from "./annotateStepReferences"
-import { annotateCitationReferenceLabels } from "./citationNumbering"
+import { annotateCitationReferenceLabels, moveReferenceSectionsToEnd } from "./citationNumbering"
 import { criticMarkupHandlers } from "./criticMarkup"
 import { buildFigureChildren, assignFigureSequenceNumbers } from "./figureNumbering"
 
@@ -54,6 +56,7 @@ export type AimdHtmlNodeRenderer = (
 export interface AimdRendererOptions extends ProcessorOptions, AimdRendererI18nOptions {
   assignerVisibility?: AimdAssignerVisibility
   aimdElementRenderers?: Partial<Record<AimdFieldType, AimdHtmlNodeRenderer>>
+  resolveAssetUrl?: AimdAssetUrlResolver
   groupStepBodies?: boolean
   groupCheckBodies?: boolean
   blockVarTypes?: string[]
@@ -1091,6 +1094,11 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     nodeData.entries = (node as any).entries
   }
 
+  // Add cite-specific fields
+  if (node.fieldType === "cite") {
+    nodeData.refs = (node as any).refs
+  }
+
   // Add step-specific fields
   if (node.fieldType === "step") {
     const stepNode = node as AimdStepNode
@@ -1189,7 +1197,7 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     }
   }
   else if (isCite) {
-    // Citation: linked [refs]
+    // Citation: compact reference markers; details are attached during citation annotation.
     const refs = "refs" in node ? (node as any).refs : [id]
     children.push(createTextNode("["))
     refs.forEach((ref: string, index: number) => {
@@ -1198,12 +1206,32 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
       }
       children.push({
         type: "element",
-        tagName: "a",
+        tagName: "span",
         properties: {
           className: ["aimd-cite__ref"],
-          href: `#ref-${ref}`,
+          role: "doc-noteref",
+          tabIndex: 0,
+          title: ref,
+          "data-aimd-ref-id": ref,
+          "data-aimd-ref-summary": ref,
         },
-        children: [createTextNode(ref)],
+        children: [
+          {
+            type: "element",
+            tagName: "span",
+            properties: { className: ["aimd-cite__label"] },
+            children: [createTextNode(ref)],
+          } as Element,
+          {
+            type: "element",
+            tagName: "span",
+            properties: {
+              className: ["aimd-cite__popover"],
+              role: "tooltip",
+            },
+            children: [createTextNode(ref)],
+          } as Element,
+        ],
       } as Element)
     })
     children.push(createTextNode("]"))
@@ -1475,9 +1503,15 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
   else if (fieldType === "fig") {
     // Figure: delegate to figureNumbering module
     const figNode = node as any
+    const figId = figNode.id || id
+    const figSrc = resolveAimdAssetUrl(figNode.src, options.resolveAssetUrl, {
+      kind: "fig",
+      id: figId,
+      title: figNode.title,
+    })
     children.push(...buildFigureChildren({
-      id: figNode.id || id,
-      src: figNode.src,
+      id: figId,
+      src: figSrc,
       title: figNode.title,
       legend: figNode.legend,
       sequence: figNode.sequence,
@@ -1509,16 +1543,20 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
 	    }
 	  }
 
-  // Add reference href
+  // Add internal reference metadata for host-level scrolling.
   if (isRef) {
+    properties.title = id
+    properties.tabIndex = 0
+    properties["data-aimd-ref-target"] = id
+
     if (fieldType === "ref_step") {
-      properties.href = `#step-${id}`
+      properties["data-aimd-ref-kind"] = "step"
     }
     else if (fieldType === "ref_var") {
-      properties.href = `#var-${id}`
+      properties["data-aimd-ref-kind"] = "var"
     }
     else if (fieldType === "ref_fig") {
-      properties.href = `#fig-${id}`
+      properties["data-aimd-ref-kind"] = "fig"
     }
   }
 
@@ -1600,7 +1638,7 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
   const element: Element = assignAimdNodeData({
     type: "element",
     tagName: isRef
-      ? "a"
+      ? "span"
       : (isFig ? "figure" : (isRefs ? "section" : ((fieldType === "var_table" || isQuiz || isGroupedStepContainer) ? "div" : "span"))),
     properties,
     children,
@@ -1713,6 +1751,7 @@ export async function renderToHtml(
     groupCheckBodies(hastTree)
   }
   await highlightVisibleAssigners(hastTree, options)
+  moveReferenceSectionsToEnd(hastTree)
   const html = toHtml(hastTree, { allowDangerousHtml: true })
 
   return { html, fields }
@@ -1744,6 +1783,7 @@ export async function renderToVue(
     groupCheckBodies(hastTree)
   }
   await highlightVisibleAssigners(hastTree, options)
+  moveReferenceSectionsToEnd(hastTree)
   const nodes = renderToVNodes(hastTree, options)
 
   return { nodes, fields }
@@ -1786,6 +1826,7 @@ export function renderToHtmlSync(
   if (options.groupStepBodies) {
     groupStepBodies(hastTree)
   }
+  moveReferenceSectionsToEnd(hastTree)
   const html = toHtml(hastTree, { allowDangerousHtml: true })
 
   return { html, fields }

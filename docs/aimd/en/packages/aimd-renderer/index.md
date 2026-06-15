@@ -17,7 +17,8 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `renderReadonlyRecordToVue(content, recordData, { resolveAsset })` for readonly Vue rendering with Record data and file assets embedded in matching AIMD fields.
 - `parseAndExtract(content)` for canonical core field metadata extraction, including simple `var` definitions in `fields.var_definitions` and BibTeX references in `fields.refs`.
 - Default previews for `var` and `var_table` display AIMD `title`, preserve the canonical field id, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus.
-- Numbered linked citation markers and generated references lists for `{{cite|...}}` plus fenced `refs` blocks.
+- Numbered citation markers with hover/focus reference details and generated end-of-document references lists for `{{cite|...}}` plus fenced `refs` blocks.
+- Host-side `resolveAssetUrl` support for rendering protocol-local figure assets from package, archive, or app-specific URLs without rewriting AIMD source.
 - `assignerVisibility` to show or hide assigner blocks in authoring/debug views.
 - Built-in quiz preview controls.
 - Built-in locale support via `locale`.
@@ -38,7 +39,7 @@ console.log(fields)
 
 ## Citations and References
 
-`renderToHtml` and `renderToVue` render `{{cite|ref_id}}` markers as numbered links to the generated references list. The visible citation marker uses refs-list order, such as `[1]`, while the link target and metadata keep the original BibTeX key. Fenced `refs` blocks use BibTeX syntax and are extracted into `fields.refs` as structured entries.
+`renderToHtml` and `renderToVue` render `{{cite|ref_id}}` markers as numbered inline reference markers. The visible citation marker uses refs-list order, such as `[1]`, while hover and keyboard focus reveal the reference details without changing the page URL. Fenced `refs` blocks use BibTeX syntax, are extracted into `fields.refs` as structured entries, and are rendered at the end of the document regardless of where the `refs` block appears in source.
 
 ````aimd
 This protocol follows {{cite|yang2025airalogyaiempowereduniversaldata}}.
@@ -55,6 +56,21 @@ This protocol follows {{cite|yang2025airalogyaiempowereduniversaldata}}.
 }
 ```
 ````
+
+## Protocol-Local Figure Assets
+
+`fig` blocks can keep clean relative sources such as `src: files/workflow-diagram.svg`. Hosts that load AIMD from a package, archive, or registry can pass `resolveAssetUrl` to map that source to a displayable URL at render time.
+
+```ts
+const { html } = await renderToHtml(content, {
+  resolveAssetUrl(src, context) {
+    if (context.kind === "fig" && src.startsWith("files/")) {
+      return exampleAssetMap[src]
+    }
+    return null
+  },
+})
+```
 
 ## Review Marks
 

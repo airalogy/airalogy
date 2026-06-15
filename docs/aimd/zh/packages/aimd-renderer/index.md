@@ -17,7 +17,8 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `renderReadonlyRecordToVue(content, recordData, { resolveAsset })`：输出带 Record 数据和文件资源的只读 Vue vnode，把数据嵌入匹配的 AIMD 字段。
 - `parseAndExtract(content)`：提取 core 规范字段结构，包括 `fields.var_definitions` 中的普通 `var` 定义，以及 `fields.refs` 中的 BibTeX 文献条目。
 - `var` 与 `var_table` 的默认预览会显示 AIMD `title`，保留规范字段 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。
-- `{{cite|...}}` 与 fenced `refs` 代码块会渲染为带编号的可点击引用标记和参考文献列表。
+- `{{cite|...}}` 与 fenced `refs` 代码块会渲染为带编号的引用标记、hover/focus 文献信息和文末参考文献列表。
+- 支持宿主通过 `resolveAssetUrl` 渲染 protocol-local 图像资源，让 `fig` 源码保留干净的相对路径，同时在包、archive 或应用内映射成真实可访问 URL。
 - `assignerVisibility`：用于作者视图或调试视图下切换 assigner 的可见性。
 - 内建 quiz 预览控制。
 - 支持通过 `locale` 切换渲染标签语言。
@@ -38,7 +39,7 @@ console.log(fields)
 
 ## 文献引用与参考文献
 
-`renderToHtml` 和 `renderToVue` 会把 `{{cite|ref_id}}` 渲染成指向参考文献列表的编号链接。正文可见引用标记按 refs 列表顺序显示为 `[1]` 这类编号，链接目标和元数据仍保留原始 BibTeX key。fenced `refs` 代码块使用 BibTeX 语法，并会被提取到 `fields.refs` 结构化条目中。
+`renderToHtml` 和 `renderToVue` 会把 `{{cite|ref_id}}` 渲染成正文里的编号引用标记。正文可见引用标记按 refs 列表顺序显示为 `[1]` 这类编号，hover 和键盘 focus 会展示参考文献信息，并且不会改变页面 URL。fenced `refs` 代码块使用 BibTeX 语法，会被提取到 `fields.refs` 结构化条目中，并且无论源码中写在什么位置，渲染时都会统一显示在文档末尾。
 
 ````aimd
 This protocol follows {{cite|yang2025airalogyaiempowereduniversaldata}}.
@@ -55,6 +56,21 @@ This protocol follows {{cite|yang2025airalogyaiempowereduniversaldata}}.
 }
 ```
 ````
+
+## Protocol-local 图像资源
+
+`fig` 代码块可以保留 `src: files/workflow-diagram.svg` 这类干净的相对路径。宿主如果从 package、archive 或 registry 加载 AIMD，可以传入 `resolveAssetUrl`，在渲染时把该路径映射成可显示的 URL。
+
+```ts
+const { html } = await renderToHtml(content, {
+  resolveAssetUrl(src, context) {
+    if (context.kind === "fig" && src.startsWith("files/")) {
+      return exampleAssetMap[src]
+    }
+    return null
+  },
+})
+```
 
 ## 审阅标记
 

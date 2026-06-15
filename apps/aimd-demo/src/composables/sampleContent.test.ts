@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { parseAndExtract } from '@airalogy/aimd-renderer'
 
-import { DEFAULT_DEMO_EXAMPLE_ID, DEMO_EXAMPLES, getDemoExampleContent } from './sampleContent'
+import { DEFAULT_DEMO_EXAMPLE_ID, DEMO_EXAMPLES, getDemoExampleContent, resolveDemoExampleAsset } from './sampleContent'
 import sampleContent from '../../../../examples/aimd/aimd-syntax-tour/protocol.aimd?raw'
 
 describe('sampleContent', () => {
@@ -50,6 +50,16 @@ describe('sampleContent', () => {
       locales: ['zh-CN'],
     })
     expect(getDemoExampleContent(protocolExample!, 'zh-CN')).toContain('# 光纤端面微纳结构器件工艺路线设计与记录')
+  })
+
+  it('resolves protocol-local example assets without rewriting source content', () => {
+    const syntaxTour = DEMO_EXAMPLES.find(example => example.id === 'aimd-syntax-tour')
+    expect(syntaxTour).toBeTruthy()
+
+    expect(getDemoExampleContent(syntaxTour!, 'en-US')).toContain('src: files/workflow-diagram.svg')
+    expect(resolveDemoExampleAsset(syntaxTour!, 'en-US', 'files/workflow-diagram.svg')).toMatch(/^(?:data:image\/svg\+xml|\/|\.\/)/)
+    expect(resolveDemoExampleAsset(syntaxTour!, 'en-US', 'airalogy.id.file.site-photo.png')).toBeNull()
+    expect(resolveDemoExampleAsset(syntaxTour!, 'en-US', 'https://example.com/workflow.svg')).toBeNull()
   })
 
   it('keeps every registered demo example loadable and parseable', () => {

@@ -16,11 +16,13 @@ import { parseAndExtract, renderToHtml } from '@airalogy/aimd-renderer'
 import type { ExtractedAimdFields } from '@airalogy/aimd-core/types'
 import '@airalogy/aimd-recorder/styles'
 import DemoExamplePicker from '../components/DemoExamplePicker.vue'
+import { handleAimdInternalRefClick, handleAimdInternalRefKeydown } from '../composables/aimdInternalRefs'
 import { useDemoLocale, useDemoMessages } from '../composables/demoI18n'
 import {
   DEFAULT_DEMO_EXAMPLE_ID,
   DEMO_EXAMPLES,
   resolveDemoExampleText,
+  resolveDemoExampleAsset,
   type DemoExample,
   useDemoExampleContent,
 } from '../composables/sampleContent'
@@ -124,6 +126,10 @@ function handleExampleReset() {
   recorderEditorKey.value += 1
 }
 
+function resolveSelectedExampleAsset(src: string): string | null {
+  return resolveDemoExampleAsset(selectedExample.value, locale.value, src)
+}
+
 async function processContent() {
   try {
     renderError.value = ''
@@ -131,6 +137,7 @@ async function processContent() {
     const result = await renderToHtml(content.value, {
       locale: locale.value,
       assignerVisibility: 'collapsed',
+      resolveAssetUrl: src => resolveSelectedExampleAsset(src),
     })
     htmlOutput.value = result.html
   } catch (error: any) {
@@ -278,7 +285,12 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
       </div>
     </div>
 
-    <div v-if="activePanel === 'workbench'" class="examples-workbench">
+    <div
+      v-if="activePanel === 'workbench'"
+      class="examples-workbench"
+      @click="handleAimdInternalRefClick"
+      @keydown="handleAimdInternalRefKeydown"
+    >
       <AimdRecorderEditor
         :key="recorderEditorKey"
         v-model="recordData"
@@ -293,11 +305,17 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
         :record-data-title="messages.common.collectedData"
         :fill-parent="true"
         :fit-viewport="false"
+        :resolve-file="resolveSelectedExampleAsset"
         @fields-change="handleFieldsChange"
       />
     </div>
 
-    <section v-else-if="activePanel === 'preview'" class="examples-panel">
+    <section
+      v-else-if="activePanel === 'preview'"
+      class="examples-panel"
+      @click="handleAimdInternalRefClick"
+      @keydown="handleAimdInternalRefKeydown"
+    >
       <div v-if="renderError" class="examples-error">{{ renderError }}</div>
       <div v-else class="examples-render-preview" v-html="htmlOutput" />
     </section>
@@ -715,6 +733,10 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
   max-width: 100%;
   height: auto;
   border-radius: 8px;
+}
+
+.examples-render-preview :deep(.aimd-figure .aimd-figure__image) {
+  border-radius: 0;
 }
 
 .examples-error {

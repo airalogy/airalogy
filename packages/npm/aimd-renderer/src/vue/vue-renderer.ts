@@ -2,6 +2,7 @@ import type { Element, Root as HastRoot, Text as HastText, RootContent } from "h
 import type { Component, VNode, VNodeChild } from "vue"
 import type { AimdNode, AimdQuizNode, AimdReferenceEntry, AimdStepNode, RenderContext } from "@airalogy/aimd-core/types"
 import type { AimdCitationReferenceDisplay } from "../common/citationNumbering"
+import type { AimdAssetUrlResolver } from "../common/assetUrls"
 import {
   formatAimdExampleValue,
   getAimdFieldDescription,
@@ -11,6 +12,8 @@ import {
 } from "@airalogy/aimd-core/utils"
 import { Fragment, h } from "vue"
 import type { AimdRendererI18nOptions, AimdRendererLocale, AimdRendererMessages } from "../locales"
+import { resolveAimdAssetUrl } from "../common/assetUrls"
+import { formatCitationReferenceSummary, moveReferenceSectionsToEnd } from "../common/citationNumbering"
 import { resolveQuizPreviewOptions, type ResolvedQuizPreviewOptions } from "../common/quiz-preview"
 import {
   createAimdRendererMessages,
@@ -49,6 +52,7 @@ export type ElementRenderer = (
 export interface AimdRendererContext extends RenderContext {
   locale: AimdRendererLocale
   messages: AimdRendererMessages
+  resolveAssetUrl?: AimdAssetUrlResolver
 }
 
 export interface AimdStepCardRendererOptions {
@@ -208,6 +212,7 @@ function getCitationReferenceDisplays(node: AimdNode): AimdCitationReferenceDisp
       .map(ref => ({
         id: String(ref?.id || "").trim(),
         label: String(ref?.label || ref?.id || "").trim(),
+        summary: String(ref?.summary || ref?.id || "").trim(),
       }))
       .filter(ref => ref.id && ref.label)
   }
@@ -216,7 +221,7 @@ function getCitationReferenceDisplays(node: AimdNode): AimdCitationReferenceDisp
   return refs
     .map((ref: unknown) => String(ref).trim())
     .filter(Boolean)
-    .map((ref: string) => ({ id: ref, label: ref }))
+    .map((ref: string) => ({ id: ref, label: ref, summary: formatCitationReferenceSummary(undefined, ref) }))
 }
 
 interface FieldMetadataHelp {
@@ -620,7 +625,10 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
       "class": "aimd-ref aimd-ref--step",
       "data-aimd-type": "ref_step",
       "data-aimd-ref": refTarget,
+      "data-aimd-ref-target": refTarget,
+      "data-aimd-ref-kind": "step",
       "data-aimd-step-sequence": stepSequence,
+      "tabindex": 0,
       "title": refTarget,
     }, [
       h("span", { class: "aimd-ref__content" }, [
@@ -640,6 +648,9 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
       "class": "aimd-ref aimd-ref--var",
       "data-aimd-type": "ref_var",
       "data-aimd-ref": refTarget,
+      "data-aimd-ref-target": refTarget,
+      "data-aimd-ref-kind": "var",
+      "tabindex": 0,
       "title": refTarget,
     }, [
       h("span", { class: "aimd-ref__content" }, [
@@ -667,12 +678,14 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
     // Display figure number if available, otherwise show ID
     const displayText = ctx.messages.figure.reference(figureNumber !== undefined ? figureNumber : refTarget)
 
-    // Render as link reference to the figure
-    return h("a", {
+    return h("span", {
       "class": "aimd-ref aimd-ref--fig",
       "data-aimd-type": "ref_fig",
       "data-aimd-ref": refTarget,
-      "href": `#fig-${refTarget}`,
+      "data-aimd-ref-target": refTarget,
+      "data-aimd-ref-kind": "fig",
+      "tabindex": 0,
+      "title": refTarget,
     }, [
       h("span", { class: "aimd-ref__content" }, displayText),
     ])
@@ -690,15 +703,23 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
       "[",
       ...citationRefs.flatMap((ref, index) => [
         index > 0 ? ", " : "",
-        h("a", {
+        h("span", {
           class: "aimd-cite__ref",
-          href: `#ref-${ref.id}`,
-          title: ref.id,
+          role: "doc-noteref",
+          tabindex: 0,
+          title: ref.summary,
           "data-aimd-ref-id": ref.id,
+          "data-aimd-ref-summary": ref.summary,
           "aria-label": ref.label === ref.id
-            ? `Reference ${ref.id}`
-            : `Reference ${ref.label}: ${ref.id}`,
-        }, ref.label),
+            ? `Reference ${ref.summary}`
+            : `Reference ${ref.label}: ${ref.summary}`,
+        }, [
+          h("span", { class: "aimd-cite__label" }, ref.label),
+          h("span", {
+            class: "aimd-cite__popover",
+            role: "tooltip",
+          }, ref.summary),
+        ]),
       ]),
       "]",
     ])
@@ -707,10 +728,14 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
   fig: (node, ctx) => {
     const figNode = node as any
     const figId = figNode.id || node.id
-    const figSrc = figNode.src || ""
     const figTitle = figNode.title
     const figLegend = figNode.legend
     const figSequence = figNode.sequence
+    const figSrc = resolveAimdAssetUrl(figNode.src || "", ctx.resolveAssetUrl, {
+      kind: "fig",
+      id: figId,
+      title: figTitle,
+    }) || ""
 
     const children: VNodeChild[] = []
 
@@ -806,7 +831,11 @@ export interface VueRendererOptions {
   /**
    * Render context
    */
-  context?: RenderContext & Partial<Pick<AimdRendererContext, "locale" | "messages">>
+  context?: RenderContext & Partial<Pick<AimdRendererContext, "locale" | "messages" | "resolveAssetUrl">>
+  /**
+   * Resolve protocol-local figure assets to displayable URLs.
+   */
+  resolveAssetUrl?: AimdAssetUrlResolver
   /**
    * Custom AIMD component renderers
    * Override default renderers or add new ones
@@ -848,6 +877,7 @@ function resolveRenderContext(options: VueRendererOptions): AimdRendererContext 
     quizPreview: context?.quizPreview ?? topLevelQuizPreview ?? undefined,
     locale,
     messages,
+    resolveAssetUrl: context?.resolveAssetUrl ?? options.resolveAssetUrl,
   }
 }
 
@@ -921,6 +951,22 @@ function splitCsvProp(value: unknown): string[] {
     .filter(Boolean)
 }
 
+function parseStringArrayProp(value: unknown): string[] {
+  if (typeof value !== "string" || !value.trim()) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed)
+      ? parsed.map(item => String(item || "").trim()).filter(Boolean)
+      : []
+  }
+  catch {
+    return []
+  }
+}
+
 function parseAimdFromProps(props: Record<string, unknown>): AimdNode | undefined {
   let parsedFromJson: Record<string, unknown> | undefined
 
@@ -956,9 +1002,11 @@ function parseAimdFromProps(props: Record<string, unknown>): AimdNode | undefine
   const stepSequence = props["data-aimd-step-sequence"] || props.dataAimdStepSequence
   const citationRefIds = splitCsvProp(props["data-aimd-refs"] || props.dataAimdRefs)
   const citationLabels = splitCsvProp(props["data-aimd-citation-labels"] || props.dataAimdCitationLabels)
+  const citationSummaries = parseStringArrayProp(props["data-aimd-citation-summaries"] || props.dataAimdCitationSummaries)
   const citationRefs = citationRefIds.map((refId, index) => ({
     id: refId,
     label: citationLabels[index] || refId,
+    summary: citationSummaries[index] || refId,
   }))
 
   if (parsedFromJson) {
@@ -1270,6 +1318,7 @@ export function renderToVNodes(
   tree: HastRoot,
   options: VueRendererOptions = {},
 ): VNode[] {
+  moveReferenceSectionsToEnd(tree)
   const result = hastToVue(tree, options)
 
   if (result === null || result === undefined) {

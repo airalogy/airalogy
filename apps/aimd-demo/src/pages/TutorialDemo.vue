@@ -4,13 +4,16 @@ import { useRoute, useRouter } from 'vue-router'
 import type { ExtractedAimdFields } from '@airalogy/aimd-core'
 import { parseAndExtract, renderToHtml } from '@airalogy/aimd-renderer'
 import DemoAimdSourceEditor from '../components/DemoAimdSourceEditor.vue'
+import { handleAimdInternalRefClick, handleAimdInternalRefKeydown } from '../composables/aimdInternalRefs'
 import { useDemoLocale, useDemoMessages } from '../composables/demoI18n'
+import { DEFAULT_DEMO_EXAMPLE_ID, getDemoExample, resolveDemoExampleAsset } from '../composables/sampleContent'
 import { getTutorialLessons, type TutorialEvaluationState } from '../composables/tutorialLessons'
 
 const route = useRoute()
 const router = useRouter()
 const { locale } = useDemoLocale()
 const messages = useDemoMessages()
+const tutorialAssetExample = getDemoExample(DEFAULT_DEMO_EXAMPLE_ID)
 
 const lessons = computed(() => getTutorialLessons(locale.value))
 const drafts = reactive<Record<string, string>>({})
@@ -88,6 +91,7 @@ watch([content, locale], async ([markdown, currentLocale]) => {
     const result = await renderToHtml(markdown, {
       locale: currentLocale,
       assignerVisibility: 'collapsed',
+      resolveAssetUrl: src => resolveDemoExampleAsset(tutorialAssetExample, 'en-US', src),
     })
     if (requestId !== renderRequestId) return
     htmlOutput.value = result.html
@@ -327,7 +331,12 @@ function loadSolution() {
           </div>
         </div>
 
-        <div v-else-if="activeTab === 'preview'" class="tab-content">
+        <div
+          v-else-if="activeTab === 'preview'"
+          class="tab-content"
+          @click="handleAimdInternalRefClick"
+          @keydown="handleAimdInternalRefKeydown"
+        >
           <div v-if="renderError" class="feedback-card feedback-card--error">
             <strong>{{ messages.pages.tutorial.renderErrorLabel }}</strong>
             <p>{{ renderError }}</p>

@@ -242,6 +242,20 @@ body.aimd-demo-body--bounded #app {
   overflow: hidden;
 }
 
+.aimd-internal-ref-target--active {
+  animation: aimd-internal-ref-target-flash 1200ms ease-out;
+}
+
+@keyframes aimd-internal-ref-target-flash {
+  0% {
+    box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.22);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(26, 115, 232, 0);
+  }
+}
+
 @media (max-width: 960px) {
   .app-header {
     padding: 12px 16px;

@@ -1547,6 +1547,7 @@ async function rebuildInlineNodes(
       value: localRecord as Record<string, Record<string, unknown>>,
     },
     blockVarTypes: ["AiralogyMarkdown"],
+    resolveAssetUrl: props.resolveFile,
     elementRenderers: {
       pre: codeBlockPreRenderer,
     },

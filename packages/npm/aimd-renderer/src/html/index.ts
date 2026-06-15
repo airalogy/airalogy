@@ -26,6 +26,10 @@ export type {
   RenderResult,
 } from '../common/processor'
 export type {
+  AimdAssetUrlResolver,
+  AimdAssetUrlResolveContext,
+} from '../common/assetUrls'
+export type {
   AimdRendererI18nOptions,
   AimdRendererLocale,
   AimdRendererMessages,

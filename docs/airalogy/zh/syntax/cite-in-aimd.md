@@ -18,9 +18,9 @@ Airalogy是世界上第一个全学科通用的科研数字化、自动化和加
 ```
 ````
 
-在上面的例子中，`{{cite|yang2025airalogyaiempowereduniversaldata}}`用于在文本中插入引用标记，而引用的详细信息以BibTeX格式放在代码块中的`refs`部分（该代码块的注释名必须为`refs`）。AIMD会自动处理这些引用，并在最终渲染的文档中生成参考文献列表。渲染器会把正文引用显示为 `[1]` 这类紧凑编号，同时在链接目标和元数据中保留原始 BibTeX key。
+在上面的例子中，`{{cite|yang2025airalogyaiempowereduniversaldata}}`用于在文本中插入引用标记，而引用的详细信息以BibTeX格式放在代码块中的`refs`部分（该代码块的注释名必须为`refs`）。AIMD会自动处理这些引用，并在最终渲染的文档中生成参考文献列表。渲染器会把正文引用显示为 `[1]` 这类紧凑编号，hover 或键盘 focus 时展示参考文献信息，同时在元数据中保留原始 BibTeX key。
 
-`parse_aimd` 和 `@airalogy/aimd-core` 会把正文引用 id 提取到 `cite`，把 BibTeX 条目提取到结构化 `refs`；`@airalogy/aimd-renderer` 会把正文引用标记链接到生成的参考文献列表。
+`parse_aimd` 和 `@airalogy/aimd-core` 会把正文引用 id 提取到 `cite`，把 BibTeX 条目提取到结构化 `refs`；`@airalogy/aimd-renderer` 会把正文引用标记渲染为非跳转的编号标记，并把参考文献列表统一渲染到 AIMD 文档末尾。
 
 在一个`cite`标签中，你可以引用一个或多个参考文献，多个引用之间用逗号分隔。例如：
 
