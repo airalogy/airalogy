@@ -210,6 +210,7 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
       <div v-if="isExamplePickerOpen" class="examples-picker-popover">
         <DemoExamplePicker
           :selected-id="selectedExampleId"
+          variant="list"
           @select="handleExampleSelect"
           @reset="handleExampleReset"
         />
