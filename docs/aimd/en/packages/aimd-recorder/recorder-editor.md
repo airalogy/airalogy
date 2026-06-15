@@ -44,6 +44,8 @@ By default it also:
 
 If the host prefers fixed-height behavior, set `:fit-viewport="false"` and continue sizing with `editorMinHeight` / `recorderMinHeight`.
 
+If the host already owns the available height, such as a route-level flex workspace or split-pane app, place the editor in a bounded parent and set `:fill-parent="true"` together with `:fit-viewport="false"`. In that mode `AimdRecorderEditor` fills the parent instead of measuring the viewport, and the source editor plus recorder side scroll inside their own panels.
+
 If the host still wants the extra structure helper panel, pass `:show-field-structure="true"`.
 
 ## Recorder-Aware WYSIWYG Mode

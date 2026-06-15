@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { computed } from 'vue'
+import { computed, onUnmounted, watchEffect } from 'vue'
 import { useDemoLocale, useDemoMessages } from './composables/demoI18n'
 
 const route = useRoute()
@@ -21,10 +21,32 @@ const navItems = computed(() => [
 ])
 
 const currentPath = computed(() => route.path)
+const isBoundedRoute = computed(() => (
+  currentPath.value === '/examples' || currentPath.value.startsWith('/examples/')
+))
+
+watchEffect(() => {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  document.body.classList.toggle('aimd-demo-body--bounded', isBoundedRoute.value)
+  if (isBoundedRoute.value && typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, left: 0 })
+  }
+})
+
+onUnmounted(() => {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  document.body.classList.remove('aimd-demo-body--bounded')
+})
 </script>
 
 <template>
-  <div class="app">
+  <div :class="['app', { 'app--bounded': isBoundedRoute }]">
     <header class="app-header">
       <h1 class="app-title">{{ messages.app.title }}</h1>
       <nav class="app-nav">
@@ -66,16 +88,41 @@ const currentPath = computed(() => route.path)
   box-sizing: border-box;
 }
 
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   color: #333;
   background: #f5f7fa;
 }
 
+body.aimd-demo-body--bounded {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body.aimd-demo-body--bounded #app {
+  height: 100%;
+  overflow: hidden;
+}
+
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.app--bounded {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .app-header {
@@ -182,8 +229,17 @@ body {
 
 .app-main {
   flex: 1;
+  min-height: 0;
   width: 100%;
   padding: 24px clamp(16px, 2.8vw, 40px);
+}
+
+.app--bounded .app-main {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 @media (max-width: 960px) {

@@ -15,4 +15,23 @@ describe('ExamplesDemo', () => {
     expect(source).toMatch(/\.examples-render-preview :deep\(p\)/)
     expect(source).toMatch(/\.examples-render-preview :deep\(ul\)/)
   })
+
+  it('keeps long examples inside bounded scroll regions', () => {
+    expect(source).toContain(':fill-parent="true"')
+    expect(source).toContain(':fit-viewport="false"')
+    expect(source).toMatch(/\.demo-page \{[\s\S]*flex: 1 1 auto;[\s\S]*overflow: hidden;/)
+    expect(source).toMatch(/\.examples-workbench \{[\s\S]*flex: 1 1 0;[\s\S]*overflow: hidden;/)
+    expect(source).toMatch(/\.examples-panel \{[\s\S]*flex: 1 1 0;[\s\S]*overflow: auto;/)
+  })
+
+  it('keeps example selection compact by default', () => {
+    expect(source).toMatch(/const isExamplePickerOpen = ref\(false\)/)
+    expect(source).toMatch(/class="examples-current"/)
+    expect(source).toMatch(/v-if="isExamplePickerOpen" class="examples-picker-popover"/)
+    expect(source).toMatch(/isExamplePickerOpen\.value = false/)
+    expect(source).toMatch(/\.examples-page-head \{[\s\S]*display: flex;/)
+    expect(source).toMatch(/\.examples-control-area \{[\s\S]*min-height: 48px;/)
+    expect(source).toMatch(/\.examples-picker-popover \{[\s\S]*position: absolute;[\s\S]*max-height: min\(54vh, 430px\);/)
+    expect(source).toMatch(/\.examples-toolbar \{[\s\S]*gap: 8px;/)
+  })
 })

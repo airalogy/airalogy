@@ -96,6 +96,7 @@ const props = withDefaults(defineProps<{
   showRecordData?: boolean
   showDetachedData?: boolean
   fitViewport?: boolean
+  fillParent?: boolean
   viewportOffset?: number
   editorMinHeight?: number
   recorderMinHeight?: number
@@ -141,6 +142,7 @@ const props = withDefaults(defineProps<{
   showRecordData: false,
   showDetachedData: true,
   fitViewport: true,
+  fillParent: false,
   viewportOffset: 24,
   editorMinHeight: 560,
   recorderMinHeight: 560,
@@ -486,6 +488,14 @@ function getElementHeight(element: Element | null | undefined) {
 }
 
 function updateViewportPanelHeights() {
+  if (props.fillParent) {
+    viewportEditorMinHeight.value = 0
+    viewportSideBodyHeight.value = 0
+    viewportVisualEditorMinHeight.value = 0
+    viewportWorkbenchMainHeight.value = null
+    return
+  }
+
   if (!props.fitViewport || typeof window === 'undefined') {
     viewportEditorMinHeight.value = props.editorMinHeight
     viewportSideBodyHeight.value = props.recorderMinHeight
@@ -544,7 +554,7 @@ const editorBindings = computed(() => {
     modelValue: contentDraft.value,
     mode: props.editorMode,
     locale: editorProps.locale ?? props.locale,
-    minHeight: editorProps.minHeight ?? viewportEditorMinHeight.value,
+    minHeight: editorProps.minHeight ?? (props.fillParent ? 0 : viewportEditorMinHeight.value),
     readonly: props.readonly || editorProps.readonly === true,
   }
 })
@@ -651,9 +661,12 @@ const workbenchMainStyle = computed(() => (
       : { '--aimd-recorder-workbench-main-height': `${viewportWorkbenchMainHeight.value}px` }),
   }
 ))
-const sidePanelBodyStyle = computed(() => ({
-  height: `${viewportSideBodyHeight.value}px`,
-}))
+const sidePanelBodyStyle = computed(() => (
+  props.fillParent ? {} : { height: `${viewportSideBodyHeight.value}px` }
+))
+const visualEditorMinHeight = computed(() => (
+  props.fillParent ? 0 : viewportVisualEditorMinHeight.value
+))
 const sideTabs = computed(() => {
   const tabs: Array<{ key: WorkbenchSideTab, label: string, badge?: number }> = [
     { key: 'recorder', label: recorderTitleLabel.value },
@@ -717,6 +730,7 @@ watch(
     visualEditMode,
     hasDetachedData,
     () => props.fitViewport,
+    () => props.fillParent,
     () => props.viewportOffset,
     () => props.editorMinHeight,
     () => props.recorderMinHeight,
@@ -1248,7 +1262,11 @@ defineExpose({
 </script>
 
 <template>
-  <div ref="workbenchRef" class="aimd-recorder-workbench">
+  <div
+    ref="workbenchRef"
+    class="aimd-recorder-workbench"
+    :class="{ 'aimd-recorder-workbench--fill-parent': fillParent }"
+  >
     <div
       ref="workbenchMainRef"
       class="aimd-recorder-workbench__main"
@@ -1415,7 +1433,7 @@ defineExpose({
             v-if="visualEditMode"
             :content="visualContentDraft"
             :model-value="recordSnapshot"
-            :min-height="viewportVisualEditorMinHeight"
+            :min-height="visualEditorMinHeight"
             :locale="locale"
             :readonly="readonly"
             :current-user-name="currentUserName"
@@ -1726,6 +1744,12 @@ defineExpose({
   gap: 16px;
 }
 
+.aimd-recorder-workbench--fill-parent {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .aimd-recorder-workbench__main {
   display: grid;
   grid-template-columns: minmax(260px, var(--aimd-recorder-source-panel-width, 50%)) 12px minmax(0, 1fr);
@@ -1733,6 +1757,12 @@ defineExpose({
   align-items: stretch;
   height: var(--aimd-recorder-workbench-main-height, auto);
   min-height: 0;
+}
+
+.aimd-recorder-workbench--fill-parent .aimd-recorder-workbench__main {
+  flex: 1 1 0;
+  height: 100%;
+  max-height: 100%;
 }
 
 .aimd-recorder-workbench__main--source-collapsed {
@@ -1754,6 +1784,10 @@ defineExpose({
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.aimd-recorder-workbench--fill-parent .aimd-recorder-workbench__panel {
+  height: 100%;
 }
 
 .aimd-recorder-workbench__panel--source {
@@ -1876,6 +1910,11 @@ defineExpose({
   min-height: 0;
 }
 
+.aimd-recorder-workbench--fill-parent .aimd-recorder-workbench__panel-body {
+  flex: 1 1 0;
+  height: auto !important;
+}
+
 .aimd-recorder-workbench__panel-body--editor {
   overflow: hidden;
 }
@@ -1883,6 +1922,30 @@ defineExpose({
 .aimd-recorder-workbench__panel-body--editor :deep(.aimd-editor) {
   border: 0 none;
   border-radius: 0;
+}
+
+.aimd-recorder-workbench--fill-parent .aimd-recorder-workbench__panel-body--editor :deep(.aimd-editor),
+.aimd-recorder-workbench--fill-parent .aimd-recorder-workbench__panel-body--editor :deep(.aimd-editor-panel),
+.aimd-recorder-workbench--fill-parent .aimd-recorder-workbench__panel-body--editor :deep(.aimd-editor-source-mode) {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.aimd-recorder-workbench--fill-parent .aimd-recorder-workbench__panel-body--editor :deep(.aimd-editor-panel) {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.aimd-recorder-workbench--fill-parent .aimd-recorder-workbench__panel-body--editor :deep(.aimd-editor-panel > div) {
+  flex: 1 1 0;
+  height: 100%;
+  min-height: 0;
+}
+
+.aimd-recorder-workbench--fill-parent .aimd-recorder-workbench__panel-body--editor :deep(.aimd-editor-source-mode) {
+  flex: 1 1 0;
 }
 
 .aimd-recorder-workbench__panel-body--recorder {

@@ -44,6 +44,8 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 
 如果宿主想退回固定高度模式，可以设置 `:fit-viewport="false"`，继续通过 `editorMinHeight` / `recorderMinHeight` 控制高度。
 
+如果宿主应用本身已经控制了可用高度，比如路由级 flex 工作区或左右分栏页面，可以把 editor 放进一个有界父容器，并同时设置 `:fill-parent="true"` 和 `:fit-viewport="false"`。这种模式下 `AimdRecorderEditor` 会填满父容器，而不是重新测量浏览器视口；源码编辑器和 recorder 侧都会在自己的面板内部滚动。
+
 如果仍然想保留额外的结构辅助面板，可以显式传 `:show-field-structure="true"`。
 
 ## Recorder-Aware WYSIWYG 模式

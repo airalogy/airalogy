@@ -160,6 +160,19 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 />
 ```
 
+如果宿主应用本身已经控制了可用高度，比如路由级 flex 工作区或左右分栏页面，可以把组件放进一个有界父容器，并同时设置 `:fill-parent="true"` 和 `:fit-viewport="false"`。这种模式下 `AimdRecorderEditor` 会填满父容器，而不是重新测量浏览器视口；源码编辑器和 recorder 侧都会在自己的面板内部滚动。
+
+```vue
+<section class="workspace-pane">
+  <AimdRecorderEditor
+    v-model="record"
+    v-model:content="content"
+    :fill-parent="true"
+    :fit-viewport="false"
+  />
+</section>
+```
+
 `record` 数据结构：
 
 ```json

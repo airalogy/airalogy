@@ -17,7 +17,13 @@ import type { ExtractedAimdFields } from '@airalogy/aimd-core/types'
 import '@airalogy/aimd-recorder/styles'
 import DemoExamplePicker from '../components/DemoExamplePicker.vue'
 import { useDemoLocale, useDemoMessages } from '../composables/demoI18n'
-import { DEFAULT_DEMO_EXAMPLE_ID, useDemoExampleContent } from '../composables/sampleContent'
+import {
+  DEFAULT_DEMO_EXAMPLE_ID,
+  DEMO_EXAMPLES,
+  resolveDemoExampleText,
+  type DemoExample,
+  useDemoExampleContent,
+} from '../composables/sampleContent'
 
 const EMPTY_FIELDS: ExtractedAimdFields = {
   var: [],
@@ -52,9 +58,24 @@ const quizGrades = ref<Record<string, AimdQuizGradeResult>>({})
 const gradeReport = ref<AimdQuizGradeReport | null>(null)
 const choiceOptionExplanationMode = ref<AimdChoiceOptionExplanationMode>('selected')
 const isSubmitted = ref(false)
+const isExamplePickerOpen = ref(false)
 
 const extractedFieldsJson = computed(() => JSON.stringify(fields.value, null, 2))
 const hasQuizFields = computed(() => (fields.value.quiz?.length || 0) > 0)
+const selectedExample = computed(() => (
+  DEMO_EXAMPLES.find(example => example.id === selectedExampleId.value) ?? DEMO_EXAMPLES[0]
+))
+const selectedExampleTitle = computed(() => (
+  selectedExample.value ? resolveDemoExampleText(selectedExample.value.title, locale.value) : selectedExampleId.value
+))
+const selectedExampleDescription = computed(() => (
+  selectedExample.value ? resolveDemoExampleText(selectedExample.value.description, locale.value) : ''
+))
+const examplePickerToggleLabel = computed(() => (
+  isExamplePickerOpen.value
+    ? messages.value.examples.hideList
+    : messages.value.examples.changeCurrent
+))
 const gradeSummary = computed(() => {
   if (!gradeReport.value) {
     return ''
@@ -71,6 +92,19 @@ const fieldStats = computed(() => ({
   refs: (fields.value.ref_step?.length || 0) + (fields.value.ref_var?.length || 0) + (fields.value.ref_fig?.length || 0),
 }))
 
+function getExampleBadge(example: DemoExample | undefined): string {
+  if (!example) {
+    return messages.value.examples.exampleBadge
+  }
+  if (example.kind === 'protocol') {
+    return messages.value.examples.protocolBadge
+  }
+  if (example.kind === 'case') {
+    return messages.value.examples.caseBadge
+  }
+  return messages.value.examples.exampleBadge
+}
+
 function resetRecord() {
   recordData.value = createEmptyProtocolRecordData()
   isSubmitted.value = false
@@ -81,6 +115,7 @@ function handleExampleSelect(id: string) {
   loadExample(id, locale.value)
   recorderEditorKey.value += 1
   activePanel.value = 'workbench'
+  isExamplePickerOpen.value = false
 }
 
 function handleExampleReset() {
@@ -130,6 +165,7 @@ watch(locale, () => {
   resetToSelectedExample(locale.value)
   recorderEditorKey.value += 1
   activePanel.value = 'workbench'
+  isExamplePickerOpen.value = false
 })
 
 watch([content, locale], processContent, { immediate: true })
@@ -138,80 +174,108 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
 
 <template>
   <div class="demo-page">
-    <h2 class="page-title">{{ messages.pages.examples.title }}</h2>
-    <p class="page-desc">{{ messages.pages.examples.desc }}</p>
+    <header class="examples-page-head">
+      <h2 class="page-title">{{ messages.pages.examples.title }}</h2>
+      <p class="page-desc">{{ messages.pages.examples.desc }}</p>
+    </header>
 
-    <DemoExamplePicker
-      :selected-id="selectedExampleId"
-      @select="handleExampleSelect"
-      @reset="handleExampleReset"
-    />
+    <section class="examples-control-area">
+      <div class="examples-current">
+        <span class="examples-current__label">{{ messages.examples.title }}</span>
+        <span class="examples-current__title">{{ selectedExampleTitle }}</span>
+        <span class="examples-current__badge">{{ getExampleBadge(selectedExample) }}</span>
+        <span class="examples-current__desc">{{ selectedExampleDescription }}</span>
+      </div>
+      <div class="examples-current__actions">
+        <button
+          type="button"
+          class="examples-control-button examples-control-button--primary"
+          :aria-expanded="isExamplePickerOpen"
+          @click="isExamplePickerOpen = !isExamplePickerOpen"
+        >
+          {{ examplePickerToggleLabel }}
+        </button>
+        <button type="button" class="examples-control-button" @click="handleExampleReset">
+          {{ messages.examples.resetCurrent }}
+        </button>
+      </div>
 
-    <div class="examples-stats">
-      <span class="examples-stat">
-        {{ messages.pages.examples.stats.var }}: <strong>{{ fieldStats.var }}</strong>
-      </span>
-      <span class="examples-stat">
-        {{ messages.pages.examples.stats.table }}: <strong>{{ fieldStats.table }}</strong>
-      </span>
-      <span class="examples-stat">
-        {{ messages.pages.examples.stats.step }}: <strong>{{ fieldStats.step }}</strong>
-      </span>
-      <span class="examples-stat">
-        {{ messages.pages.examples.stats.check }}: <strong>{{ fieldStats.check }}</strong>
-      </span>
-      <span class="examples-stat">
-        {{ messages.pages.examples.stats.refs }}: <strong>{{ fieldStats.refs }}</strong>
-      </span>
-    </div>
+      <div v-if="isExamplePickerOpen" class="examples-picker-popover">
+        <DemoExamplePicker
+          :selected-id="selectedExampleId"
+          @select="handleExampleSelect"
+          @reset="handleExampleReset"
+        />
+      </div>
+    </section>
 
-    <div class="examples-tabs" :aria-label="messages.pages.examples.panelLabel">
-      <button
-        class="examples-tab"
-        :class="{ 'examples-tab--active': activePanel === 'workbench' }"
-        type="button"
-        @click="activePanel = 'workbench'"
-      >
-        {{ messages.pages.examples.tabs.workbench }}
-      </button>
-      <button
-        class="examples-tab"
-        :class="{ 'examples-tab--active': activePanel === 'preview' }"
-        type="button"
-        @click="activePanel = 'preview'"
-      >
-        {{ messages.pages.examples.tabs.preview }}
-      </button>
-      <button
-        class="examples-tab"
-        :class="{ 'examples-tab--active': activePanel === 'fields' }"
-        type="button"
-        @click="activePanel = 'fields'"
-      >
-        {{ messages.pages.examples.tabs.fields }}
-      </button>
-    </div>
+    <div class="examples-toolbar">
+      <div class="examples-tabs" :aria-label="messages.pages.examples.panelLabel">
+        <button
+          class="examples-tab"
+          :class="{ 'examples-tab--active': activePanel === 'workbench' }"
+          type="button"
+          @click="activePanel = 'workbench'"
+        >
+          {{ messages.pages.examples.tabs.workbench }}
+        </button>
+        <button
+          class="examples-tab"
+          :class="{ 'examples-tab--active': activePanel === 'preview' }"
+          type="button"
+          @click="activePanel = 'preview'"
+        >
+          {{ messages.pages.examples.tabs.preview }}
+        </button>
+        <button
+          class="examples-tab"
+          :class="{ 'examples-tab--active': activePanel === 'fields' }"
+          type="button"
+          @click="activePanel = 'fields'"
+        >
+          {{ messages.pages.examples.tabs.fields }}
+        </button>
+      </div>
 
-    <div v-if="hasQuizFields" class="examples-quiz-toolbar">
-      <span v-if="gradeReport" class="examples-grade">
-        {{ messages.pages.examples.quiz.score }} {{ gradeSummary }}
-        <template v-if="gradeReport.summary.review_required_count">
-          · {{ messages.pages.examples.quiz.review }} {{ gradeReport.summary.review_required_count }}
-        </template>
-      </span>
-      <label class="examples-quiz-control">
-        <span>{{ messages.pages.examples.quiz.explanations }}</span>
-        <select v-model="choiceOptionExplanationMode" class="examples-quiz-select">
-          <option value="hidden">{{ messages.pages.examples.quiz.explanationModes.hidden }}</option>
-          <option value="selected">{{ messages.pages.examples.quiz.explanationModes.selected }}</option>
-          <option value="submitted">{{ messages.pages.examples.quiz.explanationModes.submitted }}</option>
-          <option value="graded">{{ messages.pages.examples.quiz.explanationModes.graded }}</option>
-        </select>
-      </label>
-      <label class="examples-quiz-control examples-quiz-control--checkbox">
-        <input v-model="isSubmitted" type="checkbox">
-        <span>{{ messages.pages.examples.quiz.submitted }}</span>
-      </label>
+      <div class="examples-stats">
+        <span class="examples-stat">
+          {{ messages.pages.examples.stats.var }}: <strong>{{ fieldStats.var }}</strong>
+        </span>
+        <span class="examples-stat">
+          {{ messages.pages.examples.stats.table }}: <strong>{{ fieldStats.table }}</strong>
+        </span>
+        <span class="examples-stat">
+          {{ messages.pages.examples.stats.step }}: <strong>{{ fieldStats.step }}</strong>
+        </span>
+        <span class="examples-stat">
+          {{ messages.pages.examples.stats.check }}: <strong>{{ fieldStats.check }}</strong>
+        </span>
+        <span class="examples-stat">
+          {{ messages.pages.examples.stats.refs }}: <strong>{{ fieldStats.refs }}</strong>
+        </span>
+      </div>
+
+      <div v-if="hasQuizFields" class="examples-quiz-toolbar">
+        <span v-if="gradeReport" class="examples-grade">
+          {{ messages.pages.examples.quiz.score }} {{ gradeSummary }}
+          <template v-if="gradeReport.summary.review_required_count">
+            · {{ messages.pages.examples.quiz.review }} {{ gradeReport.summary.review_required_count }}
+          </template>
+        </span>
+        <label class="examples-quiz-control">
+          <span>{{ messages.pages.examples.quiz.explanations }}</span>
+          <select v-model="choiceOptionExplanationMode" class="examples-quiz-select">
+            <option value="hidden">{{ messages.pages.examples.quiz.explanationModes.hidden }}</option>
+            <option value="selected">{{ messages.pages.examples.quiz.explanationModes.selected }}</option>
+            <option value="submitted">{{ messages.pages.examples.quiz.explanationModes.submitted }}</option>
+            <option value="graded">{{ messages.pages.examples.quiz.explanationModes.graded }}</option>
+          </select>
+        </label>
+        <label class="examples-quiz-control examples-quiz-control--checkbox">
+          <input v-model="isSubmitted" type="checkbox">
+          <span>{{ messages.pages.examples.quiz.submitted }}</span>
+        </label>
+      </div>
     </div>
 
     <div v-if="activePanel === 'workbench'" class="examples-workbench">
@@ -227,6 +291,8 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
         :editor-title="messages.common.aimdSource"
         :recorder-title="messages.pages.examples.workbenchTitle"
         :record-data-title="messages.common.collectedData"
+        :fill-parent="true"
+        :fit-viewport="false"
         @fields-change="handleFieldsChange"
       />
     </div>
@@ -245,23 +311,144 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
 <style scoped>
 .demo-page {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   min-height: 0;
+  overflow: hidden;
+}
+
+.examples-page-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  min-width: 0;
 }
 
 .page-title {
+  flex: 0 0 auto;
   color: #1a1a2e;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
 }
 
 .page-desc {
-  margin-top: -8px;
+  min-width: 0;
+  overflow: hidden;
   color: #666;
   font-size: 14px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+.examples-control-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.examples-current {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.examples-current__label {
+  flex: 0 0 auto;
+  color: #617086;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.examples-current__title {
+  min-width: 0;
+  overflow: hidden;
+  color: #1d2939;
+  font-size: 14px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.examples-current__badge {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #1a73e8;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.examples-current__desc {
+  min-width: 0;
+  overflow: hidden;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.examples-current__actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.examples-control-button {
+  appearance: none;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid #d6deea;
+  border-radius: 7px;
+  background: #fff;
+  color: #42526b;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.examples-control-button:hover {
+  border-color: #8ba8d8;
+  background: #f7faff;
+}
+
+.examples-control-button--primary {
+  border-color: #5f8dea;
+  background: #edf4ff;
+  color: #2454b5;
+}
+
+.examples-picker-popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  max-height: min(54vh, 430px);
+  overflow: auto;
+  border-radius: 10px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+}
+
+.examples-picker-popover :deep(.demo-example-picker) {
+  border-color: #cfd9e8;
+  box-shadow: none;
+}
+
+.examples-toolbar,
 .examples-stats,
 .examples-tabs,
 .examples-quiz-toolbar {
@@ -271,13 +458,22 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
   gap: 10px;
 }
 
+.examples-toolbar {
+  gap: 8px;
+}
+
 .examples-stats {
-  padding: 10px 14px;
+  flex: 1 1 auto;
+  padding: 7px 10px;
   border: 1px solid #e0e7f2;
   border-radius: 8px;
   background: #fff;
   color: #5f6c7d;
-  font-size: 13px;
+  font-size: 12px;
+}
+
+.examples-stat {
+  white-space: nowrap;
 }
 
 .examples-stat strong {
@@ -285,12 +481,14 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
 }
 
 .examples-tabs {
-  gap: 8px;
+  flex: 0 0 auto;
+  gap: 6px;
 }
 
 .examples-tab {
   appearance: none;
-  padding: 8px 12px;
+  height: 32px;
+  padding: 0 11px;
   border: 1px solid #d6deea;
   border-radius: 8px;
   background: #fff;
@@ -313,13 +511,14 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
 }
 
 .examples-quiz-toolbar {
+  flex: 0 1 auto;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 6px 10px;
   border: 1px solid #e5d5aa;
   border-radius: 8px;
   background: #fffaf0;
   color: #6f5630;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .examples-grade {
@@ -339,7 +538,7 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
 
 .examples-quiz-select {
   min-width: 116px;
-  height: 30px;
+  height: 28px;
   padding: 0 8px;
   border: 1px solid #dec995;
   border-radius: 7px;
@@ -348,15 +547,40 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
   font-size: 13px;
 }
 
+@media (max-width: 980px) {
+  .examples-page-head,
+  .examples-control-area,
+  .examples-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-desc {
+    white-space: normal;
+  }
+
+  .examples-current,
+  .examples-current__actions,
+  .examples-tabs,
+  .examples-stats,
+  .examples-quiz-toolbar {
+    width: 100%;
+  }
+
+  .examples-current__desc {
+    display: none;
+  }
+}
+
 .examples-workbench {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .examples-panel {
-  flex: 1 1 auto;
-  min-height: 560px;
-  max-height: calc(100vh - 260px);
+  flex: 1 1 0;
+  min-height: 0;
   overflow: auto;
   border: 1px solid #dbe4ef;
   border-radius: 14px;
@@ -517,9 +741,4 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
   white-space: pre-wrap;
 }
 
-@media (max-width: 720px) {
-  .examples-panel {
-    max-height: none;
-  }
-}
 </style>

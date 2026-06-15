@@ -68,6 +68,8 @@ export interface DemoMessages {
   examples: {
     title: string
     resetCurrent: string
+    changeCurrent: string
+    hideList: string
     exampleBadge: string
     caseBadge: string
     protocolBadge: string
@@ -196,6 +198,8 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
     examples: {
       title: 'Cases and Examples',
       resetCurrent: 'Reset Current',
+      changeCurrent: 'Change Example',
+      hideList: 'Hide Examples',
       exampleBadge: 'Example',
       caseBadge: 'Case',
       protocolBadge: 'Protocol',
@@ -322,6 +326,8 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
     examples: {
       title: '案例和示例',
       resetCurrent: '重置当前示例',
+      changeCurrent: '切换示例',
+      hideList: '收起示例',
       exampleBadge: '示例',
       caseBadge: '案例',
       protocolBadge: '协议',

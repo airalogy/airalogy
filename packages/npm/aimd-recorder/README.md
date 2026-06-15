@@ -160,6 +160,19 @@ If the host prefers the previous fixed-height behavior, disable viewport fitting
 />
 ```
 
+If the host already owns the available height, such as a route-level flex workspace or split-pane app, put the component in a bounded parent and set `:fill-parent="true"` with `:fit-viewport="false"`. In that mode `AimdRecorderEditor` fills the parent instead of measuring the browser viewport, and the source editor plus recorder side scroll inside their own panels.
+
+```vue
+<section class="workspace-pane">
+  <AimdRecorderEditor
+    v-model="record"
+    v-model:content="content"
+    :fill-parent="true"
+    :fit-viewport="false"
+  />
+</section>
+```
+
 `record` shape:
 
 ```json
