@@ -36,6 +36,7 @@ import {
   restoreAimdInlineTemplates,
   type AimdInlineTemplateMap,
 } from "./inline-template-protection"
+import { findAimdInlineTemplates } from "./inline-template-scanner"
 import {
   getAimdFieldDescription,
   getAimdFieldEnumValues,
@@ -244,15 +245,10 @@ function processTextNode(
   const value = restoreAimdInlineTemplates(node.value, templates)
   const result: InlineContentNode[] = []
   let lastIndex = 0
+  const matches = findAimdInlineTemplates(value)
 
-  const pattern = /\{\{(var_table|var|step|check|ref_step|ref_var|ref_fig|cite)\s*\|\s*([\s\S]*?)\}\}/g
-
-  let match: RegExpExecArray | null = pattern.exec(value)
-  while (match !== null) {
-    const [fullMatch, type, rawContent] = match
-    const content = rawContent.trim()
-    const startIndex = match.index
-
+  for (const match of matches) {
+    const startIndex = match.start
     if (startIndex > lastIndex) {
       result.push({
         type: "text",
@@ -260,11 +256,10 @@ function processTextNode(
       })
     }
 
-    const aimdNode = createAimdNode(type as AimdFieldType, content, fullMatch, stepContext)
+    const aimdNode = createAimdNode(match.type, match.content, match.raw, stepContext)
     result.push(aimdNode)
 
-    lastIndex = startIndex + fullMatch.length
-    match = pattern.exec(value)
+    lastIndex = match.end
   }
 
   if (lastIndex < value.length) {

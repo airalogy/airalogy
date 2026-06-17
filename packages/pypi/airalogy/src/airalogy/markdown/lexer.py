@@ -19,9 +19,9 @@ class Lexer:
     are skipped and not parsed as template expressions.
     """
 
-    # Template pattern: {{type|content}}
-    TEMPLATE_PATTERN = re.compile(
-        r"\{\{(var_table|var|step|check|ref_var|ref_step|ref_fig|cite)\|([^}]*(?:\}(?!\})[^}]*)*)\}\}",
+    # Template start pattern: {{type|content}}
+    TEMPLATE_START_PATTERN = re.compile(
+        r"\{\{\s*(var_table|var|step|check|ref_var|ref_step|ref_fig|cite)\s*\|",
         re.MULTILINE | re.DOTALL,
     )
 
@@ -144,6 +144,41 @@ class Lexer:
             end_col=end_col,
         )
 
+    def _is_escaped(self, offset: int) -> bool:
+        slash_count = 0
+        cursor = offset - 1
+
+        while cursor >= 0 and self.content[cursor] == "\\":
+            slash_count += 1
+            cursor -= 1
+
+        return slash_count % 2 == 1
+
+    def _find_template_end(self, content_start: int) -> int:
+        quote = None
+        offset = content_start
+
+        while offset < len(self.content):
+            char = self.content[offset]
+
+            if quote is not None:
+                if char == quote and not self._is_escaped(offset):
+                    quote = None
+                offset += 1
+                continue
+
+            if char in ('"', "'"):
+                quote = char
+                offset += 1
+                continue
+
+            if char == "}" and offset + 1 < len(self.content) and self.content[offset + 1] == "}":
+                return offset + 2
+
+            offset += 1
+
+        return -1
+
     def tokenize(self) -> Iterator[Token]:
         """
         Tokenize the AIMD content.
@@ -151,21 +186,37 @@ class Lexer:
         Yields:
             Token objects for each template found in the content
         """
-        for match in self.TEMPLATE_PATTERN.finditer(self.content):
+        search_offset = 0
+
+        while search_offset < len(self.content):
+            match = self.TEMPLATE_START_PATTERN.search(self.content, search_offset)
+            if match is None:
+                break
+
             start_offset = match.start()
-            raw = match.group(0)
+            content_start = match.end()
+            end_offset = self._find_template_end(content_start)
+
+            if end_offset == -1:
+                search_offset = content_start
+                continue
+
+            raw = self.content[start_offset:end_offset]
 
             # Skip matches within code blocks
             if self._is_in_excluded_range(start_offset, len(raw)):
+                search_offset = content_start
                 continue
 
             type_name = match.group(1)
-            value = match.group(2).strip()
+            value = self.content[content_start : end_offset - 2].strip()
 
             token_type = self.TOKEN_TYPE_MAP[type_name]
             position = self._get_position(start_offset, len(raw))
 
             yield Token(type=token_type, value=value, position=position, raw=raw)
+
+            search_offset = end_offset
 
         # Yield EOF token
         end_offset = len(self.content)

@@ -1266,6 +1266,20 @@ subvars=[
         assert step.check is True
         assert step.checked_message == "Workspace cleaned."
 
+    def test_parse_step_with_aimd_like_text_in_checked_message(self):
+        content = (
+            '{{step|verify, check=True, checked_message="Confirm {{ref_var|stable_wait_s}} seconds before continuing."}} Step body.'
+        )
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["step"]) == 1
+        assert len(result["templates"]["ref_var"]) == 0
+        step = result["templates"]["step"][0]
+        assert step.name == "verify"
+        assert step.check is True
+        assert step.checked_message == "Confirm {{ref_var|stable_wait_s}} seconds before continuing."
+
     def test_parse_step_with_duration(self):
         content = "{{step|incubate, duration='1h30m'}}"
         parser = AimdParser(content)
@@ -1326,6 +1340,19 @@ subvars=[
         check = result["templates"]["check"][0]
         assert check.name == "pcr_on_ice"
         assert check.checked_message == "Avoid condensation dripping."
+
+    def test_parse_check_with_aimd_like_text_in_checked_message(self):
+        content = (
+            '{{check|reading_stable, checked_message="Reading unstable after {{ref_var|stable_wait_s}} s; check electrode and sample temperature."}} Confirm pH reading is stable.'
+        )
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["check"]) == 1
+        assert len(result["templates"]["ref_var"]) == 0
+        check = result["templates"]["check"][0]
+        assert check.name == "reading_stable"
+        assert check.checked_message == "Reading unstable after {{ref_var|stable_wait_s}} s; check electrode and sample temperature."
 
     def test_parse_ref_var(self):
         content = "{{var|user}}\nAccording to {{ref_var|user}}"

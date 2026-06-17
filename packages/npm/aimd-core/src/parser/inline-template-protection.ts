@@ -1,4 +1,5 @@
-const AIMD_INLINE_TEMPLATE_PATTERN = /\{\{(var_table|var|step|check|ref_step|ref_var|ref_fig|cite)\s*\|[\s\S]*?\}\}/g
+import { findAimdInlineTemplates } from "./inline-template-scanner"
+
 const AIMD_INLINE_TEMPLATE_TOKEN_PATTERN = /AIMDINLINETEMPLATE([0-9a-f]+)TOKEN/g
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
@@ -33,12 +34,20 @@ function decodeTemplateToken(hex: string): string {
 
 export function protectAimdInlineTemplates(content: string): ProtectedAimdInlineTemplates {
   const templates: AimdInlineTemplateMap = {}
+  const matches = findAimdInlineTemplates(content)
+  let protectedContent = ""
+  let lastIndex = 0
 
-  const protectedContent = content.replace(AIMD_INLINE_TEMPLATE_PATTERN, (match) => {
-    const token = encodeTemplateToken(match)
-    templates[token] = match
-    return token
-  })
+  for (const match of matches) {
+    protectedContent += content.slice(lastIndex, match.start)
+
+    const token = encodeTemplateToken(match.raw)
+    templates[token] = match.raw
+    protectedContent += token
+    lastIndex = match.end
+  }
+
+  protectedContent += content.slice(lastIndex)
 
   return {
     content: protectedContent,

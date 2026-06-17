@@ -310,6 +310,20 @@ test('step: with checked_message', () => {
   assert.equal(node?.checked_message, 'Done!')
 })
 
+test('step: treats AIMD-looking content inside checked_message as plain text', () => {
+  const content = '{{step|verify, check=True, checked_message="Confirm {{ref_var|stable_wait_s}} seconds before continuing."}} Step body.'
+  const { tree } = parseAimd(content)
+  const node = findAimdNode(tree)
+  const paragraph = tree.children[0]
+
+  assert.equal(node?.check, true)
+  assert.equal(node?.raw, '{{step|verify, check=True, checked_message="Confirm {{ref_var|stable_wait_s}} seconds before continuing."}}')
+  assert.equal(node?.checked_message, 'Confirm {{ref_var|stable_wait_s}} seconds before continuing.')
+  assert.equal(paragraph.children.length, 2)
+  assert.equal(paragraph.children[1].type, 'text')
+  assert.equal(paragraph.children[1].value, ' Step body.')
+})
+
 test('step: preserves title, subtitle, result, and props for host renderers', () => {
   const { tree } = parseAimd("{{step|verify, 2, title='Verify Output', subtitle='Cross-check values', result=True}}")
   const node = findAimdNode(tree)
@@ -430,6 +444,20 @@ test('check: with checked_message', () => {
   const node = findAimdNode(tree)
   assert.equal(node?.id, 'verify_step')
   assert.equal(node?.checked_message, 'Complete!')
+})
+
+test('check: treats AIMD-looking content inside checked_message as plain text', () => {
+  const content = '{{check|reading_stable, checked_message="Reading unstable after {{ref_var|stable_wait_s}} s; check electrode and sample temperature."}} Confirm pH reading is stable.'
+  const { tree } = parseAimd(content)
+  const node = findAimdNode(tree)
+  const paragraph = tree.children[0]
+
+  assert.equal(node?.id, 'reading_stable')
+  assert.equal(node?.raw, '{{check|reading_stable, checked_message="Reading unstable after {{ref_var|stable_wait_s}} s; check electrode and sample temperature."}}')
+  assert.equal(node?.checked_message, 'Reading unstable after {{ref_var|stable_wait_s}} s; check electrode and sample temperature.')
+  assert.equal(paragraph.children.length, 2)
+  assert.equal(paragraph.children[1].type, 'text')
+  assert.equal(paragraph.children[1].value, ' Confirm pH reading is stable.')
 })
 
 // ── fig parsing ──────────────────────────────────────────────────────────────

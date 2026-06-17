@@ -62,6 +62,15 @@ describe('sampleContent', () => {
     expect(resolveDemoExampleAsset(syntaxTour!, 'en-US', 'https://example.com/workflow.svg')).toBeNull()
   })
 
+  it('demonstrates quoted AIMD-looking text as a literal string parameter', () => {
+    const fields = parseAndExtract(sampleContent)
+
+    expect(sampleContent).toContain('checked_message="Literal AIMD-looking text stays plain here: {{ref_var|stable_wait_s}}."')
+    expect(fields.var).toContain('stable_wait_s')
+    expect(fields.check).toContain('quoted_message_boundary')
+    expect(fields.ref_var.filter(id => id === 'stable_wait_s')).toHaveLength(1)
+  })
+
   it('keeps every registered demo example loadable and parseable', () => {
     for (const example of DEMO_EXAMPLES) {
       expect(example.locales.length).toBeGreaterThan(0)

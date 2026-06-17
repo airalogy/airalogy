@@ -8,6 +8,8 @@ Operator: {{var|operator: UserName, title = "Operator", description = "Person re
 
 Record time: {{var|current_time: CurrentTime, title = "Record Time", description = "Timestamp captured when the protocol record is prepared", examples = ["2026-05-27 09:30"]}}
 
+Stability wait time: {{var|stable_wait_s: int = 10, title = "Stability Wait (s)", description = "Seconds used to demonstrate quoted string boundaries", examples = [10, 30]}}
+
 Experiment summary: {{var|summary: AiralogyMarkdown, title = "Experiment Summary", description = "Short Markdown note for context, observations, and review comments", examples = ["Initial sample looked clear before mixing."]}}
 
 AIMD content with image refs: {{var|aimd_content: AiralogyMarkdown = "![Site photo](airalogy.id.file.site-photo.png)", title = "AIMD Content With Image Refs", description = "Paste Airalogy Markdown that contains airalogy.id.file.* image references"}}
@@ -140,6 +142,8 @@ Capture a short preparation note here: {{var|prep_observation: str}}
 ## Quality Checks
 
 {{check|quality_control}} Confirm data completeness, reagent lots, and sample identifiers before submission.
+
+{{check|quoted_message_boundary, checked_message="Literal AIMD-looking text stays plain here: {{ref_var|stable_wait_s}}."}} In normal AIMD body text, the same reference renders as data: wait {{ref_var|stable_wait_s}} s before marking this check stable.
 
 {{check|safety_verification}}
 

@@ -147,3 +147,17 @@ Example:
 {{check|reagent_quality_check}} The reagents are of good quality.
 {{check|prepare_pcr_reaction_on_ice, checked_message="Avoid condensation dripping into tubes."}} Prepare PCR reaction on ice.
 ```
+
+### 1.4 AIMD-looking text inside string parameters
+
+Content wrapped in single or double quotes inside an AIMD template parameter is treated as a plain string. This means `{{var|...}}`, `{{ref_var|...}}`, commas, and `}}` inside `checked_message`, `title`, `description`, and similar string parameters are preserved as literal text and are not parsed or rendered as nested AIMD templates.
+
+```aimd
+{{check|reading_stable, checked_message="Reading unstable after {{ref_var|stable_wait_s}} s; check electrode and sample temperature."}} Confirm pH reading is stable.
+```
+
+In this example, the `checked_message` value is the literal string `Reading unstable after {{ref_var|stable_wait_s}} s; check electrode and sample temperature.`. If the variable reference should be rendered as AIMD content, put it in the surrounding AIMD body instead:
+
+```aimd
+{{check|reading_stable, checked_message="Reading unstable; check electrode and sample temperature."}} Confirm pH reading is stable after {{ref_var|stable_wait_s}} s.
+```
