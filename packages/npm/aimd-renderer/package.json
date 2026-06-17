@@ -1,7 +1,7 @@
 {
   "name": "@airalogy/aimd-renderer",
   "type": "module",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "description": "AIMD (Airalogy Markdown) rendering engines for HTML and Vue",
   "license": "Apache-2.0",
   "repository": {
