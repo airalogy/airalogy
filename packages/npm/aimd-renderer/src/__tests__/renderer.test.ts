@@ -329,6 +329,19 @@ describe('renderToHtmlSync', () => {
     expect(rendererStyles).toMatch(/\.aimd-figure__legend \{[\s\S]*?margin: 4px 0 0;/)
   })
 
+  it('styles AIMD fields without depending on recorder styles', () => {
+    expect(rendererStyles).toMatch(/\.aimd-field \{[\s\S]*?display: inline-flex;/)
+    expect(rendererStyles).toMatch(/\.aimd-field \{[\s\S]*?max-width: 100%;/)
+    expect(rendererStyles).toMatch(/\.aimd-field \{[\s\S]*?flex-wrap: wrap;/)
+    expect(rendererStyles).toMatch(/\.aimd-field--var \{[\s\S]*?background-color: var\(--aimd-var-bg\);/)
+    expect(rendererStyles).toMatch(/\.aimd-field__name--with-metadata \{[\s\S]*?flex-direction: column;/)
+    expect(rendererStyles).toMatch(/\.aimd-field__title \{[\s\S]*?overflow-wrap: anywhere;/)
+    expect(rendererStyles).toMatch(/\.aimd-field--var-table \{[\s\S]*?display: block;/)
+    expect(rendererStyles).toMatch(/\.aimd-field--quiz \{[\s\S]*?max-width: 860px;/)
+    expect(rendererStyles).toMatch(/\.aimd-field--check \{[\s\S]*?display: inline-flex;/)
+    expect(rendererStyles).toMatch(/\.aimd-refs \{[\s\S]*?border-top: 1px solid #d8dee8;/)
+  })
+
   it('styles citation popovers as selectable hoverable content', () => {
     expect(rendererStyles).toContain('.aimd-cite__popover')
     expect(rendererStyles).not.toContain('.aimd-cite__ref::after')

@@ -8,6 +8,7 @@ import {
   AIRA_MANIFEST_PATH,
   AIRALOGY_RECORD_FORMAT,
   AIRALOGY_RECORD_SCHEMA_VERSION,
+  createProtocolAiraArchive,
   openAiraArchive,
 } from '../dist/index.js'
 
@@ -276,6 +277,93 @@ test('opens and validates a protocol .aira archive', async () => {
   })
   assert.equal(await archive.readText('protocol.aimd'), '# Demo Protocol\n\n{{var|sample_name}}\n')
   assert.deepEqual(await archive.validate(), { ok: true, issues: [] })
+})
+
+test('rejects renamed folder zips that do not include an Airalogy manifest', async () => {
+  await assert.rejects(
+    () => openAiraArchive(createStoredZip([
+      ['protocol.aimd', '# Figure Protocol\n'],
+      ['files/workflow-diagram.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>'],
+    ])),
+    /_airalogy_archive\/manifest\.json/,
+  )
+})
+
+test('creates and validates a protocol .aira archive with protocol-local files', async () => {
+  const aimd = [
+    '# Figure Protocol',
+    '',
+    'The workflow is summarized in {{ref_fig|workflow_diagram}}.',
+    '',
+    '```fig',
+    'id: workflow_diagram',
+    'src: files/workflow-diagram.svg',
+    'title: Workflow Diagram',
+    'legend: A protocol-local SVG figure.',
+    '```',
+    '',
+  ].join('\n')
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>'
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+  const archive = await openAiraArchive(await createProtocolAiraArchive({
+    aimd,
+    createdAt: '2026-06-21T00:00:00.000Z',
+    protocol: {
+      protocol_id: 'figure_protocol',
+      protocol_version: '0.1.0',
+      protocol_name: 'Figure Protocol',
+    },
+    files: [
+      {
+        path: 'files/workflow-diagram.svg',
+        data: svg,
+      },
+      {
+        path: 'files/图片.png',
+        data: png,
+      },
+    ],
+  }))
+
+  assert.deepEqual(archive.summary(), {
+    format: AIRA_ARCHIVE_FORMAT,
+    version: 1,
+    kind: 'protocol',
+    createdAt: '2026-06-21T00:00:00.000Z',
+    memberCount: 4,
+    recordCount: 0,
+    protocolCount: 1,
+    blobCount: 0,
+    fileCount: 0,
+  })
+  assert.equal(await archive.readText('protocol.aimd'), aimd)
+  assert.equal(await archive.readText('files/workflow-diagram.svg'), svg)
+  assert.deepEqual(await archive.readBytes('files/图片.png'), png)
+  assert.equal(archive.manifest.protocol.protocol_id, 'figure_protocol')
+  assert.deepEqual(archive.manifest.protocol.files, [
+    'protocol.aimd',
+    'files/workflow-diagram.svg',
+    'files/图片.png',
+  ])
+  assert.equal(archive.manifest.protocol.file_hashes['protocol.aimd'], sha256Hex(aimd))
+  assert.equal(archive.manifest.protocol.file_hashes['files/workflow-diagram.svg'], sha256Hex(svg))
+  assert.equal(archive.manifest.protocol.file_hashes['files/图片.png'], sha256Hex(png))
+  assert.deepEqual(await archive.validate(), { ok: true, issues: [] })
+})
+
+test('rejects unsafe protocol-local file paths when creating a protocol archive', async () => {
+  await assert.rejects(
+    () => createProtocolAiraArchive({
+      aimd: '# Bad Figure\n',
+      files: [
+        {
+          path: '../workflow-diagram.svg',
+          data: 'bad',
+        },
+      ],
+    }),
+    /safe relative archive path|escapes the archive root/,
+  )
 })
 
 test('opens and validates a protocols .aira archive', async () => {

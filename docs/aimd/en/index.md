@@ -38,5 +38,6 @@ pnpm docs:dev
 ## Guides And Reference
 
 - [Integration Guide](/en/integration)
+- [File Exchange With Local Figures](/en/file-exchange)
 - [API Reference](/en/api-reference)
 - [Troubleshooting / FAQ](/en/troubleshooting)

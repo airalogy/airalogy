@@ -88,6 +88,35 @@ airalogy validate ./record_bundle.aira
 airalogy validate ./record_bundle.aira --json
 ```
 
+## Browser packaging API
+
+`@airalogy/aira-core` can create a single-Protocol `.aira` archive directly in browser-compatible JavaScript. This is intended for authoring tools that edit AIMD and attach protocol-local assets referenced by `fig` blocks, such as `src: files/workflow-diagram.svg`.
+
+```ts
+import { createProtocolAiraArchive } from '@airalogy/aira-core'
+
+const bytes = await createProtocolAiraArchive({
+  aimd: [
+    '# Figure Protocol',
+    '',
+    '```fig',
+    'id: workflow_diagram',
+    'src: files/workflow-diagram.svg',
+    'title: Workflow Diagram',
+    '```',
+    '',
+  ].join('\n'),
+  files: [
+    {
+      path: 'files/workflow-diagram.svg',
+      data: svgFile,
+    },
+  ],
+})
+```
+
+The generated archive uses `kind: "protocol"`, writes `protocol.aimd` at the archive root, stores attached assets under their protocol-local paths, and records SHA-256 hashes in `protocol.file_hashes`.
+
 ## Airalogy Reader
 
 The repository includes a browser-based Reader app at `apps/aira-reader`. It opens `.aira` files locally, displays the manifest, protocols, records, archive members, and validation issues, and does not upload file content to a server.

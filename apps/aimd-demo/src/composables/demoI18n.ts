@@ -79,7 +79,44 @@ export interface DemoMessages {
       desc: string
     }
     editor: {
+      title: string
       desc: string
+      templatePickerTitle: string
+      changeTemplate: string
+      loadTemplate: string
+      blankTemplateHint: string
+      templateLoaded: string
+      sourceTitle: string
+      previewTitle: string
+      emptyPreview: string
+      renderFailed: string
+      insertFigureTitle: string
+      localFigureMode: string
+      remoteFigureMode: string
+      chooseLocalFigure: string
+      changeLocalFigure: string
+      localFigureHint: string
+      insertLocalFigure: string
+      insertRemoteFigure: string
+      remoteFigureUrl: string
+      figureTitle: string
+      figureLegend: string
+      closePanel: string
+      invalidRemoteFigureUrl: string
+      selectLocalFigureFirst: string
+      figureInserted: string
+      clearContent: string
+      contentCleared: string
+      downloadAimd: string
+      downloadAira: string
+      packagingDownload: string
+      fileCount: string
+      removeFile: string
+      ready: string
+      uploadSkipped: string
+      downloadCompleteAimd: string
+      downloadCompleteAira: string
+      downloadFailed: string
     }
     renderer: {
       desc: string
@@ -180,7 +217,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       tutorial: 'Interactive Tutorial',
       examples: 'Examples',
       core: 'Core Parser',
-      editor: 'Editor',
+      editor: 'Online Editor',
       renderer: 'Renderer',
       recorder: 'Recorder',
     },
@@ -209,7 +246,44 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         desc: 'AIMD core parser that converts AIMD source into AST and extracted field metadata',
       },
       editor: {
-        desc: 'AIMD Editor with source mode, WYSIWYG mode, and localized built-in UI',
+        title: 'AIMD Online Editor',
+        desc: 'Edit AIMD online, preview the rendered result, and download `.aimd` or `.aira`.',
+        templatePickerTitle: 'Example Template',
+        changeTemplate: 'Choose Template',
+        loadTemplate: 'Load Template',
+        blankTemplateHint: 'Start from a blank AIMD document, or load an example template as a base for editing.',
+        templateLoaded: 'Template loaded',
+        sourceTitle: 'Editor',
+        previewTitle: 'Live Preview',
+        emptyPreview: 'Preview will appear here after you add AIMD content.',
+        renderFailed: 'Preview failed',
+        insertFigureTitle: 'Insert figure',
+        localFigureMode: 'Local image',
+        remoteFigureMode: 'Image URL',
+        chooseLocalFigure: 'Choose local image',
+        changeLocalFigure: 'Change local image',
+        localFigureHint: 'Package an image file into the downloaded .aira archive.',
+        insertLocalFigure: 'Insert local figure',
+        insertRemoteFigure: 'Insert URL figure',
+        remoteFigureUrl: 'Image URL',
+        figureTitle: 'Title (optional)',
+        figureLegend: 'Legend (optional)',
+        closePanel: 'Close',
+        invalidRemoteFigureUrl: 'Enter an http:// or https:// image URL.',
+        selectLocalFigureFirst: 'Choose a local image first.',
+        figureInserted: 'Figure inserted',
+        clearContent: 'Clear',
+        contentCleared: 'Content cleared',
+        downloadAimd: 'Download .aimd',
+        downloadAira: 'Download .aira',
+        packagingDownload: 'Packaging...',
+        fileCount: 'Protocol files',
+        removeFile: 'Remove',
+        ready: 'Ready',
+        uploadSkipped: 'No image file was selected.',
+        downloadCompleteAimd: 'Downloaded .aimd',
+        downloadCompleteAira: 'Downloaded .aira',
+        downloadFailed: 'Download failed',
       },
       renderer: {
         desc: 'AIMD rendering engine that renders AIMD source into HTML and Vue VNodes',
@@ -308,7 +382,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
       tutorial: '交互式教程',
       examples: '案例',
       core: 'Core 解析器',
-      editor: 'Editor 编辑器',
+      editor: '在线编辑',
       renderer: 'Renderer 渲染器',
       recorder: 'Recorder 记录器',
     },
@@ -337,7 +411,44 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         desc: 'AIMD 核心解析器 — 将 AIMD 源码解析为 AST 并提取字段信息',
       },
       editor: {
-        desc: 'AIMD Editor — 支持 Source mode / WYSIWYG mode 与内建 UI 双语切换',
+        title: 'AIMD 在线编辑器',
+        desc: '在线编辑 AIMD，实时预览渲染结果，并下载为 `.aimd` 或 `.aira`。',
+        templatePickerTitle: '案例模板',
+        changeTemplate: '选择模板',
+        loadTemplate: '加载模板',
+        blankTemplateHint: '默认从空白 AIMD 开始，也可以加载一个案例模板作为基础再修改。',
+        templateLoaded: '已加载模板',
+        sourceTitle: '编辑器',
+        previewTitle: '实时预览',
+        emptyPreview: '添加 AIMD 内容后，这里会显示实时预览。',
+        renderFailed: '预览失败',
+        insertFigureTitle: '插入图片',
+        localFigureMode: '本地图片',
+        remoteFigureMode: '网络图片',
+        chooseLocalFigure: '选择本地图片',
+        changeLocalFigure: '更换本地图片',
+        localFigureHint: '把图片文件打包进下载的 .aira 归档。',
+        insertLocalFigure: '插入本地图片',
+        insertRemoteFigure: '插入网络图片',
+        remoteFigureUrl: '图片 URL',
+        figureTitle: '标题（可选）',
+        figureLegend: '图注（可选）',
+        closePanel: '关闭',
+        invalidRemoteFigureUrl: '请输入 http:// 或 https:// 图片 URL。',
+        selectLocalFigureFirst: '请先选择一张本地图片。',
+        figureInserted: '已插入图片',
+        clearContent: '清空',
+        contentCleared: '已清空',
+        downloadAimd: '下载 .aimd',
+        downloadAira: '下载 .aira',
+        packagingDownload: '正在打包...',
+        fileCount: 'Protocol 文件',
+        removeFile: '移除',
+        ready: '就绪',
+        uploadSkipped: '未选择图片文件。',
+        downloadCompleteAimd: '已下载 .aimd',
+        downloadCompleteAira: '已下载 .aira',
+        downloadFailed: '下载失败',
       },
       renderer: {
         desc: 'AIMD 渲染引擎 — 将 AIMD 源码渲染为 HTML 和 Vue VNodes',

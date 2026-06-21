@@ -53,6 +53,9 @@ importers:
       '@airalogy/aimd-renderer':
         specifier: workspace:*
         version: link:../../packages/npm/aimd-renderer
+      '@airalogy/aira-core':
+        specifier: workspace:*
+        version: link:../../packages/npm/aira-core
       katex:
         specifier: 'catalog:'
         version: 0.16.28

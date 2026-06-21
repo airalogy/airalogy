@@ -38,5 +38,6 @@ pnpm docs:dev
 ## 指南与参考
 
 - [集成指南](/zh/integration)
+- [带本地图片的 AIMD 文件交换](/zh/file-exchange)
 - [API 参考](/zh/api-reference)
 - [故障排查 / FAQ](/zh/troubleshooting)

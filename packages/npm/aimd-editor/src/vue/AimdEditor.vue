@@ -19,6 +19,7 @@ import {
   createMdToolbarItems,
   getQuickAimdSyntax,
   type AimdEditorProps,
+  type AimdEditorImageRequest,
 } from './types'
 import { useEditorContent } from './useEditorContent'
 
@@ -31,6 +32,7 @@ const props = withDefaults(defineProps<AimdEditorProps>(), {
   showToolbar: true,
   showAimdToolbar: true,
   showMdToolbar: true,
+  imageToolbarAction: 'markdown',
   enableBlockHandle: true,
   enableSlashMenu: true,
   keepInactiveEditorsMounted: true,
@@ -43,6 +45,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'update:mode', mode: 'source' | 'wysiwyg'): void
   (e: 'ready', editor: { monaco?: any; milkdown?: Editor }): void
+  (e: 'request-image', request: AimdEditorImageRequest): void
 }>()
 
 // --- Resolved messages ---
@@ -126,6 +129,28 @@ function onDialogInsert(syntax: string) {
   insertTextIntoActiveEditor(syntax)
 }
 
+function getToolbarButtonRect(target: EventTarget | null): AimdEditorImageRequest['buttonRect'] {
+  if (!(target instanceof HTMLElement)) return undefined
+  const rect = target.getBoundingClientRect()
+  return {
+    top: rect.top,
+    right: rect.right,
+    bottom: rect.bottom,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+  }
+}
+
+function handleMdToolbarAction(action: string, event: MouseEvent) {
+  if (action === 'image' && props.imageToolbarAction === 'custom') {
+    emit('request-image', { buttonRect: getToolbarButtonRect(event.currentTarget) })
+    return
+  }
+
+  handleMdAction(action)
+}
+
 // --- Source editor refs ---
 const sourceEditorRef = ref<InstanceType<typeof AimdSourceEditor> | null>(null)
 const wysiwygEditorRef = ref<InstanceType<typeof AimdWysiwygEditor> | null>(null)
@@ -180,7 +205,7 @@ defineExpose({
       :localized-field-types="localizedFieldTypes"
       :localized-md-toolbar-items="localizedMdToolbarItems"
       @switch-mode="switchMode"
-      @md-action="handleMdAction"
+      @md-action="handleMdToolbarAction"
       @open-aimd-dialog="openAimdDialog"
       @quick-insert-aimd="quickInsertAimd"
     />

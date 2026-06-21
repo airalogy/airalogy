@@ -18,9 +18,14 @@ const pageSources = {
 describe('DemoExamplePicker', () => {
   it('centralizes compact example selection in the shared picker', () => {
     expect(source).toContain("variant?: 'compact' | 'list'")
+    expect(source).toContain('titleLabel?: string')
+    expect(source).toContain('changeLabel?: string')
+    expect(source).toContain('resetLabel?: string')
     expect(source).toContain("variant: 'compact'")
     expect(source).toContain('demo-example-picker__current')
     expect(source).toContain('demo-example-picker__list-panel--popover')
+    expect(source).toContain('props.titleLabel ?? messages.value.examples.title')
+    expect(source).toContain('props.resetLabel ?? messages.value.examples.resetCurrent')
   })
 
   it('uses the compact picker by default on package tabs and list mode in the examples popover', () => {

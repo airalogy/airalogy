@@ -13,8 +13,9 @@ describe('aimd demo router startup', () => {
     expect(source).toMatch(/app\.mount\('#app'\)/)
   })
 
-  it('redirects unknown routes back to the tutorial', () => {
+  it('redirects root and unknown routes to the online editor', () => {
+    expect(source).toMatch(/path: '\/', redirect: '\/editor'/)
     expect(source).toMatch(/path: '\/:pathMatch\(\.\*\)\*'/)
-    expect(source).toMatch(/redirect: '\/tutorial'/)
+    expect(source).toMatch(/redirect: '\/editor'/)
   })
 })

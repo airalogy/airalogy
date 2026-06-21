@@ -25,6 +25,9 @@ export {
 export type {
   AimdFieldTypeDefinition,
   AimdFieldType,
+  AimdEditorImageToolbarAction,
+  AimdEditorImageRequest,
+  AimdEditorToolbarButtonRect,
   AimdVarTypePresetOption,
   MdToolbarItemDefinition,
   MdToolbarItem,

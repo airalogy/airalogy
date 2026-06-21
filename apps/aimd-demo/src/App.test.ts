@@ -8,9 +8,11 @@ const __dirname = dirname(__filename)
 const source = readFileSync(resolve(__dirname, './App.vue'), 'utf8')
 
 describe('App layout', () => {
-  it('keeps the examples route bounded to the viewport', () => {
+  it('keeps workspace routes bounded to the viewport', () => {
     expect(source).toContain("'app--bounded': isBoundedRoute")
-    expect(source).toContain("currentPath.value === '/examples' || currentPath.value.startsWith('/examples/')")
+    expect(source).toContain("currentPath.value === '/editor'")
+    expect(source).toContain("currentPath.value === '/examples'")
+    expect(source).toContain("currentPath.value.startsWith('/examples/')")
     expect(source).toContain("document.body.classList.toggle('aimd-demo-body--bounded', isBoundedRoute.value)")
     expect(source).toContain("window.scrollTo({ top: 0, left: 0 })")
     expect(source).toMatch(/body\.aimd-demo-body--bounded \{[\s\S]*height: 100dvh;[\s\S]*overflow: hidden;/)

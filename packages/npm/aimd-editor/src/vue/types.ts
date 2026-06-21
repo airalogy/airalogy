@@ -36,6 +36,21 @@ export interface MdToolbarItem extends MdToolbarItemDefinition {
   title?: string
 }
 
+export type AimdEditorImageToolbarAction = 'markdown' | 'custom'
+
+export interface AimdEditorToolbarButtonRect {
+  top: number
+  right: number
+  bottom: number
+  left: number
+  width: number
+  height: number
+}
+
+export interface AimdEditorImageRequest {
+  buttonRect?: AimdEditorToolbarButtonRect
+}
+
 export interface AimdEditorProps {
   /** Initial / bound markdown content (v-model) */
   modelValue?: string
@@ -55,6 +70,8 @@ export interface AimdEditorProps {
   showAimdToolbar?: boolean
   /** Whether to show the Markdown toolbar section */
   showMdToolbar?: boolean
+  /** How the Markdown image toolbar button behaves */
+  imageToolbarAction?: AimdEditorImageToolbarAction
   /** Whether to enable the Milkdown block handle (plus button on left) */
   enableBlockHandle?: boolean
   /** Whether to enable the slash menu (type / to insert) */
@@ -75,6 +92,7 @@ export interface AimdEditorEmits {
   (e: 'update:modelValue', value: string): void
   (e: 'update:mode', mode: 'source' | 'wysiwyg'): void
   (e: 'ready', editor: { monaco?: any; milkdown?: Editor }): void
+  (e: 'request-image', request: AimdEditorImageRequest): void
 }
 
 // SVG icon helpers – all 16×16, stroke-based, currentColor

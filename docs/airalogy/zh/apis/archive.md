@@ -88,6 +88,35 @@ airalogy validate ./record_bundle.aira
 airalogy validate ./record_bundle.aira --json
 ```
 
+## 浏览器打包 API
+
+`@airalogy/aira-core` 可以直接在浏览器兼容的 JavaScript 中生成单个 Protocol `.aira` 归档。这个能力适合 AIMD 编辑工具：用户编辑 AIMD，同时把 `fig` 块引用的 Protocol 本地资源一并打包，例如 `src: files/workflow-diagram.svg`。
+
+```ts
+import { createProtocolAiraArchive } from '@airalogy/aira-core'
+
+const bytes = await createProtocolAiraArchive({
+  aimd: [
+    '# Figure Protocol',
+    '',
+    '```fig',
+    'id: workflow_diagram',
+    'src: files/workflow-diagram.svg',
+    'title: Workflow Diagram',
+    '```',
+    '',
+  ].join('\n'),
+  files: [
+    {
+      path: 'files/workflow-diagram.svg',
+      data: svgFile,
+    },
+  ],
+})
+```
+
+生成的归档使用 `kind: "protocol"`，在归档根目录写入 `protocol.aimd`，把附件按 Protocol 本地路径保存，并在 `protocol.file_hashes` 中记录 SHA-256 hash。
+
 ## Airalogy Reader
 
 仓库中提供了浏览器版 Reader 应用：`apps/aira-reader`。它可以在本地打开 `.aira` 文件，显示 manifest、protocol、record、归档成员和校验问题，并且不会把文件内容上传到服务器。

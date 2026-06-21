@@ -102,13 +102,40 @@ export interface AiraValidationResult {
   issues: string[]
 }
 
+export type AiraArchiveEntryData = string | Blob | ArrayBuffer | ArrayBufferView
+
+export interface CreateProtocolAiraArchiveFile {
+  path: string
+  data: AiraArchiveEntryData
+}
+
+export interface CreateProtocolAiraArchiveOptions {
+  aimd: string
+  protocol?: Pick<AiraProtocolManifest, 'protocol_id' | 'protocol_version' | 'protocol_name' | 'entrypoint'>
+  files?: CreateProtocolAiraArchiveFile[]
+  createdAt?: string
+}
+
 type ZipEntryInternal = AiraEntry & {
   compressedDataStart: number
+}
+
+type ZipEntryPayload = {
+  name: string
+  bytes: Uint8Array
+}
+
+type ZipEntryPrepared = ZipEntryPayload & {
+  crc32: number
+  localHeaderOffset: number
 }
 
 const textDecoder = new TextDecoder('utf-8')
 const textEncoder = new TextEncoder()
 const sha256Pattern = /^[0-9a-f]{64}$/
+const ZIP_STORED_METHOD = 0
+const ZIP_UTF8_FLAG = 0x0800
+const ZIP_UINT32_MAX = 0xffffffff
 
 function getUint16(view: DataView, offset: number): number {
   return view.getUint16(offset, true)
@@ -130,6 +157,22 @@ function validateMemberPath(name: string): string | null {
     return `Archive member '${name}' escapes the archive root.`
   }
   return null
+}
+
+function normalizeArchiveMemberPath(path: string, label: string): string {
+  const normalized = path
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter(part => part && part !== '.')
+    .join('/')
+  const issue = validateMemberPath(normalized)
+  if (issue || path.startsWith('/') || path.replace(/\\/g, '/').split('/').some(part => part === '..')) {
+    throw new Error(issue ?? `${label} '${path}' is not a safe relative archive path.`)
+  }
+  if (normalized === AIRA_MANIFEST_PATH || normalized.startsWith('_airalogy_archive/')) {
+    throw new Error(`${label} '${path}' conflicts with Airalogy archive metadata.`)
+  }
+  return normalized
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -289,6 +332,229 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
   return Array.from(new Uint8Array(digest))
     .map(value => value.toString(16).padStart(2, '0'))
     .join('')
+}
+
+function makeCrc32Table(): Uint32Array {
+  const table = new Uint32Array(256)
+  for (let index = 0; index < 256; index += 1) {
+    let value = index
+    for (let bit = 0; bit < 8; bit += 1) {
+      value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1
+    }
+    table[index] = value >>> 0
+  }
+  return table
+}
+
+const crc32Table = makeCrc32Table()
+
+function crc32(bytes: Uint8Array): number {
+  let crc = 0xffffffff
+  for (const byte of bytes) {
+    crc = crc32Table[(crc ^ byte) & 0xff] ^ (crc >>> 8)
+  }
+  return (crc ^ 0xffffffff) >>> 0
+}
+
+function concatBytes(parts: Uint8Array[]): Uint8Array {
+  const totalLength = parts.reduce((sum, part) => sum + part.byteLength, 0)
+  const output = new Uint8Array(totalLength)
+  let offset = 0
+  for (const part of parts) {
+    output.set(part, offset)
+    offset += part.byteLength
+  }
+  return output
+}
+
+function dateToDosTimeAndDate(date: Date): { time: number; date: number } {
+  const year = Math.max(1980, Math.min(2107, date.getFullYear()))
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const hours = date.getHours()
+  const minutes = date.getMinutes()
+  const seconds = Math.floor(date.getSeconds() / 2)
+  return {
+    time: (hours << 11) | (minutes << 5) | seconds,
+    date: ((year - 1980) << 9) | (month << 5) | day,
+  }
+}
+
+function assertZipUint32(value: number, label: string): void {
+  if (!Number.isInteger(value) || value < 0 || value > ZIP_UINT32_MAX) {
+    throw new Error(`${label} exceeds the ZIP32 size limit.`)
+  }
+}
+
+function writeZipLocalHeader(entry: ZipEntryPrepared, dos: { time: number; date: number }): Uint8Array {
+  const nameBytes = textEncoder.encode(entry.name)
+  assertZipUint32(entry.bytes.byteLength, `Archive member '${entry.name}'`)
+  const header = new Uint8Array(30 + nameBytes.byteLength)
+  const view = new DataView(header.buffer, header.byteOffset, header.byteLength)
+  view.setUint32(0, 0x04034b50, true)
+  view.setUint16(4, 20, true)
+  view.setUint16(6, ZIP_UTF8_FLAG, true)
+  view.setUint16(8, ZIP_STORED_METHOD, true)
+  view.setUint16(10, dos.time, true)
+  view.setUint16(12, dos.date, true)
+  view.setUint32(14, entry.crc32, true)
+  view.setUint32(18, entry.bytes.byteLength, true)
+  view.setUint32(22, entry.bytes.byteLength, true)
+  view.setUint16(26, nameBytes.byteLength, true)
+  view.setUint16(28, 0, true)
+  header.set(nameBytes, 30)
+  return header
+}
+
+function writeZipCentralDirectoryEntry(entry: ZipEntryPrepared, dos: { time: number; date: number }): Uint8Array {
+  const nameBytes = textEncoder.encode(entry.name)
+  const header = new Uint8Array(46 + nameBytes.byteLength)
+  const view = new DataView(header.buffer, header.byteOffset, header.byteLength)
+  view.setUint32(0, 0x02014b50, true)
+  view.setUint16(4, 20, true)
+  view.setUint16(6, 20, true)
+  view.setUint16(8, ZIP_UTF8_FLAG, true)
+  view.setUint16(10, ZIP_STORED_METHOD, true)
+  view.setUint16(12, dos.time, true)
+  view.setUint16(14, dos.date, true)
+  view.setUint32(16, entry.crc32, true)
+  view.setUint32(20, entry.bytes.byteLength, true)
+  view.setUint32(24, entry.bytes.byteLength, true)
+  view.setUint16(28, nameBytes.byteLength, true)
+  view.setUint16(30, 0, true)
+  view.setUint16(32, 0, true)
+  view.setUint16(34, 0, true)
+  view.setUint16(36, 0, true)
+  view.setUint32(38, 0, true)
+  view.setUint32(42, entry.localHeaderOffset, true)
+  header.set(nameBytes, 46)
+  return header
+}
+
+function writeZipEndOfCentralDirectory(entryCount: number, centralDirectorySize: number, centralDirectoryOffset: number): Uint8Array {
+  assertZipUint32(entryCount, 'Archive entry count')
+  assertZipUint32(centralDirectorySize, 'Central directory')
+  assertZipUint32(centralDirectoryOffset, 'Central directory offset')
+  if (entryCount > 0xffff) {
+    throw new Error('Archive entry count exceeds the ZIP32 entry limit.')
+  }
+  const end = new Uint8Array(22)
+  const view = new DataView(end.buffer)
+  view.setUint32(0, 0x06054b50, true)
+  view.setUint16(4, 0, true)
+  view.setUint16(6, 0, true)
+  view.setUint16(8, entryCount, true)
+  view.setUint16(10, entryCount, true)
+  view.setUint32(12, centralDirectorySize, true)
+  view.setUint32(16, centralDirectoryOffset, true)
+  view.setUint16(20, 0, true)
+  return end
+}
+
+function createStoredZip(entries: ZipEntryPayload[], date = new Date()): Uint8Array {
+  const dos = dateToDosTimeAndDate(date)
+  const preparedEntries: ZipEntryPrepared[] = []
+  const localParts: Uint8Array[] = []
+  const centralParts: Uint8Array[] = []
+  let offset = 0
+
+  for (const entry of entries) {
+    const prepared: ZipEntryPrepared = {
+      ...entry,
+      crc32: crc32(entry.bytes),
+      localHeaderOffset: offset,
+    }
+    const localHeader = writeZipLocalHeader(prepared, dos)
+    localParts.push(localHeader, prepared.bytes)
+    offset += localHeader.byteLength + prepared.bytes.byteLength
+    assertZipUint32(offset, 'Archive size')
+    preparedEntries.push(prepared)
+  }
+
+  const centralDirectoryOffset = offset
+  for (const entry of preparedEntries) {
+    const central = writeZipCentralDirectoryEntry(entry, dos)
+    centralParts.push(central)
+    offset += central.byteLength
+    assertZipUint32(offset, 'Archive size')
+  }
+
+  const centralDirectorySize = offset - centralDirectoryOffset
+  return concatBytes([
+    ...localParts,
+    ...centralParts,
+    writeZipEndOfCentralDirectory(preparedEntries.length, centralDirectorySize, centralDirectoryOffset),
+  ])
+}
+
+async function toArchiveBytes(data: AiraArchiveEntryData): Promise<Uint8Array> {
+  if (typeof data === 'string') {
+    return textEncoder.encode(data)
+  }
+  if (typeof Blob !== 'undefined' && data instanceof Blob) {
+    return new Uint8Array(await data.arrayBuffer())
+  }
+  if (data instanceof ArrayBuffer) {
+    return new Uint8Array(data)
+  }
+  if (ArrayBuffer.isView(data)) {
+    return new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+  }
+  throw new Error('Archive entry data must be a string, Blob, ArrayBuffer, or ArrayBufferView.')
+}
+
+function inferProtocolNameFromAimd(aimd: string): string | null {
+  for (const line of aimd.split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('# ')) {
+      return trimmed.slice(2).trim() || null
+    }
+  }
+  return null
+}
+
+export async function createProtocolAiraArchive(options: CreateProtocolAiraArchiveOptions): Promise<Uint8Array> {
+  const entrypoint = normalizeArchiveMemberPath(options.protocol?.entrypoint ?? 'protocol.aimd', 'Protocol entrypoint')
+  const entries = new Map<string, Uint8Array>()
+  entries.set(entrypoint, textEncoder.encode(options.aimd))
+
+  for (const file of options.files ?? []) {
+    const path = normalizeArchiveMemberPath(file.path, 'Protocol file')
+    if (path === entrypoint || entries.has(path)) {
+      throw new Error(`Protocol archive contains duplicate file path '${path}'.`)
+    }
+    entries.set(path, await toArchiveBytes(file.data))
+  }
+
+  const fileNames = Array.from(entries.keys())
+  const fileHashes: Record<string, string> = {}
+  for (const [path, bytes] of entries) {
+    fileHashes[path] = await sha256Hex(bytes)
+  }
+
+  const manifest: AiraManifest = {
+    format: AIRA_ARCHIVE_FORMAT,
+    version: 1,
+    kind: 'protocol',
+    created_at: options.createdAt ?? new Date().toISOString(),
+    protocol: {
+      protocol_id: options.protocol?.protocol_id ?? null,
+      protocol_version: options.protocol?.protocol_version ?? null,
+      protocol_name: options.protocol?.protocol_name ?? inferProtocolNameFromAimd(options.aimd) ?? null,
+      entrypoint,
+      files: fileNames,
+      file_hashes: fileHashes,
+    },
+  }
+
+  const archiveEntries: ZipEntryPayload[] = [
+    {
+      name: AIRA_MANIFEST_PATH,
+      bytes: textEncoder.encode(`${JSON.stringify(manifest, null, 2)}\n`),
+    },
+    ...fileNames.map(name => ({ name, bytes: entries.get(name)! })),
+  ]
+  return createStoredZip(archiveEntries)
 }
 
 export class AiraArchive {

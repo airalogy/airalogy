@@ -14,7 +14,7 @@ defineProps<{
 
 const emit = defineEmits<{
   (e: 'switch-mode', mode: 'source' | 'wysiwyg'): void
-  (e: 'md-action', action: string): void
+  (e: 'md-action', action: string, event: MouseEvent): void
   (e: 'open-aimd-dialog', type: string): void
   (e: 'quick-insert-aimd', type: string): void
 }>()
@@ -55,7 +55,7 @@ const emit = defineEmits<{
           type="button"
           class="aimd-editor-fmt-btn"
           :title="item.title"
-          @click="emit('md-action', item.action)"
+          @click="emit('md-action', item.action, $event)"
           v-html="item.svgIcon"
         />
       </template>

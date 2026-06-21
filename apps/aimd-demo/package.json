@@ -14,6 +14,7 @@
     "@airalogy/aimd-editor": "workspace:*",
     "@airalogy/aimd-recorder": "workspace:*",
     "@airalogy/aimd-renderer": "workspace:*",
+    "@airalogy/aira-core": "workspace:*",
     "katex": "catalog:",
     "monaco-editor": "^0.52.2",
     "remark-gfm": "^4.0.1",

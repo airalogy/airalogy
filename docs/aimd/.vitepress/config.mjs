@@ -44,6 +44,7 @@ const legacyDemoHashRedirectScript = `(() => {
 
 const enGuideSidebarItems = [
   { text: 'Integration Guide', link: '/en/integration' },
+  { text: 'File Exchange With Figures', link: '/en/file-exchange' },
   { text: 'Examples', link: '/en/examples' },
   { text: 'API Reference', link: '/en/api-reference' },
   { text: 'Troubleshooting / FAQ', link: '/en/troubleshooting' },
@@ -51,6 +52,7 @@ const enGuideSidebarItems = [
 
 const zhGuideSidebarItems = [
   { text: '集成指南', link: '/zh/integration' },
+  { text: '带图 AIMD 文件交换', link: '/zh/file-exchange' },
   { text: '案例', link: '/zh/examples' },
   { text: 'API 参考', link: '/zh/api-reference' },
   { text: '故障排查 / FAQ', link: '/zh/troubleshooting' },

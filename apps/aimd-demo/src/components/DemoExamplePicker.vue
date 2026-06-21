@@ -10,6 +10,9 @@ import {
 const props = withDefaults(defineProps<{
   selectedId: string
   variant?: 'compact' | 'list'
+  titleLabel?: string
+  changeLabel?: string
+  resetLabel?: string
 }>(), {
   variant: 'compact',
 })
@@ -27,11 +30,13 @@ const isListOpen = ref(false)
 const selectedExample = computed(() => (
   examples.value.find(example => example.id === props.selectedId) ?? examples.value[0]
 ))
+const titleLabel = computed(() => props.titleLabel ?? messages.value.examples.title)
 const toggleLabel = computed(() => (
   isListOpen.value
     ? messages.value.examples.hideList
-    : messages.value.examples.changeCurrent
+    : (props.changeLabel ?? messages.value.examples.changeCurrent)
 ))
+const resetLabel = computed(() => props.resetLabel ?? messages.value.examples.resetCurrent)
 
 function getTitle(example: DemoExample): string {
   return resolveDemoExampleText(example.title, locale.value)
@@ -69,7 +74,7 @@ function handleReset() {
   >
     <div v-if="props.variant === 'compact'" class="demo-example-picker__current">
       <span class="demo-example-picker__current-copy">
-        <span class="demo-example-picker__current-label">{{ messages.examples.title }}</span>
+        <span class="demo-example-picker__current-label">{{ titleLabel }}</span>
         <span class="demo-example-picker__current-title">{{ getTitle(selectedExample) }}</span>
         <span class="demo-example-picker__badge">{{ getBadge(selectedExample) }}</span>
         <span class="demo-example-picker__current-desc">{{ getDescription(selectedExample) }}</span>
@@ -84,7 +89,7 @@ function handleReset() {
           {{ toggleLabel }}
         </button>
         <button type="button" class="demo-example-picker__control" @click="handleReset">
-          {{ messages.examples.resetCurrent }}
+          {{ resetLabel }}
         </button>
       </span>
     </div>
@@ -95,9 +100,9 @@ function handleReset() {
       :class="{ 'demo-example-picker__list-panel--popover': props.variant === 'compact' }"
     >
       <div class="demo-example-picker__header">
-        <h3 class="demo-example-picker__title">{{ messages.examples.title }}</h3>
+        <h3 class="demo-example-picker__title">{{ titleLabel }}</h3>
         <button type="button" class="demo-example-picker__reset" @click="handleReset">
-          {{ messages.examples.resetCurrent }}
+          {{ resetLabel }}
         </button>
       </div>
 

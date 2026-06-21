@@ -12,17 +12,19 @@ const docsHref = computed(() => locale.value === 'zh-CN'
 const githubHref = 'https://github.com/airalogy/airalogy'
 
 const navItems = computed(() => [
+  { path: '/editor', label: messages.value.nav.editor },
   { path: '/tutorial', label: messages.value.nav.tutorial },
   { path: '/examples', label: messages.value.nav.examples },
   { path: '/core', label: messages.value.nav.core },
-  { path: '/editor', label: messages.value.nav.editor },
   { path: '/renderer', label: messages.value.nav.renderer },
   { path: '/recorder', label: messages.value.nav.recorder },
 ])
 
 const currentPath = computed(() => route.path)
 const isBoundedRoute = computed(() => (
-  currentPath.value === '/examples' || currentPath.value.startsWith('/examples/')
+  currentPath.value === '/editor'
+  || currentPath.value === '/examples'
+  || currentPath.value.startsWith('/examples/')
 ))
 
 watchEffect(() => {

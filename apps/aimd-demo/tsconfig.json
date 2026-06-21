@@ -5,6 +5,8 @@
     "paths": {
       "@airalogy/aimd-core": ["../../packages/npm/aimd-core/src"],
       "@airalogy/aimd-core/*": ["../../packages/npm/aimd-core/src/*"],
+      "@airalogy/aira-core": ["../../packages/npm/aira-core/src"],
+      "@airalogy/aira-core/*": ["../../packages/npm/aira-core/src/*"],
       "@airalogy/aimd-editor": ["../../packages/npm/aimd-editor/src"],
       "@airalogy/aimd-editor/*": ["../../packages/npm/aimd-editor/src/*"],
       "@airalogy/aimd-renderer": ["../../packages/npm/aimd-renderer/src"],
