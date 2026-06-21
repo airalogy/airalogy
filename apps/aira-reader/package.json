@@ -2,7 +2,7 @@
   "name": "@airalogy/aira-reader",
   "private": true,
   "type": "module",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "scripts": {
     "dev": "vite",
     "build": "pnpm build:web",

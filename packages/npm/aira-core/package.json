@@ -1,7 +1,7 @@
 {
   "name": "@airalogy/aira-core",
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Core parser and validator for Airalogy .aira archives",
   "license": "Apache-2.0",
   "repository": {
