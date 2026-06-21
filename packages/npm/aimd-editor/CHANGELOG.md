@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.9.1
+
+### Patch Changes
+
+- c8b8066: Add a browser-compatible protocol `.aira` archive writer for AIMD files with protocol-local assets such as `files/workflow-diagram.svg`.
+
+  Allow AIMD editor hosts to override the image toolbar action and receive the image button position so applications can offer URL figures, local uploads, or archive-aware image insertion flows from an anchored popover.
+
+  Include AIMD field, reference, quiz, refs block, and full-width variable-table preview styles in the renderer stylesheet so static previews that import `@airalogy/aimd-renderer/styles` render AIMD tokens correctly without depending on recorder styles.
+
+- Updated dependencies [c8b8066]
+  - @airalogy/aimd-renderer@2.8.1
+
 ## 1.9.0
 
 ### Minor Changes
