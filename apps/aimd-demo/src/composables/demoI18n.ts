@@ -86,6 +86,8 @@ export interface DemoMessages {
       loadTemplate: string
       blankTemplateHint: string
       templateLoaded: string
+      draftRestored: string
+      draftSaveFailed: string
       sourceTitle: string
       previewTitle: string
       emptyPreview: string
@@ -253,6 +255,8 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         loadTemplate: 'Load Template',
         blankTemplateHint: 'Start from a blank AIMD document, or load an example template as a base for editing.',
         templateLoaded: 'Template loaded',
+        draftRestored: 'Local draft restored',
+        draftSaveFailed: 'Local draft could not be saved',
         sourceTitle: 'Editor',
         previewTitle: 'Live Preview',
         emptyPreview: 'Preview will appear here after you add AIMD content.',
@@ -418,6 +422,8 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         loadTemplate: '加载模板',
         blankTemplateHint: '默认从空白 AIMD 开始，也可以加载一个案例模板作为基础再修改。',
         templateLoaded: '已加载模板',
+        draftRestored: '已恢复本地草稿',
+        draftSaveFailed: '本地草稿保存失败',
         sourceTitle: '编辑器',
         previewTitle: '实时预览',
         emptyPreview: '添加 AIMD 内容后，这里会显示实时预览。',

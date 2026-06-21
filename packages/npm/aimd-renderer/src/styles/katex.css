@@ -77,11 +77,11 @@
 .aimd-field--var-table {
   display: block;
   box-sizing: border-box;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   margin: 8px 0;
   padding: 6px 8px;
-  overflow-x: auto;
+  overflow: visible;
   border: 1px solid #a5d6a7;
   border-radius: 4px;
   background-color: #e8f5e9;
@@ -118,13 +118,16 @@
   border-collapse: collapse;
   border-radius: 4px;
   font-size: 12px;
+  table-layout: fixed;
 }
 
 .aimd-field--var-table .aimd-field__table-preview th,
 .aimd-field--var-table .aimd-field__table-preview td {
   padding: 4px 8px;
   border: 1px solid #c8e6c9;
+  overflow-wrap: anywhere;
   text-align: left;
+  vertical-align: top;
 }
 
 .aimd-field--var-table .aimd-field__table-preview th {

@@ -337,6 +337,8 @@ describe('renderToHtmlSync', () => {
     expect(rendererStyles).toMatch(/\.aimd-field__name--with-metadata \{[\s\S]*?flex-direction: column;/)
     expect(rendererStyles).toMatch(/\.aimd-field__title \{[\s\S]*?overflow-wrap: anywhere;/)
     expect(rendererStyles).toMatch(/\.aimd-field--var-table \{[\s\S]*?display: block;/)
+    expect(rendererStyles).toMatch(/\.aimd-field--var-table \{[\s\S]*?width: 100%;/)
+    expect(rendererStyles).toMatch(/\.aimd-field--var-table \.aimd-field__table-preview \{[\s\S]*?table-layout: fixed;/)
     expect(rendererStyles).toMatch(/\.aimd-field--quiz \{[\s\S]*?max-width: 860px;/)
     expect(rendererStyles).toMatch(/\.aimd-field--check \{[\s\S]*?display: inline-flex;/)
     expect(rendererStyles).toMatch(/\.aimd-refs \{[\s\S]*?border-top: 1px solid #d8dee8;/)

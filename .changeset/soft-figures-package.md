@@ -8,4 +8,4 @@ Add a browser-compatible protocol `.aira` archive writer for AIMD files with pro
 
 Allow AIMD editor hosts to override the image toolbar action and receive the image button position so applications can offer URL figures, local uploads, or archive-aware image insertion flows from an anchored popover.
 
-Include AIMD field, reference, quiz, and refs block styles in the renderer stylesheet so static previews that import `@airalogy/aimd-renderer/styles` render AIMD tokens correctly without depending on recorder styles.
+Include AIMD field, reference, quiz, refs block, and full-width variable-table preview styles in the renderer stylesheet so static previews that import `@airalogy/aimd-renderer/styles` render AIMD tokens correctly without depending on recorder styles.

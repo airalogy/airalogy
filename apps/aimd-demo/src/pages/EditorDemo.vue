@@ -22,6 +22,29 @@ interface ProtocolFigureFile {
   previewUrl: string
 }
 
+interface StoredProtocolFigureFile {
+  id: string
+  index: number
+  title: string
+  path: string
+  name: string
+  type: string
+  lastModified: number
+  blob: Blob
+}
+
+interface EditorDraftRecord {
+  id: string
+  content: string
+  selectedExampleId: string
+  activeTemplateExampleId: string | null
+  activeTemplateLocale: DemoLocale
+  insertedFigureIds: string[]
+  uploadedFigureSerial: number
+  files: StoredProtocolFigureFile[]
+  updatedAt: string
+}
+
 interface FigureBlockInput {
   id: string
   src: string
@@ -42,6 +65,11 @@ const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
 const IMAGE_EXTENSION_PATTERN = /^(?:avif|gif|jpe?g|png|svg|webp)$/i
 const FIGURE_POPOVER_WIDTH = 420
 const FIGURE_POPOVER_GAP = 12
+const EDITOR_DRAFT_DB_NAME = 'airalogy-aimd-demo-editor'
+const EDITOR_DRAFT_DB_VERSION = 1
+const EDITOR_DRAFT_STORE_NAME = 'drafts'
+const EDITOR_DRAFT_ID = 'current'
+const EDITOR_DRAFT_SAVE_DELAY_MS = 500
 
 const { locale } = useDemoLocale()
 const messages = useDemoMessages()
@@ -76,6 +104,9 @@ const previewError = ref('')
 const figurePopoverPosition = ref({ top: 120, left: 24 })
 let uploadedFigureSerial = 1
 let previewRenderSerial = 0
+let draftSaveTimer: ReturnType<typeof setTimeout> | null = null
+let isDraftReady = false
+let isRestoringDraft = false
 
 const protocolFileCount = computed(() => protocolFiles.value.length)
 const archiveStatusLabel = computed(() => archiveStatus.value || messages.value.pages.editor.ready)
@@ -100,6 +131,186 @@ const downloadButtonLabel = computed(() => (
 ))
 const isContentBlank = computed(() => content.value.trim().length === 0)
 const canClearContent = computed(() => !isContentBlank.value || protocolFileCount.value > 0)
+
+function isEditorDraftStorageAvailable(): boolean {
+  return typeof window !== 'undefined' && 'indexedDB' in window
+}
+
+function openEditorDraftDatabase(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (!isEditorDraftStorageAvailable()) {
+      reject(new Error('IndexedDB is not available'))
+      return
+    }
+
+    const request = window.indexedDB.open(EDITOR_DRAFT_DB_NAME, EDITOR_DRAFT_DB_VERSION)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      if (!db.objectStoreNames.contains(EDITOR_DRAFT_STORE_NAME)) {
+        db.createObjectStore(EDITOR_DRAFT_STORE_NAME, { keyPath: 'id' })
+      }
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error ?? new Error('Failed to open editor draft database'))
+  })
+}
+
+async function readEditorDraft(): Promise<EditorDraftRecord | null> {
+  const db = await openEditorDraftDatabase()
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(EDITOR_DRAFT_STORE_NAME, 'readonly')
+    const store = transaction.objectStore(EDITOR_DRAFT_STORE_NAME)
+    const request = store.get(EDITOR_DRAFT_ID)
+    request.onsuccess = () => resolve((request.result as EditorDraftRecord | undefined) ?? null)
+    request.onerror = () => reject(request.error ?? new Error('Failed to read editor draft'))
+    transaction.oncomplete = () => db.close()
+    transaction.onerror = () => {
+      db.close()
+      reject(transaction.error ?? new Error('Failed to read editor draft'))
+    }
+  })
+}
+
+async function writeEditorDraft(draft: EditorDraftRecord): Promise<void> {
+  const db = await openEditorDraftDatabase()
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(EDITOR_DRAFT_STORE_NAME, 'readwrite')
+    transaction.objectStore(EDITOR_DRAFT_STORE_NAME).put(draft)
+    transaction.oncomplete = () => {
+      db.close()
+      resolve()
+    }
+    transaction.onerror = () => {
+      db.close()
+      reject(transaction.error ?? new Error('Failed to save editor draft'))
+    }
+  })
+}
+
+async function deleteEditorDraft(): Promise<void> {
+  const db = await openEditorDraftDatabase()
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(EDITOR_DRAFT_STORE_NAME, 'readwrite')
+    transaction.objectStore(EDITOR_DRAFT_STORE_NAME).delete(EDITOR_DRAFT_ID)
+    transaction.oncomplete = () => {
+      db.close()
+      resolve()
+    }
+    transaction.onerror = () => {
+      db.close()
+      reject(transaction.error ?? new Error('Failed to clear editor draft'))
+    }
+  })
+}
+
+function toStoredProtocolFigureFile(file: ProtocolFigureFile): StoredProtocolFigureFile {
+  return {
+    id: file.id,
+    index: file.index,
+    title: file.title,
+    path: file.path,
+    name: file.file.name,
+    type: file.file.type,
+    lastModified: file.file.lastModified,
+    blob: file.file,
+  }
+}
+
+function fromStoredProtocolFigureFile(file: StoredProtocolFigureFile): ProtocolFigureFile {
+  const restoredFile = new File([file.blob], file.name, {
+    type: file.type,
+    lastModified: file.lastModified,
+  })
+  return {
+    id: file.id,
+    index: file.index,
+    title: file.title,
+    path: file.path,
+    file: restoredFile,
+    previewUrl: URL.createObjectURL(restoredFile),
+  }
+}
+
+function hasEditorDraftContent(): boolean {
+  return content.value.length > 0 || protocolFileCount.value > 0 || activeTemplateExampleId.value !== null
+}
+
+function handleEditorDraftError(error: unknown) {
+  console.warn('AIMD editor draft storage failed:', error)
+  archiveStatus.value = messages.value.pages.editor.draftSaveFailed
+}
+
+async function saveEditorDraftNow(): Promise<void> {
+  if (!isDraftReady || isRestoringDraft) return
+  if (!isEditorDraftStorageAvailable()) return
+
+  if (!hasEditorDraftContent()) {
+    await deleteEditorDraft()
+    return
+  }
+
+  await writeEditorDraft({
+    id: EDITOR_DRAFT_ID,
+    content: content.value,
+    selectedExampleId: selectedExampleId.value,
+    activeTemplateExampleId: activeTemplateExampleId.value,
+    activeTemplateLocale: activeTemplateLocale.value,
+    insertedFigureIds: [...insertedFigureIds.value],
+    uploadedFigureSerial,
+    files: protocolFiles.value.map(toStoredProtocolFigureFile),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+function scheduleEditorDraftSave() {
+  if (!isDraftReady || isRestoringDraft) return
+  if (draftSaveTimer) {
+    clearTimeout(draftSaveTimer)
+  }
+  draftSaveTimer = setTimeout(() => {
+    draftSaveTimer = null
+    void saveEditorDraftNow().catch(handleEditorDraftError)
+  }, EDITOR_DRAFT_SAVE_DELAY_MS)
+}
+
+async function clearEditorDraft() {
+  if (!isEditorDraftStorageAvailable()) return
+  if (draftSaveTimer) {
+    clearTimeout(draftSaveTimer)
+    draftSaveTimer = null
+  }
+  await deleteEditorDraft()
+}
+
+async function restoreEditorDraft() {
+  if (!isEditorDraftStorageAvailable()) {
+    isDraftReady = true
+    return
+  }
+
+  isRestoringDraft = true
+  try {
+    const draft = await readEditorDraft()
+    if (!draft) return
+
+    clearProtocolFiles()
+    content.value = draft.content
+    selectedExampleId.value = draft.selectedExampleId || selectedExampleId.value
+    activeTemplateExampleId.value = draft.activeTemplateExampleId
+    activeTemplateLocale.value = draft.activeTemplateLocale
+    insertedFigureIds.value = [...draft.insertedFigureIds]
+    uploadedFigureSerial = Math.max(1, draft.uploadedFigureSerial || 1)
+    protocolFiles.value = draft.files.map(fromStoredProtocolFigureFile)
+    archiveStatus.value = messages.value.pages.editor.draftRestored
+  }
+  catch (error) {
+    handleEditorDraftError(error)
+  }
+  finally {
+    isRestoringDraft = false
+    isDraftReady = true
+  }
+}
 
 function handleExampleTemplateSelect(id: string) {
   clearProtocolFiles()
@@ -357,10 +568,14 @@ function resetFigureInsertForm() {
   figureInsertError.value = ''
 }
 
-function clearProtocolFiles() {
+function revokeProtocolFilePreviews() {
   for (const item of protocolFiles.value) {
     URL.revokeObjectURL(item.previewUrl)
   }
+}
+
+function clearProtocolFiles() {
+  revokeProtocolFilePreviews()
   protocolFiles.value = []
   uploadedFigureSerial = 1
   archiveStatus.value = ''
@@ -374,6 +589,7 @@ function clearEditorContent() {
   activeTemplateExampleId.value = null
   content.value = ''
   archiveStatus.value = messages.value.pages.editor.contentCleared
+  void clearEditorDraft().catch(handleEditorDraftError)
 }
 
 function removeProtocolFile(path: string) {
@@ -552,16 +768,30 @@ async function downloadProtocolFile() {
 }
 
 watch([content, locale, protocolFileCount], renderPreview, { immediate: true })
+watch([content, protocolFileCount, activeTemplateExampleId, activeTemplateLocale], scheduleEditorDraftSave)
+
+function handleEditorPageHide() {
+  if (draftSaveTimer) {
+    clearTimeout(draftSaveTimer)
+    draftSaveTimer = null
+  }
+  void saveEditorDraftNow().catch(error => console.warn('AIMD editor draft pagehide save failed:', error))
+}
 
 onMounted(() => {
   document.addEventListener('pointerdown', handleDocumentPointerDown)
   document.addEventListener('keydown', handleDocumentKeydown)
+  window.addEventListener('pagehide', handleEditorPageHide)
+  void restoreEditorDraft()
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', handleDocumentPointerDown)
   document.removeEventListener('keydown', handleDocumentKeydown)
-  clearProtocolFiles()
+  window.removeEventListener('pagehide', handleEditorPageHide)
+  handleEditorPageHide()
+  revokeSelectedLocalFigurePreview()
+  revokeProtocolFilePreviews()
 })
 </script>
 
@@ -1099,7 +1329,7 @@ onBeforeUnmount(() => {
   margin: 0.55em 0;
 }
 
-.render-preview :deep(table) {
+.render-preview :deep(table:not(.aimd-field__table-preview)) {
   display: block;
   width: 100%;
   max-width: 100%;
@@ -1107,6 +1337,14 @@ onBeforeUnmount(() => {
   overflow-x: auto;
   border-collapse: collapse;
   font-size: 14px;
+}
+
+.render-preview :deep(.aimd-field__table-preview) {
+  display: table;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  table-layout: fixed;
 }
 
 .render-preview :deep(th),
