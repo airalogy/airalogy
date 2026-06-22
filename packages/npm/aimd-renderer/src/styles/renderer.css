@@ -1,4 +1,4 @@
-/* Re-export KaTeX base styles for AIMD renderer consumers. */
+/* AIMD renderer styles, including KaTeX base styles for math output. */
 @import "katex/dist/katex.min.css";
 
 :root {

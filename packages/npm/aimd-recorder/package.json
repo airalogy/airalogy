@@ -38,8 +38,8 @@
       "import": "./src/record/index.ts"
     },
     "./styles": {
-      "import": "./src/styles/aimd.css",
-      "default": "./src/styles/aimd.css"
+      "import": "./src/styles/recorder.css",
+      "default": "./src/styles/recorder.css"
     }
   },
   "main": "./src/index.ts",

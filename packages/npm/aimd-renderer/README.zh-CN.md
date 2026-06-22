@@ -134,8 +134,7 @@ const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
 
 只读 `AiralogyMarkdown` 值会通过 AIMD Vue renderer 渲染，因此标题、列表、嵌套 AIMD 预览 token，以及已解析的 Markdown 图片资源都会作为文档内容显示，而不是显示原始 Markdown 文本。
 
-在浏览器环境中调用异步渲染 API（`renderToHtml` / `renderToVue`）时，会自动加载公式样式。  
-只有在你希望手动预加载样式时，才需要引入 `@airalogy/aimd-renderer/styles`。
+在浏览器环境中调用异步渲染 API（`renderToHtml` / `renderToVue`）时，会自动加载 renderer 样式。只有在你希望手动预加载或控制 renderer stylesheet 时，才需要引入 `@airalogy/aimd-renderer/styles`。
 
 ## 文档
 

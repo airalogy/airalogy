@@ -19,9 +19,9 @@ import {
 } from '../vue/readonly-record-renderer'
 import { createCodeBlockRenderer, createStepCardRenderer } from '../vue/vue-renderer'
 
-const rendererStylesPath = existsSync('src/styles/katex.css')
-  ? 'src/styles/katex.css'
-  : 'packages/npm/aimd-renderer/src/styles/katex.css'
+const rendererStylesPath = existsSync('src/styles/renderer.css')
+  ? 'src/styles/renderer.css'
+  : 'packages/npm/aimd-renderer/src/styles/renderer.css'
 const rendererStyles = readFileSync(rendererStylesPath, 'utf8')
 
 function findVNodeByType(node: any, expectedType: string): any | null {

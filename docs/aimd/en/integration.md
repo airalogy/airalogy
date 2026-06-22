@@ -398,7 +398,7 @@ import { createAimdRecorderMessages } from "@airalogy/aimd-recorder"
 
 ## Math and Styles
 
-The renderer loads KaTeX math styles automatically when using the async `renderToHtml` or `renderToVue` APIs in browser environments. For server-side rendering or manual control, import styles explicitly:
+The renderer loads its renderer stylesheet automatically when using the async `renderToHtml` or `renderToVue` APIs in browser environments. The stylesheet includes KaTeX base styles for math output and AIMD renderer UI styles. For server-side rendering or manual control, import styles explicitly:
 
 ```ts
 import "@airalogy/aimd-renderer/styles"

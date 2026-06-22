@@ -53,6 +53,6 @@ const { nodes } = await renderToVue(content, {
 
 ## 样式
 
-在浏览器环境中调用异步渲染 API（`renderToHtml` / `renderToVue`）时，会自动加载公式样式。
+在浏览器环境中调用异步渲染 API（`renderToHtml` / `renderToVue`）时，会自动加载 renderer 样式。这个样式表包含数学公式所需的 KaTeX 基础样式，也包含 AIMD renderer UI 样式。
 
 如果你需要完全控制样式加载，也可以手动引入 `@airalogy/aimd-renderer/styles`。

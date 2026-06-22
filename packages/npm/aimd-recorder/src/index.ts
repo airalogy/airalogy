@@ -7,7 +7,7 @@
  */
 
 // Re-export styles
-import './styles/aimd.css'
+import './styles/recorder.css'
 import { AimdProtocolRecorder as DeprecatedAimdProtocolRecorder } from './components'
 
 export { AimdAssignerGraph, AimdRecorder, AimdRecorderEditor, AimdQuizRecorder } from './components'

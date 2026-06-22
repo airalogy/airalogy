@@ -342,7 +342,7 @@ import {
 | Root | `@airalogy/aimd-renderer` |
 | HTML | `@airalogy/aimd-renderer/html` |
 | Vue | `@airalogy/aimd-renderer/vue` |
-| Styles | `@airalogy/aimd-renderer/styles`（KaTeX 和 renderer UI CSS） |
+| Styles | `@airalogy/aimd-renderer/styles`（renderer UI CSS，包含 KaTeX 基础样式） |
 
 ### 渲染函数
 
@@ -361,8 +361,8 @@ import {
 
 | 函数 | 签名 | 说明 |
 |------|------|------|
-| `renderToHtml` | `(content: string, options?: AimdRendererOptions) => Promise<{ html: string }>` | 异步 HTML 渲染，浏览器环境会自动加载公式样式。 |
-| `renderToHtmlSync` | `(content: string, options?) => { html: string }` | 同步 HTML 渲染（不会自动加载公式样式）。 |
+| `renderToHtml` | `(content: string, options?: AimdRendererOptions) => Promise<{ html: string }>` | 异步 HTML 渲染，浏览器环境会自动加载 renderer 样式。 |
+| `renderToHtmlSync` | `(content: string, options?) => { html: string }` | 同步 HTML 渲染（不会自动加载 renderer 样式）。 |
 | `renderToVue` | `(content: string, options?) => Promise<RenderResult>` | 渲染为 Vue VNodes，返回 `{ nodes, fields }`。 |
 | `parseAndExtract` | `(content: string) => ExtractedAimdFields` | 只解析并提取字段元数据，不做渲染。 |
 | `createRenderer` | `(options?) => Processor` | 创建可复用的 unified processor。 |

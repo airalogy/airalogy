@@ -53,6 +53,6 @@ This gives you a renderer-level step card with number badge, title, subtitle, re
 
 ## Styles
 
-Math styles are loaded automatically when calling async render APIs (`renderToHtml` / `renderToVue`) in browser environments.
+Renderer styles are loaded automatically when calling async render APIs (`renderToHtml` / `renderToVue`) in browser environments. The stylesheet includes KaTeX base styles for math output and AIMD renderer UI styles.
 
 If you need full control of style loading, import `@airalogy/aimd-renderer/styles` manually.

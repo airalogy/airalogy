@@ -396,7 +396,7 @@ import { createAimdRecorderMessages } from "@airalogy/aimd-recorder"
 
 ## 数学公式与样式
 
-在浏览器环境中调用异步 `renderToHtml` 或 `renderToVue` 时，renderer 会自动加载 KaTeX 样式。若你在 SSR 或需要手动控制加载时机，可显式引入：
+在浏览器环境中调用异步 `renderToHtml` 或 `renderToVue` 时，renderer 会自动加载 renderer stylesheet。这个样式表包含数学公式所需的 KaTeX 基础样式，也包含 AIMD renderer UI 样式。若你在 SSR 或需要手动控制加载时机，可显式引入：
 
 ```ts
 import "@airalogy/aimd-renderer/styles"

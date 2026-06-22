@@ -34,8 +34,8 @@
       "import": "./src/vue/index.ts"
     },
     "./styles": {
-      "import": "./src/styles/katex.css",
-      "default": "./src/styles/katex.css"
+      "import": "./src/styles/renderer.css",
+      "default": "./src/styles/renderer.css"
     }
   },
   "main": "./src/index.ts",

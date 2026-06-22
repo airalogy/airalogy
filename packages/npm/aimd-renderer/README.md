@@ -134,8 +134,7 @@ Use this when a host app needs to show a completed AIMD protocol as a static doc
 
 Readonly `AiralogyMarkdown` values are rendered through the AIMD Vue renderer, so headings, lists, nested AIMD preview tokens, and resolved Markdown image assets appear as document content instead of raw Markdown source.
 
-Math styles are loaded automatically when calling async render APIs (`renderToHtml` / `renderToVue`) in browser environments.  
-Use `@airalogy/aimd-renderer/styles` only if you want to preload styles manually.
+Renderer styles are loaded automatically when calling async render APIs (`renderToHtml` / `renderToVue`) in browser environments. Use `@airalogy/aimd-renderer/styles` only if you want to preload or control the renderer stylesheet manually.
 
 ## Documentation
 

@@ -18,7 +18,8 @@ const codeFieldSource = readFileSync(resolve(__dirname, '../components/AimdCodeF
 const varTableSource = readFileSync(resolve(__dirname, '../components/AimdVarTableField.vue'), 'utf8')
 const recorderSource = readFileSync(resolve(__dirname, '../components/AimdRecorder.vue'), 'utf8')
 const varHelpersSource = readFileSync(resolve(__dirname, '../composables/useVarHelpers.ts'), 'utf8')
-const styles = readFileSync(resolve(__dirname, '../styles/aimd.css'), 'utf8')
+const recorderStyles = readFileSync(resolve(__dirname, '../styles/recorder.css'), 'utf8')
+const rendererStyles = readFileSync(resolve(__dirname, '../../../aimd-renderer/src/styles/renderer.css'), 'utf8')
 
 describe('AimdVarField render behavior', () => {
   afterEach(() => {
@@ -55,32 +56,40 @@ describe('AimdVarField render behavior', () => {
     expect(codeFieldSource).not.toContain('min-height: 240px;')
   })
 
+  it('layers recorder styles on top of renderer styles', () => {
+    expect(recorderStyles).toContain('@import "@airalogy/aimd-renderer/styles";')
+    expect(recorderStyles).toContain('.aimd-field--editable')
+    expect(recorderStyles).toContain('.aimd-field--no-style')
+    expect(recorderStyles).toContain('.aimd-field-wrapper--inline')
+    expect(recorderStyles).not.toContain('.aimd-figure {')
+  })
+
   it('keeps table metadata popovers from being clipped by table bounds', () => {
-    expect(styles).toMatch(/\.aimd-field--var-table \.aimd-field__table-preview \{[\s\S]*?overflow: visible;/)
-    expect(styles).toMatch(/\.aimd-field--var-table \.aimd-field__table-preview th \{[\s\S]*?overflow: visible;/)
-    expect(styles).toContain('.aimd-field--var-table .aimd-field__table-preview th:has(.aimd-field__metadata-host:hover)')
+    expect(rendererStyles).toMatch(/\.aimd-field--var-table \.aimd-field__table-preview \{[\s\S]*?overflow: visible;/)
+    expect(rendererStyles).toMatch(/\.aimd-field--var-table \.aimd-field__table-preview th \{[\s\S]*?overflow: visible;/)
+    expect(rendererStyles).toContain('.aimd-field--var-table .aimd-field__table-preview th:has(.aimd-field__metadata-host:hover)')
   })
 
   it('keeps figure images and captions visually attached without card elevation', () => {
-    expect(styles).toMatch(/\.aimd-figure \{[\s\S]*?width: fit-content;/)
-    expect(styles).toMatch(/\.aimd-figure \{[\s\S]*?overflow: hidden;/)
-    expect(styles).not.toContain('box-shadow: 0 10px 28px')
-    expect(styles).toMatch(/\.aimd-figure__caption \{[\s\S]*?border-top: 1px solid #d8e2ef;/)
-    expect(styles).toMatch(/\.aimd-figure__legend \{[\s\S]*?margin: 4px 0 0;/)
+    expect(rendererStyles).toMatch(/\.aimd-figure \{[\s\S]*?width: fit-content;/)
+    expect(rendererStyles).toMatch(/\.aimd-figure \{[\s\S]*?overflow: hidden;/)
+    expect(rendererStyles).not.toContain('box-shadow: 0 10px 28px')
+    expect(rendererStyles).toMatch(/\.aimd-figure__caption \{[\s\S]*?border-top: 1px solid #d8e2ef;/)
+    expect(rendererStyles).toMatch(/\.aimd-figure__legend \{[\s\S]*?margin: 4px 0 0;/)
   })
 
   it('uses selectable citation popovers instead of pseudo-element tooltips', () => {
-    expect(styles).toContain('.aimd-cite__popover')
-    expect(styles).not.toContain('.aimd-cite__ref::after')
-    expect(styles).toMatch(/\.aimd-cite__popover \{[\s\S]*?pointer-events: none;/)
-    expect(styles).toMatch(/\.aimd-cite__popover \{[\s\S]*?user-select: text;/)
-    expect(styles).toMatch(/\.aimd-cite__popover::before \{[\s\S]*?height: 10px;/)
-    expect(styles).toMatch(/\.aimd-cite__ref:hover \.aimd-cite__popover,[\s\S]*?pointer-events: auto;/)
+    expect(rendererStyles).toContain('.aimd-cite__popover')
+    expect(rendererStyles).not.toContain('.aimd-cite__ref::after')
+    expect(rendererStyles).toMatch(/\.aimd-cite__popover \{[\s\S]*?pointer-events: none;/)
+    expect(rendererStyles).toMatch(/\.aimd-cite__popover \{[\s\S]*?user-select: text;/)
+    expect(rendererStyles).toMatch(/\.aimd-cite__popover::before \{[\s\S]*?height: 10px;/)
+    expect(rendererStyles).toMatch(/\.aimd-cite__ref:hover \.aimd-cite__popover,[\s\S]*?pointer-events: auto;/)
   })
 
   it('marks internal references as focusable route-safe targets', () => {
-    expect(styles).toMatch(/\.aimd-ref\[data-aimd-ref-target\] \{[\s\S]*?cursor: pointer;/)
-    expect(styles).toMatch(/\.aimd-ref\[data-aimd-ref-target\]:focus-visible \{[\s\S]*?outline: 2px solid rgba\(25, 118, 210, 0\.36\);/)
+    expect(rendererStyles).toMatch(/\.aimd-ref\[data-aimd-ref-target\] \{[\s\S]*?cursor: pointer;/)
+    expect(rendererStyles).toMatch(/\.aimd-ref\[data-aimd-ref-target\]:focus-visible \{[\s\S]*?outline: 2px solid rgba\(25, 118, 210, 0\.36\);/)
   })
 
   it('renders editable table cell values without inherited italic preview styling', () => {
@@ -408,9 +417,9 @@ describe('AimdVarField render behavior', () => {
   })
 
   it('styles metadata examples as distinct chips', () => {
-    expect(styles).toContain('.aimd-field__metadata-examples')
-    expect(styles).toContain('.aimd-field__metadata-example')
-    expect(styles).toMatch(/\.aimd-field__metadata-example \{[\s\S]*?border: 1px solid rgba\(248, 250, 252, 0\.18\);/)
+    expect(rendererStyles).toContain('.aimd-field__metadata-examples')
+    expect(rendererStyles).toContain('.aimd-field__metadata-example')
+    expect(rendererStyles).toMatch(/\.aimd-field__metadata-example \{[\s\S]*?border: 1px solid rgba\(248, 250, 252, 0\.18\);/)
   })
 
   it('renders AIMD var metadata and uses examples as placeholders', () => {

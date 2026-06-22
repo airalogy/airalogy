@@ -543,7 +543,7 @@ import { renderToVNodes } from "../vue/vue-renderer"
 // Module-level singletons
 // ---------------------------------------------------------------------------
 
-let mathStylesLoadPromise: Promise<unknown> | null = null
+let rendererStylesLoadPromise: Promise<unknown> | null = null
 
 // ---------------------------------------------------------------------------
 // Internal helpers that remain in the coordinator
@@ -565,17 +565,14 @@ const EMPTY_EXTRACTED_FIELDS: ExtractedAimdFields = {
   refs: [],
 }
 
-async function ensureMathStylesLoaded(mathEnabled: boolean | undefined): Promise<void> {
-  if (mathEnabled === false) {
-    return
-  }
+async function ensureRendererStylesLoaded(): Promise<void> {
   if (typeof document === "undefined") {
     return
   }
-  if (!mathStylesLoadPromise) {
-    mathStylesLoadPromise = import("../styles/katex.css").catch(() => undefined)
+  if (!rendererStylesLoadPromise) {
+    rendererStylesLoadPromise = import("../styles/renderer.css").catch(() => undefined)
   }
-  await mathStylesLoadPromise
+  await rendererStylesLoadPromise
 }
 
 function createAimdParseInput(content: string) {
@@ -1732,7 +1729,7 @@ export async function renderToHtml(
   content: string,
   options: AimdRendererOptions = {},
 ): Promise<{ html: string, fields: ExtractedAimdFields }> {
-  await ensureMathStylesLoaded(options.math)
+  await ensureRendererStylesLoaded()
   const processor = createHtmlProcessor(options)
 
   const { content: protectedContent, file } = createAimdParseInput(content)
@@ -1764,7 +1761,7 @@ export async function renderToVue(
   content: string,
   options: AimdRendererOptions & VueRendererOptions = {},
 ): Promise<RenderResult> {
-  await ensureMathStylesLoaded(options.math)
+  await ensureRendererStylesLoaded()
   const processor = createHtmlProcessor(options)
 
   const { content: protectedContent, file } = createAimdParseInput(content)

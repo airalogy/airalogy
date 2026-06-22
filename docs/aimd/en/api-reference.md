@@ -342,7 +342,7 @@ HTML and Vue rendering engines for AIMD content.
 | Root | `@airalogy/aimd-renderer` |
 | HTML | `@airalogy/aimd-renderer/html` |
 | Vue | `@airalogy/aimd-renderer/vue` |
-| Styles | `@airalogy/aimd-renderer/styles` (KaTeX and renderer UI CSS) |
+| Styles | `@airalogy/aimd-renderer/styles` (renderer UI CSS, including KaTeX base styles) |
 
 ### Rendering Functions
 
@@ -361,8 +361,8 @@ import {
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| `renderToHtml` | `(content: string, options?: AimdRendererOptions) => Promise<{ html: string }>` | Async HTML render with auto-loaded math styles. |
-| `renderToHtmlSync` | `(content: string, options?) => { html: string }` | Synchronous HTML render (no math style loading). |
+| `renderToHtml` | `(content: string, options?: AimdRendererOptions) => Promise<{ html: string }>` | Async HTML render with auto-loaded renderer styles. |
+| `renderToHtmlSync` | `(content: string, options?) => { html: string }` | Synchronous HTML render (no renderer style loading). |
 | `renderToVue` | `(content: string, options?) => Promise<RenderResult>` | Render to Vue VNodes. Returns `{ nodes, fields }`. |
 | `parseAndExtract` | `(content: string) => ExtractedAimdFields` | Parse content and extract field metadata without rendering. |
 | `createRenderer` | `(options?) => Processor` | Create a reusable unified processor. |
