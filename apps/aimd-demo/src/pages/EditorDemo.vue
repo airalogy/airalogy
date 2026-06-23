@@ -115,6 +115,7 @@ const packageInputRef = ref<HTMLInputElement | null>(null)
 const figurePopoverRef = ref<HTMLElement | null>(null)
 const remoteFigureUrlInputRef = ref<HTMLInputElement | null>(null)
 const protocolFiles = ref<ProtocolFigureFile[]>([])
+const protocolFilesExpanded = ref(false)
 const activeTemplateExampleId = ref<string | null>(null)
 const activeTemplateLocale = ref<DemoLocale>(locale.value)
 const archiveStatus = ref('')
@@ -141,6 +142,7 @@ let isDraftReady = false
 let isRestoringDraft = false
 
 const protocolFileCount = computed(() => protocolFiles.value.length)
+const protocolFileTotalSize = computed(() => protocolFiles.value.reduce((total, file) => total + file.file.size, 0))
 const archiveStatusLabel = computed(() => archiveStatus.value || messages.value.pages.editor.ready)
 const figurePopoverStyle = computed(() => ({
   top: `${figurePopoverPosition.value.top}px`,
@@ -684,6 +686,7 @@ function applyImportedProtocolPackage(protocolPackage: ImportedProtocolPackage) 
   activeTemplateExampleId.value = null
   content.value = protocolPackage.aimd
   protocolFiles.value = protocolPackage.files
+  protocolFilesExpanded.value = false
   uploadedFigureSerial = Math.max(protocolPackage.files.length + 1, 1)
   archiveStatus.value = `${messages.value.pages.editor.packageImported}: ${protocolPackage.files.length}`
 }
@@ -764,6 +767,7 @@ function revokeProtocolFilePreviews() {
 function clearProtocolFiles() {
   revokeProtocolFilePreviews()
   protocolFiles.value = []
+  protocolFilesExpanded.value = false
   uploadedFigureSerial = 1
   archiveStatus.value = ''
   insertedFigureIds.value = []
@@ -786,6 +790,9 @@ function removeProtocolFile(path: string) {
     URL.revokeObjectURL(item.previewUrl)
   }
   protocolFiles.value = protocolFiles.value.filter(file => file.path !== path)
+  if (protocolFiles.value.length === 0) {
+    protocolFilesExpanded.value = false
+  }
 }
 
 function openPackageFilePicker() {
@@ -1113,17 +1120,6 @@ onBeforeUnmount(() => {
       </section>
     </Teleport>
 
-    <ul v-if="protocolFileCount > 0" class="protocol-file-list">
-      <li v-for="file in protocolFiles" :key="file.path" class="protocol-file">
-        <img class="protocol-file__preview" :src="file.previewUrl" :alt="file.title">
-        <code class="protocol-file__path">{{ file.path }}</code>
-        <span class="protocol-file__size">{{ formatFileSize(file.file.size) }}</span>
-        <button type="button" class="protocol-file__remove" @click="removeProtocolFile(file.path)">
-          {{ messages.pages.editor.removeFile }}
-        </button>
-      </li>
-    </ul>
-
     <div class="editor-workspace">
       <section class="workspace-panel workspace-panel--editor">
         <div class="workspace-panel__header workspace-panel__header--split">
@@ -1144,7 +1140,19 @@ onBeforeUnmount(() => {
               @change="handlePackageFileSelected"
             >
             <span class="workspace-panel__status">{{ archiveStatusLabel }}</span>
-            <span v-if="protocolFileCount > 0" class="workspace-panel__status">{{ messages.pages.editor.fileCount }}: {{ protocolFileCount }}</span>
+            <span v-if="protocolFileCount > 0" class="workspace-panel__status workspace-panel__file-summary">
+              {{ messages.pages.editor.fileCount }}: {{ protocolFileCount }} · {{ messages.pages.editor.fileTotalSize }} {{ formatFileSize(protocolFileTotalSize) }}
+            </span>
+            <button
+              v-if="protocolFileCount > 0"
+              type="button"
+              class="archive-button workspace-panel__file-toggle"
+              :aria-expanded="protocolFilesExpanded"
+              aria-controls="editor-protocol-file-list"
+              @click="protocolFilesExpanded = !protocolFilesExpanded"
+            >
+              {{ protocolFilesExpanded ? messages.pages.editor.hideFiles : messages.pages.editor.showFiles }}
+            </button>
             <span class="workspace-panel__import-wrap">
               <button
                 type="button"
@@ -1177,6 +1185,16 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </div>
+        <ul v-if="protocolFileCount > 0 && protocolFilesExpanded" id="editor-protocol-file-list" class="protocol-file-list">
+          <li v-for="file in protocolFiles" :key="file.path" class="protocol-file">
+            <img class="protocol-file__preview" :src="file.previewUrl" :alt="file.title">
+            <code class="protocol-file__path">{{ file.path }}</code>
+            <span class="protocol-file__size">{{ formatFileSize(file.file.size) }}</span>
+            <button type="button" class="protocol-file__remove" @click="removeProtocolFile(file.path)">
+              {{ messages.pages.editor.removeFile }}
+            </button>
+          </li>
+        </ul>
         <div class="workspace-panel__body workspace-panel__body--editor">
           <AimdEditor
             ref="editorRef"
@@ -1568,6 +1586,18 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.workspace-panel__file-toggle {
+  height: 32px;
+  border-color: #bdd3ff;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.workspace-panel__file-toggle:hover {
+  border-color: #8fb6ff;
+  background: #dbeafe;
+}
+
 .workspace-panel__import-wrap {
   position: relative;
   display: inline-flex;
@@ -1759,7 +1789,13 @@ onBeforeUnmount(() => {
 
 .protocol-file-list {
   display: grid;
+  max-height: min(360px, 46vh);
   gap: 8px;
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  border-top: 1px solid #e5edf6;
+  border-bottom: 1px solid #e5edf6;
   list-style: none;
 }
 
@@ -1837,6 +1873,10 @@ onBeforeUnmount(() => {
 
   .workspace-panel {
     min-height: 420px;
+  }
+
+  .protocol-file-list {
+    max-height: min(320px, 52vh);
   }
 
   .protocol-file {

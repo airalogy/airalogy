@@ -125,6 +125,9 @@ export interface DemoMessages {
       downloadAira: string
       packagingDownload: string
       fileCount: string
+      fileTotalSize: string
+      showFiles: string
+      hideFiles: string
       removeFile: string
       ready: string
       uploadSkipped: string
@@ -306,6 +309,9 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         downloadAira: 'Download .aira',
         packagingDownload: 'Packaging...',
         fileCount: 'Protocol files',
+        fileTotalSize: 'Total',
+        showFiles: 'Show files',
+        hideFiles: 'Hide files',
         removeFile: 'Remove',
         ready: 'Ready',
         uploadSkipped: 'No image file was selected.',
@@ -485,6 +491,9 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         downloadAira: '下载 .aira',
         packagingDownload: '正在打包...',
         fileCount: 'Protocol 文件',
+        fileTotalSize: '总大小',
+        showFiles: '查看文件',
+        hideFiles: '收起文件',
         removeFile: '移除',
         ready: '就绪',
         uploadSkipped: '未选择图片文件。',

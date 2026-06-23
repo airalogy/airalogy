@@ -74,10 +74,24 @@ describe('EditorDemo archive export', () => {
     expect(source).toContain('applyImportedProtocolPackage')
     expect(source).toContain('packageImportNoAimd')
     expect(source).toContain('createImportedProtocolFile')
+    expect(source).toContain("const protocolFilesExpanded = ref(false)")
+    expect(source).toContain('protocolFilesExpanded.value = false')
     expect(source).toContain('importPackageHint')
     expect(source).toContain('workspace-panel__import-tooltip')
     expect(source).toContain('aria-describedby="editor-import-package-tooltip"')
     expect(source).toContain('white-space: pre-wrap;')
+  })
+
+  it('keeps imported protocol file lists collapsed and scrollable', () => {
+    expect(source).toContain('protocolFileTotalSize')
+    expect(source).toContain('workspace-panel__file-summary')
+    expect(source).toContain('class="archive-button workspace-panel__file-toggle"')
+    expect(source).toContain(':aria-expanded="protocolFilesExpanded"')
+    expect(source).toContain('v-if="protocolFileCount > 0 && protocolFilesExpanded"')
+    expect(source).toContain('messages.pages.editor.showFiles')
+    expect(source).toContain('messages.pages.editor.hideFiles')
+    expect(source).toMatch(/\.workspace-panel__file-toggle \{[\s\S]*?background: #eff6ff;[\s\S]*?color: #1d4ed8;/)
+    expect(source).toMatch(/\.protocol-file-list \{[\s\S]*?max-height: min\(360px, 46vh\);[\s\S]*?overflow-y: auto;/)
   })
 
   it('autosaves and restores local editor drafts with protocol files', () => {
