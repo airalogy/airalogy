@@ -117,6 +117,18 @@ test('AimdSourceEditor supports controlled content sync and readonly mode for em
   assert.match(sourceEditorSource, /monacoEditorInstance\?\.updateOptions\(\{ readOnly: readonly \}\)/)
 })
 
+test('AimdEditor source and WYSIWYG modes can fill taller host panels', () => {
+  assert.match(editorSource, /class="aimd-editor-mode-host"/)
+  assert.match(editorSource, /\.aimd-editor-panel\s*\{[^}]*display: flex;[^}]*flex: 1 1 auto;[^}]*min-height: 0;/s)
+  assert.match(editorSource, /\.aimd-editor-mode-host\s*\{[^}]*display: flex;[^}]*flex: 1 1 auto;[^}]*min-height: 0;/s)
+  assert.match(editorSource, /\.aimd-editor-source-mode\s*\{[^}]*flex: 1 1 auto;[^}]*overflow: hidden;/s)
+  assert.match(editorSource, /\.aimd-editor-container\s*\{[^}]*flex: 1 1 auto;[^}]*height: auto;/s)
+  assert.match(sourceEditorSource, /:style="\{ minHeight: minHeight \+ 'px' \}"/)
+  assert.match(wysiwygSource, /:style="\{ minHeight: minHeight \+ 'px', overflowY: 'auto' \}"/)
+  assert.doesNotMatch(sourceEditorSource, /:style="\{ height: minHeight \+ 'px' \}"/)
+  assert.doesNotMatch(wysiwygSource, /:style="\{ height: minHeight \+ 'px', overflowY: 'auto' \}"/)
+})
+
 test('AimdFieldDialog var type section exposes explained presets and keeps custom input', () => {
   assert.match(dialogSource, /aimd-var-type-grid/)
   assert.match(dialogSource, /aimd-var-type-card/)
@@ -177,8 +189,8 @@ test('AimdEditor can unmount inactive editor panes for embedded recorder fields'
   assert.match(editorSource, /keepInactiveEditorsMounted: true/)
   assert.match(editorSource, /const shouldMountSourceEditor = computed\(\(\) => props\.keepInactiveEditorsMounted \|\| editorMode\.value === 'source'\)/)
   assert.match(editorSource, /const shouldMountWysiwygEditor = computed\(\(\) => props\.keepInactiveEditorsMounted \|\| editorMode\.value === 'wysiwyg'\)/)
-  assert.match(editorSource, /<div v-if="shouldMountSourceEditor" v-show="editorMode === 'source'">/)
-  assert.match(editorSource, /<div v-if="shouldMountWysiwygEditor" v-show="editorMode === 'wysiwyg'">/)
+  assert.match(editorSource, /<div v-if="shouldMountSourceEditor" v-show="editorMode === 'source'" class="aimd-editor-mode-host">/)
+  assert.match(editorSource, /<div v-if="shouldMountWysiwygEditor" v-show="editorMode === 'wysiwyg'" class="aimd-editor-mode-host">/)
 })
 
 test('AimdEditorToolbar uses non-submit buttons for host safety', () => {

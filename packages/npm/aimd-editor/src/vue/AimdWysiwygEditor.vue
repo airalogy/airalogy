@@ -535,7 +535,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="aimd-editor-wysiwyg-mode" :style="{ height: minHeight + 'px', overflowY: 'auto' }">
+  <div class="aimd-editor-wysiwyg-mode" :style="{ minHeight: minHeight + 'px', overflowY: 'auto' }">
     <MilkdownProvider>
       <MilkdownEditorInner
         :default-value="content"

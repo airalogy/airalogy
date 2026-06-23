@@ -213,7 +213,7 @@ defineExpose({
     <!-- Editor area -->
       <div class="aimd-editor-panel" :style="{ minHeight: minHeight + 'px' }">
         <!-- Source mode: Monaco -->
-      <div v-if="shouldMountSourceEditor" v-show="editorMode === 'source'">
+      <div v-if="shouldMountSourceEditor" v-show="editorMode === 'source'" class="aimd-editor-mode-host">
         <AimdSourceEditor
           ref="sourceEditorRef"
           :content="content"
@@ -229,7 +229,7 @@ defineExpose({
       </div>
 
       <!-- WYSIWYG mode: Milkdown -->
-      <div v-if="shouldMountWysiwygEditor" v-show="editorMode === 'wysiwyg'">
+      <div v-if="shouldMountWysiwygEditor" v-show="editorMode === 'wysiwyg'" class="aimd-editor-mode-host">
         <AimdWysiwygEditor
           ref="wysiwygEditorRef"
           :content="content"
@@ -263,6 +263,7 @@ defineExpose({
 .aimd-editor {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
@@ -402,16 +403,31 @@ defineExpose({
 
 /* --- Editor panel --- */
 .aimd-editor-panel {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
   background: #fff;
   overflow: hidden;
 }
 
+.aimd-editor-mode-host {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
 .aimd-editor-source-mode {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
 }
 
 .aimd-editor-container {
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
 }
 
 .aimd-editor-loading {
@@ -421,6 +437,11 @@ defineExpose({
 }
 
 /* --- WYSIWYG mode (Milkdown) --- */
+.aimd-editor-wysiwyg-mode {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .aimd-editor-wysiwyg-mode .milkdown {
   height: 100%;
 }
