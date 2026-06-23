@@ -14,6 +14,7 @@ from airalogy.assigner import DefaultAssigner
 from airalogy.ingest import import_records as import_airalogy_records
 from airalogy.markdown import extract_assigner_blocks, generate_model, parse_aimd
 from airalogy.markdown.errors import AimdParseError
+from airalogy.markdown.model_sync import merge_var_models
 from pydantic import TypeAdapter, ValidationError, create_model
 
 logger = logging.getLogger("protocol_executor_logger")
@@ -143,6 +144,13 @@ def _load_aimd_model(protocol_name: str):
     return model
 
 
+def _merge_protocol_var_model(protocol_name: str, aimd_var_model):
+    model = import_module(f"{protocol_name}.model")
+    if model is not None and hasattr(model, "VarModel"):
+        return merge_var_models(aimd_var_model, model.VarModel)
+    return aimd_var_model
+
+
 def parse_protocol(protocol_name: str):
     protocol_path = _validate_protocol_name(protocol_name)
     # check protocol.aimd file
@@ -207,25 +215,15 @@ def parse_protocol(protocol_name: str):
     # load aimd model
     aimd_model = import_module(f"{protocol_name}.aimd_model", force_reload=True)
     if aimd_model and hasattr(aimd_model, "VarModel"):
-        aimd_schema = aimd_model.VarModel.model_json_schema()
+        effective_var_model = _merge_protocol_var_model(
+            protocol_name,
+            aimd_model.VarModel,
+        )
+        model_schema = effective_var_model.model_json_schema()
     else:
-        aimd_schema = {"type": "object", "required": [], "properties": {}}
+        model_schema = {"type": "object", "required": [], "properties": {}}
 
-    # load var model
-    var_model = import_module(f"{protocol_name}.model")
-    if var_model and hasattr(var_model, "VarModel"):
-        model_schema = var_model.VarModel.model_json_schema()
-        # check model schema properties should be defined in AIMD
-        errors = []
-        for key in model_schema["properties"]:
-            if key not in var_names:
-                errors.append(f"Model field `{key}` not defined in AIMD file")
-        if errors:
-            raise ValueError("\n".join(errors))
-    else:
-        model_schema = {}
-
-    schema["vars"] = deep_merge(aimd_schema, model_schema)
+    schema["vars"] = model_schema
 
     assigners = {}
     assigner_graph = None
@@ -371,22 +369,12 @@ def validate_variables(protocol_name: str, variables: dict) -> dict:
     _validate_protocol_name(protocol_name)
     data = {"data": variables}
 
-    # validate by aimd model
     aimd_model = _load_aimd_model(protocol_name)
+    effective_var_model = _merge_protocol_var_model(protocol_name, aimd_model.VarModel)
     try:
-        aimd_model.VarModel(**variables)
+        effective_var_model.model_validate(variables)
     except ValidationError as exc:
-        data["errors"] = exc.errors()
-
-    # validate by custom model
-    model = import_module(f"{protocol_name}.model")
-    if model is not None and hasattr(model, "VarModel"):
-        try:
-            model.VarModel(**variables)
-        except ValidationError as exc:
-            existing = data.get("errors", [])
-            existing.extend(exc.errors())
-            data["errors"] = existing
+        data["errors"] = exc.errors(include_context=False)
 
     return data
 

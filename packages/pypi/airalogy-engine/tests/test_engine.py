@@ -35,6 +35,61 @@ def _state_is_running(state) -> bool:
     return state is not None and getattr(state, "running", False) is True
 
 
+def _write_model_priority_protocol(protocol_dir: Path) -> None:
+    protocol_dir.mkdir()
+    protocol_dir.joinpath("protocol.aimd").write_text(
+        """## Model priority protocol
+
+Age: {{var|age:int}}
+Score: {{var|score:int}}
+Nickname: {{var|nickname}}
+""",
+        encoding="utf-8",
+    )
+    protocol_dir.joinpath("protocol.toml").write_text(
+        """[airalogy_protocol]
+id = "model_priority_protocol"
+version = "1.0.0"
+name = "Model Priority Protocol"
+""",
+        encoding="utf-8",
+    )
+    protocol_dir.joinpath("model.py").write_text(
+        "\n".join(
+            [
+                "from pydantic import BaseModel, field_validator",
+                "",
+                "class VarModel(BaseModel):",
+                "    age: str",
+                "    nickname: str",
+                "",
+                '    @field_validator("nickname")',
+                "    @classmethod",
+                "    def nickname_cannot_be_blocked(cls, value):",
+                '        if value == "blocked":',
+                '            raise ValueError("nickname is blocked")',
+                "        return value",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
+async def _validate_temp_protocol(
+    protocol_dir: Path,
+    sandbox_kwargs: dict,
+    variables: dict,
+) -> dict:
+    engine = AiralogyEngine(
+        str(protocol_dir),
+        **sandbox_kwargs,
+    )
+    try:
+        return await engine.validate_variables(variables=variables)
+    finally:
+        await engine.close()
+
+
 # ---------------------------------------------------------------------------
 # parse_protocol
 # ---------------------------------------------------------------------------
@@ -139,10 +194,8 @@ class TestAssignVariable:
         sandbox_kwargs,
     ):
         """assign_variable times out promptly when PROTOCOL_SLEEP_TIME exceeds timeout."""
-        home = tempfile.mkdtemp(prefix="aebl-timeout-", dir="/tmp")
         engine = AiralogyEngine(
             _EXAMPLE_PROTOCOL,
-            boxlite_home=home,
             auto_stop=False,
             **sandbox_kwargs,
         )
@@ -168,7 +221,6 @@ class TestAssignVariable:
             assert elapsed < 6.0
         finally:
             await engine.close()
-            shutil.rmtree(home, ignore_errors=True)
 
     @pytest.mark.asyncio
     async def test_assign_variable_succeeds_when_timeout_exceeds_protocol_sleep(
@@ -194,10 +246,8 @@ class TestAssignVariable:
     ):
         """debug=True still copies the partial log after killing a timed-out guest."""
         log_file = tmp_path / "slow_timeout.log"
-        home = tempfile.mkdtemp(prefix="aebl-timeout-debug-", dir="/tmp")
         engine = AiralogyEngine(
             _EXAMPLE_PROTOCOL,
-            boxlite_home=home,
             auto_stop=False,
             **sandbox_kwargs,
         )
@@ -228,7 +278,6 @@ class TestAssignVariable:
             assert "action: assign_variable" in log_content
         finally:
             await engine.close()
-            shutil.rmtree(home, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
@@ -280,6 +329,86 @@ class TestValidateVariables:
         assert "errors" in data
         assert any(tuple(error["loc"]) == ("duration",) for error in data["errors"])
 
+    @pytest.mark.asyncio
+    async def test_validate_custom_model_overrides_aimd_field(
+        self,
+        sandbox_kwargs,
+        tmp_path,
+    ):
+        """model.py field rules override AIMD rules for the same variable."""
+        protocol_dir = tmp_path / "model_priority_protocol"
+        _write_model_priority_protocol(protocol_dir)
+        engine = AiralogyEngine(
+            str(protocol_dir),
+            **sandbox_kwargs,
+        )
+
+        try:
+            parse_result = await engine.parse_protocol()
+            validate_result = await engine.validate_variables(
+                variables={
+                    "age": "custom-model-string",
+                    "score": 10,
+                    "nickname": "alice",
+                },
+            )
+        finally:
+            await engine.close()
+
+        assert parse_result["success"] is True
+        age_schema = parse_result["data"]["json_schema"]["vars"]["properties"]["age"]
+        assert age_schema["type"] == "string"
+        assert validate_result["success"] is True
+        assert "errors" not in validate_result["data"]
+
+    @pytest.mark.asyncio
+    async def test_validate_aimd_only_field_still_validates(
+        self,
+        sandbox_kwargs,
+        tmp_path,
+    ):
+        """AIMD-only fields remain part of the effective validation model."""
+        protocol_dir = tmp_path / "model_priority_protocol"
+        _write_model_priority_protocol(protocol_dir)
+
+        result = await _validate_temp_protocol(
+            protocol_dir,
+            sandbox_kwargs,
+            {
+                "age": "custom-model-string",
+                "nickname": "alice",
+            },
+        )
+
+        assert result["success"] is True
+        error_locations = {tuple(error["loc"]) for error in result["data"]["errors"]}
+        assert ("score",) in error_locations
+        assert ("age",) not in error_locations
+
+    @pytest.mark.asyncio
+    async def test_validate_custom_model_validator_errors(
+        self,
+        sandbox_kwargs,
+        tmp_path,
+    ):
+        """Custom model.py validators are included in effective validation."""
+        protocol_dir = tmp_path / "model_priority_protocol"
+        _write_model_priority_protocol(protocol_dir)
+
+        result = await _validate_temp_protocol(
+            protocol_dir,
+            sandbox_kwargs,
+            {
+                "age": "custom-model-string",
+                "score": 10,
+                "nickname": "blocked",
+            },
+        )
+
+        assert result["success"] is True
+        errors = result["data"]["errors"]
+        assert any(tuple(error["loc"]) == ("nickname",) for error in errors)
+
 
 # ---------------------------------------------------------------------------
 # import_records
@@ -321,10 +450,8 @@ name = "Records Protocol"
 ]""",
             encoding="utf-8",
         )
-        home = tempfile.mkdtemp(prefix="aebl-import-records-", dir="/tmp")
         engine = AiralogyEngine(
             str(protocol_dir),
-            boxlite_home=home,
             **sandbox_kwargs,
         )
 
@@ -332,7 +459,6 @@ name = "Records Protocol"
             result = await engine.import_records("records.json")
         finally:
             await engine.close()
-            shutil.rmtree(home, ignore_errors=True)
 
         assert result["success"] is True
         data = result["data"]
@@ -441,10 +567,8 @@ class TestBoxLifecycle:
         self,
         sandbox_kwargs,
     ):
-        home = tempfile.mkdtemp(prefix="aebl-lifecycle-", dir="/tmp")
         engine = AiralogyEngine(
             _EXAMPLE_PROTOCOL,
-            boxlite_home=home,
             **sandbox_kwargs,
         )
 
@@ -455,17 +579,14 @@ class TestBoxLifecycle:
             assert engine._box is None
         finally:
             await engine.close()
-            shutil.rmtree(home, ignore_errors=True)
 
     @pytest.mark.asyncio
     async def test_auto_stop_false_reuses_running_box(
         self,
         sandbox_kwargs,
     ):
-        home = tempfile.mkdtemp(prefix="aebl-reuse-", dir="/tmp")
         engine = AiralogyEngine(
             _EXAMPLE_PROTOCOL,
-            boxlite_home=home,
             auto_stop=False,
             **sandbox_kwargs,
         )
@@ -483,17 +604,14 @@ class TestBoxLifecycle:
             assert _state_is_running(engine.box_status())
         finally:
             await engine.close()
-            shutil.rmtree(home, ignore_errors=True)
 
     @pytest.mark.asyncio
     async def test_stop_stops_box_and_later_command_creates_new_box(
         self,
         sandbox_kwargs,
     ):
-        home = tempfile.mkdtemp(prefix="aebl-stop-", dir="/tmp")
         engine = AiralogyEngine(
             _EXAMPLE_PROTOCOL,
-            boxlite_home=home,
             auto_stop=False,
             **sandbox_kwargs,
         )
@@ -515,17 +633,14 @@ class TestBoxLifecycle:
             assert _state_is_running(engine.box_status())
         finally:
             await engine.close()
-            shutil.rmtree(home, ignore_errors=True)
 
     @pytest.mark.asyncio
     async def test_timeout_does_not_stop_persistent_box(
         self,
         sandbox_kwargs,
     ):
-        home = tempfile.mkdtemp(prefix="aebl-persistent-timeout-", dir="/tmp")
         engine = AiralogyEngine(
             _EXAMPLE_PROTOCOL,
-            boxlite_home=home,
             auto_stop=False,
             **sandbox_kwargs,
         )
@@ -560,7 +675,6 @@ class TestBoxLifecycle:
             assert recovery["data"]["assigned_fields"]["duration"] == "PT1M"
         finally:
             await engine.close()
-            shutil.rmtree(home, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
@@ -579,10 +693,8 @@ class TestSandboxExecutionHelper:
         """_exec_command_with_timeout passes sequence env pairs into box.exec."""
         import airalogy_engine.engine as engine_module
 
-        home = tempfile.mkdtemp(prefix="aebl-env-", dir="/tmp")
         engine = AiralogyEngine(
             _EXAMPLE_PROTOCOL,
-            boxlite_home=home,
             auto_stop=False,
             **sandbox_kwargs,
         )
@@ -612,7 +724,6 @@ class TestSandboxExecutionHelper:
             assert stderr.strip() == ""
         finally:
             await engine.close()
-            shutil.rmtree(home, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
