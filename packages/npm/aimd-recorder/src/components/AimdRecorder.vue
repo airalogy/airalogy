@@ -2870,18 +2870,44 @@ defineExpose({
   gap: 6px;
 }
 .aimd-protocol-recorder__content :deep(.aimd-step-field__body) {
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
   color: var(--rec-text);
   font-size: 15px;
   line-height: 1.72;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 .aimd-protocol-recorder__content :deep(.aimd-step-field__body .aimd-step-body) {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.aimd-protocol-recorder__content :deep(.aimd-step-field__body .aimd-step-body > *) {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 .aimd-protocol-recorder__content :deep(.aimd-step-field__body p) {
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.aimd-protocol-recorder__content :deep(.aimd-step-field__body .aimd-rec-inline--var-markdown),
+.aimd-protocol-recorder__content :deep(.aimd-step-field__body .aimd-field--var-table) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.aimd-protocol-recorder__content :deep(.aimd-step-field__body .aimd-field--var-table) {
+  overflow-x: auto;
 }
 .aimd-protocol-recorder__content :deep(.aimd-step-field__body-actions) {
   display: flex;

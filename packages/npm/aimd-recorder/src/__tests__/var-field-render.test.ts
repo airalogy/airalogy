@@ -153,6 +153,14 @@ describe('AimdVarField render behavior', () => {
     expect(recorderSource).not.toContain('width: min(100%, 1040px);')
   })
 
+  it('keeps step body content inside the step card width', () => {
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body\) \{[\s\S]*?width: 100%;[\s\S]*?max-width: 100%;[\s\S]*?overflow-wrap: anywhere;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-step-body\) \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-step-body > \*\) \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%;[\s\S]*?overflow-wrap: anywhere;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-rec-inline--var-markdown\),\n\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-field--var-table\) \{[\s\S]*?width: 100%;[\s\S]*?max-width: 100%;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-field--var-table\) \{[\s\S]*?overflow-x: auto;/)
+  })
+
   it('renders file-like vars with a native file picker control', async () => {
     const node: AimdVarNode = {
       type: 'aimd',
