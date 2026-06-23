@@ -587,6 +587,47 @@ describe('measureVarLabelWidth', () => {
 
     expect(measureVarLabelWidth(wrapper)).toBeLessThan(240)
   })
+
+  it('includes long metadata keys when sizing stacked var labels', () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => ({
+      measureText: (text: string) => ({ width: text.length * 8 }),
+    } as unknown as CanvasRenderingContext2D))
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element: Element) => {
+      const classList = (element as HTMLElement).classList
+      const horizontalPadding = classList.contains('aimd-field__name')
+        ? '16px'
+        : classList.contains('aimd-field__scope--var')
+          ? '14px'
+          : '0px'
+      return {
+        fontSize: '14px',
+        fontFamily: 'sans-serif',
+        fontWeight: '500',
+        fontStyle: 'normal',
+        paddingLeft: horizontalPadding,
+        paddingRight: '0px',
+        borderLeftWidth: '0px',
+        borderRightWidth: '0px',
+        marginLeft: '0px',
+        marginRight: '0px',
+      } as CSSStyleDeclaration
+    })
+
+    const wrapper = document.createElement('span')
+    wrapper.className = 'aimd-rec-inline--var-stacked'
+    wrapper.innerHTML = `
+      <span class="aimd-field__label">
+        <span class="aimd-field__scope aimd-field__scope--var">var</span>
+        <span class="aimd-field__name">
+          <span class="aimd-field__title">岸带完整性评分</span>
+          <span class="aimd-field__key">riparian_integrity_score</span>
+        </span>
+      </span>
+    `
+    document.body.appendChild(wrapper)
+
+    expect(measureVarLabelWidth(wrapper)).toBeGreaterThan(220)
+  })
 })
 
 // ---------------------------------------------------------------------------

@@ -2098,7 +2098,7 @@ defineExpose({
   align-items: stretch;
   gap: 0;
   margin: 5px 3px;
-  width: fit-content;
+  width: max-content;
   min-width: 0;
   max-width: 100%;
   border: 1px solid var(--aimd-border-color, #90caf9);
@@ -2118,13 +2118,28 @@ defineExpose({
   box-shadow: 0 0 0 2px rgba(65, 129, 253, 0.14);
 }
 	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field) { margin: 0; box-shadow: none; }
-	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field--no-style.aimd-field__label) { min-height: 30px; border-radius: 6px 6px 0 0; }
-	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__scope) { align-self: center; height: 22px; margin-left: 3px; padding: 0 7px; border-radius: 6px; }
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field--no-style.aimd-field__label) {
+	  flex-wrap: nowrap;
+	  min-height: 30px;
+	  border-radius: 6px 6px 0 0;
+	}
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__scope) {
+	  flex: 0 0 auto;
+	  align-self: center;
+	  min-width: max-content;
+	  height: 22px;
+	  margin-left: 3px;
+	  padding: 0 7px;
+	  border-radius: 6px;
+	  overflow-wrap: normal;
+	  white-space: nowrap;
+	  word-break: normal;
+	}
 	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__name) {
 	  display: flex;
-	  flex: 1;
+	  flex: 0 0 auto;
 	  align-items: center;
-	  min-width: 0;
+	  min-width: max-content;
 	  padding: 4px 10px 4px 6px;
 	  font-size: 13px;
 	  font-weight: 600;
@@ -2136,7 +2151,14 @@ defineExpose({
 	  justify-content: center;
 	  gap: 2px;
 	  min-height: 34px;
-	  white-space: normal;
+	  white-space: nowrap;
+	}
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__title),
+	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__key) {
+	  overflow: visible;
+	  overflow-wrap: normal;
+	  white-space: nowrap;
+	  word-break: normal;
 	}
 	.aimd-protocol-recorder__content :deep(.aimd-field__key) {
 	  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;

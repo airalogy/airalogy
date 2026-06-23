@@ -119,6 +119,14 @@ describe('AimdVarField render behavior', () => {
     expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--has-assigner-control\) \{[\s\S]*?overflow: hidden;/)
   })
 
+  it('lets stacked var fields widen before wrapping long metadata keys', () => {
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked\) \{[\s\S]*?width: max-content;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked \.aimd-field--no-style\.aimd-field__label\) \{[\s\S]*?flex-wrap: nowrap;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked \.aimd-field__scope\) \{[\s\S]*?flex: 0 0 auto;[\s\S]*?white-space: nowrap;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked \.aimd-field__name\) \{[\s\S]*?flex: 0 0 auto;[\s\S]*?min-width: max-content;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked \.aimd-field__key\) \{[\s\S]*?overflow: visible;[\s\S]*?white-space: nowrap;/)
+  })
+
   it('normalizes stacked var value typography across native control types', () => {
     expect(recorderSource).toContain('--rec-body-font-size: 14px;')
     expect(recorderSource).toContain('--rec-var-value-font-size: var(--rec-body-font-size);')
