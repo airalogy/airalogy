@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type VNode } from 'vue'
-import { createProtocolAiraArchive } from '@airalogy/aira-core'
+import {
+  createProtocolAiraArchive,
+  openAiraArchive,
+  openZipArchive,
+  type AiraArchive,
+  type ZipArchive,
+} from '@airalogy/aira-core'
 import { AimdEditor, type AimdEditorImageRequest } from '@airalogy/aimd-editor'
 import { renderToVue } from '@airalogy/aimd-renderer'
 import DemoExamplePicker from '../components/DemoExamplePicker.vue'
@@ -52,6 +58,11 @@ interface FigureBlockInput {
   legend?: string
 }
 
+interface ImportedProtocolPackage {
+  aimd: string
+  files: ProtocolFigureFile[]
+}
+
 type FigureInsertSource = 'local' | 'remote'
 
 const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
@@ -61,6 +72,15 @@ const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
   'image/png': 'png',
   'image/svg+xml': 'svg',
   'image/webp': 'webp',
+}
+const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
+  avif: 'image/avif',
+  gif: 'image/gif',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  svg: 'image/svg+xml',
+  webp: 'image/webp',
 }
 const IMAGE_EXTENSION_PATTERN = /^(?:avif|gif|jpe?g|png|svg|webp)$/i
 const FIGURE_POPOVER_WIDTH = 420
@@ -83,6 +103,7 @@ content.value = ''
 const mode = ref<'source' | 'wysiwyg'>('source')
 const editorRef = ref<any>(null)
 const figureInputRef = ref<HTMLInputElement | null>(null)
+const packageInputRef = ref<HTMLInputElement | null>(null)
 const figurePopoverRef = ref<HTMLElement | null>(null)
 const remoteFigureUrlInputRef = ref<HTMLInputElement | null>(null)
 const protocolFiles = ref<ProtocolFigureFile[]>([])
@@ -90,6 +111,7 @@ const activeTemplateExampleId = ref<string | null>(null)
 const activeTemplateLocale = ref<DemoLocale>(locale.value)
 const archiveStatus = ref('')
 const isPackagingArchive = ref(false)
+const isImportingPackage = ref(false)
 const showImageInsertPanel = ref(false)
 const figureInsertSource = ref<FigureInsertSource>('local')
 const localFigureFile = ref<File | null>(null)
@@ -451,6 +473,56 @@ function getFileStem(name: string): string {
   return lastDot > 0 ? name.slice(0, lastDot) : name
 }
 
+function getPathFileName(path: string): string {
+  return path.split('/').filter(Boolean).pop() || path
+}
+
+function getPathDir(path: string): string {
+  const normalized = path.replace(/\\/g, '/')
+  const lastSlash = normalized.lastIndexOf('/')
+  return lastSlash >= 0 ? normalized.slice(0, lastSlash + 1) : ''
+}
+
+function isIgnoredZipEntry(path: string): boolean {
+  const segments = path.split('/').filter(Boolean)
+  return segments.includes('__MACOSX') || segments.some(segment => segment === '.DS_Store')
+}
+
+function isImagePath(path: string): boolean {
+  return IMAGE_EXTENSION_PATTERN.test(path.split('.').pop() || '')
+}
+
+function inferImageMimeType(path: string): string {
+  const extension = path.split('.').pop()?.toLowerCase() || ''
+  return IMAGE_MIME_BY_EXTENSION[extension] ?? 'application/octet-stream'
+}
+
+function isAimdPath(path: string): boolean {
+  return path.toLowerCase().endsWith('.aimd')
+}
+
+function chooseZipAimdEntrypoint(paths: string[]): string | null {
+  const aimdPaths = paths.filter(path => isAimdPath(path) && !isIgnoredZipEntry(path)).sort((a, b) => a.localeCompare(b))
+  return aimdPaths.find(path => getPathFileName(path).toLowerCase() === 'protocol.aimd')
+    ?? aimdPaths.find(path => getPathFileName(path).toLowerCase() === 'index.aimd')
+    ?? aimdPaths[0]
+    ?? null
+}
+
+function toProtocolRelativePath(path: string, root: string): string | null {
+  if (root && !path.startsWith(root)) {
+    return null
+  }
+  const relativePath = root ? path.slice(root.length) : path
+  if (!relativePath || relativePath.startsWith('/') || relativePath.split('/').some(part => part === '..')) {
+    return null
+  }
+  if (relativePath === '_airalogy_archive' || relativePath.startsWith('_airalogy_archive/')) {
+    return null
+  }
+  return relativePath
+}
+
 function makeFigureId(baseName: string, index: number): string {
   const id = baseName
     .replace(/[^A-Za-z0-9]+/g, '_')
@@ -499,6 +571,93 @@ function createUniqueFigureFile(file: File): ProtocolFigureFile {
     file,
     previewUrl: URL.createObjectURL(file),
   }
+}
+
+function createImportedProtocolFile(path: string, bytes: Uint8Array, index: number): ProtocolFigureFile {
+  const fileName = getPathFileName(path)
+  const file = new File([bytes], fileName, {
+    type: inferImageMimeType(path),
+    lastModified: Date.now(),
+  })
+  const baseName = makeResourceBaseName(getFileStem(fileName), `imported-figure-${index}`)
+  return {
+    id: makeUniqueFigureId(baseName, index),
+    index,
+    title: fileName,
+    path,
+    file,
+    previewUrl: URL.createObjectURL(file),
+  }
+}
+
+async function readAiraProtocolPackage(archive: AiraArchive): Promise<ImportedProtocolPackage> {
+  if (archive.manifest.kind !== 'protocol' || !archive.manifest.protocol) {
+    throw new Error(messages.value.pages.editor.packageImportUnsupportedAira)
+  }
+
+  const entrypoint = archive.manifest.protocol.entrypoint || 'protocol.aimd'
+  const aimd = await archive.readText(entrypoint)
+  const manifestFiles = Array.isArray(archive.manifest.protocol.files)
+    ? archive.manifest.protocol.files
+    : archive.entries
+        .map(entry => entry.name)
+        .filter(path => path !== entrypoint && path !== '_airalogy_archive/manifest.json')
+
+  const imagePaths = manifestFiles
+    .filter(path => path !== entrypoint && archive.has(path) && !isIgnoredZipEntry(path) && isImagePath(path))
+    .sort((a, b) => a.localeCompare(b))
+  const files: ProtocolFigureFile[] = []
+  for (const [index, path] of imagePaths.entries()) {
+    files.push(createImportedProtocolFile(path, await archive.readBytes(path), index + 1))
+  }
+
+  return { aimd, files }
+}
+
+async function readZipFolderPackage(archive: ZipArchive): Promise<ImportedProtocolPackage> {
+  const entryNames = archive.entries.map(entry => entry.name)
+  const entrypoint = chooseZipAimdEntrypoint(entryNames)
+  if (!entrypoint) {
+    throw new Error(messages.value.pages.editor.packageImportNoAimd)
+  }
+
+  const root = getPathDir(entrypoint)
+  const aimd = await archive.readText(entrypoint)
+  const imageEntries = entryNames
+    .filter(path => path !== entrypoint && !isIgnoredZipEntry(path))
+    .map(path => ({ path, relativePath: toProtocolRelativePath(path, root) }))
+    .filter((item): item is { path: string; relativePath: string } => Boolean(item.relativePath) && isImagePath(item.relativePath))
+    .sort((a, b) => a.relativePath.localeCompare(b.relativePath))
+
+  const files: ProtocolFigureFile[] = []
+  for (const [index, item] of imageEntries.entries()) {
+    files.push(createImportedProtocolFile(item.relativePath, await archive.readBytes(item.path), index + 1))
+  }
+
+  return { aimd, files }
+}
+
+async function readProtocolPackage(file: File): Promise<ImportedProtocolPackage> {
+  let airaArchive: AiraArchive | null = null
+  try {
+    airaArchive = await openAiraArchive(file)
+  }
+  catch {}
+
+  if (airaArchive) {
+    return readAiraProtocolPackage(airaArchive)
+  }
+
+  return readZipFolderPackage(await openZipArchive(file))
+}
+
+function applyImportedProtocolPackage(protocolPackage: ImportedProtocolPackage) {
+  clearProtocolFiles()
+  activeTemplateExampleId.value = null
+  content.value = protocolPackage.aimd
+  protocolFiles.value = protocolPackage.files
+  uploadedFigureSerial = Math.max(protocolPackage.files.length + 1, 1)
+  archiveStatus.value = `${messages.value.pages.editor.packageImported}: ${protocolPackage.files.length}`
 }
 
 function toAimdScalar(value: string): string {
@@ -598,6 +757,32 @@ function removeProtocolFile(path: string) {
     URL.revokeObjectURL(item.previewUrl)
   }
   protocolFiles.value = protocolFiles.value.filter(file => file.path !== path)
+}
+
+function openPackageFilePicker() {
+  packageInputRef.value?.click()
+}
+
+async function handlePackageFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || isImportingPackage.value) {
+    return
+  }
+
+  isImportingPackage.value = true
+  archiveStatus.value = messages.value.pages.editor.importingPackage
+  try {
+    const protocolPackage = await readProtocolPackage(file)
+    applyImportedProtocolPackage(protocolPackage)
+  }
+  catch (error: any) {
+    archiveStatus.value = `${messages.value.pages.editor.packageImportFailed}: ${error?.message || String(error)}`
+  }
+  finally {
+    isImportingPackage.value = false
+  }
 }
 
 function openFigureFilePicker() {
@@ -798,7 +983,6 @@ onBeforeUnmount(() => {
 <template>
   <div class="demo-page">
     <h2 class="page-title">{{ messages.pages.editor.title }}</h2>
-    <p class="page-desc">{{ messages.pages.editor.desc }}</p>
 
     <DemoExamplePicker
       :selected-id="selectedExampleId"
@@ -920,12 +1104,33 @@ onBeforeUnmount(() => {
               accept="image/*,.svg"
               @change="handleFigureFilesSelected"
             >
+            <input
+              ref="packageInputRef"
+              class="archive-file-input"
+              type="file"
+              accept=".zip,.aira,application/zip,application/vnd.airalogy.archive+zip"
+              @change="handlePackageFileSelected"
+            >
             <span class="workspace-panel__status">{{ archiveStatusLabel }}</span>
             <span v-if="protocolFileCount > 0" class="workspace-panel__status">{{ messages.pages.editor.fileCount }}: {{ protocolFileCount }}</span>
+            <span class="workspace-panel__import-wrap">
+              <button
+                type="button"
+                class="archive-button workspace-panel__import"
+                :disabled="isPackagingArchive || isImportingPackage"
+                aria-describedby="editor-import-package-tooltip"
+                @click="openPackageFilePicker"
+              >
+                {{ isImportingPackage ? messages.pages.editor.importingPackage : messages.pages.editor.importPackage }}
+              </button>
+              <span id="editor-import-package-tooltip" class="workspace-panel__import-tooltip" role="tooltip">
+                {{ messages.pages.editor.importPackageHint }}
+              </span>
+            </span>
             <button
               type="button"
               class="archive-button workspace-panel__clear"
-              :disabled="isPackagingArchive || !canClearContent"
+              :disabled="isPackagingArchive || isImportingPackage || !canClearContent"
               @click="clearEditorContent"
             >
               {{ messages.pages.editor.clearContent }}
@@ -933,7 +1138,7 @@ onBeforeUnmount(() => {
             <button
               type="button"
               class="archive-button archive-button--primary workspace-panel__download"
-              :disabled="isPackagingArchive"
+              :disabled="isPackagingArchive || isImportingPackage"
               @click="downloadProtocolFile"
             >
               {{ isPackagingArchive ? messages.pages.editor.packagingDownload : downloadButtonLabel }}
@@ -986,12 +1191,6 @@ onBeforeUnmount(() => {
   font-size: 24px;
   font-weight: 700;
   color: #1a1a2e;
-}
-
-.page-desc {
-  color: #666;
-  font-size: 14px;
-  margin-top: -8px;
 }
 
 .editor-template-hint {
@@ -1260,7 +1459,9 @@ onBeforeUnmount(() => {
 .workspace-panel__actions {
   display: inline-flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
 }
 
@@ -1270,8 +1471,46 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.workspace-panel__import-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.workspace-panel__import,
 .workspace-panel__clear {
   height: 32px;
+}
+
+.workspace-panel__import-tooltip {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(360px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1px solid #cbd7e6;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgb(15 23 42 / 16%), 0 2px 8px rgb(15 23 42 / 8%);
+  color: #334155;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.55;
+  opacity: 0;
+  pointer-events: none;
+  text-align: left;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+  visibility: hidden;
+  white-space: pre-wrap;
+}
+
+.workspace-panel__import-wrap:hover .workspace-panel__import-tooltip,
+.workspace-panel__import-wrap:focus-within .workspace-panel__import-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
 }
 
 .workspace-panel__download {

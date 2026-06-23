@@ -10,6 +10,7 @@ import {
   AIRALOGY_RECORD_SCHEMA_VERSION,
   createProtocolAiraArchive,
   openAiraArchive,
+  openZipArchive,
 } from '../dist/index.js'
 
 function sha256Hex(value) {
@@ -287,6 +288,20 @@ test('rejects renamed folder zips that do not include an Airalogy manifest', asy
     ])),
     /_airalogy_archive\/manifest\.json/,
   )
+})
+
+test('opens a plain folder zip without requiring an Airalogy manifest', async () => {
+  const archive = await openZipArchive(createStoredZip([
+    ['protocol.aimd', '# Figure Protocol\n'],
+    ['files/workflow-diagram.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>'],
+  ]))
+
+  assert.deepEqual(archive.entries.map(entry => entry.name), [
+    'protocol.aimd',
+    'files/workflow-diagram.svg',
+  ])
+  assert.equal(await archive.readText('protocol.aimd'), '# Figure Protocol\n')
+  assert.equal(await archive.readText('files/workflow-diagram.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>')
 })
 
 test('creates and validates a protocol .aira archive with protocol-local files', async () => {

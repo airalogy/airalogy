@@ -22,6 +22,7 @@ describe('EditorDemo archive export', () => {
     expect(source).toContain('emptyPreview')
     expect(source).toContain('resolveDemoExampleAsset')
     expect(source).toContain('getDemoExample(activeTemplateExampleId.value)')
+    expect(source).not.toContain('pages.editor.desc')
     expect(source).not.toContain("watch(locale, () => {\n  clearProtocolFiles()\n  resetToSelectedExample(locale.value)\n})")
   })
 
@@ -56,6 +57,27 @@ describe('EditorDemo archive export', () => {
     expect(source).toContain('workspace-panel__actions')
     expect(source).toContain('workspace-panel__download')
     expect(source).not.toContain('archive-toolbar')
+  })
+
+  it('imports plain zip or .aira packages into the online editor before repacking', () => {
+    expect(source).toContain('openAiraArchive')
+    expect(source).toContain('openZipArchive')
+    expect(source).toContain('readAiraProtocolPackage')
+    expect(source).toContain('readZipFolderPackage')
+    expect(source).toContain('chooseZipAimdEntrypoint')
+    expect(source).toContain('protocol.aimd')
+    expect(source).toContain('index.aimd')
+    expect(source).toContain('packageInputRef')
+    expect(source).toContain('accept=".zip,.aira,application/zip,application/vnd.airalogy.archive+zip"')
+    expect(source).toContain('handlePackageFileSelected')
+    expect(source).toContain('openPackageFilePicker')
+    expect(source).toContain('applyImportedProtocolPackage')
+    expect(source).toContain('packageImportNoAimd')
+    expect(source).toContain('createImportedProtocolFile')
+    expect(source).toContain('importPackageHint')
+    expect(source).toContain('workspace-panel__import-tooltip')
+    expect(source).toContain('aria-describedby="editor-import-package-tooltip"')
+    expect(source).toContain('white-space: pre-wrap;')
   })
 
   it('autosaves and restores local editor drafts with protocol files', () => {

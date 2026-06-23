@@ -102,6 +102,8 @@ export interface AiraValidationResult {
   issues: string[]
 }
 
+export type ZipArchiveInput = ArrayBuffer | Blob | Uint8Array
+
 export type AiraArchiveEntryData = string | Blob | ArrayBuffer | ArrayBufferView
 
 export interface CreateProtocolAiraArchiveFile {
@@ -327,6 +329,20 @@ async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(buffer)
 }
 
+async function readZipEntryBytes(bytes: Uint8Array, entry: ZipEntryInternal): Promise<Uint8Array> {
+  const compressed = bytes.slice(
+    entry.compressedDataStart,
+    entry.compressedDataStart + entry.compressedSize,
+  )
+  if (entry.compressionMethod === 0) {
+    return compressed
+  }
+  if (entry.compressionMethod === 8) {
+    return inflateRaw(compressed)
+  }
+  throw new Error(`Archive member '${entry.name}' uses unsupported compression method ${entry.compressionMethod}.`)
+}
+
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', bytes)
   return Array.from(new Uint8Array(digest))
@@ -503,6 +519,14 @@ async function toArchiveBytes(data: AiraArchiveEntryData): Promise<Uint8Array> {
   throw new Error('Archive entry data must be a string, Blob, ArrayBuffer, or ArrayBufferView.')
 }
 
+async function toZipInputBytes(input: ZipArchiveInput): Promise<Uint8Array> {
+  return input instanceof Uint8Array
+    ? input
+    : input instanceof Blob
+      ? new Uint8Array(await input.arrayBuffer())
+      : new Uint8Array(input)
+}
+
 function inferProtocolNameFromAimd(aimd: string): string | null {
   for (const line of aimd.split(/\r?\n/)) {
     const trimmed = line.trim()
@@ -557,6 +581,51 @@ export async function createProtocolAiraArchive(options: CreateProtocolAiraArchi
   return createStoredZip(archiveEntries)
 }
 
+export class ZipArchive {
+  readonly bytes: Uint8Array
+  readonly entries: AiraEntry[]
+
+  private readonly entryMap: Map<string, ZipEntryInternal>
+
+  private constructor(bytes: Uint8Array, entries: ZipEntryInternal[]) {
+    this.bytes = bytes
+    this.entries = entries.map(({ compressedDataStart: _compressedDataStart, ...entry }) => entry)
+    this.entryMap = new Map(entries.map(entry => [entry.name, entry]))
+  }
+
+  static async open(input: ZipArchiveInput): Promise<ZipArchive> {
+    const bytes = await toZipInputBytes(input)
+    const entries = parseZipEntries(bytes)
+    for (const entry of entries) {
+      const issue = validateMemberPath(entry.name)
+      if (issue) {
+        throw new Error(issue)
+      }
+    }
+    return new ZipArchive(bytes, entries)
+  }
+
+  has(path: string): boolean {
+    return this.entryMap.has(path)
+  }
+
+  async readBytes(path: string): Promise<Uint8Array> {
+    const entry = this.entryMap.get(path)
+    if (!entry) {
+      throw new Error(`Archive member '${path}' not found.`)
+    }
+    return readZipEntryBytes(this.bytes, entry)
+  }
+
+  async readText(path: string): Promise<string> {
+    return textDecoder.decode(await this.readBytes(path))
+  }
+
+  async readJson<T = unknown>(path: string): Promise<T> {
+    return JSON.parse(await this.readText(path)) as T
+  }
+}
+
 export class AiraArchive {
   readonly bytes: Uint8Array
   readonly entries: AiraEntry[]
@@ -572,11 +641,7 @@ export class AiraArchive {
   }
 
   static async open(input: ArrayBuffer | Blob | Uint8Array): Promise<AiraArchive> {
-    const bytes = input instanceof Uint8Array
-      ? input
-      : input instanceof Blob
-        ? new Uint8Array(await input.arrayBuffer())
-        : new Uint8Array(input)
+    const bytes = await toZipInputBytes(input)
     const entries = parseZipEntries(bytes)
     const manifestEntry = entries.find(entry => entry.name === AIRA_MANIFEST_PATH)
     if (!manifestEntry) {
@@ -626,17 +691,7 @@ export class AiraArchive {
     if (!entry) {
       throw new Error(`Archive member '${path}' not found.`)
     }
-    const compressed = this.bytes.slice(
-      entry.compressedDataStart,
-      entry.compressedDataStart + entry.compressedSize,
-    )
-    if (entry.compressionMethod === 0) {
-      return compressed
-    }
-    if (entry.compressionMethod === 8) {
-      return inflateRaw(compressed)
-    }
-    throw new Error(`Archive member '${path}' uses unsupported compression method ${entry.compressionMethod}.`)
+    return readZipEntryBytes(this.bytes, entry)
   }
 
   async readText(path: string): Promise<string> {
@@ -907,6 +962,10 @@ export class AiraArchive {
 
 export async function openAiraArchive(input: ArrayBuffer | Blob | Uint8Array): Promise<AiraArchive> {
   return AiraArchive.open(input)
+}
+
+export async function openZipArchive(input: ZipArchiveInput): Promise<ZipArchive> {
+  return ZipArchive.open(input)
 }
 
 export async function readAiraArchiveSummary(input: ArrayBuffer | Blob | Uint8Array): Promise<AiraSummary> {

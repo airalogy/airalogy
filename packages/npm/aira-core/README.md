@@ -21,6 +21,16 @@ const validation = await archive.validate()
 const manifest = archive.manifest
 ```
 
+Read an ordinary ZIP folder bundle when you do not expect an Airalogy manifest:
+
+```ts
+import { openZipArchive } from '@airalogy/aira-core'
+
+const zip = await openZipArchive(file)
+const aimd = await zip.readText('protocol.aimd')
+const image = await zip.readBytes('files/workflow-diagram.svg')
+```
+
 Create a Protocol archive with protocol-local figure files:
 
 ```ts
