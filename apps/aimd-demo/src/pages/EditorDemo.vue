@@ -8,6 +8,11 @@ import {
   type ZipArchive,
 } from '@airalogy/aira-core'
 import { AimdEditor, type AimdEditorImageRequest } from '@airalogy/aimd-editor'
+import {
+  AimdRecorder,
+  createEmptyProtocolRecordData,
+  type AimdProtocolRecordData,
+} from '@airalogy/aimd-recorder'
 import { renderToVue } from '@airalogy/aimd-renderer'
 import DemoExamplePicker from '../components/DemoExamplePicker.vue'
 import { useDemoLocale, useDemoMessages, type DemoLocale } from '../composables/demoI18n'
@@ -18,6 +23,7 @@ import {
   useDemoExampleContent,
 } from '../composables/sampleContent'
 import '@airalogy/aimd-renderer/styles'
+import '@airalogy/aimd-recorder/styles'
 
 interface ProtocolFigureFile {
   id: string
@@ -64,6 +70,7 @@ interface ImportedProtocolPackage {
 }
 
 type FigureInsertSource = 'local' | 'remote'
+type PreviewMode = 'render' | 'recorder'
 
 const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
   'image/avif': 'avif',
@@ -101,6 +108,7 @@ const {
 } = useDemoExampleContent(DEFAULT_DEMO_EXAMPLE_ID, locale)
 content.value = ''
 const mode = ref<'source' | 'wysiwyg'>('source')
+const previewMode = ref<PreviewMode>('render')
 const editorRef = ref<any>(null)
 const figureInputRef = ref<HTMLInputElement | null>(null)
 const packageInputRef = ref<HTMLInputElement | null>(null)
@@ -123,6 +131,8 @@ const figureInsertError = ref('')
 const insertedFigureIds = ref<string[]>([])
 const previewNodes = ref<VNode[]>([])
 const previewError = ref('')
+const recorderError = ref('')
+const recorderData = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 const figurePopoverPosition = ref({ top: 120, left: 24 })
 let uploadedFigureSerial = 1
 let previewRenderSerial = 0
@@ -153,6 +163,11 @@ const downloadButtonLabel = computed(() => (
 ))
 const isContentBlank = computed(() => content.value.trim().length === 0)
 const canClearContent = computed(() => !isContentBlank.value || protocolFileCount.value > 0)
+const previewPanelTitle = computed(() => (
+  previewMode.value === 'recorder'
+    ? messages.value.pages.editor.recorderTitle
+    : messages.value.pages.editor.previewTitle
+))
 
 function isEditorDraftStorageAvailable(): boolean {
   return typeof window !== 'undefined' && 'indexedDB' in window
@@ -262,6 +277,11 @@ function handleEditorDraftError(error: unknown) {
   archiveStatus.value = messages.value.pages.editor.draftSaveFailed
 }
 
+function resetRecorderData() {
+  recorderData.value = createEmptyProtocolRecordData()
+  recorderError.value = ''
+}
+
 async function saveEditorDraftNow(): Promise<void> {
   if (!isDraftReady || isRestoringDraft) return
   if (!isEditorDraftStorageAvailable()) return
@@ -316,6 +336,7 @@ async function restoreEditorDraft() {
     if (!draft) return
 
     clearProtocolFiles()
+    resetRecorderData()
     content.value = draft.content
     selectedExampleId.value = draft.selectedExampleId || selectedExampleId.value
     activeTemplateExampleId.value = draft.activeTemplateExampleId
@@ -336,6 +357,7 @@ async function restoreEditorDraft() {
 
 function handleExampleTemplateSelect(id: string) {
   clearProtocolFiles()
+  resetRecorderData()
   const example = loadExample(id, locale.value)
   activeTemplateExampleId.value = example.id
   activeTemplateLocale.value = locale.value
@@ -344,6 +366,7 @@ function handleExampleTemplateSelect(id: string) {
 
 function loadSelectedExampleTemplate() {
   clearProtocolFiles()
+  resetRecorderData()
   const example = resetToSelectedExample(locale.value)
   activeTemplateExampleId.value = example.id
   activeTemplateLocale.value = locale.value
@@ -369,6 +392,10 @@ function resolvePreviewAssetUrl(src: string): string | undefined {
     activeTemplateLocale.value,
     src,
   ) ?? undefined
+}
+
+function resolveRecorderFile(src: string): string | null {
+  return resolvePreviewAssetUrl(src) ?? null
 }
 
 async function renderPreview() {
@@ -653,6 +680,7 @@ async function readProtocolPackage(file: File): Promise<ImportedProtocolPackage>
 
 function applyImportedProtocolPackage(protocolPackage: ImportedProtocolPackage) {
   clearProtocolFiles()
+  resetRecorderData()
   activeTemplateExampleId.value = null
   content.value = protocolPackage.aimd
   protocolFiles.value = protocolPackage.files
@@ -745,6 +773,7 @@ function clearProtocolFiles() {
 
 function clearEditorContent() {
   clearProtocolFiles()
+  resetRecorderData()
   activeTemplateExampleId.value = null
   content.value = ''
   archiveStatus.value = messages.value.pages.editor.contentCleared
@@ -953,6 +982,9 @@ async function downloadProtocolFile() {
 }
 
 watch([content, locale, protocolFileCount], renderPreview, { immediate: true })
+watch([content, locale], () => {
+  recorderError.value = ''
+})
 watch([content, protocolFileCount, activeTemplateExampleId, activeTemplateLocale], scheduleEditorDraftSave)
 
 function handleEditorPageHide() {
@@ -1161,10 +1193,26 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="workspace-panel workspace-panel--preview">
-        <div class="workspace-panel__header">
-          <h3 class="workspace-panel__title">{{ messages.pages.editor.previewTitle }}</h3>
+        <div class="workspace-panel__header workspace-panel__header--split">
+          <h3 class="workspace-panel__title">{{ previewPanelTitle }}</h3>
+          <div class="preview-mode-tabs" :aria-label="messages.pages.editor.previewModeLabel">
+            <button
+              type="button"
+              :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'render' }]"
+              @click="previewMode = 'render'"
+            >
+              {{ messages.pages.editor.renderMode }}
+            </button>
+            <button
+              type="button"
+              :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'recorder' }]"
+              @click="previewMode = 'recorder'"
+            >
+              {{ messages.pages.editor.recorderMode }}
+            </button>
+          </div>
         </div>
-        <div class="workspace-panel__body render-preview">
+        <div v-if="previewMode === 'render'" class="workspace-panel__body render-preview">
           <div v-if="previewError" class="preview-error">
             {{ messages.pages.editor.renderFailed }}: {{ previewError }}
           </div>
@@ -1172,6 +1220,22 @@ onBeforeUnmount(() => {
             {{ messages.pages.editor.emptyPreview }}
           </div>
           <component v-else :is="() => previewNodes" />
+        </div>
+        <div v-else class="workspace-panel__body recorder-preview">
+          <div v-if="recorderError" class="preview-error">
+            {{ messages.pages.editor.recorderFailed }}: {{ recorderError }}
+          </div>
+          <div v-if="isContentBlank" class="preview-empty">
+            {{ messages.pages.editor.emptyRecorder }}
+          </div>
+          <AimdRecorder
+            v-else
+            v-model="recorderData"
+            :content="content"
+            :locale="locale"
+            :resolve-file="resolveRecorderFile"
+            @error="recorderError = $event"
+          />
         </div>
       </section>
     </div>
@@ -1456,6 +1520,39 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
+.preview-mode-tabs {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid #d5e2f2;
+  border-radius: 7px;
+  background: #eef4fb;
+}
+
+.preview-mode-tab {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #56657a;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.preview-mode-tab:hover {
+  color: #1a73e8;
+}
+
+.preview-mode-tab--active {
+  background: #fff;
+  color: #1a73e8;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 10%);
+}
+
 .workspace-panel__actions {
   display: inline-flex;
   flex: 0 0 auto;
@@ -1544,6 +1641,15 @@ onBeforeUnmount(() => {
   line-height: 1.75;
   font-size: 15px;
   overflow-wrap: anywhere;
+}
+
+.recorder-preview {
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.recorder-preview :deep(.aimd-protocol-recorder) {
+  min-height: 100%;
 }
 
 .render-preview :deep(h1) {

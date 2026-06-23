@@ -97,6 +97,22 @@ describe('EditorDemo archive export', () => {
     expect(source).toContain('draftSaveFailed')
   })
 
+  it('lets the right panel switch between static render preview and a fillable recorder form', () => {
+    expect(source).toContain('AimdRecorder')
+    expect(source).toContain('createEmptyProtocolRecordData')
+    expect(source).toContain("type PreviewMode = 'render' | 'recorder'")
+    expect(source).toContain("const previewMode = ref<PreviewMode>('render')")
+    expect(source).toContain('previewPanelTitle')
+    expect(source).toContain('preview-mode-tabs')
+    expect(source).toContain("previewMode = 'render'")
+    expect(source).toContain("previewMode = 'recorder'")
+    expect(source).toContain('v-model="recorderData"')
+    expect(source).toContain(':resolve-file="resolveRecorderFile"')
+    expect(source).toContain('resetRecorderData')
+    expect(source).toContain('recorderMode')
+    expect(source).toContain('emptyRecorder')
+  })
+
   it('keeps the live preview from adding a panel-level horizontal scrollbar', () => {
     expect(source).toMatch(/\.workspace-panel__body \{[\s\S]*?overflow-x: hidden;/)
     expect(source).toMatch(/\.workspace-panel__body \{[\s\S]*?overflow-y: auto;/)

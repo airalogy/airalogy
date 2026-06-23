@@ -89,8 +89,14 @@ export interface DemoMessages {
       draftSaveFailed: string
       sourceTitle: string
       previewTitle: string
+      recorderTitle: string
+      previewModeLabel: string
+      renderMode: string
+      recorderMode: string
       emptyPreview: string
+      emptyRecorder: string
       renderFailed: string
+      recorderFailed: string
       insertFigureTitle: string
       localFigureMode: string
       remoteFigureMode: string
@@ -264,8 +270,14 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         draftSaveFailed: 'Local draft could not be saved',
         sourceTitle: 'Editor',
         previewTitle: 'Live Preview',
+        recorderTitle: 'Recorder Form',
+        previewModeLabel: 'Preview mode',
+        renderMode: 'Preview',
+        recorderMode: 'Fill',
         emptyPreview: 'Preview will appear here after you add AIMD content.',
+        emptyRecorder: 'Fillable fields will appear here after you add AIMD variables, steps, checks, tables, or quizzes.',
         renderFailed: 'Preview failed',
+        recorderFailed: 'Recorder failed',
         insertFigureTitle: 'Insert figure',
         localFigureMode: 'Local image',
         remoteFigureMode: 'Image URL',
@@ -437,8 +449,14 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         draftSaveFailed: '本地草稿保存失败',
         sourceTitle: '编辑器',
         previewTitle: '实时预览',
+        recorderTitle: '填写表单',
+        previewModeLabel: '预览模式',
+        renderMode: '预览',
+        recorderMode: '填写',
         emptyPreview: '添加 AIMD 内容后，这里会显示实时预览。',
+        emptyRecorder: '添加 AIMD 变量、步骤、检查点、表格或题目后，这里会显示可填写表单。',
         renderFailed: '预览失败',
+        recorderFailed: '表单渲染失败',
         insertFigureTitle: '插入图片',
         localFigureMode: '本地图片',
         remoteFigureMode: '网络图片',
