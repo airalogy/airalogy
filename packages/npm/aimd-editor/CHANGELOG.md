@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.10.0
+
+### Minor Changes
+
+- 69922a8: Add AIMD `media` blocks and `ref_media` references for video, audio, ordinary files, and default media pin controls.
+
+  Renderer hosts can resolve protocol-local media assets with `resolveAssetUrl()` using `context.kind` values of `media` and `media_poster`. Vue rendering now provides a compact default pin/unpin interaction for video and audio media, including single-item pinning, collapsed descriptions, and small, medium, and large pinned-size controls, while static HTML rendering exposes matching data attributes for host-controlled behavior.
+
+### Patch Changes
+
+- ffa32e1: Allow source and WYSIWYG editor modes to flex-fill taller host panels while preserving their configured minimum height.
+- Updated dependencies [36a5fef]
+- Updated dependencies [69922a8]
+- Updated dependencies [b5c5646]
+  - @airalogy/aimd-renderer@2.9.0
+  - @airalogy/aimd-core@2.11.0
+
 ## 1.9.1
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # @airalogy/protocol-demo
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [36a5fef]
+- Updated dependencies [4328cd2]
+- Updated dependencies [ffa32e1]
+- Updated dependencies [69922a8]
+- Updated dependencies [b5c5646]
+- Updated dependencies [4c8bfdc]
+  - @airalogy/aimd-recorder@1.19.2
+  - @airalogy/aimd-editor@1.10.0
+  - @airalogy/aimd-core@2.11.0
+
 ## 0.0.4
 
 ### Patch Changes

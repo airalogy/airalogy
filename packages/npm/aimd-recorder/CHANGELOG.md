@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.19.2
+
+### Patch Changes
+
+- 36a5fef: Add default prose typography for rendered AIMD documents inside an `.aimd-renderer` container, including clearer heading hierarchy, visible list markers, and more compact body line height. Recorder rendered content and markdown previews now inherit those renderer prose styles instead of keeping a separate heading/list treatment.
+- 4328cd2: Keep step body text, markdown fields, and variable tables constrained within the step card width.
+- b5c5646: Rename the internal renderer stylesheet to `renderer.css` and the recorder stylesheet to `recorder.css` while keeping the public `@airalogy/aimd-renderer/styles` and `@airalogy/aimd-recorder/styles` imports stable.
+
+  Make the recorder stylesheet import the renderer stylesheet and layer recorder-specific editing styles on top. Browser render helpers now load the renderer stylesheet as the canonical renderer CSS entry instead of treating it as math-only KaTeX styles.
+
+- 4c8bfdc: Let stacked variable fields expand to fit long metadata keys, preventing long var IDs from wrapping or truncating inside recorder field headers.
+- Updated dependencies [36a5fef]
+- Updated dependencies [ffa32e1]
+- Updated dependencies [69922a8]
+- Updated dependencies [b5c5646]
+  - @airalogy/aimd-renderer@2.9.0
+  - @airalogy/aimd-editor@1.10.0
+  - @airalogy/aimd-core@2.11.0
+
 ## 1.19.1
 
 ### Patch Changes

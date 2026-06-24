@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.9.0
+
+### Minor Changes
+
+- 69922a8: Add AIMD `media` blocks and `ref_media` references for video, audio, ordinary files, and default media pin controls.
+
+  Renderer hosts can resolve protocol-local media assets with `resolveAssetUrl()` using `context.kind` values of `media` and `media_poster`. Vue rendering now provides a compact default pin/unpin interaction for video and audio media, including single-item pinning, collapsed descriptions, and small, medium, and large pinned-size controls, while static HTML rendering exposes matching data attributes for host-controlled behavior.
+
+### Patch Changes
+
+- 36a5fef: Add default prose typography for rendered AIMD documents inside an `.aimd-renderer` container, including clearer heading hierarchy, visible list markers, and more compact body line height. Recorder rendered content and markdown previews now inherit those renderer prose styles instead of keeping a separate heading/list treatment.
+- b5c5646: Rename the internal renderer stylesheet to `renderer.css` and the recorder stylesheet to `recorder.css` while keeping the public `@airalogy/aimd-renderer/styles` and `@airalogy/aimd-recorder/styles` imports stable.
+
+  Make the recorder stylesheet import the renderer stylesheet and layer recorder-specific editing styles on top. Browser render helpers now load the renderer stylesheet as the canonical renderer CSS entry instead of treating it as math-only KaTeX styles.
+
+- Updated dependencies [69922a8]
+  - @airalogy/aimd-core@2.11.0
+
 ## 2.8.1
 
 ### Patch Changes
