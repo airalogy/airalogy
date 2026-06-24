@@ -27,6 +27,7 @@ import { annotateStepReferenceSequence } from "./annotateStepReferences"
 import { annotateCitationReferenceLabels, moveReferenceSectionsToEnd } from "./citationNumbering"
 import { criticMarkupHandlers } from "./criticMarkup"
 import { buildFigureChildren, assignFigureSequenceNumbers } from "./figureNumbering"
+import { assignMediaSequenceNumbers, buildMediaChildren, inferMediaMimeType } from "./mediaRendering"
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -560,8 +561,10 @@ const EMPTY_EXTRACTED_FIELDS: ExtractedAimdFields = {
   ref_step: [],
   ref_var: [],
   ref_fig: [],
+  ref_media: [],
   cite: [],
   fig: [],
+  media: [],
   refs: [],
 }
 
@@ -603,8 +606,10 @@ function createEmptyExtractedFields(): ExtractedAimdFields {
     ref_step: [...EMPTY_EXTRACTED_FIELDS.ref_step],
     ref_var: [...EMPTY_EXTRACTED_FIELDS.ref_var],
     ref_fig: [...(EMPTY_EXTRACTED_FIELDS.ref_fig || [])],
+    ref_media: [...(EMPTY_EXTRACTED_FIELDS.ref_media || [])],
     cite: [...(EMPTY_EXTRACTED_FIELDS.cite || [])],
     fig: [...(EMPTY_EXTRACTED_FIELDS.fig || [])],
+    media: [...(EMPTY_EXTRACTED_FIELDS.media || [])],
     refs: [...(EMPTY_EXTRACTED_FIELDS.refs || [])],
   }
 }
@@ -1086,6 +1091,20 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     nodeData.sequence = figNode.sequence
   }
 
+  // Add media-specific fields
+  if (node.fieldType === "media") {
+    const mediaNode = node as any
+    nodeData.id = mediaNode.id
+    nodeData.kind = mediaNode.kind
+    nodeData.src = mediaNode.src
+    nodeData.mime = mediaNode.mime
+    nodeData.provider = mediaNode.provider
+    nodeData.poster = mediaNode.poster
+    nodeData.title = mediaNode.title
+    nodeData.legend = mediaNode.legend
+    nodeData.sequence = mediaNode.sequence
+  }
+
   // Add refs-specific fields
   if (node.fieldType === "refs") {
     nodeData.entries = (node as any).entries
@@ -1124,17 +1143,18 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
   const typeClass = getFieldTypeClass(fieldType)
 
   // Determine if this is a reference type
-  const isRef = fieldType === "ref_step" || fieldType === "ref_var" || fieldType === "ref_fig"
+  const isRef = fieldType === "ref_step" || fieldType === "ref_var" || fieldType === "ref_fig" || fieldType === "ref_media"
   const isCite = fieldType === "cite"
   const isQuiz = fieldType === "quiz"
   const isFig = fieldType === "fig"
+  const isMedia = fieldType === "media"
   const isRefs = fieldType === "refs"
   const baseClass = isRef
     ? "aimd-ref"
-    : (isCite ? "aimd-cite" : (isFig ? "aimd-figure" : (isRefs ? "aimd-refs" : "aimd-field")))
+    : (isCite ? "aimd-cite" : (isFig ? "aimd-figure" : (isMedia ? "aimd-media" : (isRefs ? "aimd-refs" : "aimd-field"))))
   const modifierClass = isRef
-    ? `aimd-ref--${fieldType === "ref_step" ? "step" : (fieldType === "ref_var" ? "var" : "fig")}`
-    : (isCite ? "" : (isFig || isRefs ? "" : `aimd-field--${typeClass}`))
+    ? `aimd-ref--${fieldType === "ref_step" ? "step" : (fieldType === "ref_var" ? "var" : (fieldType === "ref_fig" ? "fig" : "media"))}`
+    : (isCite ? "" : (isFig || isMedia || isRefs ? "" : `aimd-field--${typeClass}`))
 
   // Generate children based on field type
   const children: (Element | HastText)[] = []
@@ -1163,8 +1183,10 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
       } as Element)
     }
     else {
-      // Variable or figure reference: show as field with scope + id
-      const scopeLabel = fieldType === "ref_var" ? messages.scope.var : messages.scope.figure
+      // Variable, figure, or media reference: show as field with scope + id
+      const scopeLabel = fieldType === "ref_var"
+        ? messages.scope.var
+        : (fieldType === "ref_media" ? messages.scope.media : messages.scope.figure)
       children.push({
         type: "element",
         tagName: "span",
@@ -1514,6 +1536,47 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
       sequence: figNode.sequence,
     }))
   }
+  else if (fieldType === "media") {
+    const mediaNode = node as any
+    const mediaId = mediaNode.id || id
+    const mediaSrc = resolveAimdAssetUrl(mediaNode.src, options.resolveAssetUrl, {
+      kind: "media",
+      id: mediaId,
+      title: mediaNode.title,
+      mediaKind: mediaNode.kind,
+    })
+    const posterSrc = resolveAimdAssetUrl(mediaNode.poster, options.resolveAssetUrl, {
+      kind: "media_poster",
+      id: mediaId,
+      title: mediaNode.title,
+      mediaKind: mediaNode.kind,
+    })
+    children.push(...buildMediaChildren({
+      id: mediaId,
+      kind: mediaNode.kind,
+      src: mediaSrc,
+      mime: mediaNode.mime || inferMediaMimeType(mediaNode.src, mediaNode.kind),
+      provider: mediaNode.provider,
+      poster: posterSrc,
+      title: mediaNode.title,
+      legend: mediaNode.legend,
+      sequence: mediaNode.sequence,
+      captionTitle: messages.media.captionTitle,
+      pinLabel: messages.media.pin,
+      unpinLabel: messages.media.unpin,
+      pinSizeControlsLabel: messages.media.pinSizeControls,
+      pinSizeSmallLabel: messages.media.pinSizeSmall,
+      pinSizeMediumLabel: messages.media.pinSizeMedium,
+      pinSizeLargeLabel: messages.media.pinSizeLarge,
+      pinSizeSmallTitle: messages.media.pinSizeSmallTitle,
+      pinSizeMediumTitle: messages.media.pinSizeMediumTitle,
+      pinSizeLargeTitle: messages.media.pinSizeLargeTitle,
+      showLegendLabel: messages.media.showLegend,
+      hideLegendLabel: messages.media.hideLegend,
+      showLegendTitle: messages.media.showLegendTitle,
+      hideLegendTitle: messages.media.hideLegendTitle,
+    }))
+  }
 
   // Build properties
 	  const properties: Properties = {
@@ -1554,6 +1617,9 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     }
     else if (fieldType === "ref_fig") {
       properties["data-aimd-ref-kind"] = "fig"
+    }
+    else if (fieldType === "ref_media") {
+      properties["data-aimd-ref-kind"] = "media"
     }
   }
 
@@ -1615,6 +1681,21 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     properties["data-aimd-fig-src"] = figNode.src
   }
 
+  if (node.fieldType === "media") {
+    const mediaNode = node as any
+    properties.id = `media-${mediaNode.id || id}`
+    properties["data-aimd-media-id"] = mediaNode.id
+    properties["data-aimd-media-src"] = mediaNode.src
+    properties["data-aimd-media-kind"] = mediaNode.kind
+    properties["data-aimd-media-size"] = "medium"
+    if (mediaNode.legend) {
+      properties["data-aimd-media-legend"] = "expanded"
+    }
+    if (mediaNode.provider) {
+      properties["data-aimd-media-provider"] = mediaNode.provider
+    }
+  }
+
   if (node.fieldType === "cite") {
     const refs = "refs" in node ? (node as any).refs : [id]
     properties["data-aimd-refs"] = refs.join(",")
@@ -1636,7 +1717,7 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     type: "element",
     tagName: isRef
       ? "span"
-      : (isFig ? "figure" : (isRefs ? "section" : ((fieldType === "var_table" || isQuiz || isGroupedStepContainer) ? "div" : "span"))),
+      : ((isFig || isMedia) ? "figure" : (isRefs ? "section" : ((fieldType === "var_table" || isQuiz || isGroupedStepContainer) ? "div" : "span"))),
     properties,
     children,
   }, node)
@@ -1739,6 +1820,7 @@ export async function renderToHtml(
   const fields = getExtractedFields(file)
   annotateStepReferenceSequence(hastTree, fields, options)
   assignFigureSequenceNumbers(hastTree, fields)
+  assignMediaSequenceNumbers(hastTree, fields, createAimdRendererMessages(options.locale, options.messages).media)
   annotateCitationReferenceLabels(hastTree, fields)
   liftBlockVarElements(hastTree, options.blockVarTypes)
   if (options.groupStepBodies) {
@@ -1771,6 +1853,7 @@ export async function renderToVue(
   const fields = getExtractedFields(file)
   annotateStepReferenceSequence(hastTree, fields, options)
   assignFigureSequenceNumbers(hastTree, fields)
+  assignMediaSequenceNumbers(hastTree, fields, createAimdRendererMessages(options.locale, options.messages).media)
   annotateCitationReferenceLabels(hastTree, fields)
   liftBlockVarElements(hastTree, options.blockVarTypes)
   if (options.groupStepBodies) {
@@ -1818,6 +1901,7 @@ export function renderToHtmlSync(
   const fields = getExtractedFields(file)
   annotateStepReferenceSequence(hastTree, fields, options)
   assignFigureSequenceNumbers(hastTree, fields)
+  assignMediaSequenceNumbers(hastTree, fields, createAimdRendererMessages(options.locale, options.messages).media)
   annotateCitationReferenceLabels(hastTree, fields)
   liftBlockVarElements(hastTree, options.blockVarTypes)
   if (options.groupStepBodies) {

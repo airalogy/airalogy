@@ -103,6 +103,28 @@ title: Workflow Diagram
 legend: A compact local SVG figure used to demonstrate fig metadata and ref_fig links.
 ```
 
+## Platform Video Media
+
+Platform videos use `kind: video` plus a provider hint. See {{ref_media|youtube_demo}} and {{ref_media|bilibili_demo}} for examples.
+
+```media
+id: youtube_demo
+kind: video
+provider: youtube
+src: https://www.youtube.com/embed/VIDEO_ID
+title: YouTube Video
+legend: Replace VIDEO_ID with the video's YouTube embed id.
+```
+
+```media
+id: bilibili_demo
+kind: video
+provider: bilibili
+src: https://player.bilibili.com/player.html?bvid=BV_ID
+title: Bilibili Video
+legend: Replace BV_ID with the video's BVID.
+```
+
 ```refs
 @misc{yang2025airalogyaiempowereduniversaldata,
       title={Airalogy: AI-empowered universal data digitization for research automation},

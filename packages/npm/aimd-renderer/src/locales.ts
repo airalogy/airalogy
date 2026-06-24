@@ -20,6 +20,7 @@ export interface AimdRendererMessages {
     check: string
     table: string
     figure: string
+    media: string
   }
   quiz: {
     types: {
@@ -42,6 +43,23 @@ export interface AimdRendererMessages {
   figure: {
     reference: (value: string | number) => string
     captionTitle: (sequence: number, title?: string) => string
+  }
+  media: {
+    reference: (value: string | number, kind?: string) => string
+    captionTitle: (sequence: number, title?: string, kind?: string) => string
+    pin: string
+    unpin: string
+    pinSizeControls: string
+    pinSizeSmall: string
+    pinSizeMedium: string
+    pinSizeLarge: string
+    pinSizeSmallTitle: string
+    pinSizeMediumTitle: string
+    pinSizeLargeTitle: string
+    showLegend: string
+    hideLegend: string
+    showLegendTitle: string
+    hideLegendTitle: string
   }
   references: {
     title: string
@@ -84,6 +102,7 @@ const EN_US_MESSAGES: AimdRendererMessages = {
     check: "check",
     table: "table",
     figure: "figure",
+    media: "media",
   },
   quiz: {
     types: {
@@ -107,6 +126,23 @@ const EN_US_MESSAGES: AimdRendererMessages = {
     reference: value => `figure ${value}`,
     captionTitle: (sequence, title) => title ? `figure ${sequence}: ${title}` : `figure ${sequence}`,
   },
+  media: {
+    reference: (value, kind) => `${getEnglishMediaKindLabel(kind)} ${value}`,
+    captionTitle: (sequence, title, kind) => title ? `${getEnglishMediaKindLabel(kind)} ${sequence}: ${title}` : `${getEnglishMediaKindLabel(kind)} ${sequence}`,
+    pin: "Pin",
+    unpin: "Unpin",
+    pinSizeControls: "Pinned media size",
+    pinSizeSmall: "S",
+    pinSizeMedium: "M",
+    pinSizeLarge: "L",
+    pinSizeSmallTitle: "Small pinned size",
+    pinSizeMediumTitle: "Medium pinned size",
+    pinSizeLargeTitle: "Large pinned size",
+    showLegend: "Details",
+    hideLegend: "Hide",
+    showLegendTitle: "Show media description",
+    hideLegendTitle: "Hide media description",
+  },
   references: {
     title: "References",
   },
@@ -124,6 +160,7 @@ const ZH_CN_MESSAGES: AimdRendererMessages = {
     check: "检查点",
     table: "表格",
     figure: "图",
+    media: "媒体",
   },
   quiz: {
     types: {
@@ -147,6 +184,23 @@ const ZH_CN_MESSAGES: AimdRendererMessages = {
     reference: value => `图 ${value}`,
     captionTitle: (sequence, title) => title ? `图 ${sequence}：${title}` : `图 ${sequence}`,
   },
+  media: {
+    reference: (value, kind) => `${getChineseMediaKindLabel(kind)} ${value}`,
+    captionTitle: (sequence, title, kind) => title ? `${getChineseMediaKindLabel(kind)} ${sequence}：${title}` : `${getChineseMediaKindLabel(kind)} ${sequence}`,
+    pin: "固定",
+    unpin: "取消",
+    pinSizeControls: "固定媒体尺寸",
+    pinSizeSmall: "小",
+    pinSizeMedium: "中",
+    pinSizeLarge: "大",
+    pinSizeSmallTitle: "小尺寸固定",
+    pinSizeMediumTitle: "中尺寸固定",
+    pinSizeLargeTitle: "大尺寸固定",
+    showLegend: "说明",
+    hideLegend: "收起",
+    showLegendTitle: "展开媒体说明",
+    hideLegendTitle: "收起媒体说明",
+  },
   references: {
     title: "参考文献",
   },
@@ -154,6 +208,38 @@ const ZH_CN_MESSAGES: AimdRendererMessages = {
     clientSummary: "前端 assigner",
     serverSummary: "服务端 assigner",
   },
+}
+
+function normalizeMediaKindLabelKey(kind: string | undefined): "video" | "audio" | "file" {
+  const normalized = (kind || "").trim().toLowerCase()
+  if (normalized === "video" || normalized === "audio") {
+    return normalized
+  }
+  return "file"
+}
+
+function getEnglishMediaKindLabel(kind: string | undefined): string {
+  switch (normalizeMediaKindLabelKey(kind)) {
+    case "video":
+      return "Video"
+    case "audio":
+      return "Audio"
+    case "file":
+    default:
+      return "Attachment"
+  }
+}
+
+function getChineseMediaKindLabel(kind: string | undefined): string {
+  switch (normalizeMediaKindLabelKey(kind)) {
+    case "video":
+      return "视频"
+    case "audio":
+      return "音频"
+    case "file":
+    default:
+      return "附件"
+  }
 }
 
 const BASE_MESSAGES: Record<AimdRendererLocale, AimdRendererMessages> = {

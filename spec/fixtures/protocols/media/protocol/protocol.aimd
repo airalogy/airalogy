@@ -1,0 +1,15 @@
+# Media AIMD Test
+
+This fixture validates a local media block and an inline media reference such as {{ref_media|lecture_video}}.
+
+{{step|review_media}} Confirm that the media block can be rendered and optionally pinned by the host.
+
+```media
+id: lecture_video
+kind: video
+src: files/lecture.mp4
+mime: video/mp4
+poster: files/lecture-poster.jpg
+title: Lecture Video
+legend: A local video resource packaged with the AIMD protocol.
+```

@@ -85,3 +85,25 @@ def test_refs_fixture_extracts_python_refs_templates():
         == "Airalogy: Universal Research Automation"
     )
     assert parsed["templates"]["refs"][1]["url"] == "https://example.com/protocol"
+
+
+def test_media_fixture_extracts_python_media_templates():
+    content = (
+        PROTOCOL_FIXTURES_ROOT
+        / "media/protocol/protocol.aimd"
+    ).read_text(encoding="utf-8")
+
+    parsed = parse_aimd(content)
+
+    assert [field_name(field) for field in parsed["templates"]["step"]] == [
+        "review_media"
+    ]
+    assert parsed["templates"]["ref_media"][0]["ref_id"] == "lecture_video"
+    media = parsed["templates"]["media"][0]
+    assert media["id"] == "lecture_video"
+    assert media["kind"] == "video"
+    assert media["src"] == "files/lecture.mp4"
+    assert media["mime"] == "video/mp4"
+    assert media["poster"] == "files/lecture-poster.jpg"
+    assert media["title"] == "Lecture Video"
+    assert media["legend"] == "A local video resource packaged with the AIMD protocol."

@@ -18,6 +18,8 @@ from .model_sync import (
 )
 from .parser import AimdParser
 
+STANDARD_MEDIA_KINDS = {"video", "audio", "file"}
+
 
 class ValidationError:
     """Represents a validation error with position information."""
@@ -126,6 +128,19 @@ class AimdValidator:
                         ref_step.position.end_line,
                         ref_step.position.start_col,
                         ref_step.position.end_col,
+                    )
+                )
+
+        for media in result["templates"]["media"]:
+            media_kind = (media.kind or "file").strip().lower()
+            if media_kind not in STANDARD_MEDIA_KINDS:
+                errors.append(
+                    ValidationError(
+                        f'Media "{media.id}" has unsupported kind "{media.kind}". Supported media kinds are video, audio, and file; static images must use a fig block.',
+                        media.position.start_line,
+                        media.position.end_line,
+                        media.position.start_col,
+                        media.position.end_col,
                     )
                 )
 

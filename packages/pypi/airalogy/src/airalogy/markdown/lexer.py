@@ -21,7 +21,7 @@ class Lexer:
 
     # Template start pattern: {{type|content}}
     TEMPLATE_START_PATTERN = re.compile(
-        r"\{\{\s*(var_table|var|step|check|ref_var|ref_step|ref_fig|cite)\s*\|",
+        r"\{\{\s*(var_table|var|step|check|ref_var|ref_step|ref_fig|ref_media|cite)\s*\|",
         re.MULTILINE | re.DOTALL,
     )
 
@@ -45,6 +45,7 @@ class Lexer:
         "ref_var": TokenType.REF_VAR,
         "ref_step": TokenType.REF_STEP,
         "ref_fig": TokenType.REF_FIG,
+        "ref_media": TokenType.REF_MEDIA,
         "cite": TokenType.CITE,
     }
 

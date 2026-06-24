@@ -1,5 +1,7 @@
 # 在Airalogy Markdown中插入图
 
+`fig` 用于静态图片，重点是图号、图题、图例和 <code v-pre>{{ref_fig|...}}</code> 引用。即使图片来自 `.aira` 里的本地文件，也仍然推荐使用 `fig`。如果要插入视频、音频、PDF 或需要播放器交互的课件媒体，请使用 [`media`](./multimedia.md)。
+
 ## 插入图
 
 在AIMD中，您可以通过使用`fig`代码块来插入图像。例如：
@@ -35,7 +37,7 @@ legend: 这是一个使用Airalogy文件ID的图像示例。
 ```
 ````
 
-注意`fig`代码块符合YAML语法。如果Legend包含多行文本，可以使用YAML的多行字符串语法，例如：
+`fig` 代码块内部是键值对，兼容 YAML 写法；如果 `legend` 包含多行文本，可以使用 `|`：
 
 ````aimd
 ```fig
@@ -50,7 +52,7 @@ legend: |
 
 ### 引用图
 
-在AIMD文档中，您可以通过`{{ref_fig|<fig_id>}}`语法来引用图像。例如：
+在AIMD文档中，您可以通过 <code v-pre>{{ref_fig|&lt;fig_id&gt;}}</code> 语法来引用图像。例如：
 
 ````aimd
 如{{ref_fig|fig_1}}所示，这是一个示例图。
@@ -63,7 +65,7 @@ legend: 这是一个示例图的图例说明。
 ```
 ````
 
-解析后，`{{ref_fig|fig_1}}`会渲染为带编号的图引用标记（例如“图 1”），并保留目标 metadata。宿主应用可以用这些 metadata 滚动定位到对应图像，而不需要改写自身路由状态。
+解析后，<code v-pre>{{ref_fig|fig_1}}</code> 会渲染为带编号的图引用标记（例如“图 1”），并保留目标 metadata。宿主应用可以用这些 metadata 滚动定位到对应图像，而不需要改写自身路由状态。
 
 ## 语法设计说明
 

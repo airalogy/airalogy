@@ -18,7 +18,8 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `parseAndExtract(content)` for canonical core field metadata extraction, including simple `var` definitions in `fields.var_definitions` and BibTeX references in `fields.refs`.
 - Default previews for `var` and `var_table` display AIMD `title`, preserve the canonical field id, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus.
 - Numbered citation markers with hover/focus reference details and generated end-of-document references lists for `{{cite|...}}` plus fenced `refs` blocks.
-- Host-side `resolveAssetUrl` support for rendering protocol-local figure assets from package, archive, or app-specific URLs without rewriting AIMD source.
+- Host-side `resolveAssetUrl` support for rendering protocol-local figure and media assets from package, archive, or app-specific URLs without rewriting AIMD source.
+- Default Vue pin controls for `video` / `audio` media, including single-item pinning, collapsed pinned descriptions, and small / medium / large pinned-size controls; HTML output exposes matching `data-*` hooks for host-controlled behavior.
 - `assignerVisibility` to show or hide assigner blocks in authoring/debug views.
 - Built-in quiz preview controls.
 - Built-in locale support via `locale`.
@@ -57,14 +58,17 @@ This protocol follows {{cite|yang2025airalogyaiempowereduniversaldata}}.
 ```
 ````
 
-## Protocol-Local Figure Assets
+## Protocol-Local Figure and Media Assets
 
-`fig` blocks can keep clean relative sources such as `src: files/workflow-diagram.svg`. Hosts that load AIMD from a package, archive, or registry can pass `resolveAssetUrl` to map that source to a displayable URL at render time.
+`fig` and `media` blocks can keep clean relative sources such as `src: files/workflow-diagram.svg` or `src: files/videos/lecture.mp4`. Hosts that load AIMD from a package, archive, or registry can pass `resolveAssetUrl` to map that source to a displayable URL at render time. `context.kind` distinguishes `fig`, `media`, and `media_poster`.
 
 ```ts
 const { html } = await renderToHtml(content, {
   resolveAssetUrl(src, context) {
     if (context.kind === "fig" && src.startsWith("files/")) {
+      return exampleAssetMap[src]
+    }
+    if ((context.kind === "media" || context.kind === "media_poster") && src.startsWith("files/")) {
       return exampleAssetMap[src]
     }
     return null

@@ -1,4 +1,4 @@
-import type { AimdClientAssignerField, AimdReferenceField } from "../types/aimd"
+import type { AimdClientAssignerField, AimdMediaField, AimdReferenceField } from "../types/aimd"
 import type { AimdStepNode, AimdStepTimerMode, AimdVarDefinition } from "../types/nodes"
 export { validateClientAssigners } from "./assigner-graph"
 import { parseClientAssignerContent as parseClientAssignerContentImpl } from "./client-assigner-syntax"
@@ -1096,15 +1096,23 @@ export function validateVarDefinition(def: AimdVarDefinition): string[] {
   ]
 }
 
-/**
- * Parse fig code block content (YAML format).
- */
-export function parseFigContent(content: string): {
-  id: string
-  src: string
-  title?: string
-  legend?: string
-} {
+function normalizeBlockScalarValue(value: string): string {
+  const trimmed = value.trim()
+  if (trimmed.length >= 2) {
+    const quote = trimmed[0]
+    if ((quote === "\"" || quote === "'") && trimmed[trimmed.length - 1] === quote) {
+      try {
+        return quote === "\"" ? JSON.parse(trimmed) : trimmed.slice(1, -1).replace(/\\'/g, "'")
+      }
+      catch {
+        return trimmed.slice(1, -1)
+      }
+    }
+  }
+  return trimmed
+}
+
+function parseBlockScalarFields(content: string): Record<string, string> {
   const lines = content.split("\n")
   const result: Record<string, string> = {}
   let currentKey: string | null = null
@@ -1121,7 +1129,7 @@ export function parseFigContent(content: string): {
     const match = trimmedLine.match(/^(\w+):\s*(.*)$/)
     if (match) {
       if (currentKey) {
-        result[currentKey] = currentValue.trim()
+        result[currentKey] = normalizeBlockScalarValue(currentValue)
       }
 
       currentKey = match[1]
@@ -1147,8 +1155,22 @@ export function parseFigContent(content: string): {
   }
 
   if (currentKey) {
-    result[currentKey] = currentValue.trim()
+    result[currentKey] = normalizeBlockScalarValue(currentValue)
   }
+
+  return result
+}
+
+/**
+ * Parse fig code block content (YAML-like key/value format).
+ */
+export function parseFigContent(content: string): {
+  id: string
+  src: string
+  title?: string
+  legend?: string
+} {
+  const result = parseBlockScalarFields(content)
 
   if (!result.id || !result.src) {
     throw new Error("fig block must have \"id\" and \"src\" fields")
@@ -1160,6 +1182,54 @@ export function parseFigContent(content: string): {
     title: result.title,
     legend: result.legend,
   }
+}
+
+export const AIMD_STANDARD_MEDIA_KINDS = ["video", "audio", "file"] as const
+
+export type AimdStandardMediaKind = typeof AIMD_STANDARD_MEDIA_KINDS[number]
+
+export function normalizeAimdMediaKind(kind: string | undefined): string {
+  return (kind || "file").trim().toLowerCase() || "file"
+}
+
+export function isStandardAimdMediaKind(kind: string | undefined): boolean {
+  return (AIMD_STANDARD_MEDIA_KINDS as readonly string[]).includes(normalizeAimdMediaKind(kind))
+}
+
+export function validateMediaDefinition(media: Pick<AimdMediaField, "id" | "kind">): string[] {
+  const normalizedKind = normalizeAimdMediaKind(media.kind)
+  if (isStandardAimdMediaKind(normalizedKind)) {
+    return []
+  }
+
+  return [
+    `media "${media.id}": unsupported kind "${media.kind}". Supported media kinds are video, audio, and file; static images must use a fig block.`,
+  ]
+}
+
+/**
+ * Parse media code block content (YAML-like key/value format).
+ */
+export function parseMediaContent(content: string): AimdMediaField {
+  const result = parseBlockScalarFields(content)
+
+  if (!result.id || !result.src) {
+    throw new Error("media block must have \"id\" and \"src\" fields")
+  }
+
+  const media: AimdMediaField = {
+    id: result.id,
+    kind: result.kind || "file",
+    src: result.src,
+  }
+
+  if (result.mime) media.mime = result.mime
+  if (result.provider) media.provider = result.provider
+  if (result.poster) media.poster = result.poster
+  if (result.title) media.title = result.title
+  if (result.legend) media.legend = result.legend
+
+  return media
 }
 
 /**

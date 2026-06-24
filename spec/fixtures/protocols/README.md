@@ -15,3 +15,4 @@ These fixtures are regression and compatibility inputs for parser, assigner, fil
 | `aimd-multi-hop-image` | Multi-hop Airalogy Markdown image references. |
 | `multi-level-assigner` | Multi-level assigner chains with auto/manual/auto-first behavior. |
 | `critic-markup` | CriticMarkup-style review marks inside Airalogy Markdown text. |
+| `media` | AIMD media blocks and `ref_media` links. |

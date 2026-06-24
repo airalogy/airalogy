@@ -7,6 +7,7 @@ import { unified } from 'unified'
 import {
   protectAimdInlineTemplates,
   remarkAimd,
+  validateMediaDefinition,
   validateVarDefinition,
   validateVarDefaultType,
   validateVarKwargs,
@@ -487,6 +488,82 @@ legend: This chart shows data.
   assert.equal(fields.fig[0].legend, 'This chart shows data.')
 })
 
+// ── media parsing ────────────────────────────────────────────────────────────
+
+test('media: video block with local asset metadata', () => {
+  const { tree, fields } = parseAimd(`
+\`\`\`media
+id: lecture_demo
+kind: video
+src: files/videos/demo.mp4
+mime: video/mp4
+poster: files/images/demo-poster.png
+title: Lecture Demo
+legend: Watch this while reading the following section.
+\`\`\`
+`)
+  const node = findAimdNode(tree)
+  assert.equal(node?.fieldType, 'media')
+  assert.equal(node?.id, 'lecture_demo')
+  assert.equal(node?.kind, 'video')
+  assert.equal(node?.src, 'files/videos/demo.mp4')
+  assert.equal(node?.mime, 'video/mp4')
+  assert.equal(node?.poster, 'files/images/demo-poster.png')
+  assert.equal(fields.media.length, 1)
+  assert.deepEqual(fields.media[0], {
+    id: 'lecture_demo',
+    kind: 'video',
+    src: 'files/videos/demo.mp4',
+    mime: 'video/mp4',
+    poster: 'files/images/demo-poster.png',
+    title: 'Lecture Demo',
+    legend: 'Watch this while reading the following section.',
+  })
+})
+
+test('media: type is not accepted as a kind alias', () => {
+  const { tree, fields } = parseAimd(`
+\`\`\`media
+id: lecture_audio
+type: audio
+src: files/lecture.mp3
+\`\`\`
+`)
+  const node = findAimdNode(tree)
+  assert.equal(node?.fieldType, 'media')
+  assert.equal(node?.id, 'lecture_audio')
+  assert.equal(node?.kind, 'file')
+  assert.equal(fields.media[0].kind, 'file')
+})
+
+test('validateMediaDefinition: image media kind is a standard error', () => {
+  const errors = validateMediaDefinition({
+    id: 'workflow_image',
+    kind: 'image',
+    src: 'files/workflow.png',
+  })
+  assert.equal(errors.length, 1)
+  assert.match(errors[0], /unsupported kind "image"/)
+  assert.match(errors[0], /fig block/)
+})
+
+test('validateMediaDefinition: embed media kind is a standard error', () => {
+  const errors = validateMediaDefinition({
+    id: 'youtube_demo',
+    kind: 'embed',
+    src: 'https://www.youtube.com/embed/VIDEO_ID',
+  })
+  assert.equal(errors.length, 1)
+  assert.match(errors[0], /unsupported kind "embed"/)
+  assert.match(errors[0], /video, audio, and file/)
+})
+
+test('validateMediaDefinition: standard media kinds are valid', () => {
+  for (const kind of ['video', 'audio', 'file']) {
+    assert.deepEqual(validateMediaDefinition({ id: `${kind}_demo`, kind, src: `files/${kind}` }), [])
+  }
+})
+
 // ── ref parsing ──────────────────────────────────────────────────────────────
 
 test('ref_var: reference to variable', () => {
@@ -509,6 +586,14 @@ test('ref_fig: reference to figure', () => {
   const node = findAimdNode(tree)
   assert.equal(node?.fieldType, 'ref_fig')
   assert.equal(node?.refTarget, 'fig1')
+})
+
+test('ref_media: reference to media', () => {
+  const { tree, fields } = parseAimd('Watch {{ref_media|lecture_demo}} while reading.')
+  const node = findAimdNode(tree)
+  assert.equal(node?.fieldType, 'ref_media')
+  assert.equal(node?.refTarget, 'lecture_demo')
+  assert.ok(fields.ref_media.includes('lecture_demo'))
 })
 
 // ── cite parsing ─────────────────────────────────────────────────────────────

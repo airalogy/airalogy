@@ -20,8 +20,10 @@ export type AimdFieldType =
   | "ref_step"
   | "ref_var"
   | "ref_fig"
+  | "ref_media"
   | "cite"
   | "fig"
+  | "media"
   | "refs"
 
 /**
@@ -36,8 +38,10 @@ export type AimdScope =
   | "ref_step"
   | "ref_var"
   | "ref_fig"
+  | "ref_media"
   | "cite"
   | "fig"
+  | "media"
   | "refs"
 
 /**
@@ -283,7 +287,7 @@ export interface AimdCheckNode extends BaseNode {
  * AIMD reference node
  */
 export interface AimdRefNode extends BaseNode {
-  fieldType: "ref_step" | "ref_var" | "ref_fig"
+  fieldType: "ref_step" | "ref_var" | "ref_fig" | "ref_media"
   refTarget: string
 }
 
@@ -310,6 +314,31 @@ export interface AimdFigNode extends BaseNode {
   /** Figure legend/caption (optional but recommended) */
   legend?: string
   /** Figure sequence number (auto-generated) */
+  sequence?: number
+}
+
+/**
+ * AIMD media node
+ */
+export interface AimdMediaNode extends BaseNode {
+  fieldType: "media"
+  /** Media ID (used for references) */
+  id: string
+  /** Media kind. Standard values are video, audio, and file. Static images use `fig`. */
+  kind: "video" | "audio" | "file" | string
+  /** Media source (local path, URL, or external provider URL) */
+  src: string
+  /** MIME type, when known */
+  mime?: string
+  /** External provider name, such as youtube or bilibili */
+  provider?: string
+  /** Poster image source for video media */
+  poster?: string
+  /** Media title */
+  title?: string
+  /** Media legend/caption */
+  legend?: string
+  /** Media sequence number (auto-generated) */
   sequence?: number
 }
 
@@ -356,6 +385,7 @@ export type AimdNode =
   | AimdRefNode 
   | AimdCiteNode 
   | AimdFigNode
+  | AimdMediaNode
   | AimdRefsNode
 
 /**
@@ -411,4 +441,5 @@ export type {
   AimdCheckField,
   AimdRefField,
   AimdFigField,
+  AimdMediaField,
 } from './aimd'

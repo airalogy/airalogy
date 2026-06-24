@@ -6,16 +6,22 @@ export { default as remarkAimd } from './remark-aimd'
 export { default as rehypeAimd } from './rehype-aimd'
 export { validateClientAssignerFunctionSource } from './client-assigner-syntax'
 export {
+  AIMD_STANDARD_MEDIA_KINDS,
   NUMERIC_CONSTRAINT_KWARGS,
+  isStandardAimdMediaKind,
   isNumericVarType,
+  normalizeAimdMediaKind,
   parseDurationToMs,
+  parseMediaContent,
   parseStepTimerMode,
   parseVarEnumValues,
   parseVarDefinition,
   parseRefsContent,
+  validateMediaDefinition,
   validateVarDefaultType,
   validateVarDefinition,
   validateVarKwargs,
+  type AimdStandardMediaKind,
 } from './field-parsers'
 export {
   protectAimdInlineTemplates,

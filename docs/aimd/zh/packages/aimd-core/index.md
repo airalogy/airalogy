@@ -12,7 +12,7 @@ pnpm add @airalogy/aimd-core
 
 ## 核心能力
 
-- 解析 AIMD 模板语法与 `quiz` / `fig` 代码块。
+- 解析 AIMD 模板语法与 `quiz` / `fig` / `media` 代码块。
 - 解析 fenced `assigner runtime=client` 代码块并提取前端 assigner 元数据。
 - 构建兼容 MDAST 的 AIMD 节点。
 - 构建兼容 MDAST 的 CriticMarkup 审阅节点，包括添加、删除、替换、注释和高亮。
@@ -135,12 +135,14 @@ processor.runSync(tree, file)
 
 ## 校验辅助函数
 
-如果你的编辑器、lint 流程或导入链路需要在 AIMD 内容进入 renderer / recorder 之前先做 parser 级校验，`@airalogy/aimd-core/parser` 还导出了两个可复用辅助函数：
+如果你的编辑器、lint 流程或导入链路需要在 AIMD 内容进入 renderer / recorder 之前先做 parser 级校验，`@airalogy/aimd-core/parser` 还导出了一组可复用辅助函数：
 
 ```ts
 import {
+  parseMediaContent,
   parseVarDefinition,
   validateClientAssignerFunctionSource,
+  validateMediaDefinition,
   validateVarDefinition,
   validateVarDefaultType,
   validateVarKwargs,
@@ -148,6 +150,8 @@ import {
 ```
 
 - `validateClientAssignerFunctionSource(functionSource, id)` 会拒绝不安全或不受支持的前端 `client_assigner` 代码，例如 `eval`、`window`、`fetch`、Unicode 转义绕过，以及其他非确定性结构。
+- `parseMediaContent(content)` 会解析 fenced `media` 块中的 key-value 内容，并保留原始 `kind`。
+- `validateMediaDefinition(media)` 会把非 `video`、`audio`、`file` 的 `kind` 报为标准错误；静态图片应使用 `fig`。
 - `validateVarDefaultType(def)` 会在 AIMD var 的默认值与声明类型不匹配时返回 warning 文本。
 - `validateVarKwargs(def)` 会在支持的 kwargs 被用于不兼容的 var 定义时返回 warning 文本，包括 `gt`、`ge`、`lt`、`le`、`multiple_of` 这类 Pydantic 风格数值约束被用在非数值类型上。
 - `validateVarDefinition(def)` 会合并默认值校验与 kwargs 校验，并递归检查嵌套 `subvars`。

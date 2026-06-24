@@ -71,6 +71,26 @@ describe('sampleContent', () => {
     expect(fields.ref_var.filter(id => id === 'stable_wait_s')).toHaveLength(1)
   })
 
+  it('demonstrates provider-based platform video media', () => {
+    const fields = parseAndExtract(sampleContent)
+
+    expect(fields.ref_media).toEqual(expect.arrayContaining(['youtube_demo', 'bilibili_demo']))
+    expect(fields.media).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'youtube_demo',
+        kind: 'video',
+        provider: 'youtube',
+        src: 'https://www.youtube.com/embed/VIDEO_ID',
+      }),
+      expect.objectContaining({
+        id: 'bilibili_demo',
+        kind: 'video',
+        provider: 'bilibili',
+        src: 'https://player.bilibili.com/player.html?bvid=BV_ID',
+      }),
+    ]))
+  })
+
   it('keeps every registered demo example loadable and parseable', () => {
     for (const example of DEMO_EXAMPLES) {
       expect(example.locales.length).toBeGreaterThan(0)

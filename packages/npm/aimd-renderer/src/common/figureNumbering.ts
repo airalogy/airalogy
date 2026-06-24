@@ -1,5 +1,6 @@
 import type { Element, Text as HastText, Root as HastRoot } from "hast"
 import type { ExtractedAimdFields } from "@airalogy/aimd-core/types"
+import { buildCaptionedResourceCaption } from "./captionedResourceRendering"
 
 // ---------------------------------------------------------------------------
 // Figure numbering helpers
@@ -53,34 +54,16 @@ export function buildFigureChildren(figNode: {
     children: [],
   } as Element)
 
-  // Create figcaption if title or legend exists
-  if (figTitle || figLegend) {
-    const captionChildren: (Element | HastText)[] = []
-
-    if (figTitle) {
-      captionChildren.push({
-        type: "element",
-        tagName: "div",
-        properties: { className: ["aimd-figure__title"] },
-        children: [{ type: "text", value: figTitle }],
-      } as Element)
-    }
-
-    if (figLegend) {
-      captionChildren.push({
-        type: "element",
-        tagName: "div",
-        properties: { className: ["aimd-figure__legend"] },
-        children: [{ type: "text", value: figLegend }],
-      } as Element)
-    }
-
-    children.push({
-      type: "element",
-      tagName: "figcaption",
-      properties: { className: ["aimd-figure__caption"] },
-      children: captionChildren,
-    } as Element)
+  const caption = buildCaptionedResourceCaption({
+    captionTagName: "figcaption",
+    captionClassName: ["aimd-figure__caption"],
+    title: figTitle,
+    titleClassName: ["aimd-figure__title"],
+    legend: figLegend,
+    legendClassName: ["aimd-figure__legend"],
+  })
+  if (caption) {
+    children.push(caption)
   }
 
   return children

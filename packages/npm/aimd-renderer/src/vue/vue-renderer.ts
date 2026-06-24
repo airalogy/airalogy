@@ -14,6 +14,7 @@ import { Fragment, h } from "vue"
 import type { AimdRendererI18nOptions, AimdRendererLocale, AimdRendererMessages } from "../locales"
 import { resolveAimdAssetUrl } from "../common/assetUrls"
 import { formatCitationReferenceSummary, moveReferenceSectionsToEnd } from "../common/citationNumbering"
+import { inferMediaMimeType, isPinnableMediaKind, normalizeMediaKind, normalizeMediaNumberingKind } from "../common/mediaRendering"
 import { resolveQuizPreviewOptions, type ResolvedQuizPreviewOptions } from "../common/quiz-preview"
 import {
   createAimdRendererMessages,
@@ -67,6 +68,185 @@ function resolveQuizPreviewOptionsFromContext(ctx: RenderContext): ResolvedQuizP
 }
 
 const BLANK_PLACEHOLDER_PATTERN = /\[\[([^\[\]\s]+)\]\]/g
+const AIMD_MEDIA_PINNED_SIZES = ["small", "medium", "large"] as const
+const AIMD_MEDIA_PIN_ALIGN_FRAMES = 3
+
+type AimdMediaPinnedSize = typeof AIMD_MEDIA_PINNED_SIZES[number]
+
+function isAimdMediaPinnedSize(value: string | undefined): value is AimdMediaPinnedSize {
+  return AIMD_MEDIA_PINNED_SIZES.includes(value as AimdMediaPinnedSize)
+}
+
+function updateAimdMediaSizeButtons(mediaElement: HTMLElement, activeSize: AimdMediaPinnedSize): void {
+  mediaElement.querySelectorAll<HTMLElement>("[data-aimd-media-size-option]").forEach((sizeButton) => {
+    sizeButton.setAttribute(
+      "aria-pressed",
+      sizeButton.dataset.aimdMediaSizeOption === activeSize ? "true" : "false",
+    )
+  })
+}
+
+function updateAimdMediaLegendToggle(mediaElement: HTMLElement, collapsed: boolean): void {
+  const toggleButton = mediaElement.querySelector<HTMLElement>("[data-aimd-media-legend-toggle]")
+  if (!toggleButton) {
+    return
+  }
+
+  const showLabel = toggleButton.dataset.aimdMediaShowLegendLabel || "Details"
+  const hideLabel = toggleButton.dataset.aimdMediaHideLegendLabel || "Hide"
+  const showTitle = toggleButton.dataset.aimdMediaShowLegendTitle || "Show media description"
+  const hideTitle = toggleButton.dataset.aimdMediaHideLegendTitle || "Hide media description"
+  const label = collapsed ? showLabel : hideLabel
+  const title = collapsed ? showTitle : hideTitle
+
+  toggleButton.setAttribute("aria-expanded", collapsed ? "false" : "true")
+  toggleButton.setAttribute("aria-label", title)
+  toggleButton.setAttribute("title", title)
+  toggleButton.textContent = label
+}
+
+function findAimdMediaScrollParent(mediaElement: HTMLElement): HTMLElement | null {
+  let parent = mediaElement.parentElement
+  while (parent) {
+    const style = window.getComputedStyle(parent)
+    if (/(auto|scroll|overlay)/.test(style.overflowY) && parent.scrollHeight > parent.clientHeight) {
+      return parent
+    }
+    parent = parent.parentElement
+  }
+  return null
+}
+
+function getCssPixelValue(element: HTMLElement, propertyName: string): number {
+  const rawValue = window.getComputedStyle(element).getPropertyValue(propertyName).trim()
+  const numericValue = Number.parseFloat(rawValue)
+  return Number.isFinite(numericValue) ? numericValue : 0
+}
+
+function alignAimdMediaToPinnedTopOnce(mediaElement: HTMLElement): void {
+  const mediaRect = mediaElement.getBoundingClientRect()
+  const pinnedTop = getCssPixelValue(mediaElement, "--aimd-media-pinned-top")
+  const scrollParent = findAimdMediaScrollParent(mediaElement)
+  if (scrollParent) {
+    const parentRect = scrollParent.getBoundingClientRect()
+    const delta = mediaRect.top - parentRect.top - pinnedTop
+    if (Math.abs(delta) > 1) {
+      scrollParent.scrollTop += delta
+    }
+    return
+  }
+
+  const delta = mediaRect.top - pinnedTop
+  if (Math.abs(delta) > 1) {
+    window.scrollBy({
+      top: delta,
+      left: 0,
+      behavior: "auto",
+    })
+  }
+}
+
+function alignAimdMediaToPinnedTop(mediaElement: HTMLElement): void {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  let frame = 0
+  const alignFrame = () => {
+    frame += 1
+    alignAimdMediaToPinnedTopOnce(mediaElement)
+    if (frame < AIMD_MEDIA_PIN_ALIGN_FRAMES) {
+      window.requestAnimationFrame(alignFrame)
+    }
+  }
+  window.requestAnimationFrame(alignFrame)
+}
+
+function getAimdMediaPinScope(mediaElement: HTMLElement): ParentNode {
+  return mediaElement.closest("[data-aimd-renderer-root], .aimd-renderer, .render-preview, .recorder-preview")
+    || mediaElement.parentElement
+    || mediaElement.ownerDocument
+}
+
+function unpinAimdMedia(mediaElement: HTMLElement, pinLabel: string): void {
+  mediaElement.classList.remove("aimd-media--pinned")
+  mediaElement.dataset.aimdMediaPinned = "false"
+
+  if (mediaElement.querySelector(".aimd-media__legend")) {
+    mediaElement.dataset.aimdMediaLegend = "expanded"
+    updateAimdMediaLegendToggle(mediaElement, false)
+  }
+
+  const pinButton = mediaElement.querySelector<HTMLElement>("[data-aimd-media-pin]")
+  if (pinButton) {
+    pinButton.setAttribute("aria-pressed", "false")
+    pinButton.textContent = pinLabel
+  }
+}
+
+function toggleAimdMediaPinned(
+  event: Event,
+  pinLabel: string,
+  unpinLabel: string,
+): void {
+  const button = event.currentTarget as HTMLElement | null
+  const mediaElement = button?.closest?.(".aimd-media")
+  if (!(button instanceof HTMLElement) || !(mediaElement instanceof HTMLElement)) {
+    return
+  }
+
+  const shouldPin = !mediaElement.classList.contains("aimd-media--pinned")
+  if (shouldPin) {
+    getAimdMediaPinScope(mediaElement)
+      .querySelectorAll<HTMLElement>(".aimd-media--pinned")
+      .forEach((pinnedMedia) => {
+        if (pinnedMedia !== mediaElement) {
+          unpinAimdMedia(pinnedMedia, pinLabel)
+        }
+      })
+  }
+
+  mediaElement.classList.toggle("aimd-media--pinned", shouldPin)
+  mediaElement.dataset.aimdMediaPinned = shouldPin ? "true" : "false"
+  const activeSize = isAimdMediaPinnedSize(mediaElement.dataset.aimdMediaSize)
+    ? mediaElement.dataset.aimdMediaSize
+    : "medium"
+  mediaElement.dataset.aimdMediaSize = activeSize
+  updateAimdMediaSizeButtons(mediaElement, activeSize)
+  if (mediaElement.querySelector(".aimd-media__legend")) {
+    const collapsed = shouldPin
+    mediaElement.dataset.aimdMediaLegend = collapsed ? "collapsed" : "expanded"
+    updateAimdMediaLegendToggle(mediaElement, collapsed)
+  }
+  button.setAttribute("aria-pressed", shouldPin ? "true" : "false")
+  button.textContent = shouldPin ? unpinLabel : pinLabel
+  if (shouldPin) {
+    alignAimdMediaToPinnedTop(mediaElement)
+  }
+}
+
+function setAimdMediaPinnedSize(event: Event, size: AimdMediaPinnedSize): void {
+  const button = event.currentTarget as HTMLElement | null
+  const mediaElement = button?.closest?.(".aimd-media")
+  if (!(button instanceof HTMLElement) || !(mediaElement instanceof HTMLElement)) {
+    return
+  }
+
+  mediaElement.dataset.aimdMediaSize = size
+  updateAimdMediaSizeButtons(mediaElement, size)
+}
+
+function toggleAimdMediaLegend(event: Event): void {
+  const button = event.currentTarget as HTMLElement | null
+  const mediaElement = button?.closest?.(".aimd-media")
+  if (!(button instanceof HTMLElement) || !(mediaElement instanceof HTMLElement)) {
+    return
+  }
+
+  const collapsed = mediaElement.dataset.aimdMediaLegend !== "collapsed"
+  mediaElement.dataset.aimdMediaLegend = collapsed ? "collapsed" : "expanded"
+  updateAimdMediaLegendToggle(mediaElement, collapsed)
+}
 
 function buildQuizStemChildren(
   quizType: AimdQuizNode["quizType"],
@@ -691,6 +871,27 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
     ])
   },
 
+  ref_media: (node, ctx) => {
+    const { id } = node
+    const refTarget = "refTarget" in node ? node.refTarget : id
+    const mediaNumber = "mediaNumber" in node ? (node as any).mediaNumber : undefined
+    const mediaKind = "mediaKind" in node ? (node as any).mediaKind : undefined
+    const displayText = ctx.messages.media.reference(mediaNumber !== undefined ? mediaNumber : refTarget, mediaKind)
+
+    return h("span", {
+      "class": "aimd-ref aimd-ref--media",
+      "data-aimd-type": "ref_media",
+      "data-aimd-ref": refTarget,
+      "data-aimd-ref-target": refTarget,
+      "data-aimd-ref-kind": "media",
+      "data-aimd-ref-media-kind": mediaKind,
+      "tabindex": 0,
+      "title": refTarget,
+    }, [
+      h("span", { class: "aimd-ref__content" }, displayText),
+    ])
+  },
+
   cite: (node, ctx) => {
     const citationRefs = getCitationReferenceDisplays(node)
 
@@ -781,6 +982,170 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
       "data-aimd-fig-id": figId,
       "data-aimd-fig-src": figSrc,
       "id": `fig-${figId}`,
+    }, children)
+  },
+
+  media: (node, ctx) => {
+    const mediaNode = node as any
+    const mediaId = mediaNode.id || node.id
+    const mediaKind = normalizeMediaKind(mediaNode.kind)
+    const mediaNumberingKind = normalizeMediaNumberingKind(mediaNode.kind)
+    const mediaTitle = mediaNode.title
+    const mediaDisplayTitle = mediaTitle || mediaId
+    const mediaSrc = resolveAimdAssetUrl(mediaNode.src || "", ctx.resolveAssetUrl, {
+      kind: "media",
+      id: mediaId,
+      title: mediaNode.title,
+      mediaKind,
+    }) || ""
+    const posterSrc = resolveAimdAssetUrl(mediaNode.poster || "", ctx.resolveAssetUrl, {
+      kind: "media_poster",
+      id: mediaId,
+      title: mediaTitle,
+      mediaKind,
+    })
+    const mediaMime = mediaNode.mime
+      || inferMediaMimeType(mediaNode.src, mediaNumberingKind)
+      || inferMediaMimeType(mediaSrc, mediaNumberingKind)
+
+    const hasProvider = typeof mediaNode.provider === "string" && mediaNode.provider.trim().length > 0
+    const body = mediaNumberingKind === "video"
+      ? hasProvider
+        ? h("iframe", {
+            class: "aimd-media__embed",
+            src: mediaSrc,
+            title: mediaDisplayTitle,
+            loading: "lazy",
+            allow: "fullscreen; picture-in-picture",
+            allowfullscreen: true,
+          })
+        : h("video", {
+            class: "aimd-media__video",
+            src: mediaSrc,
+            poster: posterSrc,
+            controls: true,
+            preload: "metadata",
+          }, mediaMime ? [h("source", { src: mediaSrc, type: mediaMime })] : undefined)
+      : mediaNumberingKind === "audio"
+        ? h("audio", {
+            class: "aimd-media__audio",
+            src: mediaSrc,
+            controls: true,
+            preload: "metadata",
+          }, mediaMime ? [h("source", { src: mediaSrc, type: mediaMime })] : undefined)
+        : h("a", {
+            class: "aimd-media__file-link",
+            href: mediaSrc,
+            target: "_blank",
+            rel: "noopener noreferrer",
+          }, mediaDisplayTitle || mediaSrc)
+
+    const captionChildren: VNodeChild[] = []
+    const captionActions: VNodeChild[] = []
+    const mediaSequence = mediaNode.sequence
+    if (mediaSequence !== undefined || mediaNode.title) {
+      const titleText = mediaSequence !== undefined
+        ? ctx.messages.media.captionTitle(mediaSequence + 1, mediaNode.title, mediaNumberingKind)
+        : mediaNode.title
+      captionChildren.push(h("div", { class: "aimd-media__title" }, titleText))
+    }
+    const canPinMedia = isPinnableMediaKind(mediaNumberingKind)
+    if (canPinMedia) {
+      if (mediaNode.legend) {
+        captionActions.push(h("button", {
+          type: "button",
+          class: "aimd-media__legend-toggle",
+          "data-aimd-media-legend-toggle": mediaId,
+          "data-aimd-media-show-legend-label": ctx.messages.media.showLegend,
+          "data-aimd-media-hide-legend-label": ctx.messages.media.hideLegend,
+          "data-aimd-media-show-legend-title": ctx.messages.media.showLegendTitle,
+          "data-aimd-media-hide-legend-title": ctx.messages.media.hideLegendTitle,
+          "aria-expanded": "false",
+          "aria-label": ctx.messages.media.showLegendTitle,
+          title: ctx.messages.media.showLegendTitle,
+          onClick: toggleAimdMediaLegend,
+        }, ctx.messages.media.showLegend))
+      }
+
+      const sizeOptions: Array<{
+        size: AimdMediaPinnedSize
+        label: string
+        title: string
+        pressed: string
+      }> = [
+        {
+          size: "small",
+          label: ctx.messages.media.pinSizeSmall,
+          title: ctx.messages.media.pinSizeSmallTitle,
+          pressed: "false",
+        },
+        {
+          size: "medium",
+          label: ctx.messages.media.pinSizeMedium,
+          title: ctx.messages.media.pinSizeMediumTitle,
+          pressed: "true",
+        },
+        {
+          size: "large",
+          label: ctx.messages.media.pinSizeLarge,
+          title: ctx.messages.media.pinSizeLargeTitle,
+          pressed: "false",
+        },
+      ]
+      captionActions.push(
+        h("span", {
+          class: "aimd-media__size-controls",
+          "data-aimd-media-size-controls": mediaId,
+          "aria-label": ctx.messages.media.pinSizeControls,
+        }, sizeOptions.map(option => h("button", {
+          type: "button",
+          class: "aimd-media__size",
+          "data-aimd-media-size-option": option.size,
+          "aria-pressed": option.pressed,
+          "aria-label": option.title,
+          title: option.title,
+          onClick: (event: Event) => setAimdMediaPinnedSize(event, option.size),
+        }, option.label))),
+        h("button", {
+          type: "button",
+          class: "aimd-media__pin",
+          "data-aimd-media-pin": mediaId,
+          "data-aimd-media-pin-label": ctx.messages.media.pin,
+          "data-aimd-media-unpin-label": ctx.messages.media.unpin,
+          "aria-pressed": "false",
+          onClick: (event: Event) => toggleAimdMediaPinned(
+            event,
+            ctx.messages.media.pin,
+            ctx.messages.media.unpin,
+          ),
+        }, ctx.messages.media.pin),
+      )
+    }
+    if (captionActions.length > 0) {
+      captionChildren.push(h("span", { class: "aimd-media__actions" }, captionActions))
+    }
+    if (mediaNode.legend) {
+      captionChildren.push(h("div", { class: "aimd-media__legend" }, mediaNode.legend))
+    }
+
+    const children: VNodeChild[] = [
+      h("div", { class: `aimd-media__body aimd-media__body--${mediaNumberingKind}` }, [body]),
+    ]
+    if (captionChildren.length > 0) {
+      children.push(h("figcaption", { class: "aimd-media__caption" }, captionChildren))
+    }
+
+    return h("figure", {
+      "class": `aimd-media aimd-media--${mediaNumberingKind}`,
+      "data-aimd-type": "media",
+      "data-aimd-media-id": mediaId,
+      "data-aimd-media-src": mediaSrc,
+      "data-aimd-media-kind": mediaKind,
+      "data-aimd-media-numbering-kind": mediaNumberingKind,
+      "data-aimd-media-provider": mediaNode.provider,
+      "data-aimd-media-size": "medium",
+      "data-aimd-media-legend": mediaNode.legend ? "expanded" : undefined,
+      "id": `media-${mediaId}`,
     }, children)
   },
 
@@ -887,8 +1252,14 @@ function resolveRenderContext(options: VueRendererOptions): AimdRendererContext 
 export interface FigureContext {
   /** Map from fig ID to sequence number */
   figureNumbers: Map<string, number>
+  /** Map from media ID to sequence number */
+  mediaNumbers: Map<string, number>
+  /** Map from media ID to normalized numbering kind */
+  mediaKinds: Map<string, string>
   /** Current figure sequence counter */
   sequence: number
+  /** Current media sequence counter per normalized media kind */
+  mediaSequencesByKind: Map<string, number>
 }
 
 /**
@@ -897,7 +1268,10 @@ export interface FigureContext {
 function createFigureContext(): FigureContext {
   return {
     figureNumbers: new Map(),
+    mediaNumbers: new Map(),
+    mediaKinds: new Map(),
     sequence: 0,
+    mediaSequencesByKind: new Map(),
   }
 }
 
@@ -930,6 +1304,30 @@ function preprocessFigures(node: HastRoot | RootContent, figCtx: FigureContext):
         const aimdData = (element.data as AimdElementData | undefined)?.aimd
         if (aimdData && "sequence" in aimdData) {
           (aimdData as any).sequence = figCtx.figureNumbers.get(figId)
+        }
+      }
+    }
+
+    if (aimdType === "media") {
+      const mediaId = element.properties?.["data-aimd-media-id"] || element.properties?.dataAimdMediaId
+      if (mediaId && typeof mediaId === "string") {
+        const aimdData = (element.data as AimdElementData | undefined)?.aimd
+        const rawMediaKind = typeof element.properties?.["data-aimd-media-kind"] === "string"
+          ? element.properties["data-aimd-media-kind"] as string
+          : (typeof element.properties?.dataAimdMediaKind === "string"
+              ? element.properties.dataAimdMediaKind as string
+              : (aimdData && "kind" in aimdData ? (aimdData as any).kind : undefined))
+        const mediaKind = normalizeMediaNumberingKind(rawMediaKind)
+
+        if (!figCtx.mediaNumbers.has(mediaId)) {
+          const nextSequence = figCtx.mediaSequencesByKind.get(mediaKind) ?? 0
+          figCtx.mediaNumbers.set(mediaId, nextSequence)
+          figCtx.mediaKinds.set(mediaId, mediaKind)
+          figCtx.mediaSequencesByKind.set(mediaKind, nextSequence + 1)
+        }
+
+        if (aimdData && "sequence" in aimdData) {
+          (aimdData as any).sequence = figCtx.mediaNumbers.get(mediaId)
         }
       }
     }
@@ -1048,6 +1446,21 @@ function parseAimdFromProps(props: Record<string, unknown>): AimdNode | undefine
       src: figSrc || "",
       title: undefined,
       legend: undefined,
+    } as AimdNode
+  }
+
+  if (fieldType === "media") {
+    const mediaId = (props["data-aimd-media-id"] || props.dataAimdMediaId) as string
+    const mediaSrc = (props["data-aimd-media-src"] || props.dataAimdMediaSrc) as string
+    const mediaKind = (props["data-aimd-media-kind"] || props.dataAimdMediaKind) as string
+    const provider = (props["data-aimd-media-provider"] || props.dataAimdMediaProvider) as string
+    return {
+      ...baseNode,
+      fieldType: "media",
+      id: mediaId || id,
+      kind: mediaKind || "file",
+      src: mediaSrc || "",
+      provider: provider || undefined,
     } as AimdNode
   }
 
@@ -1223,12 +1636,30 @@ export function hastToVue(
           }
         }
 
+        if (aimdData.fieldType === "media" && figCtx) {
+          const mediaId = aimdData.id
+          const sequence = figCtx.mediaNumbers.get(mediaId)
+          if (sequence !== undefined) {
+            (aimdData as any).sequence = sequence
+            ;(aimdData as any).mediaKind = figCtx.mediaKinds.get(mediaId)
+          }
+        }
+
         // Add figure number to ref_fig references
         if (aimdData.fieldType === "ref_fig" && figCtx) {
           const refTarget = aimdData.refTarget
           const sequence = figCtx.figureNumbers.get(refTarget)
           if (sequence !== undefined) {
             (aimdData as any).figureNumber = sequence + 1
+          }
+        }
+
+        if (aimdData.fieldType === "ref_media" && figCtx) {
+          const refTarget = aimdData.refTarget
+          const sequence = figCtx.mediaNumbers.get(refTarget)
+          if (sequence !== undefined) {
+            (aimdData as any).mediaNumber = sequence + 1
+            ;(aimdData as any).mediaKind = figCtx.mediaKinds.get(refTarget)
           }
         }
 

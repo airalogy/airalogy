@@ -4,7 +4,15 @@ import ast
 import re
 from typing import List, Optional
 
-from ..ast_nodes import CheckNode, CiteNode, RefFigNode, RefStepNode, RefVarNode, StepNode
+from ..ast_nodes import (
+    CheckNode,
+    CiteNode,
+    RefFigNode,
+    RefMediaNode,
+    RefStepNode,
+    RefVarNode,
+    StepNode,
+)
 from ..errors import InvalidSyntaxError
 from ..tokens import Token
 
@@ -225,9 +233,13 @@ class StepParserMixin:
         ref_id = token.value.strip()
         return RefFigNode(position=token.position, ref_id=ref_id)
 
+    def _parse_ref_media(self, token: Token) -> RefMediaNode:
+        """Parse a media reference: {{ref_media|media_id}}"""
+        ref_id = token.value.strip()
+        return RefMediaNode(position=token.position, ref_id=ref_id)
+
     def _parse_cite(self, token: Token) -> CiteNode:
         """Parse a citation: {{cite|ref_id1,ref_id2,...}}"""
         value = token.value.strip()
         ref_ids = [ref.strip() for ref in value.split(",") if ref.strip()]
         return CiteNode(position=token.position, ref_ids=ref_ids)
-

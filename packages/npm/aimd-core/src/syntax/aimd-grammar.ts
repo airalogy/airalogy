@@ -19,8 +19,10 @@ export const AIMD_SCOPES = {
   KEYWORD_REF_STEP: "keyword.control.ref-step.aimd",
   KEYWORD_REF_VAR: "keyword.control.ref-var.aimd",
   KEYWORD_REF_FIG: "keyword.control.ref-fig.aimd",
+  KEYWORD_REF_MEDIA: "keyword.control.ref-media.aimd",
   KEYWORD_CITE: "keyword.control.cite.aimd",
   KEYWORD_FIG: "keyword.control.fig.aimd",
+  KEYWORD_MEDIA: "keyword.control.media.aimd",
   KEYWORD_REFS: "keyword.control.refs.aimd",
 
   // Variables and types
@@ -38,6 +40,7 @@ export const AIMD_SCOPES = {
   MARKUP_REF: "markup.aimd.reference",
   MARKUP_CITE: "markup.aimd.citation",
   MARKUP_FIG_BLOCK: "markup.aimd.figure-block",
+  MARKUP_MEDIA_BLOCK: "markup.aimd.media-block",
   MARKUP_REFS_BLOCK: "markup.aimd.refs-block",
   MARKUP_CRITIC_ADDITION: "markup.inserted.critic.aimd",
   MARKUP_CRITIC_DELETION: "markup.deleted.critic.aimd",
@@ -188,6 +191,17 @@ const aimdRepository = {
         },
       },
       {
+        match: "(\\{\\{)\\s*(ref_media)\\s*(\\|)\\s*([^}]+?)\\s*(\\}\\})",
+        name: AIMD_SCOPES.MARKUP_REF,
+        captures: {
+          1: { name: AIMD_SCOPES.BRACKET_OPEN },
+          2: { name: AIMD_SCOPES.KEYWORD_REF_MEDIA },
+          3: { name: AIMD_SCOPES.DELIMITER_PIPE },
+          4: { name: AIMD_SCOPES.VARIABLE_NAME },
+          5: { name: AIMD_SCOPES.BRACKET_CLOSE },
+        },
+      },
+      {
         match: "(\\{\\{)\\s*(cite)\\s*(\\|)\\s*([^}]+?)\\s*(\\}\\})",
         name: AIMD_SCOPES.MARKUP_CITE,
         captures: {
@@ -209,6 +223,14 @@ const aimdRepository = {
         name: AIMD_SCOPES.MARKUP_FIG_BLOCK,
         beginCaptures: {
           2: { name: AIMD_SCOPES.KEYWORD_FIG },
+        },
+      },
+      {
+        begin: "^\\s*(```|~~~)\\s*(media)\\b.*$",
+        end: "^\\s*\\1\\s*$",
+        name: AIMD_SCOPES.MARKUP_MEDIA_BLOCK,
+        beginCaptures: {
+          2: { name: AIMD_SCOPES.KEYWORD_MEDIA },
         },
       },
       {

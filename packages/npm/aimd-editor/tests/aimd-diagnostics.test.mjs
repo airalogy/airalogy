@@ -54,6 +54,18 @@ test('collectAimdDiagnostics reports var semantic warnings with source offsets',
         }
         return []
       },
+      parseMediaContent(content) {
+        const id = content.match(/\bid:\s*([^\n]+)/)?.[1]?.trim()
+        const kind = content.match(/\bkind:\s*([^\n]+)/)?.[1]?.trim() || 'file'
+        const src = content.match(/\bsrc:\s*([^\n]+)/)?.[1]?.trim()
+        if (!id || !src) throw new Error('invalid media')
+        return { id, kind, src }
+      },
+      validateMediaDefinition(media) {
+        return media.kind === 'image'
+          ? [`media "${media.id}": unsupported kind "image". Supported media kinds are video, audio, and file; static images must use a fig block.`]
+          : []
+      },
     },
   })
 
@@ -68,6 +80,47 @@ test('collectAimdDiagnostics reports var semantic warnings with source offsets',
   assert.equal(diagnostics[0].startOffset, content.indexOf('{{var|name'))
   assert.equal(diagnostics[0].endOffset, content.indexOf('{{var|name') + '{{var|name: str, gt = 0}}'.length)
   assert.match(diagnostics[0].message, /numeric constraints \(gt\)/)
+})
+
+test('collectAimdDiagnostics reports unsupported media kind errors with source offsets', () => {
+  const { collectAimdDiagnostics } = loadTsModuleExports(helperPath, {
+    '@airalogy/aimd-core/parser': {
+      parseVarDefinition() {
+        return { id: 'unused' }
+      },
+      validateVarDefinition() {
+        return []
+      },
+      parseMediaContent(content) {
+        const id = content.match(/\bid:\s*([^\n]+)/)?.[1]?.trim()
+        const kind = content.match(/\bkind:\s*([^\n]+)/)?.[1]?.trim() || 'file'
+        const src = content.match(/\bsrc:\s*([^\n]+)/)?.[1]?.trim()
+        if (!id || !src) throw new Error('invalid media')
+        return { id, kind, src }
+      },
+      validateMediaDefinition(media) {
+        return media.kind === 'image'
+          ? [`media "${media.id}": unsupported kind "image". Supported media kinds are video, audio, and file; static images must use a fig block.`]
+          : []
+      },
+    },
+  })
+
+  const mediaBlock = [
+    '```media',
+    'id: workflow_image',
+    'kind: image',
+    'src: files/workflow.png',
+    '```',
+  ].join('\n')
+  const content = `Intro\n\n${mediaBlock}\n\nEnd`
+  const diagnostics = collectAimdDiagnostics(content)
+
+  assert.equal(diagnostics.length, 1)
+  assert.equal(diagnostics[0].severity, 'error')
+  assert.equal(diagnostics[0].startOffset, content.indexOf(mediaBlock))
+  assert.equal(diagnostics[0].endOffset, content.indexOf(mediaBlock) + mediaBlock.length)
+  assert.match(diagnostics[0].message, /static images must use a fig block/)
 })
 
 test('AimdSourceEditor publishes AIMD diagnostics as Monaco markers', () => {

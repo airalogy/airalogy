@@ -298,6 +298,139 @@ describe('renderToHtmlSync', () => {
     expect(html).toContain('src="/assets/workflow-diagram.svg"')
   })
 
+  it('renders media blocks with resolved assets and default pin controls during HTML rendering', () => {
+    const seenContexts: Array<{ src: string, kind: string, id?: string, mediaKind?: string }> = []
+    const { html, fields } = renderToHtmlSync([
+      'Watch {{ref_media|lecture_demo}} while reading.',
+      '',
+      '```media',
+      'id: lecture_demo',
+      'kind: video',
+      'src: files/videos/demo.mp4',
+      'mime: video/mp4',
+      'poster: files/images/demo-poster.png',
+      'title: Lecture Demo',
+      'legend: Watch this while reading the following section.',
+      '```',
+    ].join('\n'), {
+      resolveAssetUrl: (src, context) => {
+        seenContexts.push({ src, ...context })
+        return `/assets/${src.split('/').pop()}`
+      },
+    })
+
+    expect(fields.ref_media).toEqual(['lecture_demo'])
+    expect(fields.media?.[0]).toMatchObject({
+      id: 'lecture_demo',
+      kind: 'video',
+      src: 'files/videos/demo.mp4',
+      poster: 'files/images/demo-poster.png',
+    })
+    expect(seenContexts).toEqual([
+      {
+        src: 'files/videos/demo.mp4',
+        kind: 'media',
+        id: 'lecture_demo',
+        title: 'Lecture Demo',
+        mediaKind: 'video',
+      },
+      {
+        src: 'files/images/demo-poster.png',
+        kind: 'media_poster',
+        id: 'lecture_demo',
+        title: 'Lecture Demo',
+        mediaKind: 'video',
+      },
+    ])
+    expect(html).toContain('<span class="aimd-ref aimd-ref--media"')
+    expect(html).toContain('data-aimd-ref-kind="media"')
+    expect(html).toContain('<figure class="aimd-media')
+    expect(html).toContain('src="/assets/demo.mp4"')
+    expect(html).toContain('poster="/assets/demo-poster.png"')
+    expect(html).toContain('Video 1')
+    expect(html).toContain('Video 1: Lecture Demo')
+    expect(html).toContain('data-aimd-media-pin="lecture_demo"')
+    expect(html).toContain('data-aimd-media-size="medium"')
+    expect(html).toContain('data-aimd-media-legend="expanded"')
+    expect(html).toContain('aria-pressed="false"')
+    expect(html).toContain('data-aimd-media-unpin-label="Unpin"')
+    expect(html).toContain('class="aimd-media__actions"')
+    expect(html).toContain('data-aimd-media-legend-toggle="lecture_demo"')
+    expect(html).toContain('data-aimd-media-show-legend-label="Details"')
+    expect(html).toContain('data-aimd-media-size-controls="lecture_demo"')
+    expect(html).toContain('data-aimd-media-size-option="small"')
+    expect(html).toContain('aria-label="Medium pinned size"')
+  })
+
+  it('renders provider videos as iframe players while keeping video numbering', () => {
+    const { html, fields } = renderToHtmlSync([
+      'Watch {{ref_media|youtube_demo}} while reading.',
+      '',
+      '```media',
+      'id: youtube_demo',
+      'kind: video',
+      'provider: youtube',
+      'src: https://www.youtube.com/embed/VIDEO_ID',
+      'title: YouTube Demo',
+      '```',
+    ].join('\n'))
+
+    expect(fields.media?.[0]).toMatchObject({
+      id: 'youtube_demo',
+      kind: 'video',
+      provider: 'youtube',
+      src: 'https://www.youtube.com/embed/VIDEO_ID',
+    })
+    expect(html).toContain('<iframe')
+    expect(html).toContain('class="aimd-media__embed"')
+    expect(html).toContain('src="https://www.youtube.com/embed/VIDEO_ID"')
+    expect(html).toContain('data-aimd-media-kind="video"')
+    expect(html).toContain('data-aimd-media-provider="youtube"')
+    expect(html).toContain('Video 1')
+    expect(html).toContain('Video 1: YouTube Demo')
+    expect(html).not.toContain('<video')
+    expect(html).not.toContain('Embed 1')
+  })
+
+  it('numbers media references by concrete media kind during HTML rendering', () => {
+    const { html } = renderToHtmlSync([
+      '先看 {{ref_media|intro_video}}，再听 {{ref_media|narration_audio}}，最后看 {{ref_media|demo_video}}。',
+      '',
+      '```media',
+      'id: intro_video',
+      'kind: video',
+      'src: files/videos/intro.mp4',
+      'title: 介绍视频',
+      '```',
+      '',
+      '```media',
+      'id: narration_audio',
+      'kind: audio',
+      'src: files/audio/narration.mp3',
+      'title: 讲解音频',
+      '```',
+      '',
+      '```media',
+      'id: demo_video',
+      'kind: video',
+      'src: files/videos/demo.mp4',
+      'title: 演示视频',
+      '```',
+    ].join('\n'), {
+      locale: 'zh-CN',
+    })
+
+    expect(html).toContain('视频 1')
+    expect(html).toContain('视频 1：介绍视频')
+    expect(html).toContain('音频 1')
+    expect(html).toContain('音频 1：讲解音频')
+    expect(html).toContain('视频 2')
+    expect(html).toContain('视频 2：演示视频')
+    expect(html).toContain('type="video/mp4"')
+    expect(html).toContain('type="audio/mpeg"')
+    expect(html).not.toContain('媒体 1')
+  })
+
   it('renders internal references without route-breaking bare hash hrefs', () => {
     const { html } = renderToHtmlSync([
       'As shown in {{ref_fig|workflow_diagram}}, follow {{ref_step|prepare_sample}}.',
@@ -327,6 +460,22 @@ describe('renderToHtmlSync', () => {
     expect(rendererStyles).not.toContain('box-shadow: 0 10px 28px')
     expect(rendererStyles).toMatch(/\.aimd-figure__caption \{[\s\S]*?border-top: 1px solid #d8e2ef;/)
     expect(rendererStyles).toMatch(/\.aimd-figure__legend \{[\s\S]*?margin: 4px 0 0;/)
+  })
+
+  it('styles rendered media as contained media-caption blocks', () => {
+    expect(rendererStyles).toMatch(/\.aimd-media \{[\s\S]*?width: min\(100%, 920px\);/)
+    expect(rendererStyles).toMatch(/\.aimd-media--pinned \{[\s\S]*?position: sticky;/)
+    expect(rendererStyles).toMatch(/\.aimd-media--pinned \{[\s\S]*?margin-top: 0;/)
+    expect(rendererStyles).toMatch(/\.aimd-media--pinned\[data-aimd-media-size="small"\] \{[\s\S]*?--aimd-media-pinned-small-width/)
+    expect(rendererStyles).toMatch(/\.aimd-media__video,[\s\S]*?\.aimd-media__embed \{[\s\S]*?aspect-ratio: 16 \/ 9;/)
+    expect(rendererStyles).toMatch(/\.aimd-media__caption \{[\s\S]*?border-top: 1px solid #d8e2ef;/)
+    expect(rendererStyles).toMatch(/\.aimd-media--pinned\[data-aimd-media-legend="collapsed"\] \.aimd-media__legend \{[\s\S]*?display: none;/)
+    expect(rendererStyles).toMatch(/\.aimd-media__actions \{[\s\S]*?margin-left: auto;/)
+    expect(rendererStyles).toMatch(/\.aimd-media__legend-toggle \{[\s\S]*?display: none;/)
+    expect(rendererStyles).toMatch(/\.aimd-media--pinned \.aimd-media__legend-toggle \{[\s\S]*?display: inline-flex;/)
+    expect(rendererStyles).toMatch(/\.aimd-media__size-controls \{[\s\S]*?display: none;/)
+    expect(rendererStyles).toMatch(/\.aimd-media--pinned \.aimd-media__size-controls \{[\s\S]*?display: inline-flex;/)
+    expect(rendererStyles).toMatch(/\.aimd-media__pin \{[\s\S]*?cursor: pointer;/)
   })
 
   it('styles AIMD fields without depending on recorder styles', () => {
@@ -703,6 +852,181 @@ describe('renderToVue', () => {
     expect(img.props.src).toBe('/assets/workflow-diagram.svg')
   })
 
+  it('resolves media asset URLs during Vue rendering', async () => {
+    const seenContexts: Array<{ src: string, kind: string, id?: string, mediaKind?: string }> = []
+    const { nodes } = await renderToVue([
+      '```media',
+      'id: lecture_demo',
+      'kind: video',
+      'src: files/videos/demo.mp4',
+      'poster: files/images/demo-poster.png',
+      'title: Lecture Demo',
+      'legend: Watch this while reading the following section.',
+      '```',
+    ].join('\n'), {
+      resolveAssetUrl: (src, context) => {
+        seenContexts.push({ src, ...context })
+        return `/assets/${src.split('/').pop()}`
+      },
+    })
+
+    const mediaFigure = findVNodeByClass({ children: nodes }, 'aimd-media') as any
+    const video = findVNodeByType({ children: nodes }, 'video') as any
+    const source = findVNodeByType({ children: nodes }, 'source') as any
+    const actionGroup = findVNodeByClass({ children: nodes }, 'aimd-media__actions') as any
+    const legendToggle = findVNodeByClass({ children: nodes }, 'aimd-media__legend-toggle') as any
+    const sizeControls = findVNodeByClass({ children: nodes }, 'aimd-media__size-controls') as any
+    const sizeButton = findVNodeByClass({ children: nodes }, 'aimd-media__size') as any
+    const pinButton = findVNodeByClass({ children: nodes }, 'aimd-media__pin') as any
+    expect(mediaFigure).toBeTruthy()
+    expect(mediaFigure.props['data-aimd-media-size']).toBe('medium')
+    expect(mediaFigure.props['data-aimd-media-legend']).toBe('expanded')
+    expect(video).toBeTruthy()
+    expect(video.props.src).toBe('/assets/demo.mp4')
+    expect(video.props.poster).toBe('/assets/demo-poster.png')
+    expect(source).toBeTruthy()
+    expect(source.props.type).toBe('video/mp4')
+    expect(actionGroup).toBeTruthy()
+    expect(legendToggle).toBeTruthy()
+    expect(legendToggle.props['data-aimd-media-legend-toggle']).toBe('lecture_demo')
+    expect(legendToggle.props['data-aimd-media-show-legend-label']).toBe('Details')
+    expect(legendToggle.props['aria-expanded']).toBe('false')
+    expect(typeof legendToggle.props.onClick).toBe('function')
+    expect(sizeControls).toBeTruthy()
+    expect(sizeControls.props['data-aimd-media-size-controls']).toBe('lecture_demo')
+    expect(sizeButton).toBeTruthy()
+    expect(sizeButton.props['data-aimd-media-size-option']).toBe('small')
+    expect(sizeButton.props['aria-label']).toBe('Small pinned size')
+    expect(typeof sizeButton.props.onClick).toBe('function')
+    expect(pinButton).toBeTruthy()
+    expect(pinButton.props['data-aimd-media-pin']).toBe('lecture_demo')
+    expect(pinButton.props['data-aimd-media-unpin-label']).toBe('Unpin')
+    expect(pinButton.props['aria-pressed']).toBe('false')
+    expect(typeof pinButton.props.onClick).toBe('function')
+    expect(seenContexts).toEqual(expect.arrayContaining([
+      {
+        src: 'files/videos/demo.mp4',
+        kind: 'media',
+        id: 'lecture_demo',
+        title: 'Lecture Demo',
+        mediaKind: 'video',
+      },
+      {
+        src: 'files/images/demo-poster.png',
+        kind: 'media_poster',
+        id: 'lecture_demo',
+        title: 'Lecture Demo',
+        mediaKind: 'video',
+      },
+    ]))
+  })
+
+  it('pins Vue media with collapsed legends and adjustable pinned size', async () => {
+    const scrollBySpy = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined)
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0)
+        return 1
+      })
+    const { nodes } = await renderToVue([
+      '```media',
+      'id: lecture_demo',
+      'kind: video',
+      'src: files/videos/demo.mp4',
+      'title: Lecture Demo',
+      'legend: This longer description should collapse while the media is pinned.',
+      '```',
+    ].join('\n'))
+
+    const wrapper = mount({
+      render: () => h('div', nodes),
+    })
+
+    try {
+      const media = wrapper.find('.aimd-media')
+      expect(media.attributes('data-aimd-media-size')).toBe('medium')
+      expect(media.attributes('data-aimd-media-legend')).toBe('expanded')
+
+      await wrapper.find('.aimd-media__pin').trigger('click')
+      expect(media.classes()).toContain('aimd-media--pinned')
+      expect(media.attributes('data-aimd-media-size')).toBe('medium')
+      expect(media.attributes('data-aimd-media-legend')).toBe('collapsed')
+      expect(wrapper.find('.aimd-media__legend-toggle').text()).toBe('Details')
+      expect(requestAnimationFrameSpy).toHaveBeenCalled()
+
+      await wrapper.find('[data-aimd-media-size-option="small"]').trigger('click')
+      expect(media.attributes('data-aimd-media-size')).toBe('small')
+
+      await wrapper.find('.aimd-media__legend-toggle').trigger('click')
+      expect(media.attributes('data-aimd-media-legend')).toBe('expanded')
+      expect(wrapper.find('.aimd-media__legend-toggle').text()).toBe('Hide')
+    }
+    finally {
+      wrapper.unmount()
+      requestAnimationFrameSpy.mockRestore()
+      scrollBySpy.mockRestore()
+    }
+  })
+
+  it('allows only one Vue media item to be pinned at a time', async () => {
+    const scrollBySpy = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined)
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0)
+        return 1
+      })
+    const { nodes } = await renderToVue([
+      '```media',
+      'id: first_video',
+      'kind: video',
+      'src: files/videos/first.mp4',
+      'title: First Video',
+      'legend: First description.',
+      '```',
+      '',
+      '```media',
+      'id: second_video',
+      'kind: video',
+      'src: files/videos/second.mp4',
+      'title: Second Video',
+      'legend: Second description.',
+      '```',
+    ].join('\n'))
+
+    const wrapper = mount({
+      render: () => h('div', nodes),
+    })
+
+    try {
+      const mediaItems = wrapper.findAll('.aimd-media')
+      const pinButtons = wrapper.findAll('.aimd-media__pin')
+      expect(mediaItems).toHaveLength(2)
+      expect(pinButtons).toHaveLength(2)
+
+      await pinButtons[0].trigger('click')
+      expect(mediaItems[0].classes()).toContain('aimd-media--pinned')
+      expect(mediaItems[0].attributes('data-aimd-media-legend')).toBe('collapsed')
+      expect(mediaItems[1].classes()).not.toContain('aimd-media--pinned')
+
+      await pinButtons[1].trigger('click')
+      expect(mediaItems[0].classes()).not.toContain('aimd-media--pinned')
+      expect(mediaItems[0].attributes('data-aimd-media-pinned')).toBe('false')
+      expect(mediaItems[0].attributes('data-aimd-media-legend')).toBe('expanded')
+      expect(pinButtons[0].attributes('aria-pressed')).toBe('false')
+      expect(pinButtons[0].text()).toBe('Pin')
+      expect(mediaItems[1].classes()).toContain('aimd-media--pinned')
+      expect(mediaItems[1].attributes('data-aimd-media-legend')).toBe('collapsed')
+      expect(pinButtons[1].attributes('aria-pressed')).toBe('true')
+    }
+    finally {
+      wrapper.unmount()
+      requestAnimationFrameSpy.mockRestore()
+      scrollBySpy.mockRestore()
+    }
+  })
+
   it('renders Vue figure references as route-safe internal markers', async () => {
     const { nodes } = await renderToVue([
       'As shown in {{ref_fig|workflow_diagram}}.',
@@ -721,6 +1045,29 @@ describe('renderToVue', () => {
     expect(figRefNode.props['data-aimd-ref-target']).toBe('workflow_diagram')
     expect(figRefNode.props['data-aimd-ref-kind']).toBe('fig')
     expect(figRefNode.props.tabindex).toBe(0)
+  })
+
+  it('renders Vue media references as route-safe internal markers', async () => {
+    const { nodes } = await renderToVue([
+      'Watch {{ref_media|lecture_demo}} while reading.',
+      '',
+      '```media',
+      'id: lecture_demo',
+      'kind: video',
+      'src: files/videos/demo.mp4',
+      'title: Lecture Demo',
+      '```',
+    ].join('\n'))
+
+    const mediaRefNode = findVNodeByClass({ children: nodes }, 'aimd-ref--media') as any
+    expect(mediaRefNode).toBeTruthy()
+    expect(mediaRefNode.type).toBe('span')
+    expect(mediaRefNode.props.href).toBeUndefined()
+    expect(mediaRefNode.props['data-aimd-ref-target']).toBe('lecture_demo')
+    expect(mediaRefNode.props['data-aimd-ref-kind']).toBe('media')
+    expect(mediaRefNode.props['data-aimd-ref-media-kind']).toBe('video')
+    expect(mediaRefNode.props.tabindex).toBe(0)
+    expect(collectVNodeText(mediaRefNode)).toContain('Video 1')
   })
 
   it('moves refs Vue nodes to the end of the rendered document', async () => {

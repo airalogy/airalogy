@@ -1411,6 +1411,50 @@ subvars=[
         assert second_ref.id == "doe2024protocol"
         assert second_ref.url == "https://example.com/protocol"
 
+    def test_parse_media_block(self):
+        content = """
+The workflow video is summarized in {{ref_media|workflow_video}}.
+
+```media
+id: workflow_video
+kind: video
+src: files/workflow.mp4
+mime: video/mp4
+poster: files/workflow-poster.jpg
+title: Workflow Video
+legend: A local video packaged with this AIMD document.
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        assert len(result["templates"]["ref_media"]) == 1
+        assert result["templates"]["ref_media"][0].ref_id == "workflow_video"
+
+        assert len(result["templates"]["media"]) == 1
+        media = result["templates"]["media"][0]
+        assert media.id == "workflow_video"
+        assert media.kind == "video"
+        assert media.src == "files/workflow.mp4"
+        assert media.mime == "video/mp4"
+        assert media.poster == "files/workflow-poster.jpg"
+        assert media.title == "Workflow Video"
+        assert media.legend == "A local video packaged with this AIMD document."
+
+    def test_parse_media_block_does_not_accept_type_alias(self):
+        content = """
+```media
+id: lecture_audio
+type: audio
+src: files/lecture.mp3
+```
+"""
+        parser = AimdParser(content)
+        result = parser.parse()
+
+        media = result["templates"]["media"][0]
+        assert media.kind == "file"
+
     def test_invalid_name_starting_with_underscore(self):
         content = "{{var|_invalid}}"
         parser = AimdParser(content)

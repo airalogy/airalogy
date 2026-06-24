@@ -1,6 +1,6 @@
 import type { AimdFieldType } from "../types/nodes"
 
-const AIMD_INLINE_TEMPLATE_START_PATTERN = /\{\{\s*(var_table|var|step|check|ref_step|ref_var|ref_fig|cite)\s*\|/g
+const AIMD_INLINE_TEMPLATE_START_PATTERN = /\{\{\s*(var_table|var|step|check|ref_step|ref_var|ref_fig|ref_media|cite)\s*\|/g
 
 export interface AimdInlineTemplateMatch {
   type: AimdFieldType

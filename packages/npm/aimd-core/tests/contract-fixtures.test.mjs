@@ -19,6 +19,7 @@ const basicFixture = path.join(monorepoRoot, 'spec/fixtures/basic-protocol')
 const criticMarkupFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/critic-markup/protocol/protocol.aimd')
 const quotedTemplateTextFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/quoted-template-text/protocol/protocol.aimd')
 const refsFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/refs/protocol/protocol.aimd')
+const mediaFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/media/protocol/protocol.aimd')
 
 function parseAimd(content) {
   const processor = unified()
@@ -74,4 +75,22 @@ test('refs fixture extracts citations and BibTeX references', () => {
   assert.equal(fields.refs[0].title, 'Airalogy: Universal Research Automation')
   assert.equal(fields.refs[1].id, 'doe2024protocol')
   assert.equal(fields.refs[1].url, 'https://example.com/protocol')
+})
+
+test('media fixture extracts media blocks and media references', () => {
+  const content = readFileSync(mediaFixture, 'utf8')
+  const fields = parseAimd(content)
+
+  assert.deepEqual(fields.step, ['review_media'])
+  assert.deepEqual(fields.ref_media, ['lecture_video'])
+  assert.equal(fields.media.length, 1)
+  assert.deepEqual(fields.media[0], {
+    id: 'lecture_video',
+    kind: 'video',
+    src: 'files/lecture.mp4',
+    mime: 'video/mp4',
+    poster: 'files/lecture-poster.jpg',
+    title: 'Lecture Video',
+    legend: 'A local video resource packaged with the AIMD protocol.',
+  })
 })

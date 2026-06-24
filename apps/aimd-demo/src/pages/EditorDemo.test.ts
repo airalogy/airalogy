@@ -131,6 +131,8 @@ describe('EditorDemo archive export', () => {
     expect(source).toMatch(/\.workspace-panel__body \{[\s\S]*?overflow-x: hidden;/)
     expect(source).toMatch(/\.workspace-panel__body \{[\s\S]*?overflow-y: auto;/)
     expect(source).toMatch(/\.render-preview \{[\s\S]*?overflow-wrap: anywhere;/)
+    expect(source).toMatch(/\.render-preview \{[\s\S]*?padding: 0 20px 20px;/)
+    expect(source).toMatch(/\.render-preview::before \{[\s\S]*?height: 20px;/)
     expect(source).toMatch(/\.render-preview :deep\(table:not\(\.aimd-field__table-preview\)\) \{[\s\S]*?overflow-x: auto;/)
     expect(source).toMatch(/\.render-preview :deep\(\.aimd-field__table-preview\) \{[\s\S]*?display: table;/)
     expect(source).toMatch(/\.render-preview :deep\(pre\) \{[\s\S]*?overflow-x: auto;/)

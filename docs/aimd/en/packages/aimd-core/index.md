@@ -12,7 +12,7 @@ pnpm add @airalogy/aimd-core
 
 ## Main Capabilities
 
-- Parse AIMD templates and fenced `quiz` / `fig` blocks.
+- Parse AIMD templates and fenced `quiz` / `fig` / `media` blocks.
 - Parse fenced `assigner runtime=client` blocks into frontend assigner metadata.
 - Build MDAST-compatible AIMD nodes.
 - Build MDAST-compatible CriticMarkup review nodes for additions, deletions, substitutions, comments, and highlights.
@@ -135,12 +135,14 @@ processor.runSync(tree, file)
 
 ## Validation Helpers
 
-If your editor, linter, or import pipeline needs parser-level validation before AIMD content reaches the renderer or recorder, `@airalogy/aimd-core/parser` also exports two reusable helpers:
+If your editor, linter, or import pipeline needs parser-level validation before AIMD content reaches the renderer or recorder, `@airalogy/aimd-core/parser` also exports reusable helpers:
 
 ```ts
 import {
+  parseMediaContent,
   parseVarDefinition,
   validateClientAssignerFunctionSource,
+  validateMediaDefinition,
   validateVarDefinition,
   validateVarDefaultType,
   validateVarKwargs,
@@ -148,6 +150,8 @@ import {
 ```
 
 - `validateClientAssignerFunctionSource(functionSource, id)` rejects unsafe or unsupported frontend `client_assigner` code such as `eval`, `window`, `fetch`, Unicode-escape bypasses, and other non-deterministic constructs.
+- `parseMediaContent(content)` parses key-value content from a fenced `media` block and preserves the raw `kind`.
+- `validateMediaDefinition(media)` reports non-`video`/`audio`/`file` `kind` values as standard errors; static images should use `fig`.
 - `validateVarDefaultType(def)` returns warning strings when an AIMD var default does not match its declared type.
 - `validateVarKwargs(def)` returns warning strings when supported kwargs are applied to incompatible var definitions, including Pydantic-style numeric constraints (`gt`, `ge`, `lt`, `le`, `multiple_of`) on non-numeric var types.
 - `validateVarDefinition(def)` combines default-value checks and kwargs checks, including nested `subvars`.

@@ -5,6 +5,7 @@ import type {
   AimdCiteNode,
   AimdFieldType,
   AimdFigNode,
+  AimdMediaNode,
   AimdNode,
   AimdRefsNode,
   AimdScope,
@@ -25,6 +26,7 @@ import {
   parseCheckContent,
   parseFenceMeta,
   parseFigContent,
+  parseMediaContent,
   parseRefsContent,
   parseStepContent,
   parseTableColumns,
@@ -157,6 +159,7 @@ function createAimdNode(
     case "ref_step":
     case "ref_var":
     case "ref_fig":
+    case "ref_media":
       return {
         type: "aimd",
         fieldType,
@@ -183,6 +186,9 @@ function createAimdNode(
 
     case "fig":
       throw new Error("Inline fig syntax is not supported. Use a fig code block instead.")
+
+    case "media":
+      throw new Error("Inline media syntax is not supported. Use a media code block instead.")
 
     case "refs":
       throw new Error("Inline refs syntax is not supported. Use a refs code block instead.")
@@ -305,6 +311,7 @@ export interface RemarkAimdOptions {
  * - {{ref_var|id}} - Variable reference
  * - ```quiz blocks - Quiz definitions (choice / blank / open)
  * - ```fig blocks - Figure definitions
+ * - ```media blocks - Media definitions
  * - ```refs blocks - BibTeX reference definitions
  */
 const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
@@ -323,8 +330,10 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
       ref_step: [],
       ref_var: [],
       ref_fig: [],
+      ref_media: [],
       cite: [],
       fig: [],
+      media: [],
       refs: [],
     }
 
@@ -391,6 +400,39 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
         }
         catch (error) {
           console.error("Failed to parse fig block:", error)
+        }
+      }
+
+      if (lang === "media") {
+        try {
+          const mediaData = parseMediaContent(node.value)
+
+          const mediaNode: AimdMediaNode = {
+            type: "aimd",
+            fieldType: "media",
+            id: mediaData.id,
+            scope: "media",
+            raw: node.value,
+            kind: mediaData.kind,
+            src: mediaData.src,
+            mime: mediaData.mime,
+            provider: mediaData.provider,
+            poster: mediaData.poster,
+            title: mediaData.title,
+            legend: mediaData.legend,
+          }
+
+          parent.children[index] = mediaNode as any
+
+          if (extractFields && fields.media) {
+            const existingMedia = fields.media.find(media => media.id === mediaData.id)
+            if (!existingMedia) {
+              fields.media.push(mediaData)
+            }
+          }
+        }
+        catch (error) {
+          console.error("Failed to parse media block:", error)
         }
       }
 
@@ -542,6 +584,12 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
                 if (!fields.ref_fig) fields.ref_fig = []
                 if (!fields.ref_fig.includes(aimdNode.id)) {
                   fields.ref_fig.push(aimdNode.id)
+                }
+                break
+              case "ref_media":
+                if (!fields.ref_media) fields.ref_media = []
+                if (!fields.ref_media.includes(aimdNode.id)) {
+                  fields.ref_media.push(aimdNode.id)
                 }
                 break
               case "cite":

@@ -4,11 +4,21 @@ import re
 import textwrap
 from typing import Any, Dict, List, Optional
 
-from ..ast_nodes import AssignerBlockNode, CheckNode, ReferenceNode, StepNode, VarNode
+import yaml
+
+from ..ast_nodes import (
+    AssignerBlockNode,
+    CheckNode,
+    MediaNode,
+    ReferenceNode,
+    StepNode,
+    VarNode,
+)
 from ..errors import (
     AimdParseError,
     DuplicateNameError,
     ErrorCollector,
+    InvalidSyntaxError,
     InvalidNameError,
 )
 from ..lexer import Lexer
@@ -207,6 +217,84 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
 
         return references
 
+    def _normalize_media_string(
+        self, data: Dict[str, Any], key: str
+    ) -> Optional[str]:
+        value = data.get(key)
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+    def _parse_media_blocks(self) -> List[MediaNode]:
+        """
+        Extract media code blocks from AIMD content.
+
+        Returns:
+            List of MediaNode objects.
+        """
+        media_items: List[MediaNode] = []
+        for match in self.lexer.CODE_BLOCK_PATTERN.finditer(self.content):
+            lang = (match.group("lang") or "").strip().lower()
+            if lang != "media":
+                continue
+
+            raw = match.group(0)
+            code = textwrap.dedent(match.group("code").rstrip("\n\r"))
+            position = self._get_position_from_offset(match.start(), len(raw))
+
+            try:
+                parsed = yaml.safe_load(code) if code.strip() else {}
+            except yaml.YAMLError as exc:
+                self._handle_error(
+                    InvalidSyntaxError(
+                        f"Invalid media block YAML: {exc}", position=position
+                    )
+                )
+                continue
+
+            if not isinstance(parsed, dict):
+                self._handle_error(
+                    InvalidSyntaxError(
+                        "Media block must be a mapping", position=position
+                    )
+                )
+                continue
+
+            media_id = self._normalize_media_string(parsed, "id")
+            src = self._normalize_media_string(parsed, "src")
+            if not media_id:
+                self._handle_error(
+                    InvalidSyntaxError("Media block requires id", position=position)
+                )
+                continue
+            if not src:
+                self._handle_error(
+                    InvalidSyntaxError("Media block requires src", position=position)
+                )
+                continue
+
+            kind = (
+                self._normalize_media_string(parsed, "kind")
+                or "file"
+            )
+
+            media_items.append(
+                MediaNode(
+                    position=position,
+                    id=media_id,
+                    kind=kind,
+                    src=src,
+                    mime=self._normalize_media_string(parsed, "mime"),
+                    provider=self._normalize_media_string(parsed, "provider"),
+                    poster=self._normalize_media_string(parsed, "poster"),
+                    title=self._normalize_media_string(parsed, "title"),
+                    legend=self._normalize_media_string(parsed, "legend"),
+                )
+            )
+
+        return media_items
+
     def parse(self) -> Dict[str, Any]:
         """
         Parse all tokens into AST nodes.
@@ -223,7 +311,9 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
                     "ref_var": [RefVarNode, ...],
                     "ref_step": [RefStepNode, ...],
                     "ref_fig": [RefFigNode, ...],
+                    "ref_media": [RefMediaNode, ...],
                     "cite": [CiteNode, ...],
+                    "media": [MediaNode, ...],
                     "refs": [ReferenceNode, ...],
                     "assigner": [AssignerBlockNode, ...],
                 }
@@ -242,7 +332,9 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
         ref_vars = []
         ref_steps = []
         ref_figs = []
+        ref_medias = []
         cites = []
+        media = self._parse_media_blocks()
         refs = self._parse_refs_blocks()
         assigners = self._parse_assigner_blocks()
 
@@ -263,6 +355,8 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
                 ref_steps.append(self._parse_ref_step(token))
             elif token.type == TokenType.REF_FIG:
                 ref_figs.append(self._parse_ref_fig(token))
+            elif token.type == TokenType.REF_MEDIA:
+                ref_medias.append(self._parse_ref_media(token))
             elif token.type == TokenType.CITE:
                 cites.append(self._parse_cite(token))
             elif token.type == TokenType.EOF:
@@ -281,7 +375,9 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
             "ref_var": ref_vars,
             "ref_step": ref_steps,
             "ref_fig": ref_figs,
+            "ref_media": ref_medias,
             "cite": cites,
+            "media": media,
             "refs": refs,
             "assigner": assigners,
         }
@@ -410,7 +506,12 @@ def parse_aimd(aimd_content: str) -> dict:
             "ref_var": [ref_var.to_dict() for ref_var in result["templates"]["ref_var"]],
             "ref_step": [ref_step.to_dict() for ref_step in result["templates"]["ref_step"]],
             "ref_fig": [ref_fig.to_dict() for ref_fig in result["templates"]["ref_fig"]],
+            "ref_media": [
+                ref_media.to_dict()
+                for ref_media in result["templates"]["ref_media"]
+            ],
             "cite": [cite.to_dict() for cite in result["templates"]["cite"]],
+            "media": [media.to_dict() for media in result["templates"]["media"]],
             "refs": [ref.to_dict() for ref in result["templates"]["refs"]],
             "assigner": [
                 assigner.to_dict() for assigner in result["templates"]["assigner"]

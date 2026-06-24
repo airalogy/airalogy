@@ -129,6 +129,7 @@ const fields = parseAndExtract(content.value)
 // fields.quiz      — list of quiz definitions
 // fields.var_table — list of table definitions with column metadata
 // fields.fig       — list of figure definitions
+// fields.media     — list of media definitions
 ```
 
 ## Quiz Auto Grading

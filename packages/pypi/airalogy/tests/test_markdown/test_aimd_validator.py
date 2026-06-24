@@ -63,6 +63,36 @@ According to {{ref_var|user}} and {{ref_step|step_1}}
         assert is_valid
         assert len(errors) == 0
 
+    def test_validate_rejects_image_media_kind(self):
+        content = """
+```media
+id: workflow_image
+kind: image
+src: files/workflow.png
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert "unsupported kind" in errors[0].message
+        assert "fig block" in errors[0].message
+
+    def test_validate_rejects_embed_media_kind(self):
+        content = """
+```media
+id: youtube_demo
+kind: embed
+src: https://www.youtube.com/embed/VIDEO_ID
+```
+"""
+        is_valid, errors = validate_aimd(content)
+
+        assert not is_valid
+        assert len(errors) == 1
+        assert 'unsupported kind "embed"' in errors[0].message
+        assert "video, audio, and file" in errors[0].message
+
     def test_validate_model_py_matches_aimd_vars(self, tmp_path):
         content = """
 {{var|name: str}}

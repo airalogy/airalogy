@@ -12,6 +12,7 @@ These scopes are still simple `string[]`, and each string is an identifier:
 - `ref_step`
 - `ref_var`
 - `ref_fig`
+- `ref_media`
 - `cite`
 
 ## What Uses Structured Objects
@@ -22,6 +23,7 @@ These scopes are still simple `string[]`, and each string is an identifier:
 - `client_assigner[]` exposes `id`, `mode`, `dependent_fields`, `assigned_fields`, and `function_source` extracted from `assigner(config, function ...)` client blocks
 - `quiz[]` already exposes `id`
 - `fig[]` exposes `id`, `src`, `title`, and `legend` from fenced `fig` blocks
+- `media[]` exposes `id`, `kind`, `src`, `mime`, `provider`, `poster`, `title`, and `legend` from fenced `media` blocks
 - `refs[]` exposes BibTeX entries from fenced `refs` blocks with `id`, `entry_type`, `raw`, normalized `fields`, and display fields such as `title`, `author`, `year`, `doi`, and `url`
 - `step_hierarchy[]` exposes `id`, `step`, `parent_id`, `prev_id`, `next_id`, `estimated_duration_ms`, `timer_mode`, `has_check`, and `has_children`
 
@@ -86,6 +88,16 @@ These scopes are still simple `string[]`, and each string is an identifier:
       "author": "Zijie Yang and Qiji Zhou and Fang Guo and Sijie Zhang and Yexun Xi and Jinglei Nie and Yudian Zhu and Liping Huang and Chou Wu and Yonghe Xia and Xiaoyu Ma and Yingming Pu and Panzhong Lu and Junshu Pan and Mingtao Chen and Tiannan Guo and Yanmei Dou and Hongyu Chen and Anping Zeng and Jiaxing Huang and Tian Xu and Yue Zhang",
       "year": "2025",
       "url": "https://arxiv.org/abs/2506.18586"
+    }
+  ],
+  "media": [
+    {
+      "id": "lecture_video",
+      "kind": "video",
+      "src": "files/videos/lecture.mp4",
+      "mime": "video/mp4",
+      "poster": "files/videos/lecture-poster.jpg",
+      "title": "Lecture Video"
     }
   ],
   "step_hierarchy": [

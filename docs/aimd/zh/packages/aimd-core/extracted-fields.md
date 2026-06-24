@@ -12,6 +12,7 @@
 - `ref_step`
 - `ref_var`
 - `ref_fig`
+- `ref_media`
 - `cite`
 
 ## 使用对象结构的部分
@@ -22,6 +23,7 @@
 - `client_assigner[]` 提供 `id`、`mode`、`dependent_fields`、`assigned_fields`、`function_source`，它们来自 `assigner(config, function ...)` 形式的前端代码块
 - `quiz[]` 本来就使用 `id`
 - `fig[]` 提供 fenced `fig` 代码块中的 `id`、`src`、`title`、`legend`
+- `media[]` 提供 fenced `media` 代码块中的 `id`、`kind`、`src`、`mime`、`provider`、`poster`、`title`、`legend`
 - `refs[]` 提供 fenced `refs` 代码块中的 BibTeX 条目，包含 `id`、`entry_type`、`raw`、标准化 `fields`，以及 `title`、`author`、`year`、`doi`、`url` 等展示字段
 - `step_hierarchy[]` 提供 `id`、`step`、`parent_id`、`prev_id`、`next_id`、`estimated_duration_ms`、`timer_mode`、`has_check`、`has_children`
 
@@ -86,6 +88,16 @@
       "author": "Zijie Yang and Qiji Zhou and Fang Guo and Sijie Zhang and Yexun Xi and Jinglei Nie and Yudian Zhu and Liping Huang and Chou Wu and Yonghe Xia and Xiaoyu Ma and Yingming Pu and Panzhong Lu and Junshu Pan and Mingtao Chen and Tiannan Guo and Yanmei Dou and Hongyu Chen and Anping Zeng and Jiaxing Huang and Tian Xu and Yue Zhang",
       "year": "2025",
       "url": "https://arxiv.org/abs/2506.18586"
+    }
+  ],
+  "media": [
+    {
+      "id": "lecture_video",
+      "kind": "video",
+      "src": "files/videos/lecture.mp4",
+      "mime": "video/mp4",
+      "poster": "files/videos/lecture-poster.jpg",
+      "title": "Lecture Video"
     }
   ],
   "step_hierarchy": [

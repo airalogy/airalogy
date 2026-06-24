@@ -18,7 +18,8 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `parseAndExtract(content)`：提取 core 规范字段结构，包括 `fields.var_definitions` 中的普通 `var` 定义，以及 `fields.refs` 中的 BibTeX 文献条目。
 - `var` 与 `var_table` 的默认预览会显示 AIMD `title`，保留规范字段 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。
 - `{{cite|...}}` 与 fenced `refs` 代码块会渲染为带编号的引用标记、hover/focus 文献信息和文末参考文献列表。
-- 支持宿主通过 `resolveAssetUrl` 渲染 protocol-local 图像资源，让 `fig` 源码保留干净的相对路径，同时在包、archive 或应用内映射成真实可访问 URL。
+- 支持宿主通过 `resolveAssetUrl` 渲染 protocol-local 图像和媒体资源，让 `fig` / `media` 源码保留干净的相对路径，同时在包、archive 或应用内映射成真实可访问 URL。
+- Vue renderer 会为 `video` / `audio` media 提供默认固定按钮、单媒体互斥固定、固定后说明折叠和小 / 中 / 大固定尺寸控制；HTML 输出包含相同的 `data-*` 钩子，便于宿主接管。
 - `assignerVisibility`：用于作者视图或调试视图下切换 assigner 的可见性。
 - 内建 quiz 预览控制。
 - 支持通过 `locale` 切换渲染标签语言。
@@ -57,14 +58,17 @@ This protocol follows {{cite|yang2025airalogyaiempowereduniversaldata}}.
 ```
 ````
 
-## Protocol-local 图像资源
+## Protocol-local 图像与媒体资源
 
-`fig` 代码块可以保留 `src: files/workflow-diagram.svg` 这类干净的相对路径。宿主如果从 package、archive 或 registry 加载 AIMD，可以传入 `resolveAssetUrl`，在渲染时把该路径映射成可显示的 URL。
+`fig` 和 `media` 代码块可以保留 `src: files/workflow-diagram.svg` 或 `src: files/videos/lecture.mp4` 这类干净的相对路径。宿主如果从 package、archive 或 registry 加载 AIMD，可以传入 `resolveAssetUrl`，在渲染时把该路径映射成可显示的 URL。`context.kind` 会区分 `fig`、`media` 和 `media_poster`。
 
 ```ts
 const { html } = await renderToHtml(content, {
   resolveAssetUrl(src, context) {
     if (context.kind === "fig" && src.startsWith("files/")) {
+      return exampleAssetMap[src]
+    }
+    if ((context.kind === "media" || context.kind === "media_poster") && src.startsWith("files/")) {
       return exampleAssetMap[src]
     }
     return null

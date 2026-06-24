@@ -1667,10 +1667,16 @@ onBeforeUnmount(() => {
 }
 
 .render-preview {
-  padding: 20px;
+  padding: 0 20px 20px;
   line-height: 1.75;
   font-size: 15px;
   overflow-wrap: anywhere;
+}
+
+.render-preview::before {
+  display: block;
+  height: 20px;
+  content: "";
 }
 
 .recorder-preview {

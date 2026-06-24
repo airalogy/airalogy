@@ -148,8 +148,10 @@ export type AimdScopeKey =
   | "ref_step"
   | "ref_var"
   | "ref_fig"
+  | "ref_media"
   | "cite"
   | "fig"
+  | "media"
   | "refs"
 
 /**
@@ -174,8 +176,10 @@ export type AimdFieldType =
   | "ref_step"
   | "ref_var"
   | "ref_fig"
+  | "ref_media"
   | "cite"
   | "fig"
+  | "media"
   | "refs"
 
 /**
@@ -366,7 +370,7 @@ export interface AimdRefField {
   /** Reference target id */
   id: string
   /** Reference type */
-  type: "ref_step" | "ref_var" | "ref_fig"
+  type: "ref_step" | "ref_var" | "ref_fig" | "ref_media"
 }
 
 /**
@@ -382,6 +386,30 @@ export interface AimdFigField {
   /** Figure legend/caption (optional but recommended) */
   legend?: string
   /** Figure sequence number (auto-generated during rendering) */
+  sequence?: number
+}
+
+/**
+ * Media field definition.
+ */
+export interface AimdMediaField {
+  /** Media ID (short ID used in references) */
+  id: string
+  /** Media kind. Standard values are video, audio, and file. Static images use `fig`. */
+  kind: "video" | "audio" | "file" | string
+  /** Media source (local path, URL, or external provider URL) */
+  src: string
+  /** MIME type, when known */
+  mime?: string
+  /** External provider name, such as youtube or bilibili */
+  provider?: string
+  /** Poster image source for video media */
+  poster?: string
+  /** Media title */
+  title?: string
+  /** Media caption/description */
+  legend?: string
+  /** Media sequence number (auto-generated during rendering) */
   sequence?: number
 }
 
@@ -457,10 +485,14 @@ export interface ExtractedAimdFields {
   ref_var: string[]
   /** Figure references */
   ref_fig?: string[]
+  /** Media references */
+  ref_media?: string[]
   /** Citations */
   cite?: string[]
   /** Figures with full definitions */
   fig?: AimdFigField[]
+  /** Media with full definitions */
+  media?: AimdMediaField[]
   /** References parsed from fenced `refs` BibTeX blocks */
   refs?: AimdReferenceField[]
   /** Step hierarchy for nested steps */

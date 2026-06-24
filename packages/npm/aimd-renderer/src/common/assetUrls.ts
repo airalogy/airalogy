@@ -1,7 +1,8 @@
 export interface AimdAssetUrlResolveContext {
-  kind: "fig"
+  kind: "fig" | "media" | "media_poster"
   id?: string
   title?: string
+  mediaKind?: string
 }
 
 export type AimdAssetUrlResolver = (

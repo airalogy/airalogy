@@ -26,14 +26,16 @@ import {
   rehypeAimd,
   protectAimdInlineTemplates,
   protectCriticMarkupSubstitutions,
+  parseMediaContent,
   parseRefsContent,
   restoreAimdInlineTemplates,
   validateClientAssignerFunctionSource,
+  validateMediaDefinition,
   validateVarDefaultType,
 } from "@airalogy/aimd-core/parser"
 ```
 
-**`remarkAimd`**：用于 Unified remark 流水线的插件，把 AIMD 行内模板与 fenced `quiz` / `fig` / `refs` / `assigner` 块解析成带类型的 AST 节点。
+**`remarkAimd`**：用于 Unified remark 流水线的插件，把 AIMD 行内模板与 fenced `quiz` / `fig` / `media` / `refs` / `assigner` 块解析成带类型的 AST 节点。
 
 **`rehypeAimd`**：HTML AST 阶段对应的 rehype 插件。
 
@@ -47,7 +49,11 @@ import {
 
 **`parseRefsContent(content: string): AimdReferenceField[]`**：解析 fenced `refs` 代码块里的 BibTeX 内容，返回结构化 reference 条目，包括标准化后的 `title`、`author`、`year`、`doi`、`url` 等字段。
 
+**`parseMediaContent(content: string): AimdMediaField`**：解析 fenced `media` 代码块里的 key-value 内容，返回媒体定义；parser 会尽量保留字段，不负责强制标准化 `kind`。
+
 **`validateClientAssignerFunctionSource(functionSource: string, id: string): void`**：校验前端 `client_assigner` 函数体；若包含不支持或不安全结构会直接抛错。
+
+**`validateMediaDefinition(media: AimdMediaField): string[]`**：校验媒体定义的标准语义；非 `video`、`audio`、`file` 的 `kind` 会返回 error 文本，静态图片应使用 `fig`。
 
 **`validateVarDefaultType(def: AimdVarDefinition): string[]`**：当 AIMD var 默认值与声明类型不匹配时返回 warning 文本。
 
@@ -161,10 +167,23 @@ interface ExtractedAimdFields {
   ref_step: string[]
   ref_var: string[]
   ref_fig?: string[]
+  ref_media?: string[]
   cite?: string[]
   fig?: AimdFigField[]
+  media?: AimdMediaField[]
   refs?: AimdReferenceField[]
   step_hierarchy?: AimdStepField[]
+}
+
+interface AimdMediaField {
+  id: string
+  kind: string
+  src: string
+  mime?: string
+  provider?: string
+  poster?: string
+  title?: string
+  legend?: string
 }
 
 interface AimdReferenceField {
@@ -220,6 +239,7 @@ type AimdNode =
   | AimdRefNode
   | AimdCiteNode
   | AimdFigNode
+  | AimdMediaNode
   | AimdRefsNode
 ```
 

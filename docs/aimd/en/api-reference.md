@@ -26,14 +26,16 @@ import {
   rehypeAimd,
   protectAimdInlineTemplates,
   protectCriticMarkupSubstitutions,
+  parseMediaContent,
   parseRefsContent,
   restoreAimdInlineTemplates,
   validateClientAssignerFunctionSource,
+  validateMediaDefinition,
   validateVarDefaultType,
 } from "@airalogy/aimd-core/parser"
 ```
 
-**`remarkAimd`** — Unified remark plugin that parses AIMD inline templates and fenced blocks (`quiz`, `fig`, `refs`, `assigner`) into typed AST nodes. Attach to a `unified().use(remarkParse)` pipeline.
+**`remarkAimd`** — Unified remark plugin that parses AIMD inline templates and fenced blocks (`quiz`, `fig`, `media`, `refs`, `assigner`) into typed AST nodes. Attach to a `unified().use(remarkParse)` pipeline.
 
 **`rehypeAimd`** — Rehype plugin counterpart for the HTML AST stage.
 
@@ -47,7 +49,11 @@ import {
 
 **`parseRefsContent(content: string): AimdReferenceField[]`** — Parses fenced `refs` block content in BibTeX format and returns structured reference entries with normalized fields such as `title`, `author`, `year`, `doi`, and `url`.
 
+**`parseMediaContent(content: string): AimdMediaField`** — Parses key-value content from a fenced `media` block and returns a media definition; the parser preserves fields and does not enforce standard `kind` values.
+
 **`validateClientAssignerFunctionSource(functionSource: string, id: string): void`** — Validates frontend `client_assigner` function bodies and throws when unsupported or unsafe constructs are present.
+
+**`validateMediaDefinition(media: AimdMediaField): string[]`** — Validates standard media semantics; non-`video`/`audio`/`file` `kind` values return an error string, and static images should use `fig`.
 
 **`validateVarDefaultType(def: AimdVarDefinition): string[]`** — Returns warning strings when an AIMD var default value does not match the declared type.
 
@@ -161,10 +167,23 @@ interface ExtractedAimdFields {
   ref_step: string[]
   ref_var: string[]
   ref_fig?: string[]
+  ref_media?: string[]
   cite?: string[]
   fig?: AimdFigField[]
+  media?: AimdMediaField[]
   refs?: AimdReferenceField[]
   step_hierarchy?: AimdStepField[]
+}
+
+interface AimdMediaField {
+  id: string
+  kind: string
+  src: string
+  mime?: string
+  provider?: string
+  poster?: string
+  title?: string
+  legend?: string
 }
 
 interface AimdReferenceField {
@@ -220,6 +239,7 @@ type AimdNode =
   | AimdRefNode
   | AimdCiteNode
   | AimdFigNode
+  | AimdMediaNode
   | AimdRefsNode
 ```
 

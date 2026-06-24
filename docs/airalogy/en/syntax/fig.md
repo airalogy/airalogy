@@ -1,5 +1,7 @@
 # Inserting Figures in Airalogy Markdown
 
+Use `fig` for static images where figure numbering, titles, legends, and <code v-pre>{{ref_fig|...}}</code> references matter. Even when the image is a local file packaged inside `.aira`, `fig` remains the recommended form. For video, audio, PDFs, or lesson media that needs player interactions, use [`media`](./multimedia.md).
+
 ## Insert Figures
 
 In AIMD, you can insert images by using a `fig` code block. For example:
@@ -35,7 +37,7 @@ legend: This is an example of an image referenced by an Airalogy file ID.
 ```
 ````
 
-Note that the `fig` code block follows YAML syntax. If the legend contains multiple lines, you can use YAML’s multi-line string syntax, for example:
+The `fig` code block body is a key-value mapping compatible with YAML. If `legend` contains multiple lines, use `|`:
 
 ````aimd
 ```fig
@@ -50,7 +52,7 @@ legend: |
 
 ### Referencing Figures
 
-In an AIMD document, you can reference a figure using the `{{ref_fig|<fig_id>}}` syntax. For example:
+In an AIMD document, you can reference a figure using the <code v-pre>{{ref_fig|&lt;fig_id&gt;}}</code> syntax. For example:
 
 ````aimd
 As shown in {{ref_fig|fig_1}}, this is an example figure.
@@ -63,7 +65,7 @@ legend: This is an example figure legend.
 ```
 ````
 
-After parsing, `{{ref_fig|fig_1}}` will be rendered as a numbered figure reference marker (for example, “Figure 1”) with target metadata. Host applications can use that metadata to scroll to the figure without rewriting their own route state.
+After parsing, <code v-pre>{{ref_fig|fig_1}}</code> will be rendered as a numbered figure reference marker (for example, “Figure 1”) with target metadata. Host applications can use that metadata to scroll to the figure without rewriting their own route state.
 
 ## Syntax Design Rationale
 

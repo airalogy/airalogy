@@ -12,7 +12,7 @@ const surroundingPairs = autoClosingPairs
 function getTokens(tokens: string, divider = "|"): string[] {
   return tokens.split(divider)
 }
-const keywords: string[] = getTokens("var|var_table|check|step|ref_step|ref_var|ref_table|table_link")
+const keywords: string[] = getTokens("var|var_table|check|step|ref_step|ref_var|ref_fig|ref_media|ref_table|table_link")
 
 export const language: languagesNS.IMonarchLanguage = {
   ...markdownLanguage,
@@ -22,6 +22,11 @@ export const language: languagesNS.IMonarchLanguage = {
     ...markdownLanguage.tokenizer!,
     root: [
       [/^\s*(```|~~~)\s*quiz(?:\s+.*)?\s*$/, {
+        token: "string",
+        next: "@quizCodeblock",
+        nextEmbedded: "yaml",
+      }],
+      [/^\s*(```|~~~)\s*(fig|media)(?:\s+.*)?\s*$/, {
         token: "string",
         next: "@quizCodeblock",
         nextEmbedded: "yaml",
@@ -86,6 +91,8 @@ export const language: languagesNS.IMonarchLanguage = {
       [/check(\s*\|)/, AimdToken.KEYWORD_CHECKPOINT_AIMD],
       [/ref_var(\s*\|)/, AimdToken.KEYWORD_REFERENCE_VARIABLE_AIMD],
       [/ref_step(\s*\|)/, AimdToken.KEYWORD_REFERENCE_STEP_AIMD],
+      [/ref_fig(\s*\|)/, AimdToken.KEYWORD_REFERENCE_VARIABLE_AIMD],
+      [/ref_media(\s*\|)/, AimdToken.KEYWORD_REFERENCE_VARIABLE_AIMD],
       // Match the pipe delimiter
       [/\|/, { token: AimdToken.DELIMITER_PIPE_AIMD, next: "@protocolContent" }],
       // Match the closing '}}' and pop back to the root state

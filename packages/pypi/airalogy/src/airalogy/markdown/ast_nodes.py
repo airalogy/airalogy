@@ -276,6 +276,53 @@ class RefFigNode(ASTNode):
 
 
 @dataclass
+class RefMediaNode(ASTNode):
+    """Reference to a media block: {{ref_media|media_id}}"""
+
+    ref_id: str
+
+    def to_dict(self) -> dict:
+        result = super().to_dict()
+        result.update({"ref_id": self.ref_id})
+        return result
+
+
+@dataclass
+class MediaNode(ASTNode):
+    """Media entry parsed from a fenced media block."""
+
+    id: str
+    kind: str
+    src: str
+    mime: Optional[str] = None
+    provider: Optional[str] = None
+    poster: Optional[str] = None
+    title: Optional[str] = None
+    legend: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        result = super().to_dict()
+        result.update(
+            {
+                "id": self.id,
+                "kind": self.kind,
+                "src": self.src,
+            }
+        )
+        for key in (
+            "mime",
+            "provider",
+            "poster",
+            "title",
+            "legend",
+        ):
+            value = getattr(self, key)
+            if value is not None:
+                result[key] = value
+        return result
+
+
+@dataclass
 class CiteNode(ASTNode):
     """Citation: {{cite|ref_id1,ref_id2,...}}"""
 

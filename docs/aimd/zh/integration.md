@@ -126,6 +126,7 @@ const fields = parseAndExtract(content.value)
 // fields.quiz      — 题目定义列表
 // fields.var_table — 带列元数据的表格定义
 // fields.fig       — figure 定义列表
+// fields.media     — media 定义列表
 ```
 
 ## Quiz 自动评分

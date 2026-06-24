@@ -17,6 +17,7 @@ class TokenType(Enum):
     REF_VAR = auto()  # {{ref_var|...}}
     REF_STEP = auto()  # {{ref_step|...}}
     REF_FIG = auto()  # {{ref_fig|...}}
+    REF_MEDIA = auto()  # {{ref_media|...}}
     CITE = auto()  # {{cite|...}}
 
     # Text and special
