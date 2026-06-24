@@ -154,6 +154,7 @@ describe('AimdMarkdownField', () => {
       elementRenderers: { pre: expect.any(Function) },
     }))
     expect(wrapper.find('.aimd-markdown-field__preview').exists()).toBe(true)
+    expect(wrapper.find('.aimd-markdown-field__preview').classes()).toContain('aimd-renderer')
     expect(wrapper.find('.aimd-rendered-markdown').text()).toContain('flowchart TD')
     expect(wrapper.find('.aimd-editor-mock').exists()).toBe(false)
   })

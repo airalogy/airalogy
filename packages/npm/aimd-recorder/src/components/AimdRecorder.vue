@@ -1740,7 +1740,7 @@ defineExpose({
         </span>
       </div>
 
-      <div v-if="inlineNodes.length" ref="contentRoot" class="aimd-protocol-recorder__content">
+      <div v-if="inlineNodes.length" ref="contentRoot" class="aimd-protocol-recorder__content aimd-renderer">
         <InlineNodesOutlet :nodes="inlineNodes" />
       </div>
 
@@ -1807,7 +1807,6 @@ defineExpose({
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   color: var(--rec-text);
   font-size: var(--rec-body-font-size);
-  line-height: 1.7;
 }
 
 .aimd-protocol-recorder__empty {
@@ -1818,13 +1817,6 @@ defineExpose({
   text-align: center;
 }
 
-/* ── Typography ─────────────────────────────────────────────────────────── */
-.aimd-protocol-recorder__content :deep(h1) { margin: 0.45em 0 0.5em; font-size: 1.7em; line-height: 1.25; }
-.aimd-protocol-recorder__content :deep(h2) { margin: 0.8em 0 0.45em; font-size: 1.35em; line-height: 1.3; }
-.aimd-protocol-recorder__content :deep(h3) { margin: 0.7em 0 0.4em; font-size: 1.15em; }
-.aimd-protocol-recorder__content :deep(p) { margin: 0.45em 0; color: var(--rec-text); }
-.aimd-protocol-recorder__content :deep(ul),
-.aimd-protocol-recorder__content :deep(ol) { margin: 0.35em 0; padding-left: 22px; }
 .aimd-protocol-recorder__content :deep(table) { border-collapse: collapse; margin: 10px 0; font-size: 14px; }
 .aimd-protocol-recorder__content :deep(th),
 .aimd-protocol-recorder__content :deep(td) { border: 1px solid #e2e8f0; padding: 6px 10px; text-align: left; }
@@ -2875,7 +2867,6 @@ defineExpose({
   max-width: 100%;
   color: var(--rec-text);
   font-size: 15px;
-  line-height: 1.72;
   box-sizing: border-box;
   overflow-wrap: anywhere;
 }

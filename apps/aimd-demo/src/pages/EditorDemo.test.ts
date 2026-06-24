@@ -137,4 +137,10 @@ describe('EditorDemo archive export', () => {
     expect(source).toMatch(/\.render-preview :deep\(\.aimd-field__table-preview\) \{[\s\S]*?display: table;/)
     expect(source).toMatch(/\.render-preview :deep\(pre\) \{[\s\S]*?overflow-x: auto;/)
   })
+
+  it('uses the renderer typography container for live preview prose', () => {
+    expect(source).toContain('class="workspace-panel__body render-preview aimd-renderer"')
+    expect(source).not.toMatch(/\.render-preview :deep\(h1\)/)
+    expect(source).not.toMatch(/\.render-preview :deep\(ul\) \{[\s\S]*?list-style: disc outside;/)
+  })
 })

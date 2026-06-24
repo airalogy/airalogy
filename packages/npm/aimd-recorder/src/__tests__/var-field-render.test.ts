@@ -15,8 +15,10 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const source = readFileSync(resolve(__dirname, '../components/AimdVarField.vue'), 'utf8')
 const codeFieldSource = readFileSync(resolve(__dirname, '../components/AimdCodeField.vue'), 'utf8')
+const markdownFieldSource = readFileSync(resolve(__dirname, '../components/AimdMarkdownField.vue'), 'utf8')
 const varTableSource = readFileSync(resolve(__dirname, '../components/AimdVarTableField.vue'), 'utf8')
 const recorderSource = readFileSync(resolve(__dirname, '../components/AimdRecorder.vue'), 'utf8')
+const markdownNoteSource = readFileSync(resolve(__dirname, '../components/AimdMarkdownNoteField.vue'), 'utf8')
 const varHelpersSource = readFileSync(resolve(__dirname, '../composables/useVarHelpers.ts'), 'utf8')
 const recorderStyles = readFileSync(resolve(__dirname, '../styles/recorder.css'), 'utf8')
 const rendererStyles = readFileSync(resolve(__dirname, '../../../aimd-renderer/src/styles/renderer.css'), 'utf8')
@@ -58,10 +60,17 @@ describe('AimdVarField render behavior', () => {
 
   it('layers recorder styles on top of renderer styles', () => {
     expect(recorderStyles).toContain('@import "@airalogy/aimd-renderer/styles";')
+    expect(recorderSource).toContain('class="aimd-protocol-recorder__content aimd-renderer"')
+    expect(markdownFieldSource).toContain('class="aimd-markdown-field__preview aimd-renderer"')
+    expect(markdownNoteSource).toContain('class="aimd-markdown-note-field__preview aimd-renderer"')
     expect(recorderStyles).toContain('.aimd-field--editable')
     expect(recorderStyles).toContain('.aimd-field--no-style')
     expect(recorderStyles).toContain('.aimd-field-wrapper--inline')
     expect(recorderStyles).not.toContain('.aimd-figure {')
+    expect(recorderSource).not.toMatch(/\.aimd-protocol-recorder__content :deep\(h[1-3]\)/)
+    expect(recorderSource).not.toMatch(/\.aimd-protocol-recorder__content :deep\(p\)/)
+    expect(recorderSource).not.toMatch(/\.aimd-protocol-recorder__content :deep\(ul\),\n\.aimd-protocol-recorder__content :deep\(ol\)/)
+    expect(markdownFieldSource).not.toMatch(/\.aimd-markdown-field__preview :deep\(ul\),\n\.aimd-markdown-field__preview :deep\(ol\)/)
   })
 
   it('keeps table metadata popovers from being clipped by table bounds', () => {
@@ -159,6 +168,7 @@ describe('AimdVarField render behavior', () => {
     expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-step-body > \*\) \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%;[\s\S]*?overflow-wrap: anywhere;/)
     expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-rec-inline--var-markdown\),\n\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-field--var-table\) \{[\s\S]*?width: 100%;[\s\S]*?max-width: 100%;/)
     expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-field--var-table\) \{[\s\S]*?overflow-x: auto;/)
+    expect(recorderSource).not.toContain('line-height: 1.72;')
   })
 
   it('renders file-like vars with a native file picker control', async () => {

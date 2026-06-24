@@ -1230,7 +1230,7 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </div>
-        <div v-if="previewMode === 'render'" class="workspace-panel__body render-preview">
+        <div v-if="previewMode === 'render'" class="workspace-panel__body render-preview aimd-renderer">
           <div v-if="previewError" class="preview-error">
             {{ messages.pages.editor.renderFailed }}: {{ previewError }}
           </div>
@@ -1668,7 +1668,6 @@ onBeforeUnmount(() => {
 
 .render-preview {
   padding: 0 20px 20px;
-  line-height: 1.75;
   font-size: 15px;
   overflow-wrap: anywhere;
 }
@@ -1686,28 +1685,6 @@ onBeforeUnmount(() => {
 
 .recorder-preview :deep(.aimd-protocol-recorder) {
   min-height: 100%;
-}
-
-.render-preview :deep(h1) {
-  margin: 0.5em 0;
-  color: #172033;
-  font-size: 1.8em;
-}
-
-.render-preview :deep(h2) {
-  margin: 0.5em 0;
-  color: #243447;
-  font-size: 1.4em;
-}
-
-.render-preview :deep(h3) {
-  margin: 0.45em 0;
-  color: #2f3f53;
-  font-size: 1.18em;
-}
-
-.render-preview :deep(p) {
-  margin: 0.55em 0;
 }
 
 .render-preview :deep(table:not(.aimd-field__table-preview)) {
@@ -1746,12 +1723,6 @@ onBeforeUnmount(() => {
   border-left: 4px solid #d9e2ec;
   color: #5f6f84;
   background: #f8fafc;
-}
-
-.render-preview :deep(ul),
-.render-preview :deep(ol) {
-  margin: 6px 0;
-  padding-left: 24px;
 }
 
 .render-preview :deep(code) {

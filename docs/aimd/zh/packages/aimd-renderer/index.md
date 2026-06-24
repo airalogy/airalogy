@@ -19,6 +19,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `var` 与 `var_table` 的默认预览会显示 AIMD `title`，保留规范字段 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。
 - `{{cite|...}}` 与 fenced `refs` 代码块会渲染为带编号的引用标记、hover/focus 文献信息和文末参考文献列表。
 - 支持宿主通过 `resolveAssetUrl` 渲染 protocol-local 图像和媒体资源，让 `fig` / `media` 源码保留干净的相对路径，同时在包、archive 或应用内映射成真实可访问 URL。
+- 宿主把渲染输出放进 `.aimd-renderer` 容器后，可以使用 renderer 内置的 AIMD 正文排版，包括清晰的标题层级、列表 marker 和更紧凑的正文行距。
 - Vue renderer 会为 `video` / `audio` media 提供默认固定按钮、单媒体互斥固定、固定后说明折叠和小 / 中 / 大固定尺寸控制；HTML 输出包含相同的 `data-*` 钩子，便于宿主接管。
 - `assignerVisibility`：用于作者视图或调试视图下切换 assigner 的可见性。
 - 内建 quiz 预览控制。

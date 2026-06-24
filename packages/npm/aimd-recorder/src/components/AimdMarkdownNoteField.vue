@@ -361,7 +361,7 @@ onBeforeUnmount(() => {
         </span>
       </div>
       <div
-        class="aimd-markdown-note-field__preview"
+        class="aimd-markdown-note-field__preview aimd-renderer"
         :class="{ 'aimd-markdown-note-field__preview--interactive': !disabled }"
         :tabindex="disabled ? undefined : 0"
         :role="disabled ? undefined : 'button'"
@@ -534,7 +534,6 @@ onBeforeUnmount(() => {
   min-width: 0;
   padding: 6px 14px 14px;
   color: #334155;
-  line-height: 1.65;
 }
 
 .aimd-markdown-note-field__preview--interactive {

@@ -87,6 +87,7 @@ describe('AimdMarkdownNoteField', () => {
       elementRenderers: { pre: expect.any(Function) },
     }))
     expect(wrapper.find('.aimd-markdown-note-field__preview').exists()).toBe(true)
+    expect(wrapper.find('.aimd-markdown-note-field__preview').classes()).toContain('aimd-renderer')
     expect(wrapper.find('.aimd-rendered-note').text()).toContain('rendered:**keep cold**')
     expect(wrapper.find('.aimd-editor-mock').exists()).toBe(false)
   })

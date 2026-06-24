@@ -327,7 +327,7 @@ watch(
           v-else-if="previewRenderFailed"
           class="aimd-markdown-field__preview-fallback"
         >{{ draftValue }}</pre>
-        <div v-else class="aimd-markdown-field__preview">
+        <div v-else class="aimd-markdown-field__preview aimd-renderer">
           <PreviewOutlet :nodes="previewNodes" />
         </div>
       </div>
@@ -525,24 +525,6 @@ watch(
 .aimd-markdown-field__mermaid :deep(svg) {
   max-width: 100%;
   height: auto;
-}
-
-.aimd-markdown-field__preview :deep(ul),
-.aimd-markdown-field__preview :deep(ol) {
-  margin: 0.45em 0 0.75em;
-  padding-left: 1.6em;
-}
-
-.aimd-markdown-field__preview :deep(ul) {
-  list-style: disc outside;
-}
-
-.aimd-markdown-field__preview :deep(ol) {
-  list-style: decimal outside;
-}
-
-.aimd-markdown-field__preview :deep(li + li) {
-  margin-top: 0.25em;
 }
 
 .aimd-markdown-field__preview :deep(blockquote) {

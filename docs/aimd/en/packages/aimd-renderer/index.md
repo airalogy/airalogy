@@ -19,6 +19,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - Default previews for `var` and `var_table` display AIMD `title`, preserve the canonical field id, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus.
 - Numbered citation markers with hover/focus reference details and generated end-of-document references lists for `{{cite|...}}` plus fenced `refs` blocks.
 - Host-side `resolveAssetUrl` support for rendering protocol-local figure and media assets from package, archive, or app-specific URLs without rewriting AIMD source.
+- Built-in AIMD prose typography when host applications place rendered output inside an `.aimd-renderer` container, including clearer heading hierarchy, list markers, and more compact body line height.
 - Default Vue pin controls for `video` / `audio` media, including single-item pinning, collapsed pinned descriptions, and small / medium / large pinned-size controls; HTML output exposes matching `data-*` hooks for host-controlled behavior.
 - `assignerVisibility` to show or hide assigner blocks in authoring/debug views.
 - Built-in quiz preview controls.

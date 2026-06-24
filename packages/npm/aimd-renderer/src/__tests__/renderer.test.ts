@@ -462,6 +462,17 @@ describe('renderToHtmlSync', () => {
     expect(rendererStyles).toMatch(/\.aimd-figure__legend \{[\s\S]*?margin: 4px 0 0;/)
   })
 
+  it('styles rendered Markdown prose inside the renderer container', () => {
+    expect(rendererStyles).toMatch(/\.aimd-renderer \{[\s\S]*?line-height: 1\.56;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(h1\) \{[\s\S]*?font-size: 2em;[\s\S]*?line-height: 1\.12;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(h2\) \{[\s\S]*?font-size: 1\.38em;[\s\S]*?line-height: 1\.18;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(h3\) \{[\s\S]*?font-size: 1\.08em;[\s\S]*?line-height: 1\.24;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(ul\) \{[\s\S]*?list-style: disc outside;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(ol\) \{[\s\S]*?list-style: decimal outside;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(li\) \{[\s\S]*?line-height: 1\.48;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer li::marker \{[\s\S]*?color: #64748b;/)
+  })
+
   it('styles rendered media as contained media-caption blocks', () => {
     expect(rendererStyles).toMatch(/\.aimd-media \{[\s\S]*?width: min\(100%, 920px\);/)
     expect(rendererStyles).toMatch(/\.aimd-media--pinned \{[\s\S]*?position: sticky;/)

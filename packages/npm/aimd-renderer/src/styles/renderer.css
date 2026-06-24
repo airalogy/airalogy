@@ -10,6 +10,70 @@
   --aimd-var-scope-text: #1976d2;
 }
 
+.aimd-renderer {
+  color: #253247;
+  line-height: 1.56;
+}
+
+.aimd-renderer :where(h1) {
+  margin: 0.35em 0 0.55em;
+  color: #111827;
+  font-size: 2em;
+  font-weight: 760;
+  line-height: 1.12;
+}
+
+.aimd-renderer :where(h2) {
+  margin: 1.05em 0 0.45em;
+  color: #1f2f44;
+  font-size: 1.38em;
+  font-weight: 720;
+  line-height: 1.18;
+}
+
+.aimd-renderer :where(h3) {
+  margin: 0.9em 0 0.35em;
+  color: #34465f;
+  font-size: 1.08em;
+  font-weight: 700;
+  line-height: 1.24;
+}
+
+.aimd-renderer :where(p) {
+  margin: 0.45em 0;
+}
+
+.aimd-renderer :where(ul, ol) {
+  margin: 6px 0 8px;
+  padding-left: 26px;
+}
+
+.aimd-renderer :where(ul) {
+  list-style: disc outside;
+}
+
+.aimd-renderer :where(ol) {
+  list-style: decimal outside;
+}
+
+.aimd-renderer :where(ul ul) {
+  list-style-type: circle;
+}
+
+.aimd-renderer :where(ul ul ul) {
+  list-style-type: square;
+}
+
+.aimd-renderer :where(li) {
+  margin: 2px 0;
+  padding-left: 2px;
+  line-height: 1.48;
+}
+
+.aimd-renderer li::marker {
+  color: #64748b;
+}
+
 .aimd-field {
   display: inline-flex;
   align-items: center;
