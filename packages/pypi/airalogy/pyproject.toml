@@ -1,7 +1,7 @@
 [project]
 name = "airalogy"
 # Release versions are managed by Changesets through package.json and synced into this file.
-version = "0.13.0"
+version = "0.14.0"
 description = "The world's first universal framework for standardized data digitization"
 readme = "README.md"
 authors = [{ name = "Airalogy Team" }]
