@@ -23,3 +23,29 @@ fi
 
 echo "pre-push: running pnpm test:vitest"
 pnpm test:vitest
+
+changed_files="$(
+  if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    git diff --name-only '@{u}...HEAD'
+  elif git rev-parse --verify origin/main >/dev/null 2>&1; then
+    git diff --name-only 'origin/main...HEAD'
+  else
+    first_commit="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+    git diff --name-only "${first_commit}...HEAD"
+  fi
+)"
+
+if printf '%s\n' "$changed_files" | grep -Eq '^(examples/protocols/|packages/pypi/airalogy/|\.changeset/)'; then
+  if ! command -v uv >/dev/null 2>&1; then
+    echo "pre-push: uv is required to validate Python protocol example packaging." >&2
+    exit 1
+  fi
+
+  echo "pre-push: running pnpm test:python:airalogy:examples"
+  pnpm test:python:airalogy:examples
+
+  echo "pre-push: running pnpm build:python:airalogy"
+  pnpm build:python:airalogy
+else
+  echo "pre-push: skipping Python protocol example packaging checks"
+fi

@@ -28,6 +28,42 @@ The machine-readable registry is [index.json](./index.json).
 - Optional sample data files are stored beside the corresponding locale variant.
 - Compatibility and regression-only protocols live under [`spec/fixtures/protocols`](../../spec/fixtures/protocols), not in this user-facing example directory.
 
+## Required Structure
+
+`examples/protocols` is the canonical source for official user-facing Protocol examples. The PyPI package does not keep a second committed copy; `packages/pypi/airalogy/src/airalogy/examples/protocols/data` is generated from this directory during `uv build` and is ignored by git.
+
+Use one kebab-case scenario directory and one locale directory per Protocol variant:
+
+```text
+examples/protocols/<example-id>/<locale>/
+├── protocol.aimd
+├── protocol.toml
+├── assigner.py          # optional
+└── sample-data.csv      # optional
+```
+
+`<example-id>` is the public example slug used in GitHub paths and docs, for example `meeting-notes`. The Protocol id in `protocol.toml` is the stable runtime id used by APIs and package lookup, for example `meeting_notes_en`.
+
+Every locale variant must be registered in `index.json` with matching `languages`, `protocol_dir`, `entry`, and `toml` entries. If an example has `assigner.py`, register it under `assigner`; if it has bundled data files, register them under `sample_data`. All registered paths must stay inside the corresponding locale directory.
+
+## Validation And Packaging
+
+Before committing Protocol example changes, run the focused validation:
+
+```bash
+UV_CACHE_DIR=.uv-cache uv --directory packages/pypi/airalogy run --with pytest python -m pytest tests/test_spec_fixtures.py
+```
+
+Before publishing `airalogy`, also build the Python package:
+
+```bash
+UV_CACHE_DIR=.uv-cache uv build --out-dir .tmp/python-build/airalogy packages/pypi/airalogy
+```
+
+The build backend validates the example registry, verifies all referenced files, checks Protocol metadata ids, generates the package-data copy, and then removes the generated directory from the working tree after the build.
+
+The repository pre-push hook runs both checks automatically when a push includes changes under `examples/protocols`, `packages/pypi/airalogy`, or `.changeset`.
+
 ## Adding Protocol Examples
 
 - Use one kebab-case directory per scenario.

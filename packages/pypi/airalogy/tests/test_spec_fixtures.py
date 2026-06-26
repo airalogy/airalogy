@@ -8,6 +8,7 @@ from airalogy.examples.protocols import (
     protocols_root,
 )
 from airalogy.markdown import parse_aimd
+from airalogy_protocol_examples_validation import validate_protocol_examples
 
 
 MONOREPO_ROOT = Path(__file__).resolve().parents[4]
@@ -34,6 +35,8 @@ def test_basic_protocol_fixture_fields_match_python_parser():
 
 
 def test_protocol_example_registry_entries_parse_with_python_parser():
+    validate_protocol_examples(PROTOCOL_EXAMPLES_ROOT)
+
     registry = json.loads(
         PROTOCOL_EXAMPLES_ROOT.joinpath("index.json").read_text(encoding="utf-8")
     )

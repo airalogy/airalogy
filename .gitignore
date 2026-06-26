@@ -164,6 +164,7 @@ coverage/
 packages/npm/airalogy-engine/protocol_executor.py
 packages/runtime/airalogy-engine-image/airalogy-engine-image/
 packages/runtime/airalogy-engine-image/airalogy-engine-image.tar
+packages/pypi/airalogy/src/airalogy/examples/protocols/data/
 
 # mypy
 .mypy_cache/

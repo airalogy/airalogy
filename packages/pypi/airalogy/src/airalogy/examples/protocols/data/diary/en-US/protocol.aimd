@@ -1,9 +1,0 @@
-# Diary
-
-Recorder's Name: {{var|name: UserName}}
-
-Recording Time: {{var|time: CurrentTime}}
-
-Content:
-
-{{var|content: AiralogyMarkdown}}

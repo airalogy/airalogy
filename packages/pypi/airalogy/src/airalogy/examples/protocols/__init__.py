@@ -5,7 +5,7 @@ import tomllib
 from dataclasses import dataclass
 from importlib import resources
 from importlib.resources.abc import Traversable
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 
@@ -55,9 +55,17 @@ class ProtocolExample:
 
 
 def protocols_root() -> Traversable:
-    """Return the packaged protocol examples root."""
+    """Return the packaged or repository protocol examples root."""
 
-    return resources.files(__package__).joinpath(_DATA_DIR)
+    packaged_root = resources.files(__package__).joinpath(_DATA_DIR)
+    if packaged_root.joinpath("index.json").is_file():
+        return packaged_root
+
+    repository_root = find_repository_protocols_root()
+    if repository_root is not None:
+        return repository_root
+
+    return packaged_root
 
 
 def load_index() -> dict[str, Any]:
@@ -125,6 +133,15 @@ def _load_metadata(toml_path: str) -> dict[str, Any]:
     if not isinstance(metadata, dict):
         raise ValueError(f"Missing [airalogy_protocol] metadata in {toml_path}")
     return metadata
+
+
+def find_repository_protocols_root() -> Path | None:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "examples" / "protocols"
+        if (candidate / "index.json").is_file():
+            return candidate
+
+    return None
 
 
 __all__ = [

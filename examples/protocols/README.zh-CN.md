@@ -28,6 +28,42 @@
 - 可选示例数据文件放在对应语言版本目录内。
 - 只用于兼容性和回归测试的协议放在 [`spec/fixtures/protocols`](../../spec/fixtures/protocols)，不放入这个面向用户的示例目录。
 
+## 必需结构
+
+`examples/protocols` 是官方用户可见 Protocol 示例的唯一源头。PyPI 包中不再提交第二份副本；`packages/pypi/airalogy/src/airalogy/examples/protocols/data` 会在执行 `uv build` 时由这个目录自动生成，并被 git 忽略。
+
+每个场景使用一个 kebab-case 目录，每个 Protocol 语言版本使用一个 locale 子目录：
+
+```text
+examples/protocols/<example-id>/<locale>/
+├── protocol.aimd
+├── protocol.toml
+├── assigner.py          # 可选
+└── sample-data.csv      # 可选
+```
+
+`<example-id>` 是用于 GitHub 路径和文档的公开示例 slug，例如 `meeting-notes`。`protocol.toml` 中的 Protocol id 是 API 和包查找使用的稳定运行时 id，例如 `meeting_notes_en`。
+
+每个 locale 版本都必须在 `index.json` 中登记，并保持 `languages`、`protocol_dir`、`entry` 和 `toml` 一致。包含 `assigner.py` 时登记到 `assigner`；包含随包示例数据文件时登记到 `sample_data`。所有登记路径都必须位于对应 locale 目录内。
+
+## 校验与打包
+
+提交 Protocol 示例改动前，先运行聚焦校验：
+
+```bash
+UV_CACHE_DIR=.uv-cache uv --directory packages/pypi/airalogy run --with pytest python -m pytest tests/test_spec_fixtures.py
+```
+
+发布 `airalogy` 前，还要构建 Python 包：
+
+```bash
+UV_CACHE_DIR=.uv-cache uv build --out-dir .tmp/python-build/airalogy packages/pypi/airalogy
+```
+
+构建 backend 会校验示例 registry、检查所有引用文件、检查 Protocol metadata id、生成包内 data 副本，并在构建结束后从工作区删除生成目录。
+
+仓库 pre-push hook 会在本次 push 包含 `examples/protocols`、`packages/pypi/airalogy` 或 `.changeset` 改动时自动运行这两项检查。
+
 ## 新增 Protocol 示例
 
 - 每个场景使用一个 kebab-case 子目录。
