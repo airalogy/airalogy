@@ -1,0 +1,87 @@
+# Studying Candidate Antitumor Cell Activity with the Airalogy Protocol
+
+## Overview
+
+This protocol uses a common biomedical dose-response cell viability assay as an example. It shows how the Airalogy Protocol connects experimental design, raw data upload, automatic calculation, visualization, and report generation into a reusable research workflow.
+
+Example scenario: evaluating the in vitro activity of a candidate antitumor small molecule in a tumor cell model. After the researcher uploads CCK-8 cell viability readout data, the protocol automatically calculates normalized cell viability, estimates IC50, plots the dose-response curve, performs quality control, and generates a structured experimental report.
+
+## Study Information
+
+Recorder: {{var|record_recorder: UserName}}
+Recording time: {{var|record_time: CurrentTime}}
+Study ID: {{var|study_id: str = "BIO-DR-XXXXXXXX"}}
+Project name: {{var|project_name: str = "In vitro activity assessment of an antitumor candidate"}}
+Therapeutic area: {{var|therapeutic_area: str = "Tumor pharmacology / precision medicine"}}
+Candidate compound: {{var|compound_name: str = "Candidate-A"}}
+Positive control: {{var|positive_control: str = "Doxorubicin"}}
+
+## Experimental Model and Conditions
+
+Cell or model name: {{var|cell_model: str = "A549 lung adenocarcinoma cells"}}
+Assay type: {{var|assay_type: str = "CCK-8 cell viability assay"}}
+Incubation time (h): {{var|incubation_h: float = 72.0, gt = 0}}
+Seeding density (cells/well): {{var|seeding_density: int = 3000, gt = 0}}
+Culture condition: {{var|culture_condition: str = "RPMI 1640 + 10% FBS"}}
+Vehicle control mean signal: {{var|vehicle_control_mean: float = 100000.0, gt = 0}}
+Blank well mean signal: {{var|blank_mean: float = 500.0, ge=0}}
+
+## Data Upload
+
+Please upload dose-response assay data in CSV format:
+
+{{var|dose_response_file: FileIdCSV}}
+
+<details>
+<summary>CSV format requirements and example</summary>
+
+The CSV must contain these columns:
+
+| concentration_um | signal_mean | signal_sd | n |
+|-----------------:|------------:|----------:|--:|
+| 0.001            | 98000       | 2600      | 3 |
+| 0.003            | 95500       | 2400      | 3 |
+| 0.01             | 90000       | 2500      | 3 |
+| ...              | ...         | ...       | ... |
+
+Field notes:
+
+- `concentration_um`: candidate compound concentration in μM; must be greater than 0.
+- `signal_mean`: mean readout for the dose group, such as absorbance, fluorescence, or luminescence.
+- `signal_sd`: standard deviation of readouts in the dose group; optional but recommended for QC and error bars.
+- `n`: number of replicate wells; optional.
+
+</details>
+
+## Auto-Computed Results
+
+Number of dose points: {{var|point_count: int}}
+Minimum normalized cell viability (%): {{var|min_viability_pct: float}}
+Maximum inhibition (%): {{var|max_inhibition_pct: float}}
+Estimated IC50 (μM): {{var|ic50_um: float}}
+log10(IC50): {{var|log_ic50: float}}
+IC50 within tested concentration range: {{var|ic50_in_range: bool}}
+Mean log-dose inhibition AUC (%): {{var|auc_inhibition: float}}
+Maximum replicate CV (%): {{var|max_cv_pct: float}}
+QC pass: {{var|qc_pass: bool}}
+
+<details>
+<summary>QC criteria</summary>
+
+QC passes when all of the following conditions are met:
+
+- At least 6 valid dose points are present.
+- The vehicle control signal is greater than the blank well signal.
+- The dose-response curve crosses 50% cell viability, so IC50 can be estimated within the tested concentration range.
+- If `signal_sd` is provided, the maximum replicate CV is not greater than 20%.
+
+</details>
+
+## Auto-Generated Plot
+
+Dose-response curve:
+{{var|chart_dose_response: FileIdSVG}}
+
+## Auto-Generated Report
+
+{{var|report: AiralogyMarkdown}}

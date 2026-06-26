@@ -1,0 +1,14 @@
+[airalogy_protocol]
+id = "cuaac_kinetics_zh"
+version = "0.2.0"
+name = "点击化学反应动力学（CuAAC）"
+description = "以铜催化叠氮-炔烃环加成（CuAAC）为例，示例化学反应动力学实验设计、数据处理与分析的标准化Airalogy协议。"
+authors = [
+    { name = "YANG Zijie", email = "yangzijie@westlake.edu.cn", airalogy_user_id = "airalogy.id.user.yangzijie" },
+]
+maintainers = [
+    { name = "YANG Zijie", email = "yangzijie@westlake.edu.cn", airalogy_user_id = "airalogy.id.user.yangzijie" },
+]
+disciplines = ["chemistry", "chemical kinetics", "reaction analysis"]
+keywords = ["click chemistry", "CuAAC", "kinetics"]
+license = "Apache-2.0"

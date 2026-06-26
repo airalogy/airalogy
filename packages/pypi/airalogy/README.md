@@ -124,6 +124,18 @@ def calculate_required_solute_mass(dependent_fields: dict) -> AssignerResult:
     )
 ```
 
+### Load packaged protocol examples
+
+Official Airalogy Protocol examples are included in the Python package so downstream apps can reuse them without depending on a local clone of the Airalogy repository:
+
+```python
+from airalogy.examples.protocols import get_protocol_example
+
+example = get_protocol_example("meeting_notes_en")
+metadata = example.load_metadata()
+aimd = example.read_aimd()
+```
+
 ## Command Line Interface
 
 Airalogy provides a CLI tool for common operations. After installation, you can use the `airalogy` command:

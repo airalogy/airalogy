@@ -1,0 +1,383 @@
+{
+  "schema_version": "1.0.0",
+  "source_repository": "https://github.com/airalogy/protocols",
+  "examples": [
+    {
+      "id": "meeting-notes",
+      "category": "productivity",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ],
+      "title": {
+        "en-US": "Meeting Notes",
+        "zh-CN": "会议记录"
+      },
+      "description": {
+        "en-US": "A general-purpose meeting notes template for everyday meetings across teams and projects.",
+        "zh-CN": "通用的日常会议记录模板，适用于各种团队和项目。"
+      },
+      "protocol_dir": {
+        "en-US": "meeting-notes/en-US",
+        "zh-CN": "meeting-notes/zh-CN"
+      },
+      "entry": {
+        "en-US": "meeting-notes/en-US/protocol.aimd",
+        "zh-CN": "meeting-notes/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "en-US": "meeting-notes/en-US/protocol.toml",
+        "zh-CN": "meeting-notes/zh-CN/protocol.toml"
+      },
+      "engine_required": false,
+      "tags": [
+        "meeting",
+        "notes",
+        "collaboration",
+        "productivity"
+      ]
+    },
+    {
+      "id": "cuaac-kinetics",
+      "category": "chemistry",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ],
+      "title": {
+        "en-US": "Click Reaction Kinetics (CuAAC)",
+        "zh-CN": "点击化学反应动力学（CuAAC）"
+      },
+      "description": {
+        "en-US": "A chemistry protocol for CuAAC reaction design, kinetic data upload, parameter calculation, plot generation, and report drafting.",
+        "zh-CN": "以 CuAAC 点击反应为例，展示化学反应动力学实验设计、数据上传、参数计算、绘图和报告生成。"
+      },
+      "protocol_dir": {
+        "en-US": "cuaac-kinetics/en-US",
+        "zh-CN": "cuaac-kinetics/zh-CN"
+      },
+      "entry": {
+        "en-US": "cuaac-kinetics/en-US/protocol.aimd",
+        "zh-CN": "cuaac-kinetics/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "en-US": "cuaac-kinetics/en-US/protocol.toml",
+        "zh-CN": "cuaac-kinetics/zh-CN/protocol.toml"
+      },
+      "assigner": {
+        "en-US": "cuaac-kinetics/en-US/assigner.py",
+        "zh-CN": "cuaac-kinetics/zh-CN/assigner.py"
+      },
+      "sample_data": {
+        "en-US": [
+          "cuaac-kinetics/en-US/kinetics-demo.csv"
+        ],
+        "zh-CN": [
+          "cuaac-kinetics/zh-CN/kinetics-demo.csv"
+        ]
+      },
+      "engine_required": true,
+      "tags": [
+        "chemistry",
+        "kinetics",
+        "CuAAC",
+        "assigner",
+        "report"
+      ]
+    },
+    {
+      "id": "field-water-sample-observation",
+      "category": "environment",
+      "languages": [
+        "zh-CN"
+      ],
+      "title": {
+        "zh-CN": "野外水样观测与环境扰动分析"
+      },
+      "description": {
+        "zh-CN": "面向野外水样采集、当天气象场地记录、水化学与生化环境判读、季风和极端降雨扰动分析的协议。"
+      },
+      "protocol_dir": {
+        "zh-CN": "field-water-sample-observation/zh-CN"
+      },
+      "entry": {
+        "zh-CN": "field-water-sample-observation/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "zh-CN": "field-water-sample-observation/zh-CN/protocol.toml"
+      },
+      "engine_required": false,
+      "tags": [
+        "environment",
+        "water-quality",
+        "field-sampling",
+        "monsoon",
+        "extreme-rainfall",
+        "biogeochemistry"
+      ]
+    },
+    {
+      "id": "literature-review-assistant",
+      "category": "research",
+      "languages": [
+        "zh-CN"
+      ],
+      "title": {
+        "zh-CN": "AI 辅助文献调研与证据综述"
+      },
+      "description": {
+        "zh-CN": "用于定义文献调研问题、配置 OpenAI 兼容联网大模型、候选文献筛选、证据提取、质量评价和综述生成的协议。"
+      },
+      "protocol_dir": {
+        "zh-CN": "literature-review-assistant/zh-CN"
+      },
+      "entry": {
+        "zh-CN": "literature-review-assistant/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "zh-CN": "literature-review-assistant/zh-CN/protocol.toml"
+      },
+      "assigner": {
+        "zh-CN": "literature-review-assistant/zh-CN/assigner.py"
+      },
+      "engine_required": true,
+      "tags": [
+        "research",
+        "literature-review",
+        "evidence-synthesis",
+        "AI",
+        "Qwen",
+        "OpenAI-compatible",
+        "assigner"
+      ]
+    },
+    {
+      "id": "stock-fundamental-analysis-assistant",
+      "category": "finance",
+      "languages": [
+        "zh-CN"
+      ],
+      "title": {
+        "zh-CN": "AI 辅助股票基本面分析"
+      },
+      "description": {
+        "zh-CN": "用于输入股票代码和公司名称，配置 OpenAI 兼容联网大模型，整理公开财报、业务分部、财务质量、估值比较、风险清单和基本面研究报告草稿的协议。"
+      },
+      "protocol_dir": {
+        "zh-CN": "stock-fundamental-analysis-assistant/zh-CN"
+      },
+      "entry": {
+        "zh-CN": "stock-fundamental-analysis-assistant/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "zh-CN": "stock-fundamental-analysis-assistant/zh-CN/protocol.toml"
+      },
+      "assigner": {
+        "zh-CN": "stock-fundamental-analysis-assistant/zh-CN/assigner.py"
+      },
+      "engine_required": true,
+      "tags": [
+        "finance",
+        "stock-analysis",
+        "fundamental-analysis",
+        "financial-statements",
+        "valuation",
+        "AI",
+        "Qwen",
+        "OpenAI-compatible",
+        "assigner"
+      ]
+    },
+    {
+      "id": "monitoring-site-flow-graph-3d-print",
+      "category": "environment",
+      "languages": [
+        "zh-CN"
+      ],
+      "title": {
+        "zh-CN": "监测站点物理约束图与 3D 打印参数"
+      },
+      "description": {
+        "zh-CN": "基于监测站点经纬度和海拔生成距离、高程差、坡度等物理约束下的有向图，并输出适合 3D 打印的节点、边、缩放和结构参数。"
+      },
+      "protocol_dir": {
+        "zh-CN": "monitoring-site-flow-graph-3d-print/zh-CN"
+      },
+      "entry": {
+        "zh-CN": "monitoring-site-flow-graph-3d-print/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "zh-CN": "monitoring-site-flow-graph-3d-print/zh-CN/protocol.toml"
+      },
+      "assigner": {
+        "zh-CN": "monitoring-site-flow-graph-3d-print/zh-CN/assigner.py"
+      },
+      "sample_data": {
+        "zh-CN": [
+          "monitoring-site-flow-graph-3d-print/zh-CN/monitoring-sites-demo.csv"
+        ]
+      },
+      "engine_required": true,
+      "tags": [
+        "environment",
+        "monitoring-sites",
+        "hydrology",
+        "graph",
+        "3d-printing",
+        "geospatial",
+        "assigner"
+      ]
+    },
+    {
+      "id": "fiber-endface-process",
+      "category": "photonics",
+      "languages": [
+        "zh-CN"
+      ],
+      "title": {
+        "zh-CN": "光纤端面微纳结构器件工艺路线设计与记录"
+      },
+      "description": {
+        "zh-CN": "面向光纤端面微纳结构器件的课题方案拆解、微纳加工路线设计、工艺窗口记录和表征计划管理。"
+      },
+      "protocol_dir": {
+        "zh-CN": "fiber-endface-process/zh-CN"
+      },
+      "entry": {
+        "zh-CN": "fiber-endface-process/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "zh-CN": "fiber-endface-process/zh-CN/protocol.toml"
+      },
+      "engine_required": false,
+      "tags": [
+        "photonics",
+        "optical-fiber",
+        "micro-nano-fabrication",
+        "TPP",
+        "EBL",
+        "FIB"
+      ]
+    },
+    {
+      "id": "fiber-endface-sensing-calibration",
+      "category": "photonics",
+      "languages": [
+        "zh-CN"
+      ],
+      "title": {
+        "zh-CN": "光纤端面微纳结构传感标定数据分析"
+      },
+      "description": {
+        "zh-CN": "面向光纤端面微纳结构传感器的标定数据上传、灵敏度拟合、检测限估计、质控判定、绘图和报告生成。"
+      },
+      "protocol_dir": {
+        "zh-CN": "fiber-endface-sensing-calibration/zh-CN"
+      },
+      "entry": {
+        "zh-CN": "fiber-endface-sensing-calibration/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "zh-CN": "fiber-endface-sensing-calibration/zh-CN/protocol.toml"
+      },
+      "assigner": {
+        "zh-CN": "fiber-endface-sensing-calibration/zh-CN/assigner.py"
+      },
+      "sample_data": {
+        "zh-CN": [
+          "fiber-endface-sensing-calibration/zh-CN/sensing-calibration-demo.csv"
+        ]
+      },
+      "engine_required": true,
+      "tags": [
+        "photonics",
+        "optical-fiber",
+        "sensing",
+        "calibration",
+        "assigner"
+      ]
+    },
+    {
+      "id": "drug-response-ic50",
+      "category": "biomedicine",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ],
+      "title": {
+        "en-US": "Drug Response IC50 Analysis",
+        "zh-CN": "抗肿瘤候选药物细胞活性剂量-反应分析"
+      },
+      "description": {
+        "en-US": "A biomedical protocol for dose-response data upload, IC50 estimation, quality control, curve plotting, and structured report generation.",
+        "zh-CN": "用于标准化记录细胞活性实验、上传剂量-反应数据、自动估算 IC50、生成图表与实验报告。"
+      },
+      "protocol_dir": {
+        "en-US": "drug-response-ic50/en-US",
+        "zh-CN": "drug-response-ic50/zh-CN"
+      },
+      "entry": {
+        "en-US": "drug-response-ic50/en-US/protocol.aimd",
+        "zh-CN": "drug-response-ic50/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "en-US": "drug-response-ic50/en-US/protocol.toml",
+        "zh-CN": "drug-response-ic50/zh-CN/protocol.toml"
+      },
+      "assigner": {
+        "en-US": "drug-response-ic50/en-US/assigner.py",
+        "zh-CN": "drug-response-ic50/zh-CN/assigner.py"
+      },
+      "sample_data": {
+        "en-US": [
+          "drug-response-ic50/en-US/dose-response-demo.csv"
+        ],
+        "zh-CN": [
+          "drug-response-ic50/zh-CN/dose-response-demo.csv"
+        ]
+      },
+      "engine_required": true,
+      "tags": [
+        "biomedicine",
+        "pharmacology",
+        "IC50",
+        "dose-response",
+        "assigner"
+      ]
+    },
+    {
+      "id": "diary",
+      "category": "personal",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ],
+      "title": {
+        "en-US": "Diary",
+        "zh-CN": "日记"
+      },
+      "description": {
+        "en-US": "A compact Airalogy Protocol for keeping a structured diary.",
+        "zh-CN": "一个用于结构化记录日记的轻量 Airalogy Protocol。"
+      },
+      "protocol_dir": {
+        "en-US": "diary/en-US",
+        "zh-CN": "diary/zh-CN"
+      },
+      "entry": {
+        "en-US": "diary/en-US/protocol.aimd",
+        "zh-CN": "diary/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "en-US": "diary/en-US/protocol.toml",
+        "zh-CN": "diary/zh-CN/protocol.toml"
+      },
+      "engine_required": false,
+      "tags": [
+        "diary",
+        "personal",
+        "notes"
+      ]
+    }
+  ]
+}

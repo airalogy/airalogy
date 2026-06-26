@@ -1,0 +1,68 @@
+# Studying Click Reaction Kinetics with the Airalogy Protocol
+
+## Overview
+
+Click chemistry (awarded the 2022 Nobel Prize in Chemistry) refers to a class of reactions that are highly efficient, selective, high-yielding, and produce few by-products. A representative example is the copper-catalyzed azide–alkyne cycloaddition (CuAAC, Copper-catalyzed Azide–Alkyne CycloAddition).
+
+![CuAAC](https://ars.els-cdn.com/content/image/1-s2.0-S0010854511001809-fx1_lrg.jpg)
+
+This protocol uses click chemistry as an example to demonstrate how, with the Airalogy Protocol platform, you can upload experimental data, automatically compute kinetic parameters and generate plots, and then automatically produce an experimental report with a large language model (LLM).
+
+## Basic Information & Conditions
+
+Recorder: {{var|record_recorder: UserName}}
+Time: {{var|record_time: CurrentTime}}
+Reaction ID: {{var|reaction_id: str = "R-XXXXXXXX"}}
+Reaction name: {{var|reaction_name: str = "Phenylacetylene + Benzyl azide → 1,2,3-triazole"}}
+Solvent: {{var|solvent: str = "t-BuOH/H2O (1:1)"}}
+Temperature (°C): {{var|temperature: float = 25.0}}
+Catalyst: {{var|catalyst: str = "CuSO4/NaAsc"}}
+Limiting substrate (A): {{var|substrate_limit: str = "phenylacetylene"}}
+Initial concentration of A: {{var|c0: float = 50.0, gt = 0}}
+Excess substrate (B): {{var|substrate_excess: str = "benzyl azide"}}
+
+## Data Upload
+
+Please upload kinetic data (CSV format):
+
+{{var|kinetics_file: FileIdCSV}}
+
+<details>
+<summary>CSV format requirements & example</summary>
+
+| t_min | area_a | area_p |
+| ----: | -----: | -----: |
+|     0 |   1000 |      0 |
+|     5 |    800 |    200 |
+|    10 |    600 |    400 |
+|   ... |    ... |    ... |
+
+</details>
+
+## Auto-Computed Results
+
+Final conversion (%) : {{var|final_conv_pct: float}}
+Observed rate constant (min<sup>−1</sup>) : {{var|k_obs: float}}
+Half-life (min) : {{var|t_half: float}}
+Time to 95% conversion (min) : {{var|t_95: float}}
+Linear fit quality R<sup>2</sup> : {{var|r2: float}}
+QC pass : {{var|qc_pass: bool}}
+
+<details>
+<summary>QC criteria</summary>
+
+QC Pass if final conversion ≥ 90% and fit R<sup>2</sup> ≥ 0.95; otherwise QC Fail.
+
+</details>
+
+## Auto-Generated Plots
+
+Conversion–time curve:
+{{var|chart_conversion: FileIdSVG}}
+
+Linear fit (−ln(1−Conv)):
+{{var|chart_lnfit: FileIdSVG}}
+
+## Auto-Generated Report
+
+{{var|report: AiralogyMarkdown}}

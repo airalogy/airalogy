@@ -1,0 +1,68 @@
+# 通过Airalogy Protocol研究点击化学反应动力学
+
+## 说明
+
+点击化学（于2022年被授予诺贝尔化学奖）指的是一些高效、专一、产率高且副产物少的化学反应，典型代表是铜催化的叠氮-炔烃环加成反应（CuAAC, Copper-catalyzed Azide–Alkyne CycloAddition）。
+
+![CuAAC](https://ars.els-cdn.com/content/image/1-s2.0-S0010854511001809-fx1_lrg.jpg)
+
+该协议旨在以点击化学为例，展示如何利用Airalogy Protocol平台，通过上传实验数据，自动计算动力学参数并生成图表，同时利用大模型自动生成实验报告。
+
+## 基本信息与条件
+
+记录人：{{var|record_recorder: UserName}}
+记录时间：{{var|record_time: CurrentTime}}
+反应编号：{{var|reaction_id: str = "R-XXXXXXXX"}}
+反应名称：{{var|reaction_name: str = "苯乙炔 + 苄基叠氮 → 1,2,3-三唑"}}
+溶剂：{{var|solvent: str = "t-BuOH/H2O (1:1)"}}
+温度（℃）：{{var|temperature: float = 25.0}}
+催化剂：{{var|catalyst: str = "CuSO4/NaAsc"}}
+限量底物（A）：{{var|substrate_limit: str = "苯乙炔"}}
+A初始浓度：{{var|c0: float = 50.0, gt = 0}}
+过量底物（B）：{{var|substrate_excess: str = "苄基叠氮"}}
+
+## 数据上传
+
+请上传动力学数据（CSV格式）：
+
+{{var|kinetics_file: FileIdCSV}}
+
+<details>
+<summary>CSV格式要求和示例</summary>
+
+| t_min | area_a | area_p |
+|-------|--------|--------|
+| 0     | 1000   | 0      |
+| 5     | 800    | 200    |
+| 10    | 600    | 400    |
+| ...   | ...    | ...    |
+
+</details>
+
+## 自动计算结果
+
+末端转化率（%）：{{var|final_conv_pct: float}}
+观测速率常数（min<sup>−1</sup>）：{{var|k_obs: float}}
+半衰期（min）：{{var|t_half: float}}
+达95%转化时间（min）：{{var|t_95: float}}
+线性拟合优度R<sup>2</sup>：{{var|r2: float}}
+质控通过：{{var|qc_pass: bool}}
+
+<details>
+<summary>质控标准</summary>
+
+当最低末端转化率>=90%且拟合R<sup>2</sup>>=0.95时，质控通过（QC Pass），否则不通过（QC Fail）。
+
+</details>
+
+## 自动绘图
+
+转化率‑时间曲线：
+{{var|chart_conversion: FileIdSVG}}
+
+线性拟合（- ln(1−Conv)）：
+{{var|chart_lnfit: FileIdSVG}}
+
+## 自动生成报告
+
+{{var|report: AiralogyMarkdown}}

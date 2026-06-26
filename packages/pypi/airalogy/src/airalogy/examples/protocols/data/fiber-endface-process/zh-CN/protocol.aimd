@@ -1,0 +1,110 @@
+# 光纤端面微纳结构器件工艺路线设计与记录
+
+## 说明
+
+本协议面向“在光纤端面通过微纳加工构筑功能结构”的课题，用于把一个器件想法拆解成可执行、可复盘的工艺路线。课堂演示时可以让学生选择 TPP、EBL、FIB、刻蚀、镀膜或光刻等方法，比较不同工艺在端面定位、结构分辨率、材料兼容性和损伤风险上的取舍。
+
+示例场景：在单模光纤端面加工一组亚波长金属/介质结构，实现反射谱共振峰随外界折射率变化而移动，用于微量样品折射率传感。
+
+## 课题基本信息
+
+记录人：{{var|record_recorder: UserName}}
+记录时间：{{var|record_time: CurrentTime}}
+课题编号：{{var|project_id: str = "FIBER-NANO-XXXXXXXX"}}
+器件名称：{{var|device_name: str = "光纤端面纳米孔阵列折射率传感器"}}
+光纤类型：{{var|fiber_type: str = "SMF-28 单模光纤"}}
+目标功能：{{var|target_function: str = "折射率传感"}}
+工作波长（nm）：{{var|operation_wavelength_nm: float = 1550.0, gt = 0}}
+目标光学响应：{{var|target_optical_response: str = "反射谱共振峰漂移"}}
+应用场景：{{var|application_context: str = "微量液体样品实时检测"}}
+
+## 微纳结构设计
+
+结构类型：{{var|structure_type: str = "光纤端面金属纳米孔阵列"}}
+有效加工区域直径（μm）：{{var|active_area_diameter_um: float = 80.0, gt = 0}}
+结构周期（nm）：{{var|period_nm: float = 650.0, gt = 0}}
+特征线宽/孔径（nm）：{{var|feature_width_nm: float = 220.0, gt = 0}}
+目标结构高度/深度（nm）：{{var|feature_height_nm: float = 80.0, gt = 0}}
+材料体系：{{var|material_stack: str = "Ti/Au = 5/50 nm"}}
+设计依据与预期模式：
+
+{{var|design_rationale: AiralogyMarkdown}}
+
+## 工艺路线
+
+请把从端面预处理到最终封装的关键步骤按顺序记录下来。
+
+{{var|process_steps: list[ProcessStep],
+    title="工艺步骤",
+    description="每行记录一个可独立执行或复盘的微纳加工步骤",
+    subvars=[
+        var(
+            step_order: int,
+            title="序号",
+            description="步骤顺序"
+        ),
+        var(
+            method: str,
+            title="方法",
+            description="例如 TPP、EBL、FIB、ICP 刻蚀、磁控溅射、热蒸镀、光刻"
+        ),
+        var(
+            target_feature: str,
+            title="目标",
+            description="该步骤要形成、修饰或验证的结构"
+        ),
+        var(
+            key_parameters: str,
+            title="关键参数",
+            description="剂量、功率、束流、电压、刻蚀气体、沉积厚度、对准方式等"
+        ),
+        var(
+            risk_control: str,
+            title="风险控制",
+            description="端面污染、充电、热损伤、重沉积、套刻偏差、光纤夹持等风险的控制方式"
+        )
+    ]
+}}
+
+## 工艺窗口与质量控制
+
+端面清洁方案：{{var|endface_cleaning: str = "等离子清洗 60 s + 显微镜复查"}}
+端面对准容差（nm）：{{var|alignment_tolerance_nm: float = 500.0, gt = 0}}
+最大允许结构尺寸偏差（%）：{{var|max_dimension_error_pct: float = 10.0, ge = 0}}
+最大允许端面插入损耗（dB）：{{var|max_insertion_loss_db: float = 3.0, ge = 0}}
+主要失效模式：
+
+{{var|failure_modes: AiralogyMarkdown}}
+
+## 表征与验证计划
+
+{{var|characterization_plan: list[CharacterizationItem],
+    title="表征项目",
+    description="每行记录一个结构、材料或光学表征项目",
+    subvars=[
+        var(
+            method: str,
+            title="表征方法",
+            description="例如 SEM、AFM、EDS、白光干涉、反射谱、近场扫描"
+        ),
+        var(
+            measured_quantity: str,
+            title="测量量",
+            description="需要从该表征中得到的定量或定性结果"
+        ),
+        var(
+            acceptance_criteria: str,
+            title="验收标准",
+            description="判断该步骤或器件是否进入下一轮实验的标准"
+        )
+    ]
+}}
+
+## 下一轮实验设计
+
+优先优化变量：{{var|next_variable: str = "结构周期和金属膜厚"}}
+对照样品：{{var|control_sample: str = "未加工光纤端面 + 仅镀膜光纤端面"}}
+预计样品数量：{{var|sample_count: int = 6, gt = 0}}
+课堂讨论记录：
+
+{{var|discussion_notes: AiralogyMarkdown}}

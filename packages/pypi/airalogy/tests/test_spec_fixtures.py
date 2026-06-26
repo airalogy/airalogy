@@ -1,6 +1,12 @@
 import json
 from pathlib import Path
 
+from airalogy.examples.protocols import (
+    get_protocol_example,
+    iter_protocol_examples,
+    load_index,
+    protocols_root,
+)
 from airalogy.markdown import parse_aimd
 
 
@@ -40,6 +46,42 @@ def test_protocol_example_registry_entries_parse_with_python_parser():
             assert aimd_path.exists(), f"Missing AIMD entry for {example['id']} {locale}"
             assert toml_path.exists(), f"Missing TOML entry for {example['id']} {locale}"
             parse_aimd(aimd_path.read_text(encoding="utf-8"))
+
+
+def test_packaged_protocol_examples_match_repository_sources():
+    repository_index = json.loads(
+        PROTOCOL_EXAMPLES_ROOT.joinpath("index.json").read_text(encoding="utf-8")
+    )
+
+    assert load_index() == repository_index
+
+    resource_paths = {"index.json", "README.md", "README.zh-CN.md"}
+    for example in repository_index["examples"]:
+        for key in ("entry", "toml", "assigner"):
+            resource_paths.update(example.get(key, {}).values())
+        for paths in example.get("sample_data", {}).values():
+            resource_paths.update(paths)
+        for paths in example.get("assets", {}).values():
+            resource_paths.update(paths)
+
+    for relative_path in sorted(resource_paths):
+        packaged_resource = protocol_example_resource(relative_path)
+        repository_file = PROTOCOL_EXAMPLES_ROOT / relative_path
+
+        assert repository_file.is_file(), f"Missing repository example file {relative_path}"
+        assert packaged_resource.is_file(), f"Missing packaged example file {relative_path}"
+        assert packaged_resource.read_bytes() == repository_file.read_bytes()
+
+
+def test_packaged_protocol_examples_parse_with_python_parser():
+    examples = iter_protocol_examples()
+
+    assert examples
+    for example in examples:
+        metadata = example.load_metadata()
+        assert example.id == metadata["id"]
+        assert get_protocol_example(metadata["id"]) == example
+        parse_aimd(example.read_aimd())
 
 
 def test_protocol_fixtures_parse_with_python_parser():
@@ -107,3 +149,10 @@ def test_media_fixture_extracts_python_media_templates():
     assert media["poster"] == "files/lecture-poster.jpg"
     assert media["title"] == "Lecture Video"
     assert media["legend"] == "A local video resource packaged with the AIMD protocol."
+
+
+def protocol_example_resource(relative_path: str):
+    resource = protocols_root()
+    for part in relative_path.split("/"):
+        resource = resource.joinpath(part)
+    return resource

@@ -124,6 +124,18 @@ def calculate_required_solute_mass(dependent_fields: dict) -> AssignerResult:
     )
 ```
 
+### 读取随包发布的协议示例
+
+官方 Airalogy Protocol 示例会随 Python 包一起发布，下游应用可以直接复用，不需要依赖本机是否 clone 了 Airalogy 仓库：
+
+```python
+from airalogy.examples.protocols import get_protocol_example
+
+example = get_protocol_example("meeting_notes_en")
+metadata = example.load_metadata()
+aimd = example.read_aimd()
+```
+
 ## 命令行接口
 
 安装后可以直接使用 `airalogy` 命令：
