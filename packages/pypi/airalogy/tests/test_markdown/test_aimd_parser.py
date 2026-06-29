@@ -2,6 +2,9 @@
 Tests for the AIMD parser.
 """
 
+import textwrap
+from pathlib import Path
+
 import pytest
 
 from airalogy.markdown import (
@@ -17,9 +20,16 @@ from airalogy.markdown import (
     TokenType,
     VarNode,
     VarTableNode,
+    WorkflowNode,
     extract_assigner_blocks,
+    is_aimd_workflow_reference,
     parse_aimd,
+    parse_workflow_content,
 )
+
+
+REPO_ROOT = Path(__file__).resolve().parents[5]
+WORKFLOW_FIXTURE = REPO_ROOT / "spec/fixtures/workflows/parameter-optimization/workflow.aimd"
 
 
 class TestLexer:
@@ -1827,3 +1837,166 @@ options:
         assert "options.yes.followups.years.type must be one of" in str(
             exc_info.value
         )
+
+    def test_parse_workflow_content_from_fixture(self):
+        content = WORKFLOW_FIXTURE.read_text(encoding="utf-8")
+        workflow_yaml = content.split("```workflow", 1)[1].split("```", 1)[0].strip()
+        workflow = parse_workflow_content(workflow_yaml)
+
+        assert isinstance(workflow, WorkflowNode)
+        assert workflow.version == "airalogy.workflow.v1"
+        assert workflow.id == "parameter_optimization"
+        assert [node["id"] for node in workflow.nodes] == [
+            "prep",
+            "measurement",
+            "analysis",
+            "report",
+        ]
+        assigners = {assigner["id"]: assigner for assigner in workflow.assigners}
+        assert assigners["summarize_measurement"]["runtime"] == "python"
+        assert (
+            assigners["summarize_measurement"]["entrypoint"]
+            == "./assigners/summarize_measurement.py:assign"
+        )
+        assert workflow.transitions[1]["run"] == "summarize_measurement"
+        assert workflow.transitions[1]["id"] == "summarize_measurement_for_analysis"
+        assert workflow.transitions[1]["from"] == ["measurement"]
+        assert workflow.transitions[1]["to"] == ["analysis"]
+        assert workflow.transitions[1]["inputs"] == {
+            "raw_data": "${measurement.var.raw_data}",
+        }
+        assert workflow.transitions[1]["assign"] == {
+            "analysis": {
+                "var.raw_data": "${measurement.var.raw_data}",
+                "var.raw_data_summary": "${summarize_measurement_for_analysis.outputs.raw_data_summary}",
+                "var.measurement_quality": "${summarize_measurement_for_analysis.outputs.measurement_quality}",
+            },
+        }
+        assert assigners["optimize_parameters"]["runtime"] == "python"
+        assert (
+            assigners["optimize_parameters"]["entrypoint"]
+            == "./assigners/optimize_parameters.py:assign"
+        )
+        assert "permissions" not in assigners["optimize_parameters"]
+        assert workflow.transitions[3]["id"] == "retry_after_qc_failure"
+        assert workflow.transitions[3]["from"] == ["analysis"]
+        assert workflow.transitions[3]["to"] == ["prep"]
+        assert workflow.transitions[3]["run"] == "optimize_parameters"
+        assert workflow.transitions[3]["max_iterations"] == 5
+        assert workflow.default_initial_node == "prep"
+        assert is_aimd_workflow_reference("${analysis.var.summary}") is True
+        assert is_aimd_workflow_reference("${analysis.check.pass_qc.checked}") is True
+        assert (
+            is_aimd_workflow_reference(
+                "${retry_after_qc_failure.outputs.retry_reason}"
+            )
+            is True
+        )
+        assert is_aimd_workflow_reference("${analysis}") is False
+        assert is_aimd_workflow_reference("analysis.var.summary") is False
+
+    def test_parse_workflow_content_keeps_optional_permissions(self):
+        workflow = parse_workflow_content(
+            textwrap.dedent(
+                """
+                version: airalogy.workflow.v1
+                id: permissions_example
+                nodes:
+                  - id: prep
+                    protocol: ./protocols/prep/protocol.aimd
+                  - id: report
+                    protocol: ./protocols/report/protocol.aimd
+                assigners:
+                  - id: summarize
+                    runtime: python
+                    entrypoint: ./assigners/summarize.py:assign
+                    permissions:
+                      network:
+                        - api.example.com
+                      secrets:
+                        - EXAMPLE_API_KEY
+                transitions:
+                  - id: summarize_for_report
+                    from: prep
+                    to: report
+                    run: summarize
+                """
+            ).strip()
+        )
+
+        assert workflow.assigners[0]["permissions"] == {
+            "network": ["api.example.com"],
+            "secrets": ["EXAMPLE_API_KEY"],
+        }
+
+    def test_parse_workflow_content_normalizes_many_to_many_transition_assignments(
+        self,
+    ):
+        workflow = parse_workflow_content(
+            textwrap.dedent(
+                """
+                version: airalogy.workflow.v1
+                id: many_to_many_example
+                nodes:
+                  - id: analysis
+                    protocol: ./protocols/analysis/protocol.aimd
+                  - id: qc_review
+                    protocol: ./protocols/qc-review/protocol.aimd
+                  - id: report
+                    protocol: ./protocols/report/protocol.aimd
+                  - id: archive
+                    protocol: ./protocols/archive/protocol.aimd
+                assigners:
+                  - id: plan_report_and_archive
+                    runtime: python
+                    entrypoint: ./assigners/plan_report_and_archive.py:assign
+                transitions:
+                  - id: prepare_report_and_archive
+                    from:
+                      - analysis
+                      - qc_review
+                    to:
+                      - report
+                      - archive
+                    run: plan_report_and_archive
+                    inputs:
+                      analysis_summary: ${analysis.var.summary}
+                      qc_checked: ${qc_review.check.pass_qc.checked}
+                    assign:
+                      report:
+                        var.summary: ${prepare_report_and_archive.outputs.report_summary}
+                        check.ready_to_publish: ${qc_review.check.pass_qc}
+                      archive:
+                        var.qc_annotation: ${qc_review.check.pass_qc.annotation}
+                        var.archive_bundle: ${prepare_report_and_archive.outputs.archive_bundle}
+                """
+            ).strip()
+        )
+
+        transition = workflow.transitions[0]
+        assert transition["from"] == ["analysis", "qc_review"]
+        assert transition["to"] == ["report", "archive"]
+        assert transition["inputs"] == {
+            "analysis_summary": "${analysis.var.summary}",
+            "qc_checked": "${qc_review.check.pass_qc.checked}",
+        }
+        assert transition["assign"] == {
+            "report": {
+                "var.summary": "${prepare_report_and_archive.outputs.report_summary}",
+                "check.ready_to_publish": "${qc_review.check.pass_qc}",
+            },
+            "archive": {
+                "var.qc_annotation": "${qc_review.check.pass_qc.annotation}",
+                "var.archive_bundle": "${prepare_report_and_archive.outputs.archive_bundle}",
+            },
+        }
+
+    def test_parse_aimd_extracts_workflow_blocks(self):
+        result = parse_aimd(WORKFLOW_FIXTURE.read_text(encoding="utf-8"))
+        workflows = result["templates"]["workflow"]
+
+        assert len(workflows) == 1
+        assert workflows[0]["id"] == "parameter_optimization"
+        assert len(workflows[0]["transitions"]) == 4
+        assert result["templates"]["var"] == []
+        assert result["templates"]["step"] == []

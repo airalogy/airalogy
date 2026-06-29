@@ -26,6 +26,7 @@ import {
   rehypeAimd,
   protectAimdInlineTemplates,
   protectCriticMarkupSubstitutions,
+  parseWorkflowContent,
   parseMediaContent,
   parseRefsContent,
   restoreAimdInlineTemplates,
@@ -35,7 +36,7 @@ import {
 } from "@airalogy/aimd-core/parser"
 ```
 
-**`remarkAimd`** — Unified remark plugin that parses AIMD inline templates and fenced blocks (`quiz`, `fig`, `media`, `refs`, `assigner`) into typed AST nodes. Attach to a `unified().use(remarkParse)` pipeline.
+**`remarkAimd`** — Unified remark plugin that parses AIMD inline templates and fenced blocks (`workflow`, `quiz`, `fig`, `media`, `refs`, `assigner`) into typed metadata and AST nodes. Attach to a `unified().use(remarkParse)` pipeline. Workflow blocks are extracted into `file.data.aimdFields.workflow` and left as Markdown code blocks for renderers.
 
 **`rehypeAimd`** — Rehype plugin counterpart for the HTML AST stage.
 
@@ -50,6 +51,8 @@ import {
 **`parseRefsContent(content: string): AimdReferenceField[]`** — Parses fenced `refs` block content in BibTeX format and returns structured reference entries with normalized fields such as `title`, `author`, `year`, `doi`, and `url`.
 
 **`parseMediaContent(content: string): AimdMediaField`** — Parses key-value content from a fenced `media` block and returns a media definition; the parser preserves fields and does not enforce standard `kind` values.
+
+**`parseWorkflowContent(content: string): AimdWorkflowField`** — Parses the YAML body of a fenced `workflow` block and validates workflow version, nodes, transition ids, source/target node references, assigner declarations, transition inputs, grouped target assignments, permissions, and retry limits. The parser does not execute assigners or call external services.
 
 **`validateClientAssignerFunctionSource(functionSource: string, id: string): void`** — Validates frontend `client_assigner` function bodies and throws when unsupported or unsafe constructs are present.
 
@@ -161,6 +164,7 @@ interface ExtractedAimdFields {
   var: string[]
   var_table: AimdVarTableField[]
   client_assigner: AimdClientAssignerField[]
+  workflow?: AimdWorkflowField[]
   quiz: AimdQuizField[]
   step: string[]
   check: string[]
@@ -199,6 +203,60 @@ interface AimdReferenceField {
   publisher?: string
   doi?: string
   url?: string
+}
+
+type AimdWorkflowAssignValue =
+  | string
+  | number
+  | boolean
+  | null
+  | AimdWorkflowAssignValue[]
+  | { [key: string]: AimdWorkflowAssignValue }
+
+interface AimdWorkflowField {
+  version: "airalogy.workflow.v1"
+  id: string
+  title?: string
+  description?: string
+  nodes: AimdWorkflowNodeField[]
+  assigners: AimdWorkflowAssignerField[]
+  transitions: AimdWorkflowTransitionField[]
+  logic?: string
+  default_initial_node?: string
+  raw: string
+}
+
+interface AimdWorkflowNodeField {
+  id: string
+  protocol?: string
+  protocol_id?: string
+  protocol_version?: string
+  title?: string
+  description?: string
+}
+
+interface AimdWorkflowAssignerField {
+  id: string
+  runtime: string
+  entrypoint?: string
+  description?: string
+  outputs?: Record<string, string>
+  permissions?: {
+    network?: string[]
+    secrets?: string[]
+  }
+}
+
+interface AimdWorkflowTransitionField {
+  id: string
+  from: string[]
+  to: string[]
+  when?: string
+  label?: string
+  run?: string
+  inputs?: Record<string, AimdWorkflowAssignValue>
+  max_iterations?: number
+  assign?: Record<string, Record<string, AimdWorkflowAssignValue>>
 }
 
 // Variable definition (from parsed AST)

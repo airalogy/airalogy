@@ -13,6 +13,7 @@ from ..ast_nodes import (
     ReferenceNode,
     StepNode,
     VarNode,
+    WorkflowNode,
 )
 from ..errors import (
     AimdParseError,
@@ -28,9 +29,10 @@ from .quiz import QuizParserMixin
 from .refs import parse_refs_content
 from .step import StepParserMixin
 from .var import VarParserMixin
+from .workflow import WorkflowParserMixin
 
 
-class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
+class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParserMixin):
     """
     Main AIMD parser.
 
@@ -316,6 +318,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
                     "media": [MediaNode, ...],
                     "refs": [ReferenceNode, ...],
                     "assigner": [AssignerBlockNode, ...],
+                    "workflow": [WorkflowNode, ...],
                 }
             }
 
@@ -337,6 +340,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
         media = self._parse_media_blocks()
         refs = self._parse_refs_blocks()
         assigners = self._parse_assigner_blocks()
+        workflows = self._parse_workflow_blocks()
 
         for token in self.tokens:
             if token.type == TokenType.VAR:
@@ -380,6 +384,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin):
             "media": media,
             "refs": refs,
             "assigner": assigners,
+            "workflow": workflows,
         }
 
         self.parse_result = {
@@ -515,6 +520,9 @@ def parse_aimd(aimd_content: str) -> dict:
             "refs": [ref.to_dict() for ref in result["templates"]["refs"]],
             "assigner": [
                 assigner.to_dict() for assigner in result["templates"]["assigner"]
+            ],
+            "workflow": [
+                workflow.to_dict() for workflow in result["templates"]["workflow"]
             ],
         },
     }

@@ -19,6 +19,7 @@ from .ast_nodes import (
     StepNode,
     VarNode,
     VarTableNode,
+    WorkflowNode,
 )
 from .errors import (
     DuplicateNameError,
@@ -30,6 +31,7 @@ from .errors import (
 from .lexer import Lexer
 from .model_generator import generate_model
 from .parser import AimdParser, extract_assigner_blocks, parse_aimd
+from .parser.workflow import is_aimd_workflow_reference, parse_workflow_content
 from .tokens import Position, Token, TokenType
 from .get import get_airalogy_image_ids
 from .validator import AimdValidator, ValidationError, validate_aimd
@@ -57,6 +59,9 @@ __all__ = [
     "CiteNode",
     "ReferenceNode",
     "AssignerBlockNode",
+    "WorkflowNode",
+    "parse_workflow_content",
+    "is_aimd_workflow_reference",
     # Errors
     "InvalidNameError",
     "DuplicateNameError",

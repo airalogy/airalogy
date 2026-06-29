@@ -461,6 +461,117 @@ export interface AimdClientAssignerField {
 }
 
 /**
+ * JSON-serializable value or workflow reference passed through a workflow transition.
+ */
+export type AimdWorkflowAssignValue =
+  | string
+  | number
+  | boolean
+  | null
+  | AimdWorkflowAssignValue[]
+  | { [key: string]: AimdWorkflowAssignValue }
+
+/**
+ * Runtime permissions declared for a workflow-level assigner.
+ */
+export interface AimdWorkflowPermissions {
+  /** Network hosts the assigner may access, for example api.openai.com */
+  network?: string[]
+  /** Environment secrets the assigner may read, for example OPENAI_API_KEY */
+  secrets?: string[]
+}
+
+/**
+ * Protocol node inside a workflow graph.
+ */
+export interface AimdWorkflowNodeField {
+  /** Stable node id used by transitions and references */
+  id: string
+  /** Local protocol path, for example ./protocols/prep/protocol.aimd */
+  protocol?: string
+  /** Registry or project protocol id */
+  protocol_id?: string
+  /** Optional protocol version selector */
+  protocol_version?: string
+  /** Human-readable title */
+  title?: string
+  /** Human-readable description */
+  description?: string
+}
+
+/**
+ * Workflow-level assigner declaration.
+ */
+export interface AimdWorkflowAssignerField {
+  /** Stable assigner id */
+  id: string
+  /** Runtime discriminator, for example python */
+  runtime: string
+  /** Runtime entrypoint, required for python assigners */
+  entrypoint?: string
+  /** Human-readable description */
+  description?: string
+  /** Optional output contract returned by the assigner */
+  outputs?: Record<string, string>
+  /** Runtime permissions requested by the assigner */
+  permissions?: AimdWorkflowPermissions
+}
+
+/**
+ * Directed transition between workflow nodes.
+ */
+export interface AimdWorkflowTransitionField {
+  /** Stable transition invocation id */
+  id: string
+  /** Source node ids whose fields this transition may read */
+  from: string[]
+  /** Destination node ids whose fields this transition may write */
+  to: string[]
+  /** Optional condition expression evaluated by the workflow runtime */
+  when?: string
+  /** Optional display label */
+  label?: string
+  /** Workflow assigner id to run before assigning values */
+  run?: string
+  /** Values passed to the assigner function parameters */
+  inputs?: Record<string, AimdWorkflowAssignValue>
+  /** Maximum retry/loop count for this transition */
+  max_iterations?: number
+  /** Values assigned into target node fields, grouped by target node id */
+  assign?: Record<string, Record<string, AimdWorkflowAssignValue>>
+}
+
+/**
+ * Workflow definition extracted from a fenced `workflow` block.
+ */
+export interface AimdWorkflowField {
+  /** Workflow schema version */
+  version: "airalogy.workflow.v1"
+  /** Stable workflow id */
+  id: string
+  /** Human-readable title */
+  title?: string
+  /** Human-readable description */
+  description?: string
+  /** Protocol nodes in the workflow graph */
+  nodes: AimdWorkflowNodeField[]
+  /** Workflow-level assigner declarations */
+  assigners: AimdWorkflowAssignerField[]
+  /** Directed graph transitions */
+  transitions: AimdWorkflowTransitionField[]
+  /** Human-oriented workflow logic notes */
+  logic?: string
+  /** Node id used as the default start node */
+  default_initial_node?: string
+  /** Default research purpose text */
+  default_research_purpose?: string
+  /** Default research strategy text */
+  default_research_strategy?: string
+  /** Raw YAML payload inside the fenced block */
+  raw: string
+}
+
+/**
  * Extracted AIMD fields from markdown
  * This is the canonical output format from remark-aimd
  */
@@ -473,6 +584,8 @@ export interface ExtractedAimdFields {
   var_table: AimdVarTableField[]
   /** Frontend-only assigners from fenced `assigner runtime=client` blocks */
   client_assigner: AimdClientAssignerField[]
+  /** Workflow definitions from fenced `workflow` blocks */
+  workflow?: AimdWorkflowField[]
   /** Quiz definitions from ```quiz code blocks */
   quiz: AimdQuizField[]
   /** Steps */

@@ -14,6 +14,10 @@
 export { default as remarkAimd } from './parser/remark-aimd'
 export { default as rehypeAimd } from './parser/rehype-aimd'
 export {
+  isAimdWorkflowReference,
+  parseWorkflowContent,
+} from './parser/workflow-parser'
+export {
   CRITIC_MARKUP_SUBSTITUTIONS_DATA_KEY,
   remarkCriticMarkup,
   protectCriticMarkupSubstitutions,
@@ -46,6 +50,12 @@ export type {
   AimdVarField,
   AimdVarTableField,
   AimdVarType,
+  AimdWorkflowAssignerField,
+  AimdWorkflowAssignValue,
+  AimdWorkflowField,
+  AimdWorkflowNodeField,
+  AimdWorkflowPermissions,
+  AimdWorkflowTransitionField,
   ExtractedAimdFields,
 } from './types/aimd'
 

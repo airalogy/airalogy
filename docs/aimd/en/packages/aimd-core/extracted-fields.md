@@ -21,6 +21,7 @@ These scopes are still simple `string[]`, and each string is an identifier:
 - `var_table[]` exposes canonical `id` plus optional table-level `title`, `description`, `examples`, and raw AIMD `kwargs`
 - `var_table[].subvars[]` exposes canonical `id` plus optional column-level `title`, `description`, and `examples`
 - `client_assigner[]` exposes `id`, `mode`, `dependent_fields`, `assigned_fields`, and `function_source` extracted from `assigner(config, function ...)` client blocks
+- `workflow[]` exposes workflow definitions from fenced `workflow` blocks, including `version`, `id`, `nodes`, `assigners`, transition ids, normalized `from` / `to` arrays, transition `inputs`, grouped target `assign`, `logic`, and `default_initial_node`
 - `quiz[]` already exposes `id`
 - `fig[]` exposes `id`, `src`, `title`, and `legend` from fenced `fig` blocks
 - `media[]` exposes `id`, `kind`, `src`, `mime`, `provider`, `poster`, `title`, and `legend` from fenced `media` blocks
@@ -78,6 +79,54 @@ These scopes are still simple `string[]`, and each string is an identifier:
       "dependent_fields": ["a", "b"],
       "assigned_fields": ["total"],
       "function_source": "function calculate_total({ a, b }) { return { total: a + b }; }"
+    }
+  ],
+  "workflow": [
+    {
+      "version": "airalogy.workflow.v1",
+      "id": "parameter_optimization",
+      "title": "Parameter Optimization Workflow",
+      "nodes": [
+        {
+          "id": "prep",
+          "protocol": "./protocols/sample-prep/protocol.aimd",
+          "title": "Sample Preparation"
+        },
+        {
+          "id": "analysis",
+          "protocol": "./protocols/analysis/protocol.aimd",
+          "title": "QC Analysis"
+        }
+      ],
+      "assigners": [
+        {
+          "id": "optimize_parameters",
+          "runtime": "python",
+          "entrypoint": "./assigners/optimize_parameters.py:assign"
+        }
+      ],
+      "transitions": [
+        {
+          "id": "retry_after_qc_failure",
+          "from": ["analysis"],
+          "to": ["prep"],
+          "when": "${analysis.check.pass_qc.checked} == false",
+          "run": "optimize_parameters",
+          "inputs": {
+            "summary": "${analysis.var.summary}",
+            "failed_metrics": "${analysis.var.failed_metrics}"
+          },
+          "max_iterations": 5,
+          "assign": {
+            "prep": {
+              "var.target_temperature_c": "${retry_after_qc_failure.outputs.recommended_temperature_c}",
+              "var.target_concentration_m": "${retry_after_qc_failure.outputs.recommended_concentration_m}",
+              "var.retry_note": "${retry_after_qc_failure.outputs.retry_reason}"
+            }
+          }
+        }
+      ],
+      "default_initial_node": "prep"
     }
   ],
   "refs": [

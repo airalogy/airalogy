@@ -65,6 +65,36 @@
         "record",
         "client-assigner"
       ]
+    },
+    {
+      "id": "protocol-workflow",
+      "kind": "example",
+      "category": "workflow",
+      "languages": [
+        "en-US"
+      ],
+      "title": {
+        "en-US": "Protocol Workflow",
+        "zh-CN": "Protocol Workflow 编排案例"
+      },
+      "description": {
+        "en-US": "Workflow AIMD example coordinating multiple protocols with transitions, conditional routing, retry loops, and workflow-level Python assigner declarations.",
+        "zh-CN": "一个 workflow AIMD 案例，用 transition、条件分支、重试循环和 workflow 级 Python assigner 声明编排多个 protocol。"
+      },
+      "protocol_dir": {
+        "en-US": "protocol-workflow"
+      },
+      "entry": {
+        "en-US": "protocol-workflow/workflow.aimd"
+      },
+      "engine_required": true,
+      "tags": [
+        "workflow",
+        "protocol-composition",
+        "assigner",
+        "loop",
+        "branch"
+      ]
     }
   ]
 }

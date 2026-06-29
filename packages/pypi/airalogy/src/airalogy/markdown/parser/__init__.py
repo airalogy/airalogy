@@ -14,6 +14,7 @@ from ..ast_nodes import (
     StepNode,
     VarNode,
     VarTableNode,
+    WorkflowNode,
 )
 from ..errors import (
     AimdParseError,
@@ -25,6 +26,7 @@ from ..errors import (
 from ..lexer import Lexer
 from ..tokens import Position, Token, TokenType
 from .core import AimdParser, extract_assigner_blocks, parse_aimd
+from .workflow import is_aimd_workflow_reference, parse_workflow_content
 
 __all__ = [
     "AimdParser",
@@ -43,6 +45,9 @@ __all__ = [
     "StepNode",
     "VarNode",
     "VarTableNode",
+    "WorkflowNode",
+    "parse_workflow_content",
+    "is_aimd_workflow_reference",
     "AimdParseError",
     "DuplicateNameError",
     "ErrorCollector",

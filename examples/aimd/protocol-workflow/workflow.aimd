@@ -1,0 +1,86 @@
+# Parameter Optimization Workflow
+
+```workflow
+version: airalogy.workflow.v1
+id: parameter_optimization
+title: Parameter Optimization Workflow
+description: Iterates sample preparation and analysis until QC passes.
+
+nodes:
+  - id: prep
+    protocol: ./protocols/sample-prep/protocol.aimd
+    title: Sample Preparation
+  - id: measurement
+    protocol: ./protocols/measurement/protocol.aimd
+    title: Measurement
+  - id: analysis
+    protocol: ./protocols/analysis/protocol.aimd
+    title: QC Analysis
+  - id: report
+    protocol: ./protocols/report/protocol.aimd
+    title: Final Report
+
+assigners:
+  - id: summarize_measurement
+    runtime: python
+    entrypoint: ./assigners/summarize_measurement.py:assign
+    description: Builds a compact summary from raw measurement output.
+
+  - id: optimize_parameters
+    runtime: python
+    entrypoint: ./assigners/optimize_parameters.py:assign
+    description: Calls a model-backed optimizer and returns retry parameters.
+
+transitions:
+  - id: pass_sample_to_measurement
+    from:
+      - prep
+    to:
+      - measurement
+    assign:
+      measurement:
+        var.sample_id: ${prep.var.sample_id}
+
+  - id: summarize_measurement_for_analysis
+    from:
+      - measurement
+    to:
+      - analysis
+    run: summarize_measurement
+    inputs:
+      raw_data: ${measurement.var.raw_data}
+    assign:
+      analysis:
+        var.raw_data: ${measurement.var.raw_data}
+        var.raw_data_summary: ${summarize_measurement_for_analysis.outputs.raw_data_summary}
+        var.measurement_quality: ${summarize_measurement_for_analysis.outputs.measurement_quality}
+
+  - id: finish_when_qc_passes
+    from:
+      - analysis
+    to:
+      - report
+    when: ${analysis.check.pass_qc.checked} == true
+
+  - id: retry_after_qc_failure
+    from:
+      - analysis
+    to:
+      - prep
+    when: ${analysis.check.pass_qc.checked} == false
+    run: optimize_parameters
+    inputs:
+      summary: ${analysis.var.summary}
+      failed_metrics: ${analysis.var.failed_metrics}
+    max_iterations: 5
+    assign:
+      prep:
+        var.target_temperature_c: ${retry_after_qc_failure.outputs.recommended_temperature_c}
+        var.target_concentration_m: ${retry_after_qc_failure.outputs.recommended_concentration_m}
+        var.retry_note: ${retry_after_qc_failure.outputs.retry_reason}
+
+logic: |
+  Iterate preparation and measurement until QC passes or the retry limit is reached.
+
+default_initial_node: prep
+```

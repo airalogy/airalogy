@@ -24,6 +24,7 @@ export const AIMD_SCOPES = {
   KEYWORD_FIG: "keyword.control.fig.aimd",
   KEYWORD_MEDIA: "keyword.control.media.aimd",
   KEYWORD_REFS: "keyword.control.refs.aimd",
+  KEYWORD_WORKFLOW: "keyword.control.workflow.aimd",
 
   // Variables and types
   VARIABLE_NAME: "variable.other.aimd",
@@ -42,6 +43,7 @@ export const AIMD_SCOPES = {
   MARKUP_FIG_BLOCK: "markup.aimd.figure-block",
   MARKUP_MEDIA_BLOCK: "markup.aimd.media-block",
   MARKUP_REFS_BLOCK: "markup.aimd.refs-block",
+  MARKUP_WORKFLOW_BLOCK: "markup.aimd.workflow-block",
   MARKUP_CRITIC_ADDITION: "markup.inserted.critic.aimd",
   MARKUP_CRITIC_DELETION: "markup.deleted.critic.aimd",
   MARKUP_CRITIC_SUBSTITUTION: "markup.changed.critic.aimd",
@@ -218,6 +220,15 @@ const aimdRepository = {
   "aimd-fenced-block": {
     patterns: [
       {
+        begin: "^\\s*(```|~~~)\\s*(workflow)\\b.*$",
+        end: "^\\s*\\1\\s*$",
+        name: AIMD_SCOPES.MARKUP_WORKFLOW_BLOCK,
+        beginCaptures: {
+          2: { name: AIMD_SCOPES.KEYWORD_WORKFLOW },
+        },
+        patterns: [{ include: "#aimd-workflow-yaml" }],
+      },
+      {
         begin: "^\\s*(```|~~~)\\s*(fig)\\b.*$",
         end: "^\\s*\\1\\s*$",
         name: AIMD_SCOPES.MARKUP_FIG_BLOCK,
@@ -240,6 +251,34 @@ const aimdRepository = {
         beginCaptures: {
           2: { name: AIMD_SCOPES.KEYWORD_REFS },
         },
+      },
+    ],
+  },
+
+  "aimd-workflow-yaml": {
+    patterns: [
+      {
+        match: "^\\s*([A-Za-z_][A-Za-z0-9_-]*)(\\s*:)",
+        captures: {
+          1: { name: AIMD_SCOPES.VARIABLE_NAME },
+          2: { name: AIMD_SCOPES.DELIMITER_COLON },
+        },
+      },
+      {
+        match: "\\$\\{[A-Za-z][A-Za-z0-9_]*(?:\\.(?:outputs|record|inputs)\\.[A-Za-z][A-Za-z0-9_]*|\\.(?:status|iteration))*\\}",
+        name: AIMD_SCOPES.MARKUP_REF,
+      },
+      {
+        match: "\"[^\"]*\"|'[^']*'",
+        name: AIMD_SCOPES.CONSTANT_STRING,
+      },
+      {
+        match: "\\b(true|false|null)\\b",
+        name: AIMD_SCOPES.CONSTANT_BOOLEAN,
+      },
+      {
+        match: "-?\\d+\\.?\\d*",
+        name: AIMD_SCOPES.CONSTANT_NUMBER,
       },
     ],
   },
@@ -336,7 +375,7 @@ export const aimdTheme: ThemeRegistration = {
     },
     // Reference keywords - cyan
     {
-      scope: [AIMD_SCOPES.KEYWORD_REF_STEP, AIMD_SCOPES.KEYWORD_REF_VAR, AIMD_SCOPES.KEYWORD_REF_FIG],
+      scope: [AIMD_SCOPES.KEYWORD_REF_STEP, AIMD_SCOPES.KEYWORD_REF_VAR, AIMD_SCOPES.KEYWORD_REF_FIG, AIMD_SCOPES.KEYWORD_REF_MEDIA],
       settings: { foreground: "#0891B2", fontStyle: "italic" },
     },
     // Citation keyword - purple
@@ -346,7 +385,7 @@ export const aimdTheme: ThemeRegistration = {
     },
     // Block keywords - teal
     {
-      scope: [AIMD_SCOPES.KEYWORD_FIG, AIMD_SCOPES.KEYWORD_REFS],
+      scope: [AIMD_SCOPES.KEYWORD_FIG, AIMD_SCOPES.KEYWORD_MEDIA, AIMD_SCOPES.KEYWORD_REFS, AIMD_SCOPES.KEYWORD_WORKFLOW],
       settings: { foreground: "#0F766E", fontStyle: "italic" },
     },
     // Variable names - purple

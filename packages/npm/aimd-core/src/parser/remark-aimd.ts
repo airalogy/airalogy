@@ -46,6 +46,7 @@ import {
   getAimdFieldTitle,
 } from "../utils/field-metadata"
 import { parseQuizContent } from "./quiz-parser"
+import { parseWorkflowContent } from "./workflow-parser"
 import { SKIP, visit } from "unist-util-visit"
 
 /**
@@ -324,6 +325,7 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
       var_definitions: [],
       var_table: [],
       client_assigner: [],
+      workflow: [],
       quiz: [],
       step: [],
       check: [],
@@ -349,7 +351,7 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
       }
     })
 
-    // First pass: process fig/quiz/refs code blocks.
+    // First pass: process fenced AIMD code blocks.
     visit(tree, "code", (node: Code, index, parent) => {
       if (index === undefined || !parent)
         return
@@ -367,6 +369,11 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
 
       if (lang === "assigner") {
         graphAssigners.push(...extractPythonAssignerGraphNodes(node.value))
+      }
+
+      if (lang === "workflow" && extractFields) {
+        const workflow = parseWorkflowContent(node.value)
+        fields.workflow?.push(workflow)
       }
 
       if (lang === "fig") {

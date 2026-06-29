@@ -1,93 +1,389 @@
-# 在Airalogy Protocol中定义Workflow
+# 在 AIMD 中定义 Workflow
 
 ## 概述
 
-在Airalogy平台中，我们允许多个Airalogy Protocols之间协同，因此Airalogy专门提供了Workflow的定义方式。该设计使得Airalogy平台中的每个Protocol都可以被看作是一个独立的积木，而Workflow则是将这些积木组合在一起的工具。一个Workflow可以将多个Protocols关联起来，形成具有系统性的科研工作流，以实现某种特定的科研目标。由于用户可以自由的将Airalogy平台中各种公开的Protocols进行组合，这使得用户能够自由的基于已有的Protocols构建自己的科研工作流，以满足自己的独特的科研需求。Workflow由于是把Airalogy平台中的Protocols组合在一起，因此也可以被称为Airalogy Protocol Workflow，当然我们在文档中经常用Workflow来简称。
+Workflow 位于单个 `protocol.aimd` 之上，用来编排多个 Airalogy Protocol。它的核心语义不是“某个 Protocol 输出到另一个 Protocol 输入”这一种固定形式，而是把一个或多个 protocol run / Record 中的字段，复制或转换后写入一个或多个下游 protocol run / Record 的字段。
 
-### 本地
+因此可以把 Workflow 理解为：来源字段 -> 可选 assigner 转换 -> 目标字段。`nodes[]` 定义图里的 Protocol 节点，`assigners[]` 定义可复用的转换函数，`transitions[]` 定义每一次从哪些节点读取、是否运行 assigner、以及写入哪些目标字段。
 
-如果是要在本地建立一个Workflow，则需要将在一个文件夹中，将多个Airalogy Protocol放于其下，并在同文件下建立一个含有Workflow的新的Airalogy Protocol。该Airalogy Protocol的文件结构和普通的Airalogy Protocol一样。
+Workflow 逻辑应当写在 AIMD 文档中，但通常建议放在独立文件里，例如 `workflow.aimd`，而不是混在普通 protocol 文档中。fenced `workflow` 代码块是一个更高层的文档类型，专门表达 protocol 编排。
 
-## 定义语法
+Parser 只负责解析和校验 workflow 声明，不执行 Python assigner，不调用 API，不修改 Record，也不判断分支结果。运行时实现应当把每次 workflow 迭代理解为新的 node run 或 Record；已经完成的 Record 不应被改回早期状态。
 
-简单来说，通过一个Workflow，我们可以把一个项目（Project）中的多个Protocol组合在一起，形成一个具有系统性的科研工作流，以实现某种特定的科研目标。Workflow的定义语法如下：
+## 语法
 
-我们可以使用`workflow`代码块/模板来定义一个Workflow。其功能如果要做类比的话可以比做是`{{var}}`模板版本的`{{workflow}}`，但为了让用户更便捷的定义其内容，我们因此将其设计为代码块形式。该代码块可以在该Airalogy Protocol的Airalogy Markdown文件中定义。其语法如下：
+使用 fenced `workflow` 代码块，块内内容为 YAML：
 
 ````aimd
+# Parameter Optimization Workflow
+
 ```workflow
-<workflow_info>
+version: airalogy.workflow.v1
+id: parameter_optimization
+title: Parameter Optimization Workflow
+description: Iterates sample preparation and analysis until QC passes.
+
+nodes:
+  - id: prep
+    protocol: ./protocols/sample-prep/protocol.aimd
+    title: Sample Preparation
+  - id: measurement
+    protocol: ./protocols/measurement/protocol.aimd
+    title: Measurement
+  - id: analysis
+    protocol: ./protocols/analysis/protocol.aimd
+    title: QC Analysis
+  - id: report
+    protocol: ./protocols/report/protocol.aimd
+    title: Final Report
+
+assigners:
+  - id: summarize_measurement
+    runtime: python
+    entrypoint: ./assigners/summarize_measurement.py:assign
+    description: Builds a compact summary from raw measurement output.
+
+  - id: optimize_parameters
+    runtime: python
+    entrypoint: ./assigners/optimize_parameters.py:assign
+    description: Calls a model-backed optimizer and returns retry parameters.
+
+transitions:
+  - id: pass_sample_to_measurement
+    from:
+      - prep
+    to:
+      - measurement
+    assign:
+      measurement:
+        var.sample_id: ${prep.var.sample_id}
+
+  - id: summarize_measurement_for_analysis
+    from:
+      - measurement
+    to:
+      - analysis
+    run: summarize_measurement
+    inputs:
+      raw_data: ${measurement.var.raw_data}
+    assign:
+      analysis:
+        var.raw_data: ${measurement.var.raw_data}
+        var.raw_data_summary: ${summarize_measurement_for_analysis.outputs.raw_data_summary}
+        var.measurement_quality: ${summarize_measurement_for_analysis.outputs.measurement_quality}
+
+  - id: finish_when_qc_passes
+    from:
+      - analysis
+    to:
+      - report
+    when: ${analysis.check.pass_qc.checked} == true
+
+  - id: retry_after_qc_failure
+    from:
+      - analysis
+    to:
+      - prep
+    when: ${analysis.check.pass_qc.checked} == false
+    run: optimize_parameters
+    inputs:
+      summary: ${analysis.var.summary}
+      failed_metrics: ${analysis.var.failed_metrics}
+    max_iterations: 5
+    assign:
+      prep:
+        var.target_temperature_c: ${retry_after_qc_failure.outputs.recommended_temperature_c}
+        var.target_concentration_m: ${retry_after_qc_failure.outputs.recommended_concentration_m}
+        var.retry_note: ${retry_after_qc_failure.outputs.retry_reason}
+
+logic: |
+  Iterate preparation and measurement until QC passes or the retry limit is reached.
+
+default_initial_node: prep
 ```
 ````
 
-`workflow`代码块中的内容基于YAML语法编写，其高亮显示效果等同于YAML代码块，为了便于用户能够根据语法高亮来轻松理解语法，下文中在`yaml`代码块中展示了Workflow的定义语法，即`<workflow_info>`的内容：
+## Assigner 源码示例
+
+`entrypoint` 的格式是 `文件路径:函数名`。两个 assigner 可以分别写在两个 `.py` 文件里，也可以写在同一个 `.py` 文件的两个函数里；workflow 通过 `assigners[].id` 命名，通过 transition 的 `run` 引用。
+
+Assigner 函数本身建议保持为普通 Python 函数。当前设计不要求 `@assigner` 装饰器，也不要求返回 `AssignerResult` 类；函数参数由 `transition.inputs` 显式绑定，返回值是普通 dict，后续通过 `${transition_id.outputs.key}` 引用。
+
+### 写法一：每个 assigner 一个文件
+
+`entrypoint: ./assigners/summarize_measurement.py:assign` 表示 runtime 会加载 `./assigners/summarize_measurement.py` 文件里的 `assign` 函数。Workflow parser 只校验声明，不会执行这个函数。
+
+```python
+def assign(raw_data):
+    """Summarize raw measurement data before the analysis node runs."""
+    if raw_data is None:
+        return {
+            "raw_data_summary": "No raw measurement data was provided.",
+            "measurement_quality": "missing",
+        }
+
+    if isinstance(raw_data, dict):
+        point_count = len(raw_data.get("points", []))
+        instrument = raw_data.get("instrument", "unknown instrument")
+        return {
+            "raw_data_summary": f"{point_count} points captured by {instrument}.",
+            "measurement_quality": "review",
+        }
+
+    return {
+        "raw_data_summary": str(raw_data),
+        "measurement_quality": "review",
+    }
+```
+
+`entrypoint: ./assigners/optimize_parameters.py:assign` 指向另一个文件里的 `assign` 函数。它在 `retry_after_qc_failure` 这条 transition 里通过 `run: optimize_parameters` 被引用，用于生成下一轮 `prep` 的字段值。
+
+```python
+def assign(summary, failed_metrics):
+    """Recommend retry parameters after QC fails."""
+    failed_metrics = failed_metrics or []
+    retry_reason = "QC failed"
+
+    if failed_metrics:
+        retry_reason = "QC failed for: " + ", ".join(map(str, failed_metrics))
+
+    return {
+        "recommended_temperature_c": 24.0,
+        "recommended_concentration_m": 0.05,
+        "retry_reason": retry_reason,
+        "optimizer_note": f"Input summary: {summary or 'not provided'}",
+    }
+```
+
+这种写法适合 assigner 逻辑较长、依赖不同，或者希望单独测试每个 assigner 的情况。
+
+### 写法二：多个 assigner 放在同一个文件
+
+也可以把两个 assigner 函数放在同一个 Python 文件里，只要 `entrypoint` 的函数名不同即可：
 
 ```yaml
-id: example_workflow # Workflow的ID。该ID关系到该Workflow的数据储存结构
-title: Example Workflow # Workflow的标题。用于在Airalogy界面中展示，以帮助用户理解该Workflow的内容
-protocols:
-  - protocol_index: 0 # 该Workflow中的第0个Protocol。protocol_index需要从0开始递增，不得重复和跳跃
-    protocol_id: protocol_a # 该Protocol的ID。该Protocol需要为同一个Project中的Protocol，且必须存在于该Project中
-    protocol_version: 0.0.1 # 可选。如需指定Protocol版本，请新增protocol_version字段；不填写则默认使用最新版本
-    protocol_name: Protocol A # 该Protocol的名称，用于提示用户该Protocol的内容
-  - protocol_index: 1 # 该Workflow中的第1个Protocol的ID
-    protocol_id: protocol_b
-    protocol_name: Protocol B
-  # 以此类推，可以定义多个Protocol
-edges:
-  - 0 -> 1 # 该列表中的每个元素代表一个有向边。该有向边表示Protocol 0完成后，下一个可以执行的Protocol是Protocol 1
-  # 以此类推，可以定义多个有向边
-  # 有向边支持单向有向，或者双向有向。分别使用自左向右箭头`->`和双向箭头`<->`来表示（注意为了形式的简单和统一，`<-`是不被支持的）
-logic: | # 该字段用于定义Workflow的逻辑。使用Markdown语法编写
-  1. Protocol 0 must be executed before Protocol 1.
-  2. Protocol 1 must be executed before Protocol 2.
-  ...
-default_initial_protocol_index: 0 # 该字段用于定义Workflow的默认初始Protocol。如果没有默认初始Protocol，可以留空
-default_research_purpose: # 该字段用于定义Workflow的默认研究目的。如果没有默认研究目的，可以留空
-default_research_strategy: # 该字段用于定义Workflow的默认研究策略。如果没有默认研究策略，可以留空
+assigners:
+  - id: summarize_measurement
+    runtime: python
+    entrypoint: ./assigners/workflow_assigners.py:summarize_measurement
+  - id: optimize_parameters
+    runtime: python
+    entrypoint: ./assigners/workflow_assigners.py:optimize_parameters
 ```
 
-### 真实例子
+`./assigners/workflow_assigners.py` 可以这样写：
 
-我们以一个关于碳纳米管分散研究的Workflow为例，展示一个完整的Workflow定义：
+```python
+def summarize_measurement(raw_data):
+    """Summarize raw measurement data before the analysis node runs."""
+    if raw_data is None:
+        return {
+            "raw_data_summary": "No raw measurement data was provided.",
+            "measurement_quality": "missing",
+        }
 
-````aimd
-```workflow
-id: cnt_dispersion
-title: Workflow for a carbon nanotube dispersion study
-protocols:
-  - protocol_index: 0
-    protocol_id: cnt_powder
-    protocol_name: Preparation of dispersion solution from carbon nanotube powder
-  - protocol_index: 1
-    protocol_id: cnt_ultrasound
-    protocol_name: Ultrasonic dispersion of carbon nanotube solution
-  - protocol_index: 2
-    protocol_id: cnt_dilution
-    protocol_name: Preparation of low-concentration carbon nanotube dispersion solution from high-concentration solution
-  - protocol_index: 3
-    protocol_id: cnt_characterization
-    protocol_name: Characterization of carbon nanotube dispersion
-edges:
-  - 0 -> 1
-  - 1 <-> 3
-  - 3 -> 2
-  - 2 -> 1
-logic: |
-  1. The entire dispersion process must occur within a solution system, and the preparation of the dispersion from solid powder can only be the first step of the experiment: Protocol 0 must be the starting point of the Workflow.
-  2. Every dispersion system must go through the stages of preparation, ultrasonication, and characterization: a Protocol Path must include at least one instance of (Protocol 0 -> Protocol 1 -> Protocol 3), and this sequence is irreversible.
-  3. Based on the characterization results, it is determined whether: 1. The sample needs to be re-sonicated (Protocol 3 -> Protocol 1), or 2. The dispersion solution needs to be further diluted before sonication (Protocol 3 -> Protocol 2 -> Protocol 1). After repeating either of these two paths, characterization (Protocol 3) must be performed again to confirm the subsequent results. These two paths can be iteratively followed based on the outcomes of Protocol 3.
-  4. The characterization process (Protocol 3), as the only quality control step in the experiment, can appear in the middle of the steps but must always be the final step in a Protocol Path.
-  5. When the characterization results (Protocol 3) meet the research goal, the Workflow can be terminated.
+    if isinstance(raw_data, dict):
+        point_count = len(raw_data.get("points", []))
+        instrument = raw_data.get("instrument", "unknown instrument")
+        return {
+            "raw_data_summary": f"{point_count} points captured by {instrument}.",
+            "measurement_quality": "review",
+        }
+
+    return {
+        "raw_data_summary": str(raw_data),
+        "measurement_quality": "review",
+    }
+
+
+def optimize_parameters(summary, failed_metrics):
+    """Recommend retry parameters after QC fails."""
+    failed_metrics = failed_metrics or []
+    retry_reason = "QC failed"
+
+    if failed_metrics:
+        retry_reason = "QC failed for: " + ", ".join(map(str, failed_metrics))
+
+    return {
+        "recommended_temperature_c": 24.0,
+        "recommended_concentration_m": 0.05,
+        "retry_reason": retry_reason,
+        "optimizer_note": f"Input summary: {summary or 'not provided'}",
+    }
 ```
-````
 
-## 应用Workflow
+这两种写法在 workflow 语义上等价。`transition.run` 只引用 `assigners[].id`，不关心函数是否在同一个文件；`transition.inputs` 决定函数参数从哪里来，`transition.assign` 决定函数返回值写到哪些目标字段。
 
-当用户在一个Protocol中定义了一个Workflow后，在Airalogy的记录界面中，Airalogy平台会自动解析上述`workflow`代码块，并自动的绘制出Workflow Graph。用户可以通过该Graph来了解Workflow的拓扑结构。另外，界面也将把Workflow中的`logic`的Markdown文本渲染出来，以帮助用户理解Workflow的逻辑关系。
+## 字段
 
-当用户加载一个含有Workflow的Protocol后，Airalogy平台会自动根据该Workflow中所有`protocol_id`s来在该Protocol所在的Project中索引到对应的Protocol。当索引不到对应的Protocol时，Airalogy平台会提示用户该Workflow中的Protocol缺失，并要求用户先创建这些Protocol后才能使用该Workflow。
+`version` 必须是 `airalogy.workflow.v1`。这个字段不要省略；它是 workflow schema 的显式版本边界。
+
+`id` 是稳定的 workflow id。它必须以字母开头，并且只能包含字母、数字和下划线。
+
+`nodes[]` 声明 workflow 图中的 protocol 节点。每个节点都需要 `id`，并且必须提供 `protocol` 或 `protocol_id` 之一：`protocol` 用于本地 protocol 路径，`protocol_id` 用于 registry 或 project 中的 protocol 引用。可选字段包括 `protocol_version`、`title` 和 `description`。
+
+`assigners[]` 声明 workflow 级 assigner。Python assigner 需要 `runtime: python` 和 `entrypoint`。`outputs` 只是可选的函数返回契约，主要用于文档、UI 和未来更强的校验；它不声明写入目标，也不决定哪些输出会被消费。实际消费哪些返回值、写入哪些 Protocol 字段，由 `transition.assign` 显式声明。不写 `outputs` 时，runtime 仍然可以根据实际返回 dict 暴露 `${transition_id.outputs.key}`，并用 `transition.assign` 中出现的引用检查对应 key 是否存在。`permissions` 也是可选声明；普通用户通常不需要填写，工程化 runtime 可以根据 assigner、项目配置或 sandbox 策略推断与校验权限。
+
+`transitions[]` 声明节点之间的有向边。每个 transition 都需要 `id`、`from` 和 `to`。`id` 是这一次 transition 调用的命名空间，因此 assigner 返回值使用 `${transition_id.outputs.key}` 引用，而不是 `${assigner_id.outputs.key}`。`from` 和 `to` 可以在 YAML 里写成单个字符串或字符串列表，parser 输出统一归一化为数组。可选字段包括 `when`、`label`、`run`、`inputs`、`max_iterations` 和 `assign`。`run` 必须引用已存在的 assigner id。`max_iterations` 必须是正整数。
+
+输出引用使用 transition id，而不是 assigner id，是因为 assigner id 表示“函数定义”，transition id 表示“这一次函数调用”。同一个 assigner 可以被多个 transition 复用，每次调用的输入、来源节点、目标节点和返回值都可能不同。如果输出挂在 assigner id 上，`${build_analysis_inputs.outputs.raw_data_summary}` 就无法区分是哪一次调用的结果；写成 `${prepare_analysis_inputs.outputs.raw_data_summary}` 则明确表示 `prepare_analysis_inputs` 这条 transition 调用产生的输出。
+
+`inputs` 只属于 transition，不属于 assigner。它的 key 是 Python 函数参数名，value 可以是常量，也可以是字段引用，例如 `${measurement.var.raw_data}` 或 `${analysis.check.pass_qc.annotation}`。这样同一个 assigner 可以在不同 transition 中读取不同来源。
+
+`assign` 声明写入目标字段。推荐使用按目标 node 分组的形式：第一层 key 是目标 node id，第二层 key 是目标字段路径，例如 `var.sample_id`、`check.pass_qc`、`step.review_result.annotation`。当 `to` 只有一个目标 node 时，parser 也接受省略第一层目标 node 的简写，并会归一化为分组形式；当 `to` 有多个目标 node 时，必须显式按目标 node 分组。
+
+`logic` 是面向人的 Markdown 文本，用于解释 workflow 策略。
+
+`default_initial_node` 可选，用于声明默认起始节点，并且必须引用已存在的 node id。
+
+## 字段引用
+
+字段引用使用 `${node_id.field_path}`。`field_path` 至少包含两段：字段类别和字段 id；如果该字段值本身是结构化对象，可以继续写子字段。
+
+```yaml
+${measurement.var.raw_data}
+${analysis.check.pass_qc}
+${analysis.check.pass_qc.checked}
+${analysis.check.pass_qc.annotation}
+${prep.step.prepare_sample}
+${prep.step.prepare_sample.annotation}
+```
+
+`step` 和 `check` 本身也可以作为字段值来传递。比如 `${analysis.check.pass_qc}` 可以表示整个检查结果对象，而 `${analysis.check.pass_qc.checked}` 和 `${analysis.check.pass_qc.annotation}` 则分别表示其中的 `checked` 与 `annotation` 子字段。Parser 只校验引用表达式的结构形态；具体字段是否存在、字段类型是否匹配、子字段是否可写，由 protocol schema / Record schema 和 runtime 校验。
+
+右侧 value 不加 `${...}` 时就是普通常量字符串，即使它看起来像字段路径，也不会被当成引用：
+
+```yaml
+assign:
+  prep:
+    var.retry_note: retry_after_qc_failure.outputs.retry_reason
+```
+
+上面会把字面量字符串 `"retry_after_qc_failure.outputs.retry_reason"` 写入 `prep.var.retry_note`。如果想读取 transition 输出，应该显式写成：
+
+```yaml
+assign:
+  prep:
+    var.retry_note: ${retry_after_qc_failure.outputs.retry_reason}
+```
+
+这个规则让普通字符串和动态引用保持清楚边界。例如 `api.openai.com`、`data.raw.csv`、`analysis.var.summary` 都可以作为普通字符串保存，不会被 runtime 误判为引用。
+
+## 数据传递示例
+
+### 一对一
+
+一个上游 Protocol 写入一个下游 Protocol：
+
+```yaml
+transitions:
+  - id: pass_sample_to_measurement
+    from:
+      - prep
+    to:
+      - measurement
+    assign:
+      measurement:
+        var.sample_id: ${prep.var.sample_id}
+        var.sample_label: ${prep.var.sample_label}
+```
+
+### 一对多
+
+一个上游 Protocol 同时写入多个下游 Protocol：
+
+```yaml
+transitions:
+  - id: distribute_analysis_results
+    from:
+      - analysis
+    to:
+      - report
+      - archive
+    assign:
+      report:
+        var.summary: ${analysis.var.summary}
+        check.pass_qc: ${analysis.check.pass_qc}
+      archive:
+        var.summary: ${analysis.var.summary}
+        var.qc_annotation: ${analysis.check.pass_qc.annotation}
+```
+
+### 多对一
+
+多个上游 Protocol 汇总后写入一个下游 Protocol：
+
+```yaml
+assigners:
+  - id: build_analysis_inputs
+    runtime: python
+    entrypoint: ./assigners/build_analysis_inputs.py:assign
+
+transitions:
+  - id: prepare_analysis_inputs
+    from:
+      - measurement
+      - literature_review
+    to:
+      - analysis
+    run: build_analysis_inputs
+    inputs:
+      raw_data: ${measurement.var.raw_data}
+      background_summary: ${literature_review.var.summary}
+    assign:
+      analysis:
+        var.raw_data_summary: ${prepare_analysis_inputs.outputs.raw_data_summary}
+        var.background_summary: ${prepare_analysis_inputs.outputs.background_summary}
+```
+
+这里 `raw_data` 和 `background_summary` 是 `build_analysis_inputs.py:assign` 的函数参数名；它们分别来自哪一个 Protocol，由 `transition.inputs` 显式声明。
+
+### 多对多
+
+多个上游 Protocol 经过一个 assigner 后，同时写入多个下游 Protocol：
+
+```yaml
+assigners:
+  - id: plan_report_and_archive
+    runtime: python
+    entrypoint: ./assigners/plan_report_and_archive.py:assign
+
+transitions:
+  - id: prepare_report_and_archive
+    from:
+      - analysis
+      - qc_review
+    to:
+      - report
+      - archive
+    run: plan_report_and_archive
+    inputs:
+      analysis_summary: ${analysis.var.summary}
+      qc_checked: ${qc_review.check.pass_qc.checked}
+      qc_annotation: ${qc_review.check.pass_qc.annotation}
+    assign:
+      report:
+        var.summary: ${prepare_report_and_archive.outputs.report_summary}
+        check.ready_to_publish: ${qc_review.check.pass_qc}
+      archive:
+        var.qc_annotation: ${qc_review.check.pass_qc.annotation}
+        var.archive_bundle: ${prepare_report_and_archive.outputs.archive_bundle}
+```
+
+这个例子展示了完整情况：`from` 可以有多个来源，`to` 可以有多个目标，`inputs` 显式绑定 assigner 参数来源，`assign` 显式绑定每个目标 node 的目标字段。
+
+## 数据传递原则
+
+Workflow 级数据传递应当尽量保持声明式。YAML 负责声明图、来源字段、目标字段和 assigner 调用；Python assigner 只负责把输入值转换成输出值，不负责决定“这些值来自哪个 Protocol”或“写入哪个下游字段”。这样可以避免 YAML 写一套绑定、Python 再隐含写一套绑定，从而减少漂移。
+
+传递的值应当是规范 JSON 可序列化值或引用表达式。File、Image、Sequence、Markdown 等结构化值应通过 typed JSON value 或字段引用表达；具体如何展示和执行由 renderer 与 runtime 决定。
+
+## 校验
+
+npm AIMD core parser 和 Python parser 都会校验 workflow block。它们会拒绝不支持的版本、重复的 node、assigner 或 transition id、缺失的 protocol 引用、指向未知节点的 transition、指向未知 assigner 的 `run`、缺少 entrypoint 的 Python assigner、出现但格式非法的权限列表、格式非法的目标字段路径，以及非正整数的重试次数。
+
+Parser 不会执行 assigner，也不会静态推断 Python 返回 dict 的全部 key。更强的运行时校验应当在执行 assigner 后检查 `${transition_id.outputs.key}` 是否存在，并检查目标字段是否存在、可写、类型兼容。
 
 ## 数据结构
 
-请参考[Workflow数据结构](../data-structure/workflow.md)。
+请参考 [Workflow 数据结构](../data-structure/workflow.md)。

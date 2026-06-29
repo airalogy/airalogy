@@ -21,6 +21,7 @@
 - `var_table[]` 提供规范字段 `id`，以及可选的表级 `title`、`description`、`examples` 和原始 AIMD `kwargs`
 - `var_table[].subvars[]` 提供规范字段 `id`，以及可选的列级 `title`、`description`、`examples`
 - `client_assigner[]` 提供 `id`、`mode`、`dependent_fields`、`assigned_fields`、`function_source`，它们来自 `assigner(config, function ...)` 形式的前端代码块
+- `workflow[]` 提供 fenced `workflow` 代码块中的 workflow 定义，包括 `version`、`id`、`nodes`、`assigners`、transition id、归一化后的 `from` / `to` 数组、transition `inputs`、按目标分组的 `assign`、`logic` 和 `default_initial_node`
 - `quiz[]` 本来就使用 `id`
 - `fig[]` 提供 fenced `fig` 代码块中的 `id`、`src`、`title`、`legend`
 - `media[]` 提供 fenced `media` 代码块中的 `id`、`kind`、`src`、`mime`、`provider`、`poster`、`title`、`legend`
@@ -78,6 +79,54 @@
       "dependent_fields": ["a", "b"],
       "assigned_fields": ["total"],
       "function_source": "function calculate_total({ a, b }) { return { total: a + b }; }"
+    }
+  ],
+  "workflow": [
+    {
+      "version": "airalogy.workflow.v1",
+      "id": "parameter_optimization",
+      "title": "Parameter Optimization Workflow",
+      "nodes": [
+        {
+          "id": "prep",
+          "protocol": "./protocols/sample-prep/protocol.aimd",
+          "title": "Sample Preparation"
+        },
+        {
+          "id": "analysis",
+          "protocol": "./protocols/analysis/protocol.aimd",
+          "title": "QC Analysis"
+        }
+      ],
+      "assigners": [
+        {
+          "id": "optimize_parameters",
+          "runtime": "python",
+          "entrypoint": "./assigners/optimize_parameters.py:assign"
+        }
+      ],
+      "transitions": [
+        {
+          "id": "retry_after_qc_failure",
+          "from": ["analysis"],
+          "to": ["prep"],
+          "when": "${analysis.check.pass_qc.checked} == false",
+          "run": "optimize_parameters",
+          "inputs": {
+            "summary": "${analysis.var.summary}",
+            "failed_metrics": "${analysis.var.failed_metrics}"
+          },
+          "max_iterations": 5,
+          "assign": {
+            "prep": {
+              "var.target_temperature_c": "${retry_after_qc_failure.outputs.recommended_temperature_c}",
+              "var.target_concentration_m": "${retry_after_qc_failure.outputs.recommended_concentration_m}",
+              "var.retry_note": "${retry_after_qc_failure.outputs.retry_reason}"
+            }
+          }
+        }
+      ],
+      "default_initial_node": "prep"
     }
   ],
   "refs": [

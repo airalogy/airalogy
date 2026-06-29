@@ -387,3 +387,46 @@ class AssignerBlockNode(ASTNode):
         result = super().to_dict()
         result["code"] = self.code
         return result
+
+
+@dataclass
+class WorkflowNode(ASTNode):
+    """Workflow definition parsed from a fenced workflow block."""
+
+    id: str
+    version: str
+    nodes: List[Dict[str, Any]]
+    assigners: List[Dict[str, Any]]
+    transitions: List[Dict[str, Any]]
+    raw: str
+    title: Optional[str] = None
+    description: Optional[str] = None
+    logic: Optional[str] = None
+    default_initial_node: Optional[str] = None
+    default_research_purpose: Optional[str] = None
+    default_research_strategy: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        result = super().to_dict()
+        result.update(
+            {
+                "id": self.id,
+                "version": self.version,
+                "nodes": self.nodes,
+                "assigners": self.assigners,
+                "transitions": self.transitions,
+                "raw": self.raw,
+            }
+        )
+        for key in (
+            "title",
+            "description",
+            "logic",
+            "default_initial_node",
+            "default_research_purpose",
+            "default_research_strategy",
+        ):
+            value = getattr(self, key)
+            if value:
+                result[key] = value
+        return result

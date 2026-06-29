@@ -12,7 +12,7 @@ const surroundingPairs = autoClosingPairs
 function getTokens(tokens: string, divider = "|"): string[] {
   return tokens.split(divider)
 }
-const keywords: string[] = getTokens("var|var_table|check|step|ref_step|ref_var|ref_fig|ref_media|ref_table|table_link")
+const keywords: string[] = getTokens("var|var_table|check|step|ref_step|ref_var|ref_fig|ref_media|ref_table|table_link|workflow")
 
 export const language: languagesNS.IMonarchLanguage = {
   ...markdownLanguage,
@@ -22,6 +22,11 @@ export const language: languagesNS.IMonarchLanguage = {
     ...markdownLanguage.tokenizer!,
     root: [
       [/^\s*(```|~~~)\s*quiz(?:\s+.*)?\s*$/, {
+        token: "string",
+        next: "@quizCodeblock",
+        nextEmbedded: "yaml",
+      }],
+      [/^\s*(```|~~~)\s*workflow(?:\s+.*)?\s*$/, {
         token: "string",
         next: "@quizCodeblock",
         nextEmbedded: "yaml",

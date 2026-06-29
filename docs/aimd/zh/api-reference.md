@@ -26,6 +26,7 @@ import {
   rehypeAimd,
   protectAimdInlineTemplates,
   protectCriticMarkupSubstitutions,
+  parseWorkflowContent,
   parseMediaContent,
   parseRefsContent,
   restoreAimdInlineTemplates,
@@ -35,7 +36,7 @@ import {
 } from "@airalogy/aimd-core/parser"
 ```
 
-**`remarkAimd`**：用于 Unified remark 流水线的插件，把 AIMD 行内模板与 fenced `quiz` / `fig` / `media` / `refs` / `assigner` 块解析成带类型的 AST 节点。
+**`remarkAimd`**：用于 Unified remark 流水线的插件，把 AIMD 行内模板与 fenced `workflow` / `quiz` / `fig` / `media` / `refs` / `assigner` 块解析成类型化 metadata 和 AST 节点。Workflow block 会提取到 `file.data.aimdFields.workflow`，同时保留为 Markdown code block，避免 renderer 必须同步改造。
 
 **`rehypeAimd`**：HTML AST 阶段对应的 rehype 插件。
 
@@ -50,6 +51,8 @@ import {
 **`parseRefsContent(content: string): AimdReferenceField[]`**：解析 fenced `refs` 代码块里的 BibTeX 内容，返回结构化 reference 条目，包括标准化后的 `title`、`author`、`year`、`doi`、`url` 等字段。
 
 **`parseMediaContent(content: string): AimdMediaField`**：解析 fenced `media` 代码块里的 key-value 内容，返回媒体定义；parser 会尽量保留字段，不负责强制标准化 `kind`。
+
+**`parseWorkflowContent(content: string): AimdWorkflowField`**：解析 fenced `workflow` 代码块里的 YAML 内容，并校验 workflow version、nodes、transition id、来源/目标 node 引用、assigner 声明、transition inputs、按目标分组的 assign、权限和重试次数。parser 不执行 assigner，也不调用外部服务。
 
 **`validateClientAssignerFunctionSource(functionSource: string, id: string): void`**：校验前端 `client_assigner` 函数体；若包含不支持或不安全结构会直接抛错。
 
@@ -161,6 +164,7 @@ interface ExtractedAimdFields {
   var: string[]
   var_table: AimdVarTableField[]
   client_assigner: AimdClientAssignerField[]
+  workflow?: AimdWorkflowField[]
   quiz: AimdQuizField[]
   step: string[]
   check: string[]
@@ -199,6 +203,60 @@ interface AimdReferenceField {
   publisher?: string
   doi?: string
   url?: string
+}
+
+type AimdWorkflowAssignValue =
+  | string
+  | number
+  | boolean
+  | null
+  | AimdWorkflowAssignValue[]
+  | { [key: string]: AimdWorkflowAssignValue }
+
+interface AimdWorkflowField {
+  version: "airalogy.workflow.v1"
+  id: string
+  title?: string
+  description?: string
+  nodes: AimdWorkflowNodeField[]
+  assigners: AimdWorkflowAssignerField[]
+  transitions: AimdWorkflowTransitionField[]
+  logic?: string
+  default_initial_node?: string
+  raw: string
+}
+
+interface AimdWorkflowNodeField {
+  id: string
+  protocol?: string
+  protocol_id?: string
+  protocol_version?: string
+  title?: string
+  description?: string
+}
+
+interface AimdWorkflowAssignerField {
+  id: string
+  runtime: string
+  entrypoint?: string
+  description?: string
+  outputs?: Record<string, string>
+  permissions?: {
+    network?: string[]
+    secrets?: string[]
+  }
+}
+
+interface AimdWorkflowTransitionField {
+  id: string
+  from: string[]
+  to: string[]
+  when?: string
+  label?: string
+  run?: string
+  inputs?: Record<string, AimdWorkflowAssignValue>
+  max_iterations?: number
+  assign?: Record<string, Record<string, AimdWorkflowAssignValue>>
 }
 
 // 解析后的变量定义
