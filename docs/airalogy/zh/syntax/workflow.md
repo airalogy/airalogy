@@ -8,7 +8,9 @@ Workflow 位于单个 `protocol.aimd` 之上，用来编排多个 Airalogy Proto
 
 Workflow 逻辑应当写在 AIMD 文档中，但通常建议放在独立文件里，例如 `workflow.aimd`，而不是混在普通 protocol 文档中。fenced `workflow` 代码块是一个更高层的文档类型，专门表达 protocol 编排。
 
-Parser 只负责解析和校验 workflow 声明，不执行 Python assigner，不调用 API，不修改 Record，也不判断分支结果。运行时实现应当把每次 workflow 迭代理解为新的 node run 或 Record；已经完成的 Record 不应被改回早期状态。
+Parser 只负责解析和校验 workflow 声明，不执行 Python assigner，不调用 API，不修改 Record，也不判断分支结果。运行时实现应当区分技术性 retry 和 workflow loop / protocol rerun：技术性 retry 是同一次 transition 或 node run 的内部 attempt；workflow loop iteration 或 protocol rerun 才代表新的 node run 和新的 Record。
+
+技术性 retry 不应创建新的 Record，也不应创建新的 Record version，例如 assigner 调 API 超时、沙箱进程失败、网络请求重试或数据库提交前失败；这类信息最多记录为同一次 run 的 attempt log。Workflow loop iteration / protocol rerun 应当创建新的 Record，而不是把旧 Record 写成新的 version。新的 Record 表示一次新的 Protocol 执行或 node run，应该拥有自己的输入、时间、操作者、上游来源和 iteration index；Record version 只用于同一条 Record 的修订历史，例如补录、纠错、草稿保存或 schema migration。
 
 ## 语法
 
@@ -383,6 +385,8 @@ Workflow 级数据传递应当尽量保持声明式。YAML 负责声明图、来
 npm AIMD core parser 和 Python parser 都会校验 workflow block。它们会拒绝不支持的版本、重复的 node、assigner 或 transition id、缺失的 protocol 引用、指向未知节点的 transition、指向未知 assigner 的 `run`、缺少 entrypoint 的 Python assigner、出现但格式非法的权限列表、格式非法的目标字段路径，以及非正整数的重试次数。
 
 Parser 不会执行 assigner，也不会静态推断 Python 返回 dict 的全部 key。更强的运行时校验应当在执行 assigner 后检查 `${transition_id.outputs.key}` 是否存在，并检查目标字段是否存在、可写、类型兼容。
+
+`airalogy_engine.AiralogyWorkflowEngine` 支持执行 workflow transition assignment：它会解析 `workflow.aimd`，按 `transition.inputs` 读取上游 Record 字段，运行 workflow 级 Python assigner，把返回值暴露为 `${transition_id.outputs.key}`，并按 `transition.assign` 生成目标 Record draft。它不负责数据库持久化，也不把技术性 retry 写成 Record 或 Record version；平台层应当决定何时保存新的 Record。
 
 ## 数据结构
 

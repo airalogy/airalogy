@@ -8,7 +8,9 @@ You can read a workflow as: source fields -> optional assigner transformation ->
 
 Workflow logic should live in an AIMD document, but it should normally be kept in a separate file such as `workflow.aimd` rather than being mixed into a normal protocol document. The fenced `workflow` block is a higher-level document type for protocol orchestration.
 
-The parser only parses and validates the workflow declaration. It does not execute Python assigners, call APIs, mutate records, or decide branch outcomes. Runtime implementations should treat each workflow iteration as a new node run or Record; a completed Record should not be rewritten into an earlier state.
+The parser only parses and validates the workflow declaration. It does not execute Python assigners, call APIs, mutate records, or decide branch outcomes. Runtime implementations should distinguish technical retry from workflow loop / protocol rerun: a technical retry is an internal attempt within the same transition or node run, while a workflow loop iteration or protocol rerun represents a new node run and a new Record.
+
+Technical retries should not create a new Record or a new Record version, for example when an assigner API call times out, a sandbox process fails, a network request is retried, or a database commit has not yet succeeded. They should be recorded at most as attempt logs for the same run. Workflow loop iterations / protocol reruns should create new Records rather than new versions of old Records. A new Record represents a new Protocol execution or node run, with its own inputs, timestamp, operator, upstream provenance, and iteration index. Record versions are reserved for revisions of the same Record, such as completion edits, corrections, draft saves, or schema migration.
 
 ## Syntax
 
@@ -383,6 +385,8 @@ Values should be canonical JSON-serializable values or reference expressions. St
 Both the npm AIMD core parser and the Python parser validate workflow blocks. They reject unsupported versions, duplicate node, assigner, or transition ids, missing protocol references, transitions pointing to unknown nodes, `run` references pointing to unknown assigners, Python assigners without an entrypoint, permission lists that are present but malformed, malformed target field paths, and non-positive retry limits.
 
 The parser does not execute assigners and does not statically infer every key returned by a Python dict. Stronger runtime validation should check after assigner execution that `${transition_id.outputs.key}` exists, and that target fields exist, are writable, and have compatible types.
+
+`airalogy_engine.AiralogyWorkflowEngine` can execute workflow transition assignments: it parses `workflow.aimd`, reads upstream Record fields through `transition.inputs`, runs workflow-level Python assigners, exposes return values as `${transition_id.outputs.key}`, and produces target Record drafts through `transition.assign`. It does not persist Records and does not represent technical retries as Records or Record versions; the platform layer should decide when to save a new Record.
 
 ## Data Structure
 

@@ -3,7 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/airalogy-engine?label=PyPI)](https://pypi.org/project/airalogy-engine/)
 [![Python versions](https://img.shields.io/pypi/pyversions/airalogy-engine)](https://pypi.org/project/airalogy-engine/)
 
-Airalogy protocol execution sandbox for Python. Run protocol packages (`parse`, `assign`, `validate`) inside a secure [BoxLite](https://github.com/boxlite-ai/boxlite) sandbox.
+Airalogy protocol execution sandbox for Python. Run protocol packages (`parse`, `assign`, `validate`) inside a secure [BoxLite](https://github.com/boxlite-ai/boxlite) sandbox, and execute AIMD workflow transition assignments across protocol Records.
 
 ## Installation
 
@@ -107,15 +107,46 @@ async with AiralogyEngine(
     result = await engine.parse_protocol()
 ```
 
+## Workflow Usage
+
+`AiralogyWorkflowEngine` executes fenced `workflow` definitions from a `workflow.aimd` file. It resolves `transition.inputs`, runs workflow-level Python assigners, exposes outputs under `${transition_id.outputs.key}`, and applies `transition.assign` into target Record drafts. It does not persist Records or create Record versions; callers should save returned Record drafts through their platform or database layer.
+
+```python
+import asyncio
+from airalogy_engine import AiralogyWorkflowEngine
+
+async def main():
+    engine = AiralogyWorkflowEngine(
+        workflow_path="/path/to/workflow.aimd",
+        rootfs_path="/path/to/airalogy-engine-image",
+    )
+    result = await engine.run(
+        records={
+            "measurement": {"data": {"var": {"raw_data": [1, 2, 3]}}},
+            "literature_review": {"data": {"var": {"summary": "known background"}}},
+        },
+    )
+    print(result["data"]["records"]["analysis"])
+    print(result["data"]["transition_outputs"])
+    await engine.close()
+
+asyncio.run(main())
+```
+
+For local tests or trusted scripts, pass `assigner_runtime="local"` to execute workflow assigners in the host Python process instead of BoxLite.
+
 ## API
 
 | API | Description |
 |---|---|
 | `AiralogyEngine(protocol_path, boxlite_home=None, image=None, rootfs_path=None, timeout=300, memory_mib=512, cpus=1, auto_stop=True)` | Create an engine bound to one protocol path, BoxLite runtime home, and sandbox configuration |
+| `AiralogyWorkflowEngine(workflow_path, workflow_id=None, assigner_runtime="sandbox", boxlite_home=None, image=None, rootfs_path=None, timeout=300, memory_mib=512, cpus=1, auto_stop=True)` | Create an engine bound to one `workflow.aimd` file or directory and sandbox configuration for workflow-level assigners |
 | `engine.parse_protocol(env_vars=None, timeout=None, debug=False, log_file="protocol_debug.log")` | Parse the engine protocol and return schema, metadata, fields |
 | `engine.assign_variable(var_name, dependent_data, env_vars=None, timeout=None, debug=False, log_file="protocol_debug.log")` | Assign a variable using assigner functions |
 | `engine.validate_variables(variables, env_vars=None, timeout=None, debug=False, log_file="protocol_debug.log")` | Validate variable values against the protocol model |
 | `engine.import_records(input_filename, input_format="auto", allow_extra_var_fields=False, require_complete_quiz=False, include_template_defaults=True, validate_model_sync=True, env_vars=None, timeout=None, debug=False, log_file="protocol_debug.log")` | Import a protocol-local JSON/JSONL/CSV/TSV file into Airalogy record JSON objects |
+| `workflow_engine.run(records, transition_ids=None, transition_outputs=None, node_iterations=None, max_passes=1, env_vars=None, timeout=None, debug=False, log_file="workflow_debug.log")` | Execute workflow transitions in declaration order and return Record drafts, transition outputs, skipped transitions, attempts, and node iteration counters |
+| `workflow_engine.run_transition(transition_id, records, transition_outputs=None, node_iterations=None, env_vars=None, timeout=None, debug=False, log_file="workflow_debug.log")` | Execute one workflow transition and return updated Record drafts |
 | `engine.box_status()` | Return the current BoxLite `BoxStateInfo`, or `None` when the engine has no current box |
 | `await engine.stop()` | Stop this engine's current box without closing the engine |
 | `await engine.close()` | Stop this engine's current box and release its BoxLite runtime reference |

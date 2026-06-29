@@ -42,6 +42,7 @@ name = "airalogy-engine"
 version = "0.0.5"
 source = { editable = "." }
 dependencies = [
+    { name = "airalogy" },
     { name = "boxlite" },
 ]
 
@@ -53,7 +54,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "boxlite", specifier = "==0.9.5" }]
+requires-dist = [
+    { name = "airalogy", editable = "../airalogy" },
+    { name = "boxlite", specifier = "==0.9.5" },
+]
 
 [package.metadata.requires-dev]
 dev = [
