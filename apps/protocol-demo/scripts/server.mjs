@@ -258,6 +258,35 @@ function resolveSandboxOptions(input) {
   return options
 }
 
+function resolveWorkflowOptions(input, assignerRuntime) {
+  if (assignerRuntime === 'sandbox') {
+    return {
+      ...resolveSandboxOptions(input),
+      assignerRuntime,
+    }
+  }
+
+  const sandbox = isPlainObject(input) ? input : {}
+  const options = {
+    assignerRuntime,
+    timeout: numberOption(
+      sandbox.timeout ?? process.env.AIRALOGY_PROTOCOL_DEMO_TIMEOUT,
+      60,
+      1,
+      600,
+    ),
+  }
+  const debug = booleanOption(sandbox.debug, process.env.AIRALOGY_PROTOCOL_DEMO_DEBUG === '1')
+  const logFile = stringOption(sandbox.logFile) ?? process.env.AIRALOGY_PROTOCOL_DEMO_LOG_FILE
+  if (debug) {
+    options.debug = true
+  }
+  if (logFile) {
+    options.logFile = logFile
+  }
+  return options
+}
+
 async function loadRequestBody(req, limitBytes) {
   const chunks = []
   let total = 0
@@ -400,8 +429,17 @@ async function loadRegistry() {
       const tomlRelative = item.toml?.[locale]
       const assignerRelative = item.assigner?.[locale]
       const sampleDataRelative = item.sample_data?.[locale] ?? []
+      const sourceFilesRelative = item.source_files?.[locale] ?? []
+      const workflowRecordsRelative = item.workflow_records?.[locale]
 
       const sampleData = await Promise.all(sampleDataRelative.map(async (relativePath) => {
+        const absPath = safeResolve(source.root, relativePath)
+        return {
+          path: relativePath,
+          content: await readTextIfExists(absPath),
+        }
+      }))
+      const sourceFiles = await Promise.all(sourceFilesRelative.map(async (relativePath) => {
         const absPath = safeResolve(source.root, relativePath)
         return {
           path: relativePath,
@@ -419,7 +457,12 @@ async function loadRegistry() {
         toml: tomlRelative ? await readTextIfExists(safeResolve(source.root, tomlRelative)) : null,
         assignerPath: assignerRelative,
         assigner: assignerRelative ? await readTextIfExists(safeResolve(source.root, assignerRelative)) : null,
+        sourceFiles,
         sampleData,
+        workflowRecordsPath: workflowRecordsRelative,
+        workflowRecords: workflowRecordsRelative
+          ? await readTextIfExists(safeResolve(source.root, workflowRecordsRelative))
+          : null,
       }
     }
 
@@ -734,6 +777,79 @@ async function callEngine(action, protocolDir, body, protocolId) {
   }
 }
 
+function normalizeStringList(value, fieldName) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`${fieldName} must be an array`)
+  }
+
+  const strings = value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter(Boolean)
+  return strings.length > 0 ? strings : undefined
+}
+
+function normalizeObjectOption(value, fieldName) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+  if (!isPlainObject(value)) {
+    throw new Error(`${fieldName} must be an object`)
+  }
+  return value
+}
+
+async function callWorkflow(workflowDir, body, workflowExampleId) {
+  const engine = await loadEngineModule()
+  const assignerRuntime = stringOption(body.assignerRuntime) === 'local' ? 'local' : 'sandbox'
+  const options = resolveWorkflowOptions(body.sandbox, assignerRuntime)
+  const envVars = resolveEngineEnvVars(body.envVars, options, workflowExampleId)
+  const draftSourceFiles = normalizeDraftSourceFiles(body.sourceFiles)
+  let draftWorkflowDir
+
+  if (draftSourceFiles) {
+    draftWorkflowDir = await createDraftProtocolDir(draftSourceFiles)
+    workflowDir = draftWorkflowDir
+  }
+
+  try {
+    if (!isPlainObject(body.records)) {
+      throw new Error('Workflow records must be a JSON object')
+    }
+
+    const workflowOptions = {
+      ...options,
+    }
+    const workflowId = stringOption(body.workflowId)
+    const transitionIds = normalizeStringList(body.transitionIds, 'transitionIds')
+    const transitionOutputs = normalizeObjectOption(body.transitionOutputs, 'transitionOutputs')
+    const nodeIterations = normalizeObjectOption(body.nodeIterations, 'nodeIterations')
+    const maxPasses = numberOption(body.maxPasses, 1, 1, 50)
+
+    if (workflowId) {
+      workflowOptions.workflowId = workflowId
+    }
+    if (transitionIds) {
+      workflowOptions.transitionIds = transitionIds
+    }
+    if (transitionOutputs) {
+      workflowOptions.transitionOutputs = transitionOutputs
+    }
+    if (nodeIterations) {
+      workflowOptions.nodeIterations = nodeIterations
+    }
+    workflowOptions.maxPasses = maxPasses
+
+    return engine.runWorkflow(workflowDir, body.records, envVars, workflowOptions)
+  } finally {
+    if (draftWorkflowDir) {
+      scheduleDraftProtocolDirCleanup(draftWorkflowDir)
+    }
+  }
+}
+
 async function healthPayload() {
   let engine = { available: true }
   try {
@@ -847,6 +963,16 @@ async function handleApi(req, res) {
       const body = await loadJsonBody(req)
       const { protocolDir } = await resolveProtocolVariant(decodeURIComponent(id), decodeURIComponent(locale))
       const result = await callEngine(action, protocolDir, body, decodeURIComponent(id))
+      sendJson(res, 200, { ok: true, result })
+      return true
+    }
+
+    const workflowMatch = pathname.match(/^\/api\/workflows\/([^/]+)\/([^/]+)\/run$/)
+    if (workflowMatch && req.method === 'POST') {
+      const [, id, locale] = workflowMatch
+      const body = await loadJsonBody(req)
+      const { protocolDir } = await resolveProtocolVariant(decodeURIComponent(id), decodeURIComponent(locale))
+      const result = await callWorkflow(protocolDir, body, decodeURIComponent(id))
       sendJson(res, 200, { ok: true, result })
       return true
     }

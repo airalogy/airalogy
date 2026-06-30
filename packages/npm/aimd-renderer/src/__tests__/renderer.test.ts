@@ -100,6 +100,56 @@ function collectVNodeText(node: any): string {
   return ''
 }
 
+const WORKFLOW_AIMD = [
+  '# Workflow Example',
+  '',
+  '```workflow',
+  'version: airalogy.workflow.v1',
+  'id: analysis_workflow',
+  'title: Analysis Workflow',
+  'description: Builds analysis inputs from measurement and literature records.',
+  '',
+  'nodes:',
+  '  - id: measurement',
+  '    protocol: ./measurement/protocol.aimd',
+  '    title: Measurement',
+  '  - id: literature_review',
+  '    protocol: ./literature-review/protocol.aimd',
+  '    title: Literature Review',
+  '  - id: analysis',
+  '    protocol: ./analysis/protocol.aimd',
+  '    title: Analysis',
+  '',
+  'assigners:',
+  '  - id: build_analysis_inputs',
+  '    runtime: python',
+  '    entrypoint: ./assigners/build_analysis_inputs.py:assign',
+  '    outputs:',
+  '      raw_data_summary: str',
+  '      background_summary: str',
+  '',
+  'transitions:',
+  '  - id: prepare_analysis_inputs',
+  '    from:',
+  '      - measurement',
+  '      - literature_review',
+  '    to:',
+  '      - analysis',
+  '    run: build_analysis_inputs',
+  '    inputs:',
+  '      raw_data: ${measurement.var.raw_data}',
+  '      background_summary: ${literature_review.var.summary}',
+  '    assign:',
+  '      analysis:',
+  '        var.raw_data_summary: ${prepare_analysis_inputs.outputs.raw_data_summary}',
+  '        var.background_summary: ${prepare_analysis_inputs.outputs.background_summary}',
+  '',
+  'logic: |',
+  '  Use one workflow-level assigner to join multiple upstream Protocol Records.',
+  'default_initial_node: measurement',
+  '```',
+].join('\n')
+
 // ---------------------------------------------------------------------------
 // resolveQuizPreviewOptions
 // ---------------------------------------------------------------------------
@@ -180,6 +230,7 @@ describe('parseAndExtract', () => {
     expect(fields.var).toHaveLength(0)
     expect(fields.step).toHaveLength(0)
     expect(fields.quiz).toHaveLength(0)
+    expect(fields.workflow).toHaveLength(0)
   })
 
   it('extracts multiple fields from mixed content', () => {
@@ -224,6 +275,28 @@ describe('parseAndExtract', () => {
       'longitude',
       'elevation_m',
     ])
+  })
+
+  it('extracts workflow definitions', () => {
+    const fields = parseAndExtract(WORKFLOW_AIMD)
+    expect(fields.workflow).toHaveLength(1)
+    expect(fields.workflow?.[0]).toMatchObject({
+      id: 'analysis_workflow',
+      version: 'airalogy.workflow.v1',
+      default_initial_node: 'measurement',
+    })
+    expect(fields.workflow?.[0]?.transitions[0]).toMatchObject({
+      id: 'prepare_analysis_inputs',
+      from: ['measurement', 'literature_review'],
+      to: ['analysis'],
+      run: 'build_analysis_inputs',
+      assign: {
+        analysis: {
+          'var.raw_data_summary': '${prepare_analysis_inputs.outputs.raw_data_summary}',
+          'var.background_summary': '${prepare_analysis_inputs.outputs.background_summary}',
+        },
+      },
+    })
   })
 })
 
@@ -272,6 +345,51 @@ describe('renderToHtmlSync', () => {
     const { html, fields } = renderToHtmlSync('{{var|temperature}}')
     expect(fields.var).toContain('temperature')
     expect(html).toContain('temperature')
+  })
+
+  it('renders workflow blocks as structured UI instead of raw code', () => {
+    const { html, fields } = renderToHtmlSync(WORKFLOW_AIMD)
+
+    expect(fields.workflow?.[0]?.id).toBe('analysis_workflow')
+    expect(html).toContain('class="aimd-workflow"')
+    expect(html).toContain('data-aimd-workflow-id="analysis_workflow"')
+    expect(html).toContain('Analysis Workflow')
+    expect(html).toContain('prepare_analysis_inputs')
+    expect(html).toContain('build_analysis_inputs')
+    expect(html).toContain('var.raw_data_summary')
+    expect(html).not.toContain('class="language-workflow"')
+  })
+
+  it('renders workflow run state when provided by the host', () => {
+    const { html } = renderToHtmlSync(WORKFLOW_AIMD, {
+      workflowRuns: {
+        analysis_workflow: {
+          records: {
+            measurement: { data: { var: { raw_data: [1, 2, 3] } } },
+            analysis: { data: { var: { raw_data_summary: 'n=3' } } },
+          },
+          node_iterations: { analysis: 1 },
+          executed_transitions: [{ id: 'prepare_analysis_inputs' }],
+          transition_outputs: {
+            prepare_analysis_inputs: {
+              raw_data_summary: 'n=3',
+              background_summary: 'PRIOR CONTEXT',
+            },
+          },
+          attempts: [{
+            transition: 'prepare_analysis_inputs',
+            assigner: 'build_analysis_inputs',
+            status: 'succeeded',
+          }],
+        },
+      },
+    })
+
+    expect(html).toContain('2 records')
+    expect(html).toContain('executed')
+    expect(html).toContain('iteration 1')
+    expect(html).toContain('n=3')
+    expect(html).toContain('PRIOR CONTEXT')
   })
 
   it('resolves figure asset URLs during HTML rendering', () => {
@@ -795,6 +913,17 @@ describe('renderToHtmlSync', () => {
 })
 
 describe('renderToVue', () => {
+  it('renders workflow blocks as Vue nodes', async () => {
+    const { nodes, fields } = await renderToVue(WORKFLOW_AIMD)
+    const workflowNode = findVNodeByClass({ children: nodes }, 'aimd-workflow') as any
+
+    expect(fields.workflow?.[0]?.id).toBe('analysis_workflow')
+    expect(workflowNode).toBeTruthy()
+    expect(workflowNode.props['data-aimd-workflow-id']).toBe('analysis_workflow')
+    expect(collectVNodeText(workflowNode)).toContain('Analysis Workflow')
+    expect(collectVNodeText(workflowNode)).toContain('prepare_analysis_inputs')
+  })
+
   it('renders references as Vue nodes', async () => {
     const { nodes } = await renderToVue(
       [

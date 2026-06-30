@@ -468,6 +468,9 @@ importers:
       '@boxlite-ai/boxlite':
         specifier: 0.8.2
         version: 0.8.2
+      yaml:
+        specifier: ^2.4.2
+        version: 2.8.2
     devDependencies:
       '@types/node':
         specifier: ^25.5.0

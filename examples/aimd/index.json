@@ -69,6 +69,7 @@
     {
       "id": "protocol-workflow",
       "kind": "example",
+      "source_kind": "workflow",
       "category": "workflow",
       "languages": [
         "en-US"
@@ -86,6 +87,19 @@
       },
       "entry": {
         "en-US": "protocol-workflow/workflow.aimd"
+      },
+      "source_files": {
+        "en-US": [
+          "protocol-workflow/protocols/sample-prep/protocol.aimd",
+          "protocol-workflow/protocols/measurement/protocol.aimd",
+          "protocol-workflow/protocols/analysis/protocol.aimd",
+          "protocol-workflow/protocols/report/protocol.aimd",
+          "protocol-workflow/assigners/summarize_measurement.py",
+          "protocol-workflow/assigners/optimize_parameters.py"
+        ]
+      },
+      "workflow_records": {
+        "en-US": "protocol-workflow/records.initial.json"
       },
       "engine_required": true,
       "tags": [

@@ -71,7 +71,9 @@ describe('AimdRecorderEditor', () => {
   })
 
   it('lets users resize the source and recorder columns or collapse the source panel', () => {
-    expect(source).toMatch(/const sourcePanelCollapsed = ref\(false\)/)
+    expect(source).toMatch(/initialSourceCollapsed\?: boolean/)
+    expect(source).toMatch(/initialSourceCollapsed: false/)
+    expect(source).toMatch(/const sourcePanelCollapsed = ref\(props\.initialSourceCollapsed\)/)
     expect(source).toMatch(/const sourcePanelWidthPercent = ref\(50\)/)
     expect(source).toMatch(/const isPanelResizing = ref\(false\)/)
     expect(source).toMatch(/const workbenchMainStyle = computed/)

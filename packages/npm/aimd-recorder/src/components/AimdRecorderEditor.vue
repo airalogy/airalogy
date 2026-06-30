@@ -92,6 +92,7 @@ const props = withDefaults(defineProps<{
   showFieldStructure?: boolean
   showVisualEditToggle?: boolean
   initialVisualEditMode?: boolean
+  initialSourceCollapsed?: boolean
   allowRawFieldSourceEditing?: boolean
   showRecordData?: boolean
   showDetachedData?: boolean
@@ -138,6 +139,7 @@ const props = withDefaults(defineProps<{
   showFieldStructure: false,
   showVisualEditToggle: true,
   initialVisualEditMode: false,
+  initialSourceCollapsed: false,
   allowRawFieldSourceEditing: true,
   showRecordData: false,
   showDetachedData: true,
@@ -195,7 +197,7 @@ const draggedFieldUid = ref<string | null>(null)
 const visualEditMode = ref(props.initialVisualEditMode)
 const activeContentSurface = ref<'source' | 'visual' | null>(null)
 const activeSideTab = ref<WorkbenchSideTab>('recorder')
-const sourcePanelCollapsed = ref(false)
+const sourcePanelCollapsed = ref(props.initialSourceCollapsed)
 const sourcePanelWidthPercent = ref(50)
 const isPanelResizing = ref(false)
 const viewportEditorMinHeight = ref(props.editorMinHeight)

@@ -1,0 +1,21 @@
+# Measurement
+
+Use this protocol node to capture or review the raw measurement output.
+
+## Inputs
+
+Sample ID: {{var|sample_id: str, title = "Sample ID", description = "Identifier received from the preparation node."}}
+
+## Measurement Output
+
+Raw data: {{var|raw_data: json, title = "Raw measurement data", description = "Structured measurement payload used by the analysis node."}}
+
+Instrument: {{var|instrument: str = "uv-vis-alpha", title = "Instrument"}}
+
+Operator note: {{var|measurement_note: AiralogyMarkdown, title = "Measurement note"}}
+
+## Procedure
+
+{{step|capture_measurement, check=True}} Capture the measurement and attach or paste the raw data payload.
+
+{{check|measurement_ready}} Confirm that the raw data is ready for analysis.

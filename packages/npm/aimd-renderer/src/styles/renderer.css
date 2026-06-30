@@ -259,6 +259,318 @@
   font-weight: 700;
 }
 
+.aimd-workflow {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid #d6dde8;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.aimd-workflow * {
+  box-sizing: border-box;
+}
+
+.aimd-workflow__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e1e7ef;
+}
+
+.aimd-workflow__title-group {
+  min-width: 0;
+}
+
+.aimd-workflow__eyebrow {
+  margin-bottom: 2px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.aimd-workflow__title {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 760;
+  line-height: 1.25;
+}
+
+.aimd-workflow__id,
+.aimd-workflow__metrics,
+.aimd-workflow__run-summary,
+.aimd-workflow__node-meta,
+.aimd-workflow__transition-header,
+.aimd-workflow__assigner-header,
+.aimd-workflow__permission-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.aimd-workflow__id {
+  margin-top: 6px;
+}
+
+.aimd-workflow__metrics {
+  justify-content: flex-end;
+  flex-shrink: 0;
+  max-width: 50%;
+}
+
+.aimd-workflow__badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 2px 7px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.aimd-workflow__badge--success {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.aimd-workflow__badge--warning {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.aimd-workflow__badge--danger {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.aimd-workflow__description,
+.aimd-workflow__logic {
+  margin: 10px 0 0;
+  color: #475569;
+}
+
+.aimd-workflow__run-summary {
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid #dbeafe;
+  border-radius: 6px;
+  background: #eff6ff;
+}
+
+.aimd-workflow__section {
+  margin-top: 14px;
+}
+
+.aimd-workflow__section-title {
+  margin: 0 0 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.25;
+}
+
+.aimd-workflow__nodes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.aimd-workflow__node,
+.aimd-workflow__transition,
+.aimd-workflow__assigner {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d9e2ef;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.aimd-workflow__node-title {
+  color: #111827;
+  font-weight: 720;
+  overflow-wrap: anywhere;
+}
+
+.aimd-workflow__node-id,
+.aimd-workflow__node-meta,
+.aimd-workflow__assigner-description,
+.aimd-workflow__transition-label,
+.aimd-workflow__transition-detail,
+.aimd-workflow__transition-condition {
+  margin-top: 6px;
+}
+
+.aimd-workflow__node-description,
+.aimd-workflow__assigner-description,
+.aimd-workflow__transition-detail {
+  color: #64748b;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.aimd-workflow__transitions,
+.aimd-workflow__assigners {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aimd-workflow__transition {
+  border-left: 3px solid #60a5fa;
+}
+
+.aimd-workflow__assigner {
+  border-left: 3px solid #a78bfa;
+}
+
+.aimd-workflow__block {
+  margin-top: 9px;
+}
+
+.aimd-workflow__block-title {
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.aimd-workflow__assignments {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.aimd-workflow__assignment-group {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.35fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.aimd-workflow__assignment-target {
+  min-width: 0;
+  color: #475569;
+  font-size: 13px;
+}
+
+.aimd-workflow__kv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.aimd-workflow__kv-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.32fr) auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  min-width: 0;
+}
+
+.aimd-workflow__kv-arrow {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.aimd-workflow__code,
+.aimd-workflow__value {
+  display: inline-block;
+  max-width: 100%;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #334155;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.aimd-workflow__value--reference {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.aimd-workflow__value--literal {
+  background: #f7fee7;
+  color: #3f6212;
+}
+
+.aimd-workflow__permission {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.aimd-workflow__source {
+  margin-top: 12px;
+  border-top: 1px solid #e1e7ef;
+  padding-top: 10px;
+}
+
+.aimd-workflow__source-summary {
+  cursor: pointer;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.aimd-workflow__source-code {
+  margin: 8px 0 0;
+  max-height: 320px;
+  overflow: auto;
+}
+
+@media (max-width: 720px) {
+  .aimd-workflow {
+    padding: 10px;
+  }
+
+  .aimd-workflow__header {
+    flex-direction: column;
+  }
+
+  .aimd-workflow__metrics {
+    justify-content: flex-start;
+    max-width: 100%;
+  }
+
+  .aimd-workflow__assignment-group,
+  .aimd-workflow__kv-row {
+    grid-template-columns: 1fr;
+  }
+
+  .aimd-workflow__kv-arrow {
+    display: none;
+  }
+}
+
 .aimd-field--quiz .aimd-quiz__stem {
   margin-top: 6px;
   line-height: 1.55;

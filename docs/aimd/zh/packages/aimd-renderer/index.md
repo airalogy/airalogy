@@ -22,6 +22,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - 宿主把渲染输出放进 `.aimd-renderer` 容器后，可以使用 renderer 内置的 AIMD 正文排版，包括清晰的标题层级、列表 marker 和更紧凑的正文行距。
 - Vue renderer 会为 `video` / `audio` media 提供默认固定按钮、单媒体互斥固定、固定后说明折叠和小 / 中 / 大固定尺寸控制；HTML 输出包含相同的 `data-*` 钩子，便于宿主接管。
 - `assignerVisibility`：用于作者视图或调试视图下切换 assigner 的可见性。
+- fenced `workflow` 代码块会渲染为结构化 Workflow UI，展示节点、transition、workflow 级 assigner、赋值映射，并可叠加宿主传入的运行状态。
 - 内建 quiz 预览控制。
 - 支持通过 `locale` 切换渲染标签语言。
 
@@ -132,6 +133,35 @@ const { html } = await renderToHtml(content, {
 - `"hidden"`：默认值，不渲染 assigner 代码块。
 - `"collapsed"`：把 assigner 渲染为默认折叠的 `<details>`，并显示本地化摘要标题。
 - `"expanded"`：直接把 assigner 渲染成可见代码块；server assigner 按 `python`，client assigner 按 `javascript` 显示。
+
+## Workflow UI
+
+fenced `workflow` 代码块会通过 `@airalogy/aimd-core` 提取，并渲染成结构化面板，而不是显示原始 YAML。面板会展示 nodes、transitions、conditions、workflow 级 assigners、transition inputs、目标 `assign` 映射、重试限制和可选的逻辑说明。
+
+```ts
+import { renderToHtml } from "@airalogy/aimd-renderer"
+
+const { html } = await renderToHtml(workflowAimd, {
+  workflowRuns: {
+    parameter_optimization: {
+      records: {
+        prep: { data: { var: { sample_id: "S-001" } } },
+        analysis: { data: { check: { pass_qc: { checked: false } } } },
+      },
+      node_iterations: { prep: 2 },
+      executed_transitions: [{ id: "retry_after_qc_failure" }],
+      transition_outputs: {
+        retry_after_qc_failure: {
+          recommended_temperature_c: 37,
+          retry_reason: "QC signal below threshold",
+        },
+      },
+    },
+  },
+})
+```
+
+renderer 不执行 workflow assigner。宿主可以调用 `@airalogy/airalogy-engine` 或其他后端 runtime，再把返回的 `records`、`transition_outputs`、`executed_transitions`、`skipped_transitions`、`attempts` 和 `node_iterations` 传给 `workflowRuns[workflow.id]`。
 
 ## 本地化
 

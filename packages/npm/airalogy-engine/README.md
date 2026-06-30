@@ -4,7 +4,7 @@
 
 Chinese README: [README.zh-CN.md](README.zh-CN.md)
 
-Airalogy protocol execution sandbox for Node.js/TypeScript. Run protocol packages (`parse`, `assign`, `validate`) inside a secure [BoxLite](https://github.com/boxlite-ai/boxlite) sandbox.
+Airalogy protocol execution sandbox for Node.js/TypeScript. Run protocol packages (`parse`, `assign`, `validate`) inside a secure [BoxLite](https://github.com/boxlite-ai/boxlite) sandbox, and execute AIMD workflow transition assignments across protocol Records.
 
 ## Design Rationale
 
@@ -59,7 +59,7 @@ const result = await parseProtocol(protocolPath, undefined, {
 ## Usage
 
 ```typescript
-import { parseProtocol, assignVariable, validateVariables } from "@airalogy/airalogy-engine";
+import { parseProtocol, assignVariable, runWorkflow, validateVariables } from "@airalogy/airalogy-engine";
 
 const protocolPath = "/path/to/your/protocol";
 const options = { rootfsPath: "/path/to/airalogy-engine-image" }; // or { image: "..." }
@@ -87,7 +87,27 @@ const validateResult = await validateVariables(
   options,
 );
 console.log(validateResult.data);
+
+// 4. Run a workflow transition graph
+const workflowResult = await runWorkflow(
+  "/path/to/workflow.aimd",
+  {
+    measurement: { data: { var: { raw_data: [1, 2, 3] } } },
+    literature_review: { data: { var: { summary: "prior context" } } },
+  },
+  options,
+);
+console.log(workflowResult.data?.workflow_data?.path_data.steps);
+console.log(workflowResult.data?.records); // Current Record snapshot.
 ```
+
+## Workflow Runtime
+
+`runWorkflow` and `runWorkflowTransition` execute fenced `workflow` definitions from a `workflow.aimd` file or directory. The runtime resolves `transition.inputs`, runs workflow-level Python assigners in the same BoxLite sandbox style, exposes assigner returns under `${transition_id.outputs.key}`, and applies `transition.assign` into target Record drafts. The primary workflow run artifact is `workflow_data.path_data.steps`, a Path-step timeline; `records` is the current Record snapshot derived from the run. The runtime does not persist Records or create Record versions; callers should save returned Record drafts through their platform or database layer.
+
+Workflow references intentionally use `${...}` so constants and references are unambiguous. For example, `var.summary: ${prepare_analysis_inputs.outputs.summary}` copies a transition output, while `var.summary: prepare_analysis_inputs.outputs.summary` stores that exact string.
+
+For trusted local demos or tests, pass `assignerRuntime: "local"` to run workflow-level Python assigners in the host Python process instead of BoxLite. Keep the default `assignerRuntime: "sandbox"` for untrusted workflow packages and production services.
 
 ## API
 
@@ -103,6 +123,18 @@ Assign a variable value using the protocol's assigner functions.
 
 Validate variable values against the protocol's model.
 
+### `runWorkflow(workflowPath, records, envVars?, options?)`
+
+Run selected workflow transitions in declaration order. `workflowPath` may point to a `workflow.aimd` file or a directory containing `workflow.aimd`. The result data contains `workflow_data.path_data.steps`, `records`, `transition_outputs`, `executed_transitions`, `skipped_transitions`, `attempts`, and `node_iterations`.
+
+### `runWorkflowTransition(workflowPath, transitionId, records, envVars?, options?)`
+
+Run one workflow transition and return the updated Record drafts and transition metadata.
+
+### `parseWorkflowContent(content)` and `isAimdWorkflowReference(value)`
+
+Parse one workflow YAML payload and check whether a value is a `${node.section.field}` workflow reference expression.
+
 All functions return `Promise<ProtocolResult>`:
 
 ```typescript
@@ -111,6 +143,7 @@ interface ProtocolResult {
   message?: string;
   data?: Record<string, unknown>;
   output?: string;
+  files?: SandboxFileBridgeOutput[];
 }
 ```
 
@@ -127,6 +160,10 @@ All functions accept a `SandboxOptions` object:
 | `cpus` | `number` | `1` | CPU limit |
 | `debug` | `boolean` | `false` | Enable executor debug logging inside the sandbox |
 | `logFile` | `string` | `"protocol_debug.log"` | Host file to append sandbox debug logs to |
+
+### Workflow Options
+
+`runWorkflow` accepts all sandbox options plus `workflowId`, `transitionIds`, `transitionOutputs`, `nodeIterations`, `maxPasses`, and `assignerRuntime`. `runWorkflowTransition` accepts all sandbox options plus `workflowId`, `transitionOutputs`, `nodeIterations`, and `assignerRuntime`.
 
 ## Development
 

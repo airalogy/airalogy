@@ -22,6 +22,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - Built-in AIMD prose typography when host applications place rendered output inside an `.aimd-renderer` container, including clearer heading hierarchy, list markers, and more compact body line height.
 - Default Vue pin controls for `video` / `audio` media, including single-item pinning, collapsed pinned descriptions, and small / medium / large pinned-size controls; HTML output exposes matching `data-*` hooks for host-controlled behavior.
 - `assignerVisibility` to show or hide assigner blocks in authoring/debug views.
+- Fenced `workflow` blocks render as structured Workflow UI with nodes, transitions, workflow-level assigners, assignment mappings, and optional run-state overlays supplied by the host.
 - Built-in quiz preview controls.
 - Built-in locale support via `locale`.
 
@@ -132,6 +133,35 @@ Supported values:
 - `"hidden"`: default, do not render assigner blocks.
 - `"collapsed"`: render assigners inside collapsed `<details>` blocks with localized summaries.
 - `"expanded"`: render assigners as visible code blocks. Server assigners use `python`; client assigners use `javascript`.
+
+## Workflow UI
+
+Fenced `workflow` blocks are extracted through `@airalogy/aimd-core` and rendered as a structured panel instead of raw YAML code. The panel shows nodes, transitions, conditions, workflow-level assigners, transition inputs, target `assign` mappings, retry limits, and optional logic notes.
+
+```ts
+import { renderToHtml } from "@airalogy/aimd-renderer"
+
+const { html } = await renderToHtml(workflowAimd, {
+  workflowRuns: {
+    parameter_optimization: {
+      records: {
+        prep: { data: { var: { sample_id: "S-001" } } },
+        analysis: { data: { check: { pass_qc: { checked: false } } } },
+      },
+      node_iterations: { prep: 2 },
+      executed_transitions: [{ id: "retry_after_qc_failure" }],
+      transition_outputs: {
+        retry_after_qc_failure: {
+          recommended_temperature_c: 37,
+          retry_reason: "QC signal below threshold",
+        },
+      },
+    },
+  },
+})
+```
+
+The renderer does not execute workflow assigners. Hosts can run `@airalogy/airalogy-engine` or another backend runtime, then pass returned `records`, `transition_outputs`, `executed_transitions`, `skipped_transitions`, `attempts`, and `node_iterations` into `workflowRuns[workflow.id]`.
 
 ## Localization
 

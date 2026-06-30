@@ -28,6 +28,11 @@ import { annotateCitationReferenceLabels, moveReferenceSectionsToEnd } from "./c
 import { criticMarkupHandlers } from "./criticMarkup"
 import { buildFigureChildren, assignFigureSequenceNumbers } from "./figureNumbering"
 import { assignMediaSequenceNumbers, buildMediaChildren, inferMediaMimeType } from "./mediaRendering"
+import {
+  renderWorkflowBlocks,
+  type AimdWorkflowRenderOptions,
+  type AimdWorkflowRunState,
+} from "./workflowRendering"
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -43,6 +48,11 @@ export interface RenderResult {
 
 export type AimdAssignerVisibility = "hidden" | "collapsed" | "expanded"
 
+export type {
+  AimdWorkflowRenderOptions,
+  AimdWorkflowRunState,
+} from "./workflowRendering"
+
 export interface AimdHtmlRendererContext extends RenderContext {
   locale: NonNullable<AimdRendererI18nOptions["locale"]> | string
   messages: ReturnType<typeof createAimdRendererMessages>
@@ -54,7 +64,7 @@ export type AimdHtmlNodeRenderer = (
   context: AimdHtmlRendererContext,
 ) => Element | null | undefined
 
-export interface AimdRendererOptions extends ProcessorOptions, AimdRendererI18nOptions {
+export interface AimdRendererOptions extends ProcessorOptions, AimdRendererI18nOptions, AimdWorkflowRenderOptions {
   assignerVisibility?: AimdAssignerVisibility
   aimdElementRenderers?: Partial<Record<AimdFieldType, AimdHtmlNodeRenderer>>
   resolveAssetUrl?: AimdAssetUrlResolver
@@ -566,6 +576,7 @@ const EMPTY_EXTRACTED_FIELDS: ExtractedAimdFields = {
   fig: [],
   media: [],
   refs: [],
+  workflow: [],
 }
 
 async function ensureRendererStylesLoaded(): Promise<void> {
@@ -611,6 +622,7 @@ function createEmptyExtractedFields(): ExtractedAimdFields {
     fig: [...(EMPTY_EXTRACTED_FIELDS.fig || [])],
     media: [...(EMPTY_EXTRACTED_FIELDS.media || [])],
     refs: [...(EMPTY_EXTRACTED_FIELDS.refs || [])],
+    workflow: [...(EMPTY_EXTRACTED_FIELDS.workflow || [])],
   }
 }
 
@@ -1831,6 +1843,7 @@ export async function renderToHtml(
   }
   await highlightVisibleAssigners(hastTree, options)
   moveReferenceSectionsToEnd(hastTree)
+  renderWorkflowBlocks(hastTree, fields, options)
   const html = toHtml(hastTree, { allowDangerousHtml: true })
 
   return { html, fields }
@@ -1864,6 +1877,7 @@ export async function renderToVue(
   }
   await highlightVisibleAssigners(hastTree, options)
   moveReferenceSectionsToEnd(hastTree)
+  renderWorkflowBlocks(hastTree, fields, options)
   const nodes = renderToVNodes(hastTree, options)
 
   return { nodes, fields }
@@ -1908,6 +1922,7 @@ export function renderToHtmlSync(
     groupStepBodies(hastTree)
   }
   moveReferenceSectionsToEnd(hastTree)
+  renderWorkflowBlocks(hastTree, fields, options)
   const html = toHtml(hastTree, { allowDangerousHtml: true })
 
   return { html, fields }

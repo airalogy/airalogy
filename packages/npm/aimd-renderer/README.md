@@ -30,6 +30,31 @@ console.log(html)
 console.log(fields)
 ```
 
+## Workflow UI
+
+Fenced `workflow` blocks render as structured Workflow UI panels instead of raw YAML. The renderer shows nodes, transitions, workflow-level assigners, transition inputs, target `assign` mappings, retry limits, and optional run-state overlays supplied by the host.
+
+```ts
+const { html } = await renderToHtml(workflowAimd, {
+  workflowRuns: {
+    parameter_optimization: {
+      records: {
+        prep: { data: { var: { sample_id: "S-001" } } },
+      },
+      node_iterations: { prep: 2 },
+      executed_transitions: [{ id: "retry_after_qc_failure" }],
+      transition_outputs: {
+        retry_after_qc_failure: {
+          retry_reason: "QC signal below threshold",
+        },
+      },
+    },
+  },
+})
+```
+
+The renderer does not execute workflow assigners. Hosts can run `@airalogy/airalogy-engine` or another backend runtime, then pass returned `records`, `transition_outputs`, `executed_transitions`, `skipped_transitions`, `attempts`, and `node_iterations` into `workflowRuns[workflow.id]`.
+
 ## Review Marks
 
 Renderer output supports CriticMarkup-style review marks in normal Markdown text:

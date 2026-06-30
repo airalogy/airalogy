@@ -4,7 +4,7 @@
 
 英文 README：[README.md](README.md)
 
-Airalogy 协议执行 sandbox 的 Node.js/TypeScript 包。它在安全的 [BoxLite](https://github.com/boxlite-ai/boxlite) sandbox 中运行协议包的 `parse`、`assign` 和 `validate` 操作。
+Airalogy 协议执行 sandbox 的 Node.js/TypeScript 包。它在安全的 [BoxLite](https://github.com/boxlite-ai/boxlite) sandbox 中运行协议包的 `parse`、`assign` 和 `validate` 操作，也可以执行 AIMD Workflow 中跨 Protocol Record 的 transition assignment。
 
 ## 设计逻辑
 
@@ -59,7 +59,7 @@ const result = await parseProtocol(protocolPath, undefined, {
 ## 使用
 
 ```typescript
-import { parseProtocol, assignVariable, validateVariables } from "@airalogy/airalogy-engine";
+import { parseProtocol, assignVariable, runWorkflow, validateVariables } from "@airalogy/airalogy-engine";
 
 const protocolPath = "/path/to/your/protocol";
 const options = { rootfsPath: "/path/to/airalogy-engine-image" }; // 或 { image: "..." }
@@ -84,7 +84,26 @@ const validateResult = await validateVariables(
   options,
 );
 console.log(validateResult.data);
+
+const workflowResult = await runWorkflow(
+  "/path/to/workflow.aimd",
+  {
+    measurement: { data: { var: { raw_data: [1, 2, 3] } } },
+    literature_review: { data: { var: { summary: "prior context" } } },
+  },
+  options,
+);
+console.log(workflowResult.data?.workflow_data?.path_data.steps);
+console.log(workflowResult.data?.records); // 当前 Record 快照。
 ```
+
+## Workflow Runtime
+
+`runWorkflow` 和 `runWorkflowTransition` 会执行 `workflow.aimd` 中 fenced `workflow` block 定义的 transition。运行时会解析 `transition.inputs`，在 BoxLite sandbox 中调用 Workflow 级 Python assigner，把返回值暴露为 `${transition_id.outputs.key}`，再按 `transition.assign` 写入目标 Protocol 的 Record draft。Workflow 运行的主产物是 `workflow_data.path_data.steps` 这条 Path step 时间线；`records` 是本次运行派生出的当前 Record 快照。它不会持久化 Record，也不会创建 Record version；调用方应把返回的 Record draft 保存到自己的平台或数据库层。
+
+Workflow 引用保留 `${...}`，是为了区分“引用”和“常量字符串”。例如 `var.summary: ${prepare_analysis_inputs.outputs.summary}` 表示复制 transition 输出，而 `var.summary: prepare_analysis_inputs.outputs.summary` 表示写入这个普通字符串。
+
+对于可信的本地 demo 或测试，可以传入 `assignerRuntime: "local"`，让 Workflow 级 Python assigner 在宿主机 Python 进程中运行，而不是进入 BoxLite。对不可信 workflow 包和生产服务，仍应保留默认的 `assignerRuntime: "sandbox"`。
 
 ## API
 
@@ -100,6 +119,18 @@ console.log(validateResult.data);
 
 根据协议模型校验变量值。
 
+### `runWorkflow(workflowPath, records, envVars?, options?)`
+
+按声明顺序执行选中的 Workflow transitions。`workflowPath` 可以是 `workflow.aimd` 文件，也可以是包含 `workflow.aimd` 的目录。返回的 data 包含 `workflow_data.path_data.steps`、`records`、`transition_outputs`、`executed_transitions`、`skipped_transitions`、`attempts` 和 `node_iterations`。
+
+### `runWorkflowTransition(workflowPath, transitionId, records, envVars?, options?)`
+
+执行单个 Workflow transition，并返回更新后的 Record drafts 与 transition metadata。
+
+### `parseWorkflowContent(content)` 和 `isAimdWorkflowReference(value)`
+
+解析单个 Workflow YAML payload，并判断一个值是否是 `${node.section.field}` 形式的 Workflow 引用表达式。
+
 所有函数都返回 `Promise<ProtocolResult>`：
 
 ```typescript
@@ -108,6 +139,7 @@ interface ProtocolResult {
   message?: string;
   data?: Record<string, unknown>;
   output?: string;
+  files?: SandboxFileBridgeOutput[];
 }
 ```
 
@@ -124,6 +156,10 @@ interface ProtocolResult {
 | `cpus` | `number` | `1` | CPU 限制 |
 | `debug` | `boolean` | `false` | 启用 sandbox 内 executor 调试日志 |
 | `logFile` | `string` | `"protocol_debug.log"` | 追加 sandbox 调试日志的宿主机文件 |
+
+### Workflow Options
+
+`runWorkflow` 接受所有 sandbox options，并额外支持 `workflowId`、`transitionIds`、`transitionOutputs`、`nodeIterations`、`maxPasses` 和 `assignerRuntime`。`runWorkflowTransition` 接受所有 sandbox options，并额外支持 `workflowId`、`transitionOutputs`、`nodeIterations` 和 `assignerRuntime`。
 
 ## 开发
 

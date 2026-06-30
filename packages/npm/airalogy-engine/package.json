@@ -16,7 +16,8 @@
   "types": "dist/index.d.ts",
   "files": [
     "dist/",
-    "protocol_executor.py"
+    "protocol_executor.py",
+    "workflow_executor.py"
   ],
   "publishConfig": {
     "access": "public"
@@ -26,7 +27,7 @@
     "lint": "oxlint --ignore-path=.gitignore",
     "lint:fix": "oxlint --fix --ignore-path=.gitignore",
     "type-check": "tsc --noEmit",
-    "copy-executor": "cp ../../pypi/airalogy-engine/src/airalogy_engine/protocol_executor.py ./protocol_executor.py",
+    "copy-executor": "cp ../../pypi/airalogy-engine/src/airalogy_engine/protocol_executor.py ./protocol_executor.py && cp ../../pypi/airalogy-engine/src/airalogy_engine/workflow_executor.py ./workflow_executor.py",
     "test": "vitest run --config vitest.config.ts --pool=threads --maxWorkers=1 --no-file-parallelism",
     "prepublishOnly": "pnpm run build"
   },
@@ -47,6 +48,7 @@
     "vitest": "^4.1.2"
   },
   "dependencies": {
-    "@boxlite-ai/boxlite": "0.8.2"
+    "@boxlite-ai/boxlite": "0.8.2",
+    "yaml": "^2.4.2"
   }
 }

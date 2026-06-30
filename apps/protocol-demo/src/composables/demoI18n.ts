@@ -102,15 +102,20 @@ export interface ProtocolDemoMessages {
       parse: string
       assign: string
       validate: string
+      workflow: string
     }
     labels: {
       assignerTarget: string
+      assignerRuntime: string
       sandboxMode: string
       timeout: string
+      maxPasses: string
+      transitionIds: string
       rootfsPath: string
       image: string
       envVarsJson: string
       currentVars: string
+      workflowRecords: string
       engineResult: string
     }
     modes: {
@@ -118,10 +123,90 @@ export interface ProtocolDemoMessages {
       rootfs: string
       image: string
     }
+    assignerRuntimes: {
+      sandbox: string
+      local: string
+    }
     status: {
       running: string
       complete: string
       selectAssignerTarget: string
+    }
+  }
+  workflow: {
+    title: string
+    emptyDefinition: string
+    metadata: {
+      assigners: string
+      records: string
+    }
+    metrics: {
+      nodes: string
+      transitions: string
+      assigners: string
+      records: string
+      initial: string
+      executed: string
+      updated: string
+    }
+    sections: {
+      nodes: string
+      transitions: string
+      result: string
+      executed: string
+      skipped: string
+      attempts: string
+      nodeRuns: string
+      records: string
+      initialData: string
+      rawResult: string
+      nodeRecorder: string
+      advancedRecords: string
+      pathSteps: string
+    }
+    labels: {
+      run: string
+      when: string
+      assignments: string
+      targets: string
+      nodeRuns: string
+      node: string
+      protocolIndex: string
+      transition: string
+      mode: string
+      pathStatus: string
+    }
+    stepLabels: {
+      recordProtocol: string
+      addNextProtocol: string
+      addInitialValues: string
+      addResearchGoal: string
+      addResearchStrategy: string
+      addPhasedConclusion: string
+      addFinalConclusion: string
+    }
+    status: {
+      latestRun: string
+      ready: string
+      running: string
+      succeeded: string
+      failed: string
+      parseError: string
+      noResult: string
+      pending: string
+      available: string
+      none: string
+      executed: string
+      skipped: string
+      directAssign: string
+      always: string
+      notRun: string
+    }
+    nodeRecorder: {
+      autoSync: string
+      missingSource: string
+      recorderTitle: string
+      recordDataTitle: string
     }
   }
   loading: {
@@ -139,6 +224,10 @@ export interface ProtocolDemoMessages {
     unknownProtocol: string
     unsupportedLocale: string
     missingProtocolDir: string
+    workflowRecordsInvalidJson: string
+    workflowRecordsObject: string
+    workflowTransitionIdsInvalidJson: string
+    workflowTransitionIdsArray: string
   }
 }
 
@@ -166,6 +255,7 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
     sourceKinds: {
       protocol: 'Protocol',
       aimd: 'AIMD case',
+      workflow: 'Workflow',
     },
     categories: {
       productivity: 'Productivity',
@@ -178,6 +268,7 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       photonics: 'Photonics',
       personal: 'Personal',
       research: 'Research',
+      workflow: 'Workflow',
     },
     common: {
       protocols: 'Examples',
@@ -228,15 +319,20 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
         parse: 'Parse Protocol',
         assign: 'Run Assigner',
         validate: 'Validate Vars',
+        workflow: 'Run Workflow',
       },
       labels: {
         assignerTarget: 'Assigner target',
+        assignerRuntime: 'Workflow assigner runtime',
         sandboxMode: 'Sandbox mode',
         timeout: 'Timeout',
+        maxPasses: 'Max passes',
+        transitionIds: 'Transition IDs JSON',
         rootfsPath: 'Rootfs path',
         image: 'Image',
         envVarsJson: 'Env vars JSON',
         currentVars: 'Current vars',
+        workflowRecords: 'Workflow Record snapshot',
         engineResult: 'Engine result',
       },
       modes: {
@@ -244,10 +340,90 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
         rootfs: 'rootfs',
         image: 'image',
       },
+      assignerRuntimes: {
+        sandbox: 'sandbox',
+        local: 'local Python',
+      },
       status: {
         running: '{action} running',
         complete: '{action} complete',
         selectAssignerTarget: 'Select an assigner target',
+      },
+    },
+    workflow: {
+      title: 'Workflow run',
+      emptyDefinition: 'No workflow definition was parsed from the current workflow.aimd source.',
+      metadata: {
+        assigners: 'Workflow assigners',
+        records: 'Initial records',
+      },
+      metrics: {
+        nodes: 'Nodes',
+        transitions: 'Transitions',
+        assigners: 'Assigners',
+        records: 'Records',
+        initial: 'initial',
+        executed: 'executed',
+        updated: 'updated',
+      },
+      sections: {
+        nodes: 'Protocol nodes',
+        transitions: 'Transitions',
+        result: 'Run result',
+        executed: 'Executed transitions',
+        skipped: 'Skipped transitions',
+        attempts: 'Assigner attempts',
+        nodeRuns: 'Node runs',
+        records: 'Current Record snapshot',
+        initialData: 'Editable input',
+        rawResult: 'Raw engine result',
+        nodeRecorder: 'Protocol node recorder',
+        advancedRecords: 'Advanced Record snapshot JSON',
+        pathSteps: 'Path steps',
+      },
+      labels: {
+        run: 'Run',
+        when: 'When',
+        assignments: 'Assign',
+        targets: 'targets',
+        nodeRuns: 'runs',
+        node: 'Node',
+        protocolIndex: 'Protocol index',
+        transition: 'Transition',
+        mode: 'Mode',
+        pathStatus: 'Path status',
+      },
+      stepLabels: {
+        recordProtocol: 'Record protocol',
+        addNextProtocol: 'Select next protocol',
+        addInitialValues: 'Prepare initial values',
+        addResearchGoal: 'Add research goal',
+        addResearchStrategy: 'Add research strategy',
+        addPhasedConclusion: 'Add phased conclusion',
+        addFinalConclusion: 'Add final conclusion',
+      },
+      status: {
+        latestRun: 'Status',
+        ready: 'Ready to run the workflow with the current records.',
+        running: 'Workflow is running.',
+        succeeded: 'Completed: {executed} executed, {skipped} skipped.',
+        failed: 'Workflow failed.',
+        parseError: 'Workflow parse error',
+        noResult: 'Run the workflow to see Path steps, executed transitions, skipped branches, assigner outputs, and the current Record snapshot.',
+        pending: 'not run',
+        available: 'available',
+        none: 'none',
+        executed: 'executed',
+        skipped: 'skipped',
+        directAssign: 'direct assign',
+        always: 'always',
+        notRun: 'not run',
+      },
+      nodeRecorder: {
+        autoSync: 'Edits sync into the workflow Record snapshot automatically.',
+        missingSource: 'Protocol source not found',
+        recorderTitle: 'Node record',
+        recordDataTitle: 'Node Record snapshot JSON',
       },
     },
     loading: {
@@ -265,6 +441,10 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       unknownProtocol: 'Unknown protocol example',
       unsupportedLocale: 'This protocol example does not provide the selected locale',
       missingProtocolDir: 'This protocol example has no protocol directory for the selected locale',
+      workflowRecordsInvalidJson: 'Workflow records JSON is invalid',
+      workflowRecordsObject: 'Workflow records must be a JSON object',
+      workflowTransitionIdsInvalidJson: 'Transition IDs JSON is invalid',
+      workflowTransitionIdsArray: 'Transition IDs must be a JSON array',
     },
   },
   'zh-CN': {
@@ -290,6 +470,7 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
     sourceKinds: {
       protocol: 'Protocol',
       aimd: 'AIMD 案例',
+      workflow: 'Workflow',
     },
     categories: {
       productivity: '生产力',
@@ -302,6 +483,7 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       photonics: '光子学',
       personal: '个人',
       research: '研究',
+      workflow: 'Workflow',
     },
     common: {
       protocols: '示例',
@@ -352,15 +534,20 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
         parse: '解析协议',
         assign: '运行赋值器',
         validate: '校验变量',
+        workflow: '运行 Workflow',
       },
       labels: {
         assignerTarget: '赋值器目标',
+        assignerRuntime: 'Workflow 赋值器运行方式',
         sandboxMode: 'Sandbox 模式',
         timeout: '超时时间',
+        maxPasses: '最大轮次',
+        transitionIds: 'Transition IDs JSON',
         rootfsPath: 'Rootfs 路径',
         image: '镜像',
         envVarsJson: '环境变量 JSON',
         currentVars: '当前变量',
+        workflowRecords: 'Workflow Record 快照',
         engineResult: '引擎结果',
       },
       modes: {
@@ -368,10 +555,90 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
         rootfs: 'rootfs',
         image: '镜像',
       },
+      assignerRuntimes: {
+        sandbox: 'sandbox',
+        local: '本机 Python',
+      },
       status: {
         running: '{action}运行中',
         complete: '{action}完成',
         selectAssignerTarget: '请选择赋值器目标',
+      },
+    },
+    workflow: {
+      title: 'Workflow 运行',
+      emptyDefinition: '当前 workflow.aimd 源码中没有解析到 Workflow 定义。',
+      metadata: {
+        assigners: 'Workflow 赋值器',
+        records: '初始 Records',
+      },
+      metrics: {
+        nodes: '节点',
+        transitions: '转换',
+        assigners: '赋值器',
+        records: 'Records',
+        initial: '初始',
+        executed: '已执行',
+        updated: '已更新',
+      },
+      sections: {
+        nodes: 'Protocol 节点',
+        transitions: 'Transitions',
+        result: '运行结果',
+        executed: '已执行转换',
+        skipped: '已跳过转换',
+        attempts: '赋值器调用',
+        nodeRuns: '节点运行次数',
+        records: '当前 Record 快照',
+        initialData: '可编辑输入',
+        rawResult: '原始引擎结果',
+        nodeRecorder: 'Protocol 节点 Recorder',
+        advancedRecords: '高级 Record 快照 JSON',
+        pathSteps: 'Path 步骤',
+      },
+      labels: {
+        run: '运行',
+        when: '条件',
+        assignments: '赋值',
+        targets: '目标',
+        nodeRuns: '次',
+        node: '节点',
+        protocolIndex: 'Protocol 索引',
+        transition: '转换',
+        mode: '模式',
+        pathStatus: 'Path 状态',
+      },
+      stepLabels: {
+        recordProtocol: '记录 Protocol',
+        addNextProtocol: '选择下一个 Protocol',
+        addInitialValues: '生成初始字段值',
+        addResearchGoal: '添加研究目的',
+        addResearchStrategy: '添加研究策略',
+        addPhasedConclusion: '添加阶段结论',
+        addFinalConclusion: '添加最终结论',
+      },
+      status: {
+        latestRun: '状态',
+        ready: '可使用当前 Records 运行 Workflow。',
+        running: 'Workflow 正在运行。',
+        succeeded: '完成：{executed} 条已执行，{skipped} 条已跳过。',
+        failed: 'Workflow 运行失败。',
+        parseError: 'Workflow 解析错误',
+        noResult: '运行 Workflow 后，这里会显示 Path 步骤、执行的转换、跳过的分支、赋值器输出和当前 Record 快照。',
+        pending: '未运行',
+        available: '可查看',
+        none: '无',
+        executed: '已执行',
+        skipped: '已跳过',
+        directAssign: '直接赋值',
+        always: '总是执行',
+        notRun: '未运行',
+      },
+      nodeRecorder: {
+        autoSync: '在此编辑会自动同步到 Workflow Record 快照。',
+        missingSource: '未找到 Protocol 源码',
+        recorderTitle: '节点记录',
+        recordDataTitle: '节点 Record 快照 JSON',
       },
     },
     loading: {
@@ -389,6 +656,10 @@ const PROTOCOL_DEMO_MESSAGES: Record<DemoLocale, ProtocolDemoMessages> = {
       unknownProtocol: '未知协议示例',
       unsupportedLocale: '该协议示例不支持所选语言',
       missingProtocolDir: '该协议示例没有所选语言的协议目录',
+      workflowRecordsInvalidJson: 'Workflow records JSON 格式不正确',
+      workflowRecordsObject: 'Workflow records 必须是 JSON 对象',
+      workflowTransitionIdsInvalidJson: 'Transition IDs JSON 格式不正确',
+      workflowTransitionIdsArray: 'Transition IDs 必须是 JSON 数组',
     },
   },
 }

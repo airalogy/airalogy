@@ -59,7 +59,13 @@ export type {
   ProcessorOptions,
 } from '@airalogy/aimd-core/types'
 
-export type { AimdAssignerVisibility, AimdRendererOptions, RenderResult } from '../common/processor'
+export type {
+  AimdAssignerVisibility,
+  AimdRendererOptions,
+  AimdWorkflowRenderOptions,
+  AimdWorkflowRunState,
+  RenderResult,
+} from '../common/processor'
 export type {
   AimdAssetUrlResolver,
   AimdAssetUrlResolveContext,

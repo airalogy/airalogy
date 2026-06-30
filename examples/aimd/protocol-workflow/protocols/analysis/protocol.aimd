@@ -1,0 +1,21 @@
+# QC Analysis
+
+Use this protocol node to review measurement quality and decide whether the workflow should finish or retry preparation.
+
+## Measurement Context
+
+Raw data: {{var|raw_data: json, title = "Raw measurement data"}}
+
+Raw data summary: {{var|raw_data_summary: str, title = "Raw data summary"}}
+
+Measurement quality: {{var|measurement_quality: str = "review", title = "Measurement quality"}}
+
+## QC Decision
+
+Analysis summary: {{var|summary: AiralogyMarkdown = "Initial measurement shows baseline drift and broad peak width.", title = "Analysis summary"}}
+
+Failed metrics: {{var|failed_metrics: list[str], title = "Failed metrics", examples = [["baseline_noise", "peak_width"]]}}
+
+{{check|pass_qc}} Confirm whether the analysis passed QC. The workflow uses this check to choose report or retry.
+
+{{step|review_qc, check=True}} Review failed metrics and decide whether the workflow should proceed to reporting or retry preparation.

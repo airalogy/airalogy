@@ -30,6 +30,31 @@ console.log(html)
 console.log(fields)
 ```
 
+## Workflow UI
+
+fenced `workflow` 代码块会渲染为结构化 Workflow UI 面板，而不是显示原始 YAML。renderer 会展示 nodes、transitions、workflow 级 assigners、transition inputs、目标 `assign` 映射、重试限制，并可叠加宿主传入的运行状态。
+
+```ts
+const { html } = await renderToHtml(workflowAimd, {
+  workflowRuns: {
+    parameter_optimization: {
+      records: {
+        prep: { data: { var: { sample_id: "S-001" } } },
+      },
+      node_iterations: { prep: 2 },
+      executed_transitions: [{ id: "retry_after_qc_failure" }],
+      transition_outputs: {
+        retry_after_qc_failure: {
+          retry_reason: "QC signal below threshold",
+        },
+      },
+    },
+  },
+})
+```
+
+renderer 不执行 workflow assigner。宿主可以调用 `@airalogy/airalogy-engine` 或其他后端 runtime，再把返回的 `records`、`transition_outputs`、`executed_transitions`、`skipped_transitions`、`attempts` 和 `node_iterations` 传给 `workflowRuns[workflow.id]`。
+
 ## 审阅标记
 
 Renderer 输出支持普通 Markdown 文本中的 CriticMarkup 风格审阅标记：

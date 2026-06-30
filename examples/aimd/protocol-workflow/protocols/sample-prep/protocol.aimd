@@ -1,0 +1,19 @@
+# Sample Preparation
+
+Use this protocol node to prepare or adjust the sample before measurement.
+
+## Inputs
+
+Sample ID: {{var|sample_id: str = "SAMPLE-001", title = "Sample ID", description = "Stable identifier passed into the measurement protocol."}}
+
+Target temperature (C): {{var|target_temperature_c: float = 22.0, title = "Target temperature", description = "Preparation temperature selected for this workflow iteration."}}
+
+Target concentration (M): {{var|target_concentration_m: float = 0.04, title = "Target concentration", description = "Target molar concentration selected for this workflow iteration."}}
+
+Retry note: {{var|retry_note: AiralogyMarkdown, title = "Retry note", description = "Reason and context for a repeated preparation run."}}
+
+## Procedure
+
+{{step|prepare_sample, check=True}} Prepare the sample using the current temperature and concentration settings.
+
+{{check|prep_ready}} Confirm that the prepared sample is labeled and ready for measurement.

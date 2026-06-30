@@ -6,7 +6,10 @@ import { fileURLToPath } from "node:url";
 
 import {
   assignVariable,
+  parseWorkflowContent,
   parseProtocol,
+  runWorkflow,
+  runWorkflowTransition,
   type SandboxOptions,
   validateVariables,
 } from "../src/index.js";
@@ -14,13 +17,15 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MONOREPO_ROOT = path.resolve(__dirname, "../../../..");
 const EXAMPLE_PROTOCOL = path.join(MONOREPO_ROOT, "examples/airalogy-engine");
+const EXAMPLE_WORKFLOW = path.join(MONOREPO_ROOT, "examples/aimd/protocol-workflow");
 const DEFAULT_ROOTFS_PATH = path.join(
   MONOREPO_ROOT,
   "packages/runtime/airalogy-engine-image/airalogy-engine-image",
 );
+const SANDBOX_TEST_MODE = process.env.AIRALOGY_ENGINE_RUN_SANDBOX_TESTS;
 const RUN_SANDBOX_TESTS =
-  process.env.AIRALOGY_ENGINE_RUN_SANDBOX_TESTS === "1" ||
-  fs.existsSync(path.join(DEFAULT_ROOTFS_PATH, "oci-layout"));
+  SANDBOX_TEST_MODE === "1" ||
+  (SANDBOX_TEST_MODE !== "0" && fs.existsSync(path.join(DEFAULT_ROOTFS_PATH, "oci-layout")));
 const itSandbox = RUN_SANDBOX_TESTS ? it : it.skip;
 const describeSandbox = RUN_SANDBOX_TESTS ? describe : describe.skip;
 const DEFAULT_IMAGE = "numbcoder/airalogy-engine:0.1";
@@ -193,6 +198,23 @@ function writeFileBridgeProtocol(protocolPath: string): void {
   );
 }
 
+function writeWorkflowProject(workflowBody: string, assignerCode = ""): string {
+  const workflowRoot = fs.mkdtempSync(path.join(os.tmpdir(), "airalogy-workflow-"));
+  fs.writeFileSync(
+    path.join(workflowRoot, "workflow.aimd"),
+    `# Test Workflow\n\n\`\`\`workflow\n${workflowBody.trim()}\n\`\`\`\n`,
+    "utf8",
+  );
+
+  if (assignerCode.length > 0) {
+    const assignerDir = path.join(workflowRoot, "assigners");
+    fs.mkdirSync(assignerDir, { recursive: true });
+    fs.writeFileSync(path.join(assignerDir, "workflow_assigners.py"), assignerCode, "utf8");
+  }
+
+  return workflowRoot;
+}
+
 beforeAll(() => {
   envProtocolPath = fs.mkdtempSync(path.join(os.tmpdir(), "airalogy-env-protocol-"));
   writeEnvProtocol(envProtocolPath);
@@ -285,6 +307,323 @@ describe("parseProtocol", () => {
       parseProtocol(EXAMPLE_PROTOCOL, { rootfsPath: "/tmp/nonexistent_rootfs_dir_12345" }),
     ).rejects.toThrow("rootfs_path must be an OCI layout directory");
   });
+});
+
+describe("workflow parsing", () => {
+  it("normalizes single-target assign syntax", () => {
+    const workflow = parseWorkflowContent(`
+version: airalogy.workflow.v1
+id: copy_workflow
+nodes:
+  - id: measurement
+    protocol: ./measurement/protocol.aimd
+  - id: analysis
+    protocol: ./analysis/protocol.aimd
+transitions:
+  - id: copy_measurement
+    from: measurement
+    to: analysis
+    assign:
+      var.raw_data: \${measurement.var.raw_data}
+`);
+
+    expect(workflow.transitions[0]?.assign).toEqual({
+      analysis: {
+        "var.raw_data": "${measurement.var.raw_data}",
+      },
+    });
+  });
+});
+
+describe("runWorkflowTransition", () => {
+  it("copies source Record fields into target Record drafts without an assigner", async () => {
+    const workflowRoot = writeWorkflowProject(`
+version: airalogy.workflow.v1
+id: copy_workflow
+nodes:
+  - id: measurement
+    protocol: ./measurement/protocol.aimd
+  - id: analysis
+    protocol: ./analysis/protocol.aimd
+transitions:
+  - id: copy_measurement
+    from: measurement
+    to: analysis
+    assign:
+      analysis:
+        var.raw_data: \${measurement.var.raw_data}
+        check.pass_qc.checked: true
+        check.pass_qc.annotation: \${measurement.var.note}
+`);
+
+    try {
+      const result = await runWorkflowTransition(
+        workflowRoot,
+        "copy_measurement",
+        {
+          measurement: {
+            record_id: "measurement-record-001",
+            version: 2,
+            data: {
+              var: {
+                raw_data: [1, 2, 3],
+                note: "ready",
+              },
+            },
+          },
+        },
+      );
+
+      expect(result.success).toBe(true);
+      const records = result.data?.records as Record<string, Record<string, unknown>>;
+      const analysis = records.analysis as Record<string, Record<string, unknown>>;
+      const data = analysis.data as Record<string, Record<string, unknown>>;
+      expect(data.var.raw_data).toEqual([1, 2, 3]);
+      expect((data.check.pass_qc as Record<string, unknown>).checked).toBe(true);
+      expect((data.check.pass_qc as Record<string, unknown>).annotation).toBe("ready");
+      expect(result.data?.node_iterations).toEqual({ analysis: 1 });
+      const workflowData = result.data?.workflow_data as Record<string, unknown>;
+      const pathData = workflowData.path_data as Record<string, unknown>;
+      const pathSteps = pathData.steps as Array<Record<string, unknown>>;
+      expect(pathData.path_status).toBe("waiting_for_record");
+      expect(pathSteps.map((step) => step.step)).toEqual([
+        "record_protocol",
+        "add_next_protocol",
+        "add_initial_values_for_fields_in_next_protocol",
+      ]);
+      expect(pathSteps.map((step) => step.path_index)).toEqual([1, 2, 2]);
+      expect((pathSteps[0]?.data as Record<string, unknown>).node_id).toBe("measurement");
+      expect((pathSteps[0]?.data as Record<string, unknown>).record_id).toBe("measurement-record-001");
+      expect((pathSteps[0]?.data as Record<string, unknown>).record_version).toBe(2);
+      expect((pathSteps[1]?.data as Record<string, unknown>).node_id).toBe("analysis");
+      expect((pathSteps[2]?.data as Record<string, unknown>).values).toEqual({
+        "var.raw_data": [1, 2, 3],
+        "check.pass_qc.checked": true,
+        "check.pass_qc.annotation": "ready",
+      });
+    } finally {
+      fs.rmSync(workflowRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("skips a transition when its condition is false", async () => {
+    const workflowRoot = writeWorkflowProject(`
+version: airalogy.workflow.v1
+id: branch_workflow
+nodes:
+  - id: analysis
+    protocol: ./analysis/protocol.aimd
+  - id: report
+    protocol: ./report/protocol.aimd
+transitions:
+  - id: analysis_to_report
+    from: analysis
+    to: report
+    when: \${analysis.check.pass_qc.checked} == true
+    assign:
+      report:
+        var.summary: \${analysis.var.summary}
+`);
+
+    try {
+      const result = await runWorkflowTransition(
+        workflowRoot,
+        "analysis_to_report",
+        {
+          analysis: {
+            data: {
+              check: {
+                pass_qc: {
+                  checked: false,
+                },
+              },
+              var: {
+                summary: "needs retry",
+              },
+            },
+          },
+        },
+      );
+
+      expect(result.success).toBe(true);
+      const records = result.data?.records as Record<string, unknown> | undefined;
+      expect(records?.report).toBeUndefined();
+      expect(result.data?.skipped_transitions).toEqual([{ id: "analysis_to_report", reason: "when_false" }]);
+      expect(result.data?.executed_transitions).toEqual([]);
+    } finally {
+      fs.rmSync(workflowRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("runWorkflow local assigner runtime", () => {
+  it("runs the packaged protocol workflow example without a sandbox", async () => {
+    const records = JSON.parse(
+      fs.readFileSync(path.join(EXAMPLE_WORKFLOW, "records.initial.json"), "utf8"),
+    ) as Record<string, unknown>;
+    const result = await runWorkflow(
+      EXAMPLE_WORKFLOW,
+      records,
+      { assignerRuntime: "local" },
+    );
+
+    expect(result.success).toBe(true);
+    const recordsOut = result.data?.records as Record<string, Record<string, unknown>>;
+    const measurement = recordsOut.measurement as Record<string, Record<string, unknown>>;
+    const analysis = recordsOut.analysis as Record<string, Record<string, unknown>>;
+    const prep = recordsOut.prep as Record<string, Record<string, unknown>>;
+    const measurementData = measurement.data as Record<string, Record<string, unknown>>;
+    const analysisData = analysis.data as Record<string, Record<string, unknown>>;
+    const prepData = prep.data as Record<string, Record<string, unknown>>;
+
+    expect(measurementData.var.sample_id).toBe("SAMPLE-001");
+    expect(analysisData.var.raw_data_summary).toBe("3 points captured by uv-vis-alpha.");
+    expect(analysisData.var.measurement_quality).toBe("review");
+    expect(prepData.var.target_temperature_c).toBe(24);
+    expect(prepData.var.target_concentration_m).toBe(0.05);
+    expect(prepData.var.retry_note).toBe("QC failed for: baseline_noise, peak_width");
+    const executedTransitions = result.data?.executed_transitions as Array<Record<string, unknown>>;
+    expect(executedTransitions.map((transition) => transition.id)).toEqual([
+      "pass_sample_to_measurement",
+      "summarize_measurement_for_analysis",
+      "retry_after_qc_failure",
+    ]);
+    expect(executedTransitions[0]).toMatchObject({
+      from: ["prep"],
+      to: ["measurement"],
+    });
+    expect(executedTransitions[1]).toMatchObject({
+      from: ["measurement"],
+      to: ["analysis"],
+      run: "summarize_measurement",
+    });
+    expect(executedTransitions[2]).toMatchObject({
+      from: ["analysis"],
+      to: ["prep"],
+      run: "optimize_parameters",
+    });
+    expect(result.data?.skipped_transitions).toEqual([
+      { id: "finish_when_qc_passes", reason: "when_false" },
+    ]);
+    const workflowData = result.data?.workflow_data as Record<string, unknown>;
+    const pathData = workflowData.path_data as Record<string, unknown>;
+    const pathSteps = pathData.steps as Array<Record<string, unknown>>;
+    expect(pathData.path_status).toBe("waiting_for_record");
+    expect(pathSteps.map((step) => step.path_index)).toEqual([1, 2, 3, 4, 4, 5, 5, 6, 6]);
+    expect((workflowData.protocols_info as unknown[]).length).toBe(4);
+    expect(pathSteps.filter((step) => step.step === "record_protocol")
+      .map((step) => (step.data as Record<string, unknown>).node_id)).toEqual([
+      "prep",
+      "measurement",
+      "analysis",
+    ]);
+    expect(pathSteps.filter((step) => step.step === "add_next_protocol")
+      .map((step) => (step.data as Record<string, unknown>).node_id)).toEqual([
+      "measurement",
+      "analysis",
+      "prep",
+    ]);
+    const prepInitialValues = pathSteps.find((step) =>
+      step.step === "add_initial_values_for_fields_in_next_protocol" &&
+      (step.data as Record<string, unknown>).node_id === "prep")?.data as Record<string, unknown>;
+    expect(prepInitialValues.values).toEqual({
+      "var.target_temperature_c": 24,
+      "var.target_concentration_m": 0.05,
+      "var.retry_note": "QC failed for: baseline_noise, peak_width",
+    });
+  });
+});
+
+describeSandbox("runWorkflow", () => {
+  it("runs a sandboxed workflow assigner and assigns outputs by transition id", async () => {
+    const workflowRoot = writeWorkflowProject(
+      `
+version: airalogy.workflow.v1
+id: analysis_workflow
+nodes:
+  - id: measurement
+    protocol: ./measurement/protocol.aimd
+  - id: literature_review
+    protocol: ./literature-review/protocol.aimd
+  - id: analysis
+    protocol: ./analysis/protocol.aimd
+assigners:
+  - id: build_analysis_inputs
+    runtime: python
+    entrypoint: ./assigners/workflow_assigners.py:build_analysis_inputs
+    outputs:
+      raw_data_summary: str
+      background_summary: str
+transitions:
+  - id: prepare_analysis_inputs
+    from:
+      - measurement
+      - literature_review
+    to:
+      - analysis
+    run: build_analysis_inputs
+    inputs:
+      raw_data: \${measurement.var.raw_data}
+      background_summary: \${literature_review.var.summary}
+    assign:
+      analysis:
+        var.raw_data_summary: \${prepare_analysis_inputs.outputs.raw_data_summary}
+        var.background_summary: \${prepare_analysis_inputs.outputs.background_summary}
+`,
+      [
+        "def build_analysis_inputs(raw_data, background_summary):",
+        "    return {",
+        "        'raw_data_summary': f'n={len(raw_data)}',",
+        "        'background_summary': background_summary.upper(),",
+        "    }",
+        "",
+      ].join("\n"),
+    );
+
+    try {
+      const result = await runWorkflow(
+        workflowRoot,
+        {
+          measurement: {
+            data: {
+              var: {
+                raw_data: [10, 20, 30],
+              },
+            },
+          },
+          literature_review: {
+            data: {
+              var: {
+                summary: "prior context",
+              },
+            },
+          },
+        },
+        sandboxKwargs(),
+      );
+
+      expect(result.success).toBe(true);
+      const records = result.data?.records as Record<string, Record<string, unknown>>;
+      const analysis = records.analysis as Record<string, Record<string, unknown>>;
+      const data = analysis.data as Record<string, Record<string, unknown>>;
+      expect(data.var.raw_data_summary).toBe("n=3");
+      expect(data.var.background_summary).toBe("PRIOR CONTEXT");
+      expect(result.data?.transition_outputs).toEqual({
+        prepare_analysis_inputs: {
+          raw_data_summary: "n=3",
+          background_summary: "PRIOR CONTEXT",
+        },
+      });
+      expect(result.data?.executed_transitions).toEqual([{
+        id: "prepare_analysis_inputs",
+        from: ["measurement", "literature_review"],
+        to: ["analysis"],
+        run: "build_analysis_inputs",
+      }]);
+    } finally {
+      fs.rmSync(workflowRoot, { recursive: true, force: true });
+    }
+  }, 120_000);
 });
 
 describeSandbox("assignVariable", () => {
@@ -472,7 +811,8 @@ describeSandbox("validateVariables", () => {
     );
 
     expect(invalidResult.success).toBe(true);
-    expect((invalidResult.data?.errors as unknown[]).length).toBeGreaterThan(0);
+    const invalidErrors = invalidResult.data?.errors as unknown[] | undefined;
+    expect(invalidErrors?.length ?? 0).toBeGreaterThan(0);
   }, 120_000);
 });
 

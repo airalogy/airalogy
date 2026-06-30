@@ -1,0 +1,51 @@
+{
+  "prep": {
+    "data": {
+      "var": {
+        "sample_id": "SAMPLE-001",
+        "target_temperature_c": 22.0,
+        "target_concentration_m": 0.04
+      }
+    }
+  },
+  "measurement": {
+    "data": {
+      "var": {
+        "raw_data": {
+          "instrument": "uv-vis-alpha",
+          "points": [
+            {
+              "time_s": 0,
+              "signal": 0.11
+            },
+            {
+              "time_s": 30,
+              "signal": 0.43
+            },
+            {
+              "time_s": 60,
+              "signal": 0.76
+            }
+          ]
+        }
+      }
+    }
+  },
+  "analysis": {
+    "data": {
+      "var": {
+        "summary": "Initial measurement shows baseline drift and broad peak width.",
+        "failed_metrics": [
+          "baseline_noise",
+          "peak_width"
+        ]
+      },
+      "check": {
+        "pass_qc": {
+          "checked": false,
+          "annotation": "Baseline noise remains above threshold."
+        }
+      }
+    }
+  }
+}

@@ -100,6 +100,8 @@ export type {
   AimdHtmlNodeRenderer,
   AimdHtmlRendererContext,
   CustomElementAimdRendererOptions,
+  AimdWorkflowRenderOptions,
+  AimdWorkflowRunState,
   AimdRendererOptions,
   RenderResult,
 } from './common/processor'

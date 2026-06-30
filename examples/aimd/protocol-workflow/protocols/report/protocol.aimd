@@ -1,0 +1,17 @@
+# Final Report
+
+Use this protocol node to prepare the final report after QC passes.
+
+## Inputs
+
+Final summary: {{var|final_summary: AiralogyMarkdown, title = "Final summary"}}
+
+QC passed: {{var|qc_pass: bool = false, title = "QC passed"}}
+
+Reviewer: {{var|reviewer: UserName, title = "Reviewer"}}
+
+## Review
+
+{{step|draft_report, check=True}} Draft the report from the prepared sample, measurement output, and QC analysis.
+
+{{check|report_ready}} Confirm that the report is ready for release.
