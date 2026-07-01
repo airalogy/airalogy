@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.20.0
+
+### Minor Changes
+
+- c353d3d: Add the built-in `BloodType` protocol field type for common ABO and Rh blood group values.
+
+  Generate AIMD built-in type metadata from the Python `airalogy.types` registry, and let `@airalogy/aimd-core` and `@airalogy/aimd-recorder` use official enum metadata so named built-in types such as `BloodType` render as recorder select fields without duplicating enum definitions in npm packages.
+
+### Patch Changes
+
+- 682ddf5: Add an optional `initialSourceCollapsed` prop to `AimdRecorderEditor` so embedded recorder surfaces can open directly on the record form while still allowing users to expand the source panel.
+- Updated dependencies [19350d6]
+- Updated dependencies [c353d3d]
+- Updated dependencies [682ddf5]
+  - @airalogy/aimd-core@2.12.0
+  - @airalogy/aimd-renderer@2.9.1
+
 ## 1.19.2
 
 ### Patch Changes

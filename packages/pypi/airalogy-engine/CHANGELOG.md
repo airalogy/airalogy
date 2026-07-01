@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.6
+
+### Patch Changes
+
+- c13e771: Add `AiralogyWorkflowEngine` for executing AIMD workflow transition assignments, including workflow-level Python assigners, transition output namespaces, target Record drafts, conditions, and iteration limits.
+
 ## 0.0.4
 
 ### Patch Changes

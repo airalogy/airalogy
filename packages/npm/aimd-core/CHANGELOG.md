@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.12.0
+
+### Minor Changes
+
+- c353d3d: Add the built-in `BloodType` protocol field type for common ABO and Rh blood group values.
+
+  Generate AIMD built-in type metadata from the Python `airalogy.types` registry, and let `@airalogy/aimd-core` and `@airalogy/aimd-recorder` use official enum metadata so named built-in types such as `BloodType` render as recorder select fields without duplicating enum definitions in npm packages.
+
+### Patch Changes
+
+- 19350d6: Add fenced `workflow` block parsing for `workflow.aimd` documents, including typed workflow nodes, transitions, Python assigner declarations, permission metadata, retry limits, and extracted field metadata.
+
 ## 2.11.0
 
 ### Minor Changes
