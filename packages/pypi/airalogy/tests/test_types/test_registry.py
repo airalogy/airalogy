@@ -22,6 +22,12 @@ def test_builtin_type_registry_contains_official_types():
     assert code_descriptor.storage_kind == "scalar"
     assert code_descriptor.ui_kind == "code"
 
+    blood_type_descriptor = registry.get("BloodType")
+    assert blood_type_descriptor is not None
+    assert blood_type_descriptor.import_from == "airalogy.types"
+    assert blood_type_descriptor.storage_kind == "scalar"
+    assert blood_type_descriptor.ui_kind is None
+
 
 def test_register_and_unregister_custom_type_descriptor():
     descriptor = AiralogyTypeDescriptor(

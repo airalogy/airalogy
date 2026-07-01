@@ -2,6 +2,9 @@
 Comprehensive tests for model generator.
 """
 
+import pytest
+from pydantic import ValidationError
+
 from airalogy.markdown import generate_model
 
 
@@ -154,6 +157,7 @@ options:
 {{var|user_name: UserName}}
 {{var|current_time: CurrentTime}}
 {{var|avatar: FileIdJPG}}
+{{var|blood_type: BloodType | None}}
 {{var|gender: ChineseGender}}
 {{var|plasmid: DNASequence}}
 {{var|plain_code: CodeStr}}
@@ -165,6 +169,7 @@ options:
         assert "UserName" in code
         assert "CurrentTime" in code
         assert "FileIdJPG" in code
+        assert "BloodType" in code
         assert "DNASequence" in code
         assert "CodeStr" in code
         # Should not use import *
@@ -172,6 +177,7 @@ options:
         assert "user_name: UserName" in code
         assert "current_time: CurrentTime" in code
         assert "avatar: FileIdJPG" in code
+        assert "blood_type: BloodType | None" in code
         assert "gender: ChineseGender" in code
         assert "plasmid: DNASequence" in code
         assert "plain_code: CodeStr" in code
@@ -182,6 +188,21 @@ options:
         plain_code_schema = schema["properties"]["plain_code"]
         assert plain_code_schema["airalogy_type"] == "CodeStr"
         assert plain_code_schema["language"] == "plaintext"
+
+    def test_generate_model_validates_blood_type(self):
+        code = generate_model("{{var|blood_type: BloodType | None}}")
+
+        assert "from airalogy.types import BloodType" in code
+        assert "blood_type: BloodType | None" in code
+
+        namespace = {}
+        exec(code, namespace)
+        var_model = namespace["VarModel"]
+        assert var_model(blood_type="AB+").blood_type == "AB+"
+        assert var_model(blood_type="Rh+").blood_type == "Rh+"
+        assert var_model(blood_type=None).blood_type is None
+        with pytest.raises(ValidationError):
+            var_model(blood_type="unknown")
 
     def test_generate_simple_var_table(self):
         """Test generating model from simple var table."""

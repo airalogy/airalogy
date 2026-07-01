@@ -311,6 +311,27 @@ class VarModel(BaseModel):
 
 `DNASequence` 是唯一支持的公开类型名。在 AIMD、Python 模型和面向用户的文档中都应统一使用 `DNASequence`。
 
+## 血型枚举类型
+
+`BloodType` 是用于常见 ABO 与 Rh 血型取值的内置枚举类型。
+
+```py
+from airalogy.types import BloodType
+from pydantic import BaseModel
+
+
+class SampleModel(BaseModel):
+    blood_type: BloodType | None = None
+```
+
+纯 ABO 取值包括 `"A"`、`"B"`、`"AB"` 和 `"O"`。`"A+"`、`"A-"` 这类组合值表示同时记录了 ABO 血型和 Rh 阳性或 Rh 阴性状态。仅记录 Rh 因子时，也可以使用 `"Rh+"` 和 `"Rh-"`。
+
+在 AIMD 中直接使用公开类型名即可：
+
+```md
+血型：{{var|blood_type: BloodType | None}}
+```
+
 ## 中国常用枚举类
 
 `airalogy.types.chinese` 中内置了若干个在中国业务场景中常用的枚举字段，可用于快速构建人口统计信息相关的数据模型。

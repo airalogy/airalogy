@@ -309,6 +309,27 @@ Use `DNASequence` when the sequence itself should be editable in the UI. Use `Fi
 
 `DNASequence` is the only supported public type name. Use `DNASequence` consistently in AIMD, Python models, and UI-facing documentation.
 
+## Blood Type
+
+`BloodType` is a built-in enum type for common ABO and Rh blood group values.
+
+```python
+from airalogy.types import BloodType
+from pydantic import BaseModel
+
+
+class SampleModel(BaseModel):
+    blood_type: BloodType | None = None
+```
+
+The plain ABO values are `"A"`, `"B"`, `"AB"`, and `"O"`. Combined values such as `"A+"` or `"A-"` mean the ABO group is known together with Rh positive or Rh negative status. Standalone `"Rh+"` and `"Rh-"` are also accepted when only the Rh factor is recorded.
+
+In AIMD, use the public type name directly:
+
+```md
+Blood type: {{var|blood_type: BloodType | None}}
+```
+
 ## Chinese Enum Types
 
 `airalogy.types.chinese` bundles several enumerations that match common demographic fields in mainland China scenarios.
