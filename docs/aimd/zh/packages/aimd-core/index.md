@@ -156,6 +156,10 @@ import {
 - `validateVarKwargs(def)` 会在支持的 kwargs 被用于不兼容的 var 定义时返回 warning 文本，包括 `gt`、`ge`、`lt`、`le`、`multiple_of` 这类 Pydantic 风格数值约束被用在非数值类型上。
 - `validateVarDefinition(def)` 会合并默认值校验与 kwargs 校验，并递归检查嵌套 `subvars`。
 
+## 内置类型元数据
+
+`@airalogy/aimd-core/utils` 导出 `getAimdBuiltInTypeMetadata()` 和 `getAimdBuiltInTypeEnumValues()`。这些元数据由 Python `airalogy.types` 注册表生成，因此 `BloodType` 这类官方命名枚举类型可以在浏览器工具中复用同一组取值，不需要在 npm 代码里重新维护 Python 类型定义。
+
 ## 继续阅读
 
 - 解析节点与字段提取结果现在只保留 `id`。如果你在升级旧接入，请先阅读[迁移说明](/zh/packages/aimd-core/compatibility)。

@@ -16,12 +16,15 @@ export {
 export {
   formatAimdExampleValue,
   formatAimdExamples,
+  getAimdBuiltInTypeEnumValues,
+  getAimdBuiltInTypeMetadata,
   getAimdFieldDescription,
   getAimdFieldDisplayLabel,
   getAimdFieldEnumValues,
   getAimdFieldExamples,
   getAimdFieldTitle,
   resolveAimdFieldMetadata,
+  type AimdBuiltInTypeMetadata,
   type AimdResolvedFieldMetadata,
 } from './field-metadata'
 

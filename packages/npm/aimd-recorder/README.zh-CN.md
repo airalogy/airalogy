@@ -6,6 +6,7 @@
 AIMD（Airalogy Markdown）记录 UI 组件与样式集合，包含协议内联录入组件、组合式 `AimdRecorderEditor` 与可复用题目作答控件。
 
 内置变量控件支持 `CurrentTime`、`UserName`、`AiralogyMarkdown` 和 `DNASequence`。
+`BloodType` 这类官方命名枚举类型会使用从 Python `airalogy.types` 注册表生成的元数据渲染为下拉输入。
 `AiralogyMarkdown` 现在会在 recorder 中以横铺内嵌 AIMD/Markdown 字段呈现，可在渲染预览和源码编辑之间切换；源码编辑保留完整顶部工具栏，并继续支持切换到 `所见即所得`，而不是普通 textarea。
 在 recorder/edit 模式下，`ref_var` 如果已经有记录值，会优先以只读内联内容显示该值。
 `var` 和 `var_table` 标签会显示 AIMD 的 `title`，保留规范 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情；宿主也可以通过 `fieldMeta` 在运行时覆盖这些显示字段。
@@ -37,6 +38,7 @@ const content = ref(`# Protocol
 样本名：{{var|sample_name: str, title="样本名", description="样本的人类可读标签", examples=["S-001"]}}
 记录者：{{var|operator: UserName}}
 记录时间：{{var|current_time: CurrentTime}}
+血型：{{var|blood_type: BloodType | None}}
 温度设置：{{var|temperature: float = 25.0, title="温度 (C)", description="环境温度，单位为摄氏度", examples=[25.0, 37.0]}}
 实验摘要：{{var|summary: AiralogyMarkdown}}
 质粒：{{var|plasmid: DNASequence}}`)

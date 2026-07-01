@@ -1,0 +1,468 @@
+{
+  "version": 1,
+  "types": {
+    "UserName": {
+      "type_name": "UserName",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "ui_kind": "current-user",
+      "type": "string",
+      "description": "The user name of the current Airalogy user"
+    },
+    "CurrentTime": {
+      "type_name": "CurrentTime",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "ui_kind": "current-time",
+      "type": "string",
+      "description": "The current time. The timezone is based on the user's browser."
+    },
+    "CurrentProtocolId": {
+      "type_name": "CurrentProtocolId",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string",
+      "description": "The ID of the current Airalogy Protocol."
+    },
+    "CurrentRecordId": {
+      "type_name": "CurrentRecordId",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string",
+      "description": "The ID of the current Airalogy Record."
+    },
+    "BloodType": {
+      "type_name": "BloodType",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string",
+      "title": "Blood type",
+      "description": "Common ABO blood group values. Values such as A+ or A- combine an ABO group with Rh positive or Rh negative status. Rh+ and Rh- are allowed when only Rh factor is recorded.",
+      "enum": [
+        "A",
+        "B",
+        "AB",
+        "O",
+        "A+",
+        "A-",
+        "B+",
+        "B-",
+        "AB+",
+        "AB-",
+        "O+",
+        "O-",
+        "Rh+",
+        "Rh-"
+      ]
+    },
+    "ChineseEducationLevel": {
+      "type_name": "ChineseEducationLevel",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string",
+      "title": "文化程度",
+      "description": "中国居民信息登记中常用的文化程度分类。",
+      "enum": [
+        "无学历",
+        "小学",
+        "初中",
+        "高中",
+        "中专",
+        "大专",
+        "本科",
+        "硕士",
+        "博士"
+      ]
+    },
+    "ChineseEthnicGroup": {
+      "type_name": "ChineseEthnicGroup",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string",
+      "title": "民族",
+      "description": "中国国务院公布的 56 个法定民族之一。",
+      "enum": [
+        "汉族",
+        "蒙古族",
+        "回族",
+        "藏族",
+        "维吾尔族",
+        "苗族",
+        "彝族",
+        "壮族",
+        "布依族",
+        "朝鲜族",
+        "满族",
+        "侗族",
+        "瑶族",
+        "白族",
+        "土家族",
+        "哈尼族",
+        "哈萨克族",
+        "傣族",
+        "黎族",
+        "傈僳族",
+        "佤族",
+        "畲族",
+        "高山族",
+        "拉祜族",
+        "水族",
+        "东乡族",
+        "纳西族",
+        "景颇族",
+        "柯尔克孜族",
+        "土族",
+        "达斡尔族",
+        "仫佬族",
+        "羌族",
+        "布朗族",
+        "撒拉族",
+        "毛南族",
+        "仡佬族",
+        "锡伯族",
+        "阿昌族",
+        "普米族",
+        "塔吉克族",
+        "怒族",
+        "乌孜别克族",
+        "俄罗斯族",
+        "鄂温克族",
+        "德昂族",
+        "保安族",
+        "裕固族",
+        "京族",
+        "塔塔尔族",
+        "独龙族",
+        "鄂伦春族",
+        "赫哲族",
+        "门巴族",
+        "珞巴族",
+        "基诺族"
+      ]
+    },
+    "ChineseGender": {
+      "type_name": "ChineseGender",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string",
+      "title": "性别",
+      "description": "中国居民信息登记中常用的性别分类。",
+      "enum": [
+        "男",
+        "女"
+      ]
+    },
+    "ChineseMaritalStatus": {
+      "type_name": "ChineseMaritalStatus",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string",
+      "title": "婚姻状况",
+      "description": "中国居民信息登记中常用的婚姻状况分类。",
+      "enum": [
+        "未婚",
+        "已婚",
+        "丧偶",
+        "离婚",
+        "再婚"
+      ]
+    },
+    "ChineseProvinceLevelRegion": {
+      "type_name": "ChineseProvinceLevelRegion",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string",
+      "title": "省级行政区",
+      "description": "中国现行省级行政区（省、自治区、直辖市、特别行政区）。",
+      "enum": [
+        "北京",
+        "天津",
+        "上海",
+        "重庆",
+        "河北",
+        "山西",
+        "辽宁",
+        "吉林",
+        "黑龙江",
+        "江苏",
+        "浙江",
+        "安徽",
+        "福建",
+        "江西",
+        "山东",
+        "河南",
+        "湖北",
+        "湖南",
+        "广东",
+        "海南",
+        "四川",
+        "贵州",
+        "云南",
+        "陕西",
+        "甘肃",
+        "青海",
+        "台湾",
+        "西藏",
+        "内蒙古",
+        "广西",
+        "宁夏",
+        "新疆",
+        "香港",
+        "澳门"
+      ]
+    },
+    "AiralogyMarkdown": {
+      "type_name": "AiralogyMarkdown",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "ui_kind": "markdown",
+      "type": "string",
+      "description": "An Airalogy Markdown string"
+    },
+    "RecordId": {
+      "type_name": "RecordId",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string"
+    },
+    "FileIdPNG": {
+      "type_name": "FileIdPNG",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdPNG. This type allows users to upload a .png file and inject it into the related data field."
+    },
+    "FileIdJPG": {
+      "type_name": "FileIdJPG",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdJPG. This type allows users to upload a .jpg file and inject it into the related data field."
+    },
+    "FileIdSVG": {
+      "type_name": "FileIdSVG",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdSVG. This type allows users to upload a .svg file and inject it into the related data field."
+    },
+    "FileIdWEBP": {
+      "type_name": "FileIdWEBP",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdWEBP. This type allows users to upload a .webp file and inject it into the related data field."
+    },
+    "FileIdTIFF": {
+      "type_name": "FileIdTIFF",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdTIFF. This type allows users to upload a .tiff file and inject it into the related data field."
+    },
+    "FileIdMP4": {
+      "type_name": "FileIdMP4",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdMP4. This type allows users to upload a .mp4 file and inject it into the related data field."
+    },
+    "FileIdMP3": {
+      "type_name": "FileIdMP3",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdMP3. This type allows users to upload a .mp3 file and inject it into the related data field."
+    },
+    "FileIdAIMD": {
+      "type_name": "FileIdAIMD",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdAIMD. This type allows users to upload a .aimd file and inject it into the related data field."
+    },
+    "FileIdMD": {
+      "type_name": "FileIdMD",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdMD. This type allows users to upload a .md file and inject it into the related data field."
+    },
+    "FileIdTXT": {
+      "type_name": "FileIdTXT",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdTXT. This type allows users to upload a .txt file and inject it into the related data field."
+    },
+    "FileIdCSV": {
+      "type_name": "FileIdCSV",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdCSV. This type allows users to upload a .csv file and inject it into the related data field."
+    },
+    "FileIdJSON": {
+      "type_name": "FileIdJSON",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdJSON. This type allows users to upload a .json file and inject it into the related data field."
+    },
+    "FileIdDOCX": {
+      "type_name": "FileIdDOCX",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdDOCX. This type allows users to upload a .docx file and inject it into the related data field."
+    },
+    "FileIdXLSX": {
+      "type_name": "FileIdXLSX",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdXLSX. This type allows users to upload a .xlsx file and inject it into the related data field."
+    },
+    "FileIdPPTX": {
+      "type_name": "FileIdPPTX",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdPPTX. This type allows users to upload a .pptx file and inject it into the related data field."
+    },
+    "FileIdPDF": {
+      "type_name": "FileIdPDF",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdPDF. This type allows users to upload a .pdf file and inject it into the related data field."
+    },
+    "FileIdDNA": {
+      "type_name": "FileIdDNA",
+      "import_from": "airalogy.types",
+      "storage_kind": "file-id",
+      "ui_kind": "file",
+      "type": "string",
+      "description": "Airalogy built-in type: FileIdDNA. This type allows users to upload a .dna file and inject it into the related data field."
+    },
+    "Recommended": {
+      "type_name": "Recommended",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "object"
+    },
+    "IgnoreStr": {
+      "type_name": "IgnoreStr",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string",
+      "description": "In an Airalogy Field of this type, a user may provide a string; however, when the Airalogy Record is submitted, the string is not persisted. This is intended for sensitive input (such as an API key) that the Airalogy Protocol Assigner can consume during processing but that should never be stored in the final Record."
+    },
+    "CodeStr": {
+      "type_name": "CodeStr",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "ui_kind": "code",
+      "type": "string",
+      "description": "Airalogy built-in type: CodeStr (plaintext). Strings of this type contain language-agnostic code or structured text and are rendered in a plain code editor."
+    },
+    "PyStr": {
+      "type_name": "PyStr",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "ui_kind": "code",
+      "type": "string",
+      "description": "Airalogy built-in type: CodeStr (python). Strings of this type contain python source code and are rendered in an editor with python syntax highlighting."
+    },
+    "JsStr": {
+      "type_name": "JsStr",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "ui_kind": "code",
+      "type": "string",
+      "description": "Airalogy built-in type: CodeStr (javascript). Strings of this type contain javascript source code and are rendered in an editor with javascript syntax highlighting."
+    },
+    "TsStr": {
+      "type_name": "TsStr",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "ui_kind": "code",
+      "type": "string",
+      "description": "Airalogy built-in type: CodeStr (typescript). Strings of this type contain typescript source code and are rendered in an editor with typescript syntax highlighting."
+    },
+    "JsonStr": {
+      "type_name": "JsonStr",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "ui_kind": "code",
+      "type": "string",
+      "description": "Airalogy built-in type: CodeStr (json). Strings of this type contain json source code and are rendered in an editor with json syntax highlighting."
+    },
+    "TomlStr": {
+      "type_name": "TomlStr",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "ui_kind": "code",
+      "type": "string",
+      "description": "Airalogy built-in type: CodeStr (toml). Strings of this type contain toml source code and are rendered in an editor with toml syntax highlighting."
+    },
+    "YamlStr": {
+      "type_name": "YamlStr",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "ui_kind": "code",
+      "type": "string",
+      "description": "Airalogy built-in type: CodeStr (yaml). Strings of this type contain yaml source code and are rendered in an editor with yaml syntax highlighting."
+    },
+    "ATCG": {
+      "type_name": "ATCG",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "ui_kind": "dna-text",
+      "type": "string"
+    },
+    "DNASequence": {
+      "type_name": "DNASequence",
+      "import_from": "airalogy.types",
+      "storage_kind": "structured",
+      "ui_kind": "dna-sequence",
+      "type": "object",
+      "title": "DNASequence",
+      "description": "Structured DNA sequence value used by Airalogy's dedicated sequence editor.\n\nThis model intentionally stays simpler than full GenBank flatfiles while\npreserving the core pieces needed for practical import/export alignment:\nmulti-segment feature locations, partial flags, and qualifier rows."
+    },
+    "SnakeStr": {
+      "type_name": "SnakeStr",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string"
+    },
+    "VersionStr": {
+      "type_name": "VersionStr",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string"
+    },
+    "ProtocolId": {
+      "type_name": "ProtocolId",
+      "import_from": "airalogy.types",
+      "storage_kind": "scalar",
+      "type": "string"
+    }
+  }
+}

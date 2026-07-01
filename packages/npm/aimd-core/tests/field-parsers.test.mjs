@@ -12,6 +12,10 @@ import {
   validateVarDefaultType,
   validateVarKwargs,
 } from '../dist/parser.js'
+import {
+  getAimdBuiltInTypeEnumValues,
+  getAimdBuiltInTypeMetadata,
+} from '../dist/utils.js'
 
 function parseAimd(content) {
   const processor = unified()
@@ -198,6 +202,25 @@ test('var: parses enum kwarg as enum metadata', () => {
   assert.deepEqual(fields.var_definitions?.[0]?.enum, ['low', 'medium', 'high'])
 })
 
+test('var: resolves official Airalogy built-in type enums from generated metadata', () => {
+  const { tree, fields } = parseAimd('{{var|blood_type: BloodType | None}}')
+  const node = findAimdNode(tree)
+  const expected = getAimdBuiltInTypeEnumValues('BloodType | None')
+  assert.ok(expected.length > 0)
+  assert.deepEqual(node?.definition?.enum, expected)
+  assert.deepEqual(fields.var_definitions?.[0]?.enum, expected)
+  assert.equal(fields.var_definitions?.[0]?.type, 'BloodType | None')
+})
+
+test('utils: resolves official Airalogy built-in type metadata', () => {
+  const metadata = getAimdBuiltInTypeMetadata('BloodType | None')
+  assert.equal(metadata?.type_name, 'BloodType')
+  assert.equal(metadata?.storage_kind, 'scalar')
+  assert.ok(Array.isArray(metadata?.enum))
+  assert.ok(metadata.enum.length > 0)
+  assert.deepEqual(getAimdBuiltInTypeEnumValues('BloodType | None'), metadata.enum)
+})
+
 // ── parseVarDefinition: subvars ──────────────────────────────────────────────
 
 test('var_table: with simple subvars', () => {
@@ -228,6 +251,15 @@ test('var_table: subvars keep enum metadata', () => {
   const node = findAimdNode(tree)
   assert.deepEqual(node?.definition?.subvars?.decision?.enum, ['include', 'exclude', 'review'])
   assert.deepEqual(fields.var_table?.[0]?.subvars?.[0]?.enum, ['include', 'exclude', 'review'])
+})
+
+test('var_table: subvars resolve official Airalogy built-in type enums', () => {
+  const { tree, fields } = parseAimd('{{var_table|samples, subvars=[blood_type: BloodType | None]}}')
+  const node = findAimdNode(tree)
+  const expected = getAimdBuiltInTypeEnumValues('BloodType | None')
+  assert.ok(expected.length > 0)
+  assert.deepEqual(node?.definition?.subvars?.blood_type?.enum, expected)
+  assert.deepEqual(fields.var_table?.[0]?.subvars?.[0]?.enum, expected)
 })
 
 test('var_table: multiline nested var() subvars keep full child definitions', () => {

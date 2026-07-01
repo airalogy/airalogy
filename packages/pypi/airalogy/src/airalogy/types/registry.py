@@ -8,7 +8,9 @@ import inspect
 from collections import OrderedDict
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
+from importlib import import_module
 from importlib.metadata import entry_points
+from typing import Any
 
 PLUGIN_ENTRY_POINT_GROUP = "airalogy.types"
 
@@ -230,3 +232,73 @@ def register_airalogy_type(
 
 def unregister_airalogy_type(type_name: str) -> AiralogyTypeDescriptor | None:
     return _REGISTRY.unregister(type_name)
+
+
+def _json_schema_for_descriptor(
+    descriptor: AiralogyTypeDescriptor,
+) -> Mapping[str, Any]:
+    try:
+        from pydantic import TypeAdapter
+
+        module = import_module(descriptor.import_from)
+        type_object = getattr(module, descriptor.type_name)
+        schema = TypeAdapter(type_object).json_schema()
+    except Exception:
+        return {}
+
+    return schema if isinstance(schema, Mapping) else {}
+
+
+def _schema_scalar_list(value: object) -> list[object]:
+    if not isinstance(value, list):
+        return []
+    return [
+        item
+        for item in value
+        if isinstance(item, (str, int, float, bool)) or item is None
+    ]
+
+
+def export_airalogy_type_metadata(*, load_plugins: bool = False) -> dict[str, Any]:
+    """
+    Export registered Airalogy type metadata for non-Python consumers.
+
+    The Python type definitions remain the source of truth. This export keeps
+    only portable metadata that browser and npm packages can safely consume,
+    such as enum values and display descriptions.
+    """
+
+    registry = get_airalogy_type_registry(load_plugins=load_plugins)
+    types: dict[str, dict[str, Any]] = {}
+
+    for descriptor in registry.iter_descriptors():
+        schema = _json_schema_for_descriptor(descriptor)
+        metadata: dict[str, Any] = {
+            "type_name": descriptor.type_name,
+            "import_from": descriptor.import_from,
+        }
+
+        if descriptor.aliases:
+            metadata["aliases"] = list(descriptor.aliases)
+        if descriptor.storage_kind is not None:
+            metadata["storage_kind"] = descriptor.storage_kind
+        if descriptor.ui_kind is not None:
+            metadata["ui_kind"] = descriptor.ui_kind
+        if descriptor.schema_extra:
+            metadata["schema_extra"] = dict(descriptor.schema_extra)
+
+        for key in ("type", "title", "description"):
+            value = schema.get(key)
+            if isinstance(value, str) and value:
+                metadata[key] = value
+
+        enum_values = _schema_scalar_list(schema.get("enum"))
+        if enum_values:
+            metadata["enum"] = enum_values
+
+        types[descriptor.type_name] = metadata
+
+    return {
+        "version": 1,
+        "types": types,
+    }

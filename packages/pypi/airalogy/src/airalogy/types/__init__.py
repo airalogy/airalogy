@@ -2,7 +2,11 @@
 This module contains the built-in types for Airalogy. These types could be used to define the Airalogy Protocol Model.
 """
 
-from .registry import AiralogyTypeDescriptor, register_airalogy_type
+from .registry import (
+    AiralogyTypeDescriptor,
+    export_airalogy_type_metadata,
+    register_airalogy_type,
+)
 
 __all__ = [
     "UserName",
@@ -49,6 +53,9 @@ __all__ = [
     "VersionStr",
     "ProtocolId",
     "RecordId",
+    "AiralogyTypeDescriptor",
+    "export_airalogy_type_metadata",
+    "register_airalogy_type",
 ]
 
 

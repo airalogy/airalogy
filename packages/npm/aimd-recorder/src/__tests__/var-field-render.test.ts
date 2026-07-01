@@ -5,6 +5,7 @@ import { h } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AimdVarNode, AimdVarTableNode } from '@airalogy/aimd-core/types'
+import { getAimdBuiltInTypeEnumValues } from '@airalogy/aimd-core/utils'
 
 import AimdRecorder from '../components/AimdRecorder.vue'
 import AimdVarField from '../components/AimdVarField.vue'
@@ -593,6 +594,38 @@ describe('AimdVarField render behavior', () => {
     const updates = wrapper.emitted('update:modelValue') ?? []
     const latest = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
     expect(latest?.var?.review_type).toBe('quick')
+  })
+
+  it('renders official Airalogy built-in enum types as select fields in AimdRecorder', async () => {
+    const enumValues = getAimdBuiltInTypeEnumValues('BloodType | None')
+    expect(enumValues.length).toBeGreaterThan(0)
+
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: 'Blood type: {{var|blood_type: BloodType | None, title = "Blood type"}}',
+        locale: 'en-US',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    await vi.dynamicImportSettled()
+    await wrapper.vm.$nextTick()
+
+    const select = wrapper.find('select[data-rec-focus-key="var:blood_type"]')
+    expect(select.exists()).toBe(true)
+    expect(select.findAll('option').map(option => option.text())).toEqual([
+      '',
+      ...enumValues.map(value => String(value)),
+    ])
+
+    await select.setValue('0')
+    await flushPromises()
+
+    const updates = wrapper.emitted('update:modelValue') ?? []
+    const latest = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    expect(latest?.var?.blood_type).toBe(enumValues[0])
   })
 
   it('renders AIMD var_table and column metadata', () => {

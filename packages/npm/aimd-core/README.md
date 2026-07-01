@@ -143,6 +143,10 @@ import {
 
 Use `validateClientAssignerFunctionSource()` when host tooling needs to preflight fenced `assigner runtime=client` functions before saving or executing them. Use `validateVarDefaultType()` to surface warnings when an authored AIMD var default does not match its declared type. Use `validateVarKwargs()` or `validateVarDefinition()` when tooling also needs to warn about Pydantic-style numeric constraints such as `gt`, `ge`, `lt`, `le`, and `multiple_of` on non-numeric var types.
 
+## Built-in Type Metadata
+
+`@airalogy/aimd-core/utils` exports `getAimdBuiltInTypeMetadata()` and `getAimdBuiltInTypeEnumValues()`. The bundled metadata is generated from the Python `airalogy.types` registry, so official named enum types such as `BloodType` expose the same values to browser tools without duplicating Python type definitions in npm code.
+
 ## Documentation
 
 - EN: <https://airalogy.github.io/airalogy/aimd/en/packages/aimd-core>

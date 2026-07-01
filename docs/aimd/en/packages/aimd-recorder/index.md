@@ -17,6 +17,7 @@ pnpm add @airalogy/aimd-recorder @airalogy/aimd-core
 - Combined authoring + recording editor: `AimdRecorderEditor`.
 - Reusable quiz answer component: `AimdQuizRecorder`.
 - Built-in recorder widgets for `CurrentTime`, `UserName`, `AiralogyMarkdown`, and `DNASequence`.
+- Automatic select inputs for official named enum types such as `BloodType`, using metadata generated from the Python `airalogy.types` registry.
 - Frontend-only `assigner runtime=client` execution for pure var computations.
 
 ## Guides

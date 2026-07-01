@@ -1,5 +1,6 @@
 import type { AimdClientAssignerField, AimdMediaField, AimdReferenceField } from "../types/aimd"
 import type { AimdStepNode, AimdStepTimerMode, AimdVarDefinition } from "../types/nodes"
+import { getAimdBuiltInTypeEnumValues } from "../utils/field-metadata"
 export { validateClientAssigners } from "./assigner-graph"
 import { parseClientAssignerContent as parseClientAssignerContentImpl } from "./client-assigner-syntax"
 
@@ -214,7 +215,12 @@ export function parseVarEnumValues(
     return explicitEnum
   }
 
-  return parseLiteralEnumValues(type)
+  const literalEnum = parseLiteralEnumValues(type)
+  if (literalEnum.length > 0) {
+    return literalEnum
+  }
+
+  return getAimdBuiltInTypeEnumValues(type)
 }
 
 function applyVarEnumMetadata(def: AimdVarDefinition): AimdVarDefinition {

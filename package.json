@@ -44,6 +44,8 @@
     "release:npm": "node scripts/release/publish-npm-packages.mjs",
     "setup:githooks": "git config core.hooksPath .githooks",
     "sync:python-versions": "node scripts/release/sync-python-versions.mjs",
+    "sync:aimd-type-metadata": "node scripts/aimd/generate-built-in-type-metadata.mjs",
+    "check:aimd-type-metadata": "node scripts/aimd/generate-built-in-type-metadata.mjs --check",
     "test": "pnpm test:npm",
     "test:aira": "pnpm --filter '@airalogy/aira-*' -r --if-present test",
     "test:aimd": "pnpm --filter '@airalogy/aimd-*' -r --if-present test",

@@ -1,6 +1,10 @@
+import json
+from pathlib import Path
+
 from airalogy.markdown import generate_model
 from airalogy.types.registry import (
     AiralogyTypeDescriptor,
+    export_airalogy_type_metadata,
     get_airalogy_type_registry,
     register_airalogy_type,
     unregister_airalogy_type,
@@ -27,6 +31,44 @@ def test_builtin_type_registry_contains_official_types():
     assert blood_type_descriptor.import_from == "airalogy.types"
     assert blood_type_descriptor.storage_kind == "scalar"
     assert blood_type_descriptor.ui_kind is None
+
+
+def test_export_airalogy_type_metadata_includes_builtin_enums():
+    metadata = export_airalogy_type_metadata(load_plugins=False)
+    blood_type = metadata["types"]["BloodType"]
+
+    assert metadata["version"] == 1
+    assert blood_type["import_from"] == "airalogy.types"
+    assert blood_type["storage_kind"] == "scalar"
+    assert blood_type["title"] == "Blood type"
+    assert "Rh positive or Rh negative" in blood_type["description"]
+    assert blood_type["enum"] == [
+        "A",
+        "B",
+        "AB",
+        "O",
+        "A+",
+        "A-",
+        "B+",
+        "B-",
+        "AB+",
+        "AB-",
+        "O+",
+        "O-",
+        "Rh+",
+        "Rh-",
+    ]
+
+
+def test_generated_npm_type_metadata_matches_python_export():
+    metadata_path = (
+        Path(__file__).resolve().parents[4]
+        / "npm/aimd-core/src/types/airalogy-built-in-type-metadata.generated.json"
+    )
+
+    assert json.loads(metadata_path.read_text(encoding="utf-8")) == (
+        export_airalogy_type_metadata(load_plugins=False)
+    )
 
 
 def test_register_and_unregister_custom_type_descriptor():

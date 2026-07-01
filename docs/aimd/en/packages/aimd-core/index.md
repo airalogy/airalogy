@@ -156,6 +156,10 @@ import {
 - `validateVarKwargs(def)` returns warning strings when supported kwargs are applied to incompatible var definitions, including Pydantic-style numeric constraints (`gt`, `ge`, `lt`, `le`, `multiple_of`) on non-numeric var types.
 - `validateVarDefinition(def)` combines default-value checks and kwargs checks, including nested `subvars`.
 
+## Built-in Type Metadata
+
+`@airalogy/aimd-core/utils` exports `getAimdBuiltInTypeMetadata()` and `getAimdBuiltInTypeEnumValues()`. The metadata is generated from the Python `airalogy.types` registry, so official named enum types such as `BloodType` expose the same values to browser tools without duplicating Python type definitions in npm code.
+
 ## Further Reading
 
 - Parsed nodes and extracted fields now use `id` only. If you are upgrading older integrations, read [Migration](/en/packages/aimd-core/compatibility) first.

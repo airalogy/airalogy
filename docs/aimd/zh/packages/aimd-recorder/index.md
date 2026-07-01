@@ -17,6 +17,7 @@ pnpm add @airalogy/aimd-recorder @airalogy/aimd-core
 - 提供组合式编辑器组件 `AimdRecorderEditor`。
 - 提供可复用题目控件 `AimdQuizRecorder`。
 - 内置 `CurrentTime`、`UserName`、`AiralogyMarkdown`、`DNASequence` 等 recorder widget。
+- `BloodType` 这类官方命名枚举类型会使用从 Python `airalogy.types` 注册表生成的元数据自动渲染为下拉输入。
 - 前端受限的 `assigner runtime=client` 可在本地执行。
 
 ## 导航

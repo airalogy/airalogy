@@ -6,6 +6,7 @@
 Reusable recording UI for AIMD (Airalogy Markdown), including inline protocol recorder, the combined `AimdRecorderEditor`, quiz answer components, and styles.
 
 Built-in variable input types include `CurrentTime`, `UserName`, `AiralogyMarkdown`, and `DNASequence`.
+Official named enum types such as `BloodType` render as select inputs using metadata generated from the Python `airalogy.types` registry.
 `AiralogyMarkdown` now uses a full-width embedded AIMD/Markdown field in recorder mode with rendered preview and source-editing modes; source editing keeps the full top toolbar and still supports switching to `WYSIWYG` instead of a plain textarea.
 In recorder/edit mode, `ref_var` references display current var values as readonly inline content when available.
 `var` and `var_table` labels display AIMD `title`, keep canonical ids visible, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus. Host `fieldMeta` can override the same display fields at runtime.
@@ -37,6 +38,7 @@ const content = ref(`# Protocol
 Sample: {{var|sample_name: str, title="Sample name", description="Human-readable sample label", examples=["S-001"]}}
 Operator: {{var|operator: UserName}}
 Record Time: {{var|current_time: CurrentTime}}
+Blood Type: {{var|blood_type: BloodType | None}}
 Temperature: {{var|temperature: float = 25.0, title="Temperature (C)", description="Ambient temperature in Celsius", examples=[25.0, 37.0]}}
 Notes: {{var|notes: AiralogyMarkdown}}
 Plasmid: {{var|plasmid: DNASequence}}`)

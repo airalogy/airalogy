@@ -18,6 +18,8 @@ Extracted image ids: {{var|image_ids: list[str], title = "Extracted Image IDs", 
 
 Plasmid sequence: {{var|plasmid_sequence: DNASequence, title = "Plasmid Sequence", description = "Sequence record with topology and feature annotations", examples = ["ATGCGTACGTAGCTAG"]}}
 
+Sample blood type: {{var|blood_type: BloodType | None, title = "Blood Type", description = "Common ABO blood group values, optionally including Rh positive or Rh negative status", examples = ["A+", "O-", "Rh+"]}}
+
 Python analysis snippet: {{var|python_code: PyStr, title = "Python analysis helper"}}
 
 JavaScript formatter: {{var|javascript_code: JsStr, title = "JavaScript formatter"}}
