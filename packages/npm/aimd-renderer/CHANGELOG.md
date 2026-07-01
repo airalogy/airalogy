@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.9.1
+
+### Patch Changes
+
+- 682ddf5: Render fenced AIMD `workflow` blocks as structured Workflow UI panels with nodes, transitions, assigners, assignment mappings, and optional host-supplied run-state overlays.
+- Updated dependencies [19350d6]
+- Updated dependencies [c353d3d]
+  - @airalogy/aimd-core@2.12.0
+
 ## 2.9.0
 
 ### Minor Changes

@@ -1,12 +1,12 @@
 [project]
 name = "airalogy-engine"
 # Release versions are managed by Changesets through package.json and synced into this file.
-version = "0.0.5"
+version = "0.0.6"
 description = "Airalogy protocol execute sandbox"
 readme = "README.md"
 authors = [{ name = "Airalogy Team" }]
 requires-python = ">=3.13"
-dependencies = ["airalogy~=0.14.0", "boxlite==0.9.5"]
+dependencies = ["airalogy~=0.14.1", "boxlite==0.9.5"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
