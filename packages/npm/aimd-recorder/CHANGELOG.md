@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.21.0
+
+### Minor Changes
+
+- e6cbe13: Render `list[str]`, `list[int]`, and `list[float]` variables as full-row recorder fields with repeatable, drag-reorderable item inputs plus a JSON array mode.
+
+### Patch Changes
+
+- 6947d33: Keep complex Markdown tables with embedded recorder fields inside the recorder width by making the table area horizontally scrollable and constraining long variable labels inside table cells.
+
 ## 1.20.0
 
 ### Minor Changes
