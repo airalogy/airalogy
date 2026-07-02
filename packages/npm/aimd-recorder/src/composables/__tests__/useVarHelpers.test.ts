@@ -3,7 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   normalizeVarTypeName,
   getVarInputKind,
+  getScalarListInputItems,
+  getScalarListItemType,
+  isScalarListVarType,
   isStructuredVarType,
+  normalizeScalarListInputItems,
   unwrapStructuredValue,
   toBooleanValue,
   toDateValue,
@@ -18,6 +22,7 @@ import {
   getNumericFieldConstraints,
   getNumericInputAttributes,
   calculateVarStackWidth,
+  applyVarStackWidth,
   syncAutoWrapTextareaHeight,
   measureVarLabelWidth,
   createSelectedFileValue,
@@ -101,9 +106,23 @@ describe('getVarInputKind', () => {
     expect(getVarInputKind('airalogymarkdown')).toBe('textarea')
   })
 
-  it('returns "textarea" for structured list and object types', () => {
+  it('returns "scalar-list" for scalar list types', () => {
+    expect(getVarInputKind('list[str]')).toBe('scalar-list')
+    expect(getVarInputKind('list[str] | None')).toBe('scalar-list')
+    expect(getVarInputKind('Optional[list[str]]')).toBe('scalar-list')
+    expect(getVarInputKind('typing.List[str]')).toBe('scalar-list')
+    expect(getVarInputKind('array[string]')).toBe('scalar-list')
+    expect(getVarInputKind('str[]')).toBe('scalar-list')
+    expect(getVarInputKind('list[int]')).toBe('scalar-list')
+    expect(getVarInputKind('list[float]')).toBe('scalar-list')
+    expect(getVarInputKind('array[number]')).toBe('scalar-list')
+    expect(getVarInputKind('int[]')).toBe('scalar-list')
+  })
+
+  it('returns "textarea" for structured non-scalar list and object types', () => {
     expect(getVarInputKind('list')).toBe('textarea')
-    expect(getVarInputKind('list[str]')).toBe('textarea')
+    expect(getVarInputKind('list[bool]')).toBe('textarea')
+    expect(getVarInputKind('list[dict[str, int]]')).toBe('textarea')
     expect(getVarInputKind('dict[str, int]')).toBe('textarea')
     expect(getVarInputKind('json')).toBe('textarea')
     expect(getVarInputKind('Listener')).toBe('text')
@@ -451,8 +470,13 @@ describe('getVarInputDisplayValue', () => {
   })
 
   it('pretty-prints structured list and object values', () => {
-    expect(getVarInputDisplayValue(['a', 'b'], 'textarea', { type: 'list[str]' })).toBe(JSON.stringify(['a', 'b'], null, 2))
+    expect(getVarInputDisplayValue([1, 2], 'textarea', { type: 'list[int]' })).toBe(JSON.stringify([1, 2], null, 2))
     expect(getVarInputDisplayValue({ a: 1 }, 'textarea', { type: 'dict[str, int]' })).toBe(JSON.stringify({ a: 1 }, null, 2))
+  })
+
+  it('formats scalar list values as compact JSON for helper consumers', () => {
+    expect(getVarInputDisplayValue([' a ', 'b', ''], 'scalar-list', { type: 'list[str]' })).toBe(JSON.stringify(['a', 'b']))
+    expect(getVarInputDisplayValue(['1', '2', ''], 'scalar-list', { type: 'list[int]' })).toBe(JSON.stringify([1, 2]))
   })
 })
 
@@ -487,21 +511,63 @@ describe('parseVarInputValue', () => {
   })
 
   it('parses JSON input for structured list types', () => {
-    expect(parseVarInputValue('["a", "b"]', 'list[str]', 'textarea')).toEqual(['a', 'b'])
-    expect(parseVarInputValue('not json', 'list[str]', 'textarea')).toBe('not json')
+    expect(parseVarInputValue('[1, 2]', 'list[int]', 'textarea')).toEqual([1, 2])
+    expect(parseVarInputValue('not json', 'list[int]', 'textarea')).toBe('not json')
+  })
+
+  it('parses scalar-list input into a clean scalar array', () => {
+    expect(parseVarInputValue('["a", " b ", ""]', 'list[str]', 'scalar-list')).toEqual(['a', 'b'])
+    expect(parseVarInputValue('a\nb\n', 'list[str]', 'scalar-list')).toEqual(['a', 'b'])
+    expect(parseVarInputValue('["1", "2", ""]', 'list[int]', 'scalar-list')).toEqual([1, 2])
+    expect(parseVarInputValue('1\n2.5\n', 'list[float]', 'scalar-list')).toEqual([1, 2.5])
+    expect(parseVarInputValue('1.2', 'list[int]', 'scalar-list')).toEqual(['1.2'])
   })
 })
 
 // ---------------------------------------------------------------------------
-// isStructuredVarType
+// list type helpers
 // ---------------------------------------------------------------------------
 
-describe('isStructuredVarType', () => {
+describe('list type helpers', () => {
   it('detects explicit structured types without matching unrelated names', () => {
     expect(isStructuredVarType('list[str]')).toBe(true)
+    expect(isStructuredVarType('list[str] | None')).toBe(true)
     expect(isStructuredVarType('dict[str, int]')).toBe(true)
     expect(isStructuredVarType('object')).toBe(true)
     expect(isStructuredVarType('Listener')).toBe(false)
+  })
+
+  it('detects only scalar-item list types as scalar-list controls', () => {
+    expect(isScalarListVarType('list[str]')).toBe(true)
+    expect(isScalarListVarType('list[str] | None')).toBe(true)
+    expect(isScalarListVarType('Optional[list[str]]')).toBe(true)
+    expect(isScalarListVarType('typing.List[str]')).toBe(true)
+    expect(isScalarListVarType('array[string]')).toBe(true)
+    expect(isScalarListVarType('list[int]')).toBe(true)
+    expect(isScalarListVarType('list[float]')).toBe(true)
+    expect(isScalarListVarType('array[number]')).toBe(true)
+    expect(isScalarListVarType('list[bool]')).toBe(false)
+    expect(isScalarListVarType('list[dict[str, int]]')).toBe(false)
+    expect(isScalarListVarType('list')).toBe(false)
+  })
+
+  it('resolves scalar list item types for supported scalar arrays', () => {
+    expect(getScalarListItemType('list[str]')).toBe('string')
+    expect(getScalarListItemType('str[]')).toBe('string')
+    expect(getScalarListItemType('list[int] | None')).toBe('int')
+    expect(getScalarListItemType('Optional[list[float]]')).toBe('float')
+    expect(getScalarListItemType('array[number]')).toBe('float')
+    expect(getScalarListItemType('list[bool]')).toBeUndefined()
+    expect(getScalarListItemType('list[dict[str, int]]')).toBeUndefined()
+  })
+
+  it('normalizes scalar-list values while preserving editable draft rows', () => {
+    expect(getScalarListInputItems(['a', 2, null])).toEqual(['a', '2', ''])
+    expect(getScalarListInputItems('["a", "b"]')).toEqual(['a', 'b'])
+    expect(getScalarListInputItems('a\nb')).toEqual(['a', 'b'])
+    expect(normalizeScalarListInputItems([' a ', '', 'b'])).toEqual(['a', 'b'])
+    expect(normalizeScalarListInputItems(['1', '', '2'], 'int')).toEqual([1, 2])
+    expect(normalizeScalarListInputItems(['1.5', 'x'], 'float')).toEqual([1.5, 'x'])
   })
 })
 
@@ -525,6 +591,37 @@ describe('calculateVarStackWidth', () => {
     const result = calculateVarStackWidth('x', 'dna')
     const px = parseInt(result)
     expect(px).toBeGreaterThanOrEqual(160)
+  })
+
+  it('keeps a scalar-list fallback stack width for non-DOM callers', () => {
+    const result = calculateVarStackWidth('x', 'scalar-list')
+    const px = parseInt(result)
+    expect(px).toBeGreaterThanOrEqual(220)
+    expect(px).toBeLessThan(420)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// applyVarStackWidth
+// ---------------------------------------------------------------------------
+
+describe('applyVarStackWidth', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('keeps scalar-list vars full width instead of measuring content width', () => {
+    const wrapper = document.createElement('span')
+    wrapper.className = 'aimd-rec-inline--var-stacked aimd-rec-inline--var-stacked--scalar-list'
+    const control = document.createElement('span')
+    control.className = 'aimd-rec-inline__scalar-list'
+    wrapper.appendChild(control)
+    document.body.appendChild(wrapper)
+
+    applyVarStackWidth(control, 'scalar-list')
+
+    expect(wrapper.style.width).toBe('100%')
+    expect(wrapper.style.maxWidth).toBe('100%')
   })
 })
 

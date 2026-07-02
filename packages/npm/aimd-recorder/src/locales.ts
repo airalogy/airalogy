@@ -95,6 +95,18 @@ export interface AimdRecorderMessages {
     replace: string
     uploadFailed: string
   }
+  scalarList: {
+    itemsMode: string
+    jsonMode: string
+    itemPlaceholder: string
+    itemIndex: (index: number) => string
+    addItem: string
+    removeItem: string
+    dragItem: string
+    jsonInvalidSyntax: string
+    jsonInvalidArray: string
+    jsonInvalidItem: string
+  }
   dna: {
     editMode: string
     interactiveMode: string
@@ -279,6 +291,18 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     replace: "Replace file",
     uploadFailed: "File upload failed.",
   },
+  scalarList: {
+    itemsMode: "Items",
+    jsonMode: "JSON",
+    itemPlaceholder: "List item",
+    itemIndex: index => `Item ${index}`,
+    addItem: "Add item",
+    removeItem: "Remove item",
+    dragItem: "Drag to reorder",
+    jsonInvalidSyntax: "Invalid JSON.",
+    jsonInvalidArray: "JSON value must be an array.",
+    jsonInvalidItem: "JSON array items do not match this list type.",
+  },
   dna: {
     editMode: "Edit mode",
     interactiveMode: "Interactive",
@@ -435,6 +459,18 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     preview: "预览",
     replace: "替换文件",
     uploadFailed: "文件上传失败。",
+  },
+  scalarList: {
+    itemsMode: "逐项",
+    jsonMode: "JSON",
+    itemPlaceholder: "列表项",
+    itemIndex: index => `第 ${index} 项`,
+    addItem: "添加项",
+    removeItem: "删除项",
+    dragItem: "拖拽排序",
+    jsonInvalidSyntax: "JSON 格式无效。",
+    jsonInvalidArray: "JSON 值必须是数组。",
+    jsonInvalidItem: "JSON 数组项与当前列表类型不匹配。",
   },
   dna: {
     editMode: "编辑模式",

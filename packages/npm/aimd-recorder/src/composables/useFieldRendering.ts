@@ -6,6 +6,9 @@ import {
   normalizeVarTypeName,
   getVarInputKind,
   getVarInputDisplayValue,
+  getScalarListInputItems,
+  getScalarListItemType,
+  normalizeScalarListInputItems,
   unwrapStructuredValue,
   formatDateTimeWithTimezone,
   type VarInputKind,
@@ -217,6 +220,7 @@ export function useFieldRendering(options: FieldRenderingOptions) {
       typePlugin,
     })
     if (inputKind === "checkbox") return false
+    if (inputKind === "scalar-list") return []
     if (inputKind === "dna") return normalizeDnaSequenceValue(undefined)
     if (normalizedType === "currenttime") return formatDateTimeWithTimezone(resolveNowDate())
     if (normalizedType === "username" && typeof options.currentUserName() === "string") return options.currentUserName()
@@ -240,6 +244,13 @@ export function useFieldRendering(options: FieldRenderingOptions) {
     const normalizedType = normalizeVarTypeName(type)
     if (inputKind === "dna" || normalizedType === "dnasequence") {
       return normalizeDnaSequenceValue(value)
+    }
+
+    if (inputKind === "scalar-list") {
+      return normalizeScalarListInputItems(
+        getScalarListInputItems(value),
+        getScalarListItemType(type) ?? "string",
+      )
     }
 
     return value

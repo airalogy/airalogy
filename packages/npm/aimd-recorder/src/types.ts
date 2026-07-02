@@ -112,7 +112,7 @@ export type AimdFileInfoResolver = (
   context: AimdFileResolveContext,
 ) => AimdResolvedFileInfo | string | null | undefined | Promise<AimdResolvedFileInfo | string | null | undefined>
 
-export type AimdVarInputKind = "text" | "number" | "checkbox" | "textarea" | "date" | "datetime" | "time" | "dna" | "code" | "file"
+export type AimdVarInputKind = "text" | "number" | "checkbox" | "textarea" | "scalar-list" | "date" | "datetime" | "time" | "dna" | "code" | "file"
 export type AimdStepDetailDisplay = "auto" | "always"
 export type AimdChoiceOptionExplanationMode = "hidden" | "selected" | "submitted" | "graded"
 export type AimdScaleGradeDisplayMode = "hidden" | "completed" | "submitted" | "graded"

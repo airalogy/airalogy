@@ -67,6 +67,8 @@ export interface NumericInputAttributes {
 
 export type FileInputDisplayKind = AimdAssetKind
 export type FileInputConfig = AimdFileInputConfig
+export type ScalarListItemType = "string" | "int" | "float"
+export type ScalarListInputItem = string | number
 
 export function getFileInputConfig(
   type: string | undefined,
@@ -179,6 +181,10 @@ function resolveOverrideInputKind(inputType: string | undefined, codeLanguage: s
     return 'textarea'
   }
 
+  if (normalized === 'scalarlist' || normalized === 'stringlist' || normalized === 'strlist') {
+    return 'scalar-list'
+  }
+
   if (normalized === 'dna') {
     return 'dna'
   }
@@ -202,14 +208,129 @@ export function normalizeVarTypeName(type: string | undefined): string {
   return normalizeAimdTypeName(type)
 }
 
+function splitTopLevelTypeUnion(annotation: string): string[] {
+  const parts: string[] = []
+  let depth = 0
+  let quote: string | null = null
+  let current = ""
+
+  for (let index = 0; index < annotation.length; index += 1) {
+    const char = annotation[index]
+    const previous = annotation[index - 1]
+
+    if (quote) {
+      current += char
+      if (char === quote && previous !== "\\") {
+        quote = null
+      }
+      continue
+    }
+
+    if (char === "\"" || char === "'") {
+      quote = char
+      current += char
+      continue
+    }
+
+    if (char === "[" || char === "(" || char === "{") {
+      depth += 1
+      current += char
+      continue
+    }
+
+    if (char === "]" || char === ")" || char === "}") {
+      depth = Math.max(0, depth - 1)
+      current += char
+      continue
+    }
+
+    if (char === "|" && depth === 0) {
+      parts.push(current.trim())
+      current = ""
+      continue
+    }
+
+    current += char
+  }
+
+  if (current.trim()) {
+    parts.push(current.trim())
+  }
+
+  return parts.length > 0 ? parts : [annotation.trim()]
+}
+
+function canonicalizeTypeExpression(type: string | undefined): string {
+  return typeof type === "string" ? type.trim().replace(/\s+/g, "").toLowerCase() : ""
+}
+
+function unwrapOptionalTypeAnnotation(type: string | undefined): string {
+  let raw = typeof type === "string" ? type.trim() : ""
+
+  for (let index = 0; index < 4; index += 1) {
+    const compact = canonicalizeTypeExpression(raw)
+    const optionalMatch = compact.match(/^(?:typing\.)?optional\[(.*)\]$/)
+    if (optionalMatch) {
+      raw = optionalMatch[1]
+      continue
+    }
+
+    const unionParts = splitTopLevelTypeUnion(raw)
+    if (unionParts.length > 1) {
+      const valueParts = unionParts.filter(part => {
+        const normalized = canonicalizeTypeExpression(part)
+        return normalized !== "none" && normalized !== "null" && normalized !== "undefined"
+      })
+      if (valueParts.length === 1) {
+        raw = valueParts[0]
+        continue
+      }
+    }
+
+    break
+  }
+
+  return raw
+}
+
 export function isNumericVarType(type: string | undefined): boolean {
   const normalized = normalizeVarTypeName(type)
   return normalized === "float" || normalized === "int" || normalized === "integer" || normalized === "number"
 }
 
+function getScalarListItemTypeFromExpression(type: string | undefined): ScalarListItemType | undefined {
+  const normalized = canonicalizeTypeExpression(type).replace(/^typing\./, "")
+  if (normalized === "str" || normalized === "string" || normalized === "builtins.str") {
+    return "string"
+  }
+  if (normalized === "int" || normalized === "integer" || normalized === "builtins.int") {
+    return "int"
+  }
+  if (normalized === "float" || normalized === "number" || normalized === "builtins.float") {
+    return "float"
+  }
+  return undefined
+}
+
+export function getScalarListItemType(type: string | undefined): ScalarListItemType | undefined {
+  const compact = canonicalizeTypeExpression(unwrapOptionalTypeAnnotation(type)).replace(/^typing\./, "")
+
+  if (compact.endsWith("[]")) {
+    return getScalarListItemTypeFromExpression(compact.slice(0, -2))
+  }
+
+  const listMatch = compact.match(/^(?:list|array)\[(.*)\]$/)
+  return listMatch ? getScalarListItemTypeFromExpression(listMatch[1]) : undefined
+}
+
+export function isScalarListVarType(type: string | undefined): boolean {
+  return getScalarListItemType(type) !== undefined
+}
+
 export function isStructuredVarType(type: string | undefined): boolean {
-  const raw = typeof type === "string" ? type.trim().toLowerCase() : ""
-  const normalized = normalizeVarTypeName(type)
+  const unwrappedType = unwrapOptionalTypeAnnotation(type)
+  const raw = canonicalizeTypeExpression(unwrappedType).replace(/^typing\./, "")
+  const normalized = normalizeVarTypeName(unwrappedType)
   return normalized === "json"
     || normalized === "list"
     || raw.startsWith("list[")
@@ -232,6 +353,10 @@ export function getVarInputKind(type: string | undefined, options: VarInputKindO
   const typePlugin = options.typePlugin ?? resolveAimdTypePlugin(type, options.typePlugins)
   if (typePlugin?.inputKind) {
     return typePlugin.inputKind
+  }
+
+  if (isScalarListVarType(type)) {
+    return "scalar-list"
   }
 
   const normalized = normalizeVarTypeName(type)
@@ -291,6 +416,61 @@ function stringifyStructuredInputValue(value: unknown): string {
   } catch {
     return String(value)
   }
+}
+
+function normalizeScalarListNumberItem(text: string, itemType: ScalarListItemType): ScalarListInputItem {
+  const parsed = Number(text)
+  if (!Number.isFinite(parsed)) {
+    return text
+  }
+  if (itemType === "int" && !Number.isInteger(parsed)) {
+    return text
+  }
+  return parsed
+}
+
+export function normalizeScalarListInputItems(
+  items: unknown[],
+  itemType: ScalarListItemType = "string",
+): ScalarListInputItem[] {
+  return items
+    .map(item => item === null || typeof item === "undefined" ? "" : String(item).trim())
+    .filter(item => item.length > 0)
+    .map(item => itemType === "string" ? item : normalizeScalarListNumberItem(item, itemType))
+}
+
+export function getScalarListInputItems(value: unknown): string[] {
+  const normalized = unwrapStructuredValue(value)
+
+  if (Array.isArray(normalized)) {
+    return normalized.map(item => item === null || typeof item === "undefined" ? "" : String(item))
+  }
+
+  if (typeof normalized === "string") {
+    const text = normalized.trim()
+    if (!text) {
+      return []
+    }
+    if (text.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(text)
+        if (Array.isArray(parsed)) {
+          return parsed.map(item => item === null || typeof item === "undefined" ? "" : String(item))
+        }
+      } catch {
+        // Fall through to plain text handling.
+      }
+    }
+    return text.includes("\n")
+      ? text.split(/\r?\n/)
+      : [normalized]
+  }
+
+  if (normalized === null || typeof normalized === "undefined") {
+    return []
+  }
+
+  return [String(normalized)]
 }
 
 function toFiniteNumber(value: unknown): number | undefined {
@@ -556,6 +736,13 @@ export function getVarInputDisplayValue(
     return getFileDisplayName(normalized)
   }
 
+  if (kind === "scalar-list") {
+    return JSON.stringify(normalizeScalarListInputItems(
+      getScalarListInputItems(normalized),
+      getScalarListItemType(options.type) ?? "string",
+    ))
+  }
+
   if (isStructuredVarType(options.type)) {
     return stringifyStructuredInputValue(normalized)
   }
@@ -608,6 +795,13 @@ export function parseVarInputValue(
     return Number.isNaN(parsed) ? rawValue : parsed
   }
 
+  if (kind === "scalar-list") {
+    return normalizeScalarListInputItems(
+      getScalarListInputItems(rawValue),
+      getScalarListItemType(type) ?? "string",
+    )
+  }
+
   if (isStructuredVarType(type)) {
     const text = rawValue.trim()
     if (!text) {
@@ -633,7 +827,8 @@ function getVarControlMinWidth(inputKind: VarInputKind): number {
     case "dna":
     case "code":
     case "file":
-      return 160
+    case "scalar-list":
+      return inputKind === "scalar-list" ? 220 : 160
     default:
       return 0
   }
@@ -649,6 +844,8 @@ function getVarControlExtraWidth(inputKind: VarInputKind): number {
       return 28
     case "file":
       return 24
+    case "scalar-list":
+      return 16
     default:
       return 4
   }
@@ -843,10 +1040,16 @@ export function applyVarStackWidth(target: HTMLElement, inputKind: VarInputKind)
     return
   }
 
+  if (inputKind === "scalar-list") {
+    wrapper.style.width = "100%"
+    wrapper.style.maxWidth = "100%"
+    return
+  }
+
   const labelWidth = measureVarLabelWidth(wrapper)
 
   let controlWidth = 0
-  const input = wrapper.querySelector(".aimd-rec-inline__input--stacked, .aimd-rec-inline__textarea--stacked-text, .aimd-rec-inline__file-control") as HTMLElement | null
+  const input = wrapper.querySelector(".aimd-rec-inline__input--stacked, .aimd-rec-inline__textarea--stacked-text, .aimd-rec-inline__file-control, .aimd-rec-inline__scalar-list") as HTMLElement | null
   const minWidthPx = Math.max(getVarControlMinWidth(inputKind), getFileControlMinWidth(input))
   if (input) {
     controlWidth = measureSingleLineControlWidth(input) + getVarControlExtraWidth(inputKind)

@@ -4,6 +4,9 @@
 
 Enter sample name: {{var|sample_name: str, title = "Sample Name", description = "Human-readable label used throughout this protocol", examples = ["S-001", "Control A"]}}
 
+Sample tags: {{var|sample_tags: list[str], title = "Sample Tags", description = "Repeatable manual scalar list for sample labels; drag items to reorder them"}}
+Replicate counts: {{var|replicate_counts: list[int], title = "Replicate Counts", description = "Repeatable numeric scalar list; drag items to reorder them"}}
+
 Operator: {{var|operator: UserName, title = "Operator", description = "Person responsible for running and reviewing this protocol", examples = ["Dr. Chen"]}}
 
 Record time: {{var|current_time: CurrentTime, title = "Record Time", description = "Timestamp captured when the protocol record is prepared", examples = ["2026-05-27 09:30"]}}

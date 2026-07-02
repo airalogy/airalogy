@@ -283,7 +283,10 @@ describe('AimdRecorder assigner controls', () => {
     const latestRecord = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
     expect(latestRecord?.var?.image_ids).toEqual(['airalogy.id.file.image-a.png', 'airalogy.id.file.image-b.png'])
     expect(wrapper.find('.aimd-rec-assigner-field__button').exists()).toBe(true)
-    expect((wrapper.find('textarea.aimd-rec-inline__textarea').element as HTMLTextAreaElement).value).toContain('"airalogy.id.file.image-a.png"')
+    expect(wrapper.findAll<HTMLInputElement>('.aimd-rec-scalar-list__input').map(input => input.element.value)).toEqual([
+      'airalogy.id.file.image-a.png',
+      'airalogy.id.file.image-b.png',
+    ])
   })
 
   it('runs auto host assigners when dependent fields become available', async () => {

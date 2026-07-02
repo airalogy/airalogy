@@ -32,9 +32,14 @@ import {
   getFileValueId,
   getFileDisplayName,
   getFileInputConfig,
+  getScalarListInputItems,
+  getScalarListItemType,
   getVarEnumSelectValue,
   getVarEnumValueFromSelectValue,
+  normalizeScalarListInputItems,
   type NumericInputAttributes,
+  type ScalarListInputItem,
+  type ScalarListItemType,
 } from "../composables/useVarHelpers"
 
 const AimdCodeField = defineAsyncComponent(() => import("./AimdCodeField.vue"))
@@ -71,6 +76,13 @@ interface FileDisplayInfo {
   type?: string
   size?: number
 }
+
+type ScalarListEditMode = "items" | "json"
+type ScalarListJsonParseError = "syntax" | "array" | "item"
+
+type ScalarListJsonParseResult =
+  | { ok: true; value: ScalarListInputItem[] }
+  | { ok: false; error: ScalarListJsonParseError }
 
 function parseCsvPreviewLine(line: string): string[] {
   const cells: string[] = []
@@ -174,7 +186,186 @@ function formatFileSize(size: number | undefined): string {
   return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`
 }
 
-function renderUtilityIcon(kind: "download" | "open" | "clear" | "replace" | "preview"): VNode {
+function areArraysEqual(left: unknown[], right: unknown[]): boolean {
+  return left.length === right.length && left.every((value, index) => Object.is(value, right[index]))
+}
+
+const SCALAR_LIST_INPUT_MIN_WIDTH_PX = 50
+const SCALAR_LIST_INPUT_EXTRA_SPACE_PX = 8
+let scalarListTextMeasureContext: CanvasRenderingContext2D | null | undefined
+
+function getApproximateTextWidthEm(text: string): number {
+  return Array.from(text).reduce((width, char) => {
+    const codePoint = char.codePointAt(0) ?? 0
+    if (codePoint >= 0x1100) {
+      return width + 1
+    }
+    if (/\s/.test(char)) {
+      return width + 0.35
+    }
+    if (/[ilI|.,'`!:;]/.test(char)) {
+      return width + 0.3
+    }
+    if (/[mwMW@#%&]/.test(char)) {
+      return width + 0.82
+    }
+    if (/[A-Z0-9]/.test(char)) {
+      return width + 0.62
+    }
+    if (/[a-z]/.test(char)) {
+      return width + 0.56
+    }
+    return width + 0.65
+  }, 0)
+}
+
+function getApproximateTextMaxLineWidthEm(text: string): number {
+  return text
+    .split(/\r\n|\r|\n/)
+    .reduce((maxWidth, line) => Math.max(maxWidth, getApproximateTextWidthEm(line)), 0)
+}
+
+function hasExplicitLineBreak(text: string): boolean {
+  return /\r|\n/.test(text)
+}
+
+function getScalarListInputWidthEm(value: string, placeholder: string | undefined): number {
+  const trimmedValue = value.trim()
+  if (trimmedValue.length > 0) {
+    return Math.ceil(Math.max(2.4, getApproximateTextMaxLineWidthEm(trimmedValue) + 0.75) * 10) / 10
+  }
+
+  const placeholderText = placeholder ?? ""
+  return Math.ceil(Math.max(3.4, getApproximateTextMaxLineWidthEm(placeholderText) + 0.75) * 10) / 10
+}
+
+function getScalarListInputFallbackWidthPx(value: string, placeholder: string | undefined): number {
+  return Math.ceil(getScalarListInputWidthEm(value, placeholder) * 14 + 16)
+}
+
+function getScalarListTextMeasureContext(): CanvasRenderingContext2D | null {
+  if (scalarListTextMeasureContext !== undefined) {
+    return scalarListTextMeasureContext
+  }
+  if (typeof document === "undefined") {
+    scalarListTextMeasureContext = null
+    return scalarListTextMeasureContext
+  }
+  try {
+    const canvas = document.createElement("canvas")
+    const context = canvas.getContext("2d")
+    scalarListTextMeasureContext = context && typeof context.measureText === "function" ? context : null
+  } catch {
+    scalarListTextMeasureContext = null
+  }
+  return scalarListTextMeasureContext
+}
+
+function getComputedFontShorthand(style: CSSStyleDeclaration): string {
+  return style.font && style.font !== ""
+    ? style.font
+    : `${style.fontStyle} ${style.fontVariant} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+}
+
+function getCssPixelValue(value: string): number {
+  const parsed = Number.parseFloat(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function getScalarListInputChromeWidthPx(style: CSSStyleDeclaration): number {
+  if (style.boxSizing !== "border-box") {
+    return 0
+  }
+  return getCssPixelValue(style.paddingLeft)
+    + getCssPixelValue(style.paddingRight)
+    + getCssPixelValue(style.borderLeftWidth)
+    + getCssPixelValue(style.borderRightWidth)
+}
+
+function getScalarListMeasuredInputWidthPx(control: HTMLInputElement | HTMLTextAreaElement): number | null {
+  if (typeof window === "undefined" || typeof window.getComputedStyle !== "function") {
+    return null
+  }
+  const context = getScalarListTextMeasureContext()
+  if (!context) {
+    return null
+  }
+  const style = window.getComputedStyle(control)
+  context.font = getComputedFontShorthand(style)
+  const text = control.value.length > 0 ? control.value : control.placeholder
+  const maxTextWidth = text
+    .split(/\r\n|\r|\n/)
+    .reduce((maxWidth, line) => Math.max(maxWidth, context.measureText(line).width), 0)
+  return Math.ceil(Math.max(
+    SCALAR_LIST_INPUT_MIN_WIDTH_PX,
+    maxTextWidth + getScalarListInputChromeWidthPx(style) + SCALAR_LIST_INPUT_EXTRA_SPACE_PX,
+  ))
+}
+
+function syncScalarListInputWidth(control: HTMLInputElement | HTMLTextAreaElement) {
+  const measuredWidth = getScalarListMeasuredInputWidthPx(control)
+  if (measuredWidth !== null) {
+    control.style.setProperty("--aimd-rec-scalar-list-input-width", `${measuredWidth}px`)
+  }
+}
+
+function syncScalarListTextInputLayout(control: HTMLTextAreaElement) {
+  syncScalarListInputWidth(control)
+  syncAutoWrapTextareaHeight(control)
+}
+
+function formatScalarListJsonValue(value: unknown, itemType: ScalarListItemType): string {
+  return JSON.stringify(normalizeScalarListInputItems(getScalarListInputItems(value), itemType), null, 2)
+}
+
+function isValidScalarListJsonItem(item: unknown, itemType: ScalarListItemType): boolean {
+  if (item === null || Array.isArray(item) || typeof item === "object") {
+    return false
+  }
+  if (itemType === "string") {
+    return typeof item === "string" || typeof item === "number" || typeof item === "boolean"
+  }
+  if (typeof item === "number") {
+    return Number.isFinite(item) && (itemType !== "int" || Number.isInteger(item))
+  }
+  if (typeof item === "string" && item.trim()) {
+    const parsed = Number(item)
+    return Number.isFinite(parsed) && (itemType !== "int" || Number.isInteger(parsed))
+  }
+  return false
+}
+
+function parseScalarListJsonValue(rawValue: string, itemType: ScalarListItemType): ScalarListJsonParseResult {
+  const text = rawValue.trim()
+  if (!text) {
+    return { ok: true, value: [] }
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    return { ok: false, error: "syntax" }
+  }
+  if (!Array.isArray(parsed)) {
+    return { ok: false, error: "array" }
+  }
+  if (!parsed.every(item => isValidScalarListJsonItem(item, itemType))) {
+    return { ok: false, error: "item" }
+  }
+  return { ok: true, value: normalizeScalarListInputItems(parsed, itemType) }
+}
+
+function getScalarListJsonPlaceholder(itemType: ScalarListItemType): string {
+  if (itemType === "int") {
+    return "[1, 2]"
+  }
+  if (itemType === "float") {
+    return "[1.2, 3.4]"
+  }
+  return "[\"alpha\", \"beta\"]"
+}
+
+function renderUtilityIcon(kind: "download" | "open" | "clear" | "replace" | "preview" | "add" | "drag"): VNode {
   const common = {
     viewBox: "0 0 24 24",
     width: "1em",
@@ -212,6 +403,22 @@ function renderUtilityIcon(kind: "download" | "open" | "clear" | "replace" | "pr
     return h("svg", common, [
       h("path", { d: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z" }),
       h("circle", { cx: "12", cy: "12", r: "3" }),
+    ])
+  }
+  if (kind === "add") {
+    return h("svg", common, [
+      h("path", { d: "M12 5v14" }),
+      h("path", { d: "M5 12h14" }),
+    ])
+  }
+  if (kind === "drag") {
+    return h("svg", common, [
+      h("circle", { cx: "9", cy: "6", r: "1" }),
+      h("circle", { cx: "9", cy: "12", r: "1" }),
+      h("circle", { cx: "9", cy: "18", r: "1" }),
+      h("circle", { cx: "15", cy: "6", r: "1" }),
+      h("circle", { cx: "15", cy: "12", r: "1" }),
+      h("circle", { cx: "15", cy: "18", r: "1" }),
     ])
   }
   return h("svg", common, [
@@ -288,7 +495,44 @@ export default defineComponent({
     const csvPreview = ref<CsvPreviewState | null>(null)
     const resolvedFileInfo = ref<FileDisplayInfo | null>(null)
     const lastSelectedFileInfo = ref<FileDisplayInfo | null>(null)
+    const scalarListDraftRows = ref<string[] | null>(null)
+    const scalarListMode = ref<ScalarListEditMode>("items")
+    const scalarListJsonDraft = ref<string | null>(null)
+    const scalarListJsonError = ref("")
+    const scalarListDragIndex = ref<number | null>(null)
+    const scalarListDropIndex = ref<number | null>(null)
     let csvPreviewRequestId = 0
+
+    watch(
+      () => [props.inputKind, props.value] as const,
+      ([inputKind, value]) => {
+        if (inputKind !== "scalar-list") {
+          scalarListDraftRows.value = null
+          scalarListMode.value = "items"
+          scalarListJsonDraft.value = null
+          scalarListJsonError.value = ""
+          scalarListDragIndex.value = null
+          scalarListDropIndex.value = null
+          return
+        }
+        const itemType = getScalarListItemType(props.node.definition?.type || "str") ?? "string"
+        const persistedItems = normalizeScalarListInputItems(getScalarListInputItems(value), itemType)
+        if (scalarListDraftRows.value) {
+          const draftItems = normalizeScalarListInputItems(scalarListDraftRows.value, itemType)
+          if (!areArraysEqual(persistedItems, draftItems)) {
+            scalarListDraftRows.value = null
+          }
+        }
+        if (scalarListJsonDraft.value !== null) {
+          const parsedDraft = parseScalarListJsonValue(scalarListJsonDraft.value, itemType)
+          if (parsedDraft.ok && !areArraysEqual(persistedItems, parsedDraft.value)) {
+            scalarListJsonDraft.value = null
+            scalarListJsonError.value = ""
+          }
+        }
+      },
+      { immediate: true },
+    )
 
     watch(
       () => {
@@ -424,7 +668,7 @@ export default defineComponent({
         }
       }
 
-      function syncFileControlLayout(control: HTMLElement) {
+      function syncCompositeControlLayout(control: HTMLElement) {
         applyVarStackWidth(control, inputKind)
       }
 
@@ -469,12 +713,16 @@ export default defineComponent({
         }
       }
 
-      const renderHeaderAssignerActions = (): VNode | null => {
-        if (!["file", "code"].includes(inputKind) || (!props.assignerControl && !props.assignerStatus)) {
+      const renderHeaderAssignerActions = (headerAction?: VNode | null): VNode | null => {
+        const hasAssignerActions = ["file", "code", "scalar-list"].includes(inputKind) && Boolean(props.assignerControl || props.assignerStatus)
+        if (!headerAction && !hasAssignerActions) {
           return null
         }
 
         return h("span", { class: "aimd-rec-inline__header-assigner-actions" }, [
+          headerAction
+            ? h("span", { class: "aimd-rec-inline__header-extra-action" }, [headerAction])
+            : null,
           props.assignerControl
             ? h("span", { class: "aimd-rec-inline__header-assigner-action" }, [props.assignerControl])
             : null,
@@ -484,7 +732,7 @@ export default defineComponent({
         ])
       }
 
-      const renderVarLabel = (): VNode => {
+      const renderVarLabel = (headerAction?: VNode | null): VNode => {
         const metaTitle = normalizeMetaString(meta?.title)
         const definitionTitle = getAimdFieldTitle(node.definition)
         const displayTitle = metaTitle ?? getAimdFieldDisplayLabel(id, node.definition)
@@ -517,7 +765,7 @@ export default defineComponent({
             hasCustomTitle ? h("span", { class: "aimd-field__key" }, id) : null,
             renderFieldMetadataPopover(help),
           ]),
-          renderHeaderAssignerActions(),
+          renderHeaderAssignerActions(headerAction),
         ])
       }
 
@@ -579,7 +827,7 @@ export default defineComponent({
       const renderStackedVar = (
         control: VNode,
         variantClass?: string | string[],
-        options: { controlRow?: boolean } = {},
+        options: { controlRow?: boolean; headerAction?: VNode | null } = {},
       ): VNode =>
         h("span", {
           class: [
@@ -590,7 +838,7 @@ export default defineComponent({
             ...extraClasses,
           ],
         }, [
-          renderVarLabel(),
+          renderVarLabel(options.headerAction),
           options.controlRow === false ? control : renderControlRow(control),
           renderAssignerError(),
         ])
@@ -708,8 +956,8 @@ export default defineComponent({
           h("span", {
             class: "aimd-rec-inline__value-control aimd-rec-inline__file-control",
             "data-file-kind": fileConfig.kind,
-            onVnodeMounted: (vnode: any) => syncFileControlLayout(vnode.el as HTMLElement),
-            onVnodeUpdated: (vnode: any) => syncFileControlLayout(vnode.el as HTMLElement),
+            onVnodeMounted: (vnode: any) => syncCompositeControlLayout(vnode.el as HTMLElement),
+            onVnodeUpdated: (vnode: any) => syncCompositeControlLayout(vnode.el as HTMLElement),
           }, [
             hasFileValue
               ? h("span", { class: "aimd-rec-file-card" }, [
@@ -818,6 +1066,298 @@ export default defineComponent({
           ]),
           "aimd-rec-inline--var-stacked--file",
           { controlRow: false },
+        )
+      }
+
+      if (inputKind === "scalar-list") {
+        const scalarListItemType = getScalarListItemType(type) ?? "string"
+        const isNumericScalarList = scalarListItemType === "int" || scalarListItemType === "float"
+        const persistedRows = getScalarListInputItems(props.value)
+        const rows = scalarListDraftRows.value ?? (persistedRows.length > 0 ? persistedRows : [""])
+        const emitScalarListRows = (nextRows: string[]) => {
+          const visibleRows = nextRows.length > 0 ? nextRows : [""]
+          scalarListDraftRows.value = visibleRows
+          emit("change", {
+            id,
+            value: normalizeScalarListInputItems(visibleRows, scalarListItemType),
+            type,
+            inputKind,
+          })
+        }
+        const updateScalarListRow = (rowIndex: number, value: string) => {
+          const nextRows = rows.slice()
+          nextRows[rowIndex] = value
+          emitScalarListRows(nextRows)
+        }
+        const removeScalarListRow = (rowIndex: number) => {
+          emitScalarListRows(rows.filter((_, index) => index !== rowIndex))
+        }
+        const addScalarListRow = () => {
+          emitScalarListRows([...rows, ""])
+        }
+        const resetScalarListDragState = () => {
+          scalarListDragIndex.value = null
+          scalarListDropIndex.value = null
+        }
+        const getScalarListDragSourceIndex = (event: DragEvent): number | null => {
+          const transferred = event.dataTransfer?.getData("text/plain")
+          const parsed = transferred ? Number.parseInt(transferred, 10) : NaN
+          if (Number.isInteger(parsed) && parsed >= 0 && parsed < rows.length) {
+            return parsed
+          }
+          return scalarListDragIndex.value
+        }
+        const reorderScalarListRow = (sourceIndex: number, targetIndex: number) => {
+          if (sourceIndex === targetIndex || sourceIndex < 0 || targetIndex < 0 || sourceIndex >= rows.length || targetIndex >= rows.length) {
+            return
+          }
+          const nextRows = rows.slice()
+          const [moved] = nextRows.splice(sourceIndex, 1)
+          nextRows.splice(targetIndex, 0, moved)
+          emitScalarListRows(nextRows)
+        }
+        const onScalarListDragStart = (rowIndex: number, event: DragEvent) => {
+          scalarListDragIndex.value = rowIndex
+          scalarListDropIndex.value = null
+          if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move"
+            event.dataTransfer.setData("text/plain", String(rowIndex))
+          }
+        }
+        const onScalarListDragOver = (rowIndex: number, event: DragEvent) => {
+          const sourceIndex = getScalarListDragSourceIndex(event)
+          if (sourceIndex === null || sourceIndex === rowIndex) {
+            return
+          }
+          event.preventDefault()
+          scalarListDropIndex.value = rowIndex
+          if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "move"
+          }
+        }
+        const onScalarListDrop = (rowIndex: number, event: DragEvent) => {
+          event.preventDefault()
+          const sourceIndex = getScalarListDragSourceIndex(event)
+          resetScalarListDragState()
+          if (sourceIndex === null) {
+            return
+          }
+          reorderScalarListRow(sourceIndex, rowIndex)
+        }
+        const getScalarListJsonErrorMessage = (error: ScalarListJsonParseError): string => {
+          if (error === "array") {
+            return props.messages.scalarList.jsonInvalidArray
+          }
+          if (error === "item") {
+            return props.messages.scalarList.jsonInvalidItem
+          }
+          return props.messages.scalarList.jsonInvalidSyntax
+        }
+        const getScalarListJsonDraft = () => (
+          scalarListJsonDraft.value
+          ?? formatScalarListJsonValue(scalarListDraftRows.value ?? props.value, scalarListItemType)
+        )
+        const emitScalarListJsonDraft = (rawValue: string) => {
+          scalarListJsonDraft.value = rawValue
+          const parsed = parseScalarListJsonValue(rawValue, scalarListItemType)
+          if (!parsed.ok) {
+            scalarListJsonError.value = getScalarListJsonErrorMessage(parsed.error)
+            return
+          }
+          scalarListJsonError.value = ""
+          scalarListDraftRows.value = parsed.value.length > 0 ? getScalarListInputItems(parsed.value) : [""]
+          emit("change", {
+            id,
+            value: parsed.value,
+            type,
+            inputKind,
+          })
+        }
+        const setScalarListMode = (mode: ScalarListEditMode) => {
+          if (scalarListMode.value === mode) {
+            return
+          }
+          if (mode === "json") {
+            scalarListJsonDraft.value = formatScalarListJsonValue(scalarListDraftRows.value ?? props.value, scalarListItemType)
+            scalarListJsonError.value = ""
+          } else {
+            scalarListJsonDraft.value = null
+            scalarListJsonError.value = ""
+          }
+          scalarListMode.value = mode
+        }
+        const modeButton = (mode: ScalarListEditMode, label: string) => h("button", {
+          type: "button",
+          class: [
+            "aimd-rec-scalar-list__mode-button",
+            scalarListMode.value === mode ? "aimd-rec-scalar-list__mode-button--active" : undefined,
+          ],
+          disabled,
+          "aria-pressed": scalarListMode.value === mode,
+          onClick: () => setScalarListMode(mode),
+        }, label)
+        const modeToolbar = h("span", { class: "aimd-rec-scalar-list__toolbar" }, [
+          h("span", { class: "aimd-rec-scalar-list__mode" }, [
+            modeButton("items", props.messages.scalarList.itemsMode),
+            modeButton("json", props.messages.scalarList.jsonMode),
+          ]),
+        ])
+        const rowsControl = h("span", { class: "aimd-rec-scalar-list__rows" }, rows.map((item, rowIndex) => {
+          const canRemoveRow = !disabled && (rows.length > 1 || item.trim().length > 0)
+          const canDragRow = !disabled && rows.length > 1
+          const isDropTarget = scalarListDropIndex.value === rowIndex
+          const dropPlacement = isDropTarget && scalarListDragIndex.value !== null && scalarListDragIndex.value < rowIndex ? "after" : "before"
+          const itemIndexLabel = props.messages.scalarList.itemIndex(rowIndex + 1)
+          const itemPlaceholder = placeholder ?? props.messages.scalarList.itemPlaceholder
+          const isExplicitMultilineItem = !isNumericScalarList && hasExplicitLineBreak(item)
+          const itemControlProps = {
+            "data-rec-focus-key": rowIndex === 0 ? `var:${id}` : `var:${id}:${rowIndex}`,
+            class: [
+              "aimd-rec-scalar-list__input",
+              isNumericScalarList ? "aimd-rec-scalar-list__input--number" : "aimd-rec-scalar-list__input--text",
+            ],
+            disabled,
+            placeholder: itemPlaceholder,
+            title: item.trim().length > 0 ? item : undefined,
+            value: item,
+            style: {
+              "--aimd-rec-scalar-list-input-width": `${getScalarListInputFallbackWidthPx(item, itemPlaceholder)}px`,
+            },
+            onBlur: onVarBlur,
+          }
+          return h("span", {
+            key: rowIndex,
+            class: [
+              "aimd-rec-scalar-list__row",
+              canDragRow ? "aimd-rec-scalar-list__row--has-drag" : undefined,
+              canRemoveRow ? "aimd-rec-scalar-list__row--has-remove" : undefined,
+              isNumericScalarList ? "aimd-rec-scalar-list__row--number" : "aimd-rec-scalar-list__row--text",
+              isExplicitMultilineItem ? "aimd-rec-scalar-list__row--multiline" : undefined,
+              scalarListDragIndex.value === rowIndex ? "aimd-rec-scalar-list__row--dragging" : undefined,
+              isDropTarget ? "aimd-rec-scalar-list__row--drop-target" : undefined,
+              isDropTarget ? `aimd-rec-scalar-list__row--drop-target-${dropPlacement}` : undefined,
+            ],
+            onDragover: (event: DragEvent) => onScalarListDragOver(rowIndex, event),
+            onDrop: (event: DragEvent) => onScalarListDrop(rowIndex, event),
+          }, [
+            canDragRow
+              ? h("button", {
+                type: "button",
+                class: "aimd-rec-scalar-list__drag",
+                title: props.messages.scalarList.dragItem,
+                "aria-label": props.messages.scalarList.dragItem,
+                draggable: true,
+                onDragstart: (event: DragEvent) => onScalarListDragStart(rowIndex, event),
+                onDragend: resetScalarListDragState,
+              }, [
+                renderUtilityIcon("drag"),
+                h("span", { class: "aimd-rec-scalar-list__icon-label" }, props.messages.scalarList.dragItem),
+              ])
+              : null,
+            h("span", {
+              class: "aimd-rec-scalar-list__index",
+              title: itemIndexLabel,
+              "aria-label": itemIndexLabel,
+            }, String(rowIndex + 1)),
+            isNumericScalarList
+              ? h("input", {
+                ...itemControlProps,
+                type: "number",
+                inputmode: scalarListItemType === "int" ? "numeric" : scalarListItemType === "float" ? "decimal" : undefined,
+                step: scalarListItemType === "int" ? "1" : scalarListItemType === "float" ? "any" : undefined,
+                onVnodeMounted: (vnode: any) => {
+                  const el = vnode.el as HTMLInputElement
+                  syncScalarListInputWidth(el)
+                },
+                onVnodeUpdated: (vnode: any) => {
+                  const el = vnode.el as HTMLInputElement
+                  syncScalarListInputWidth(el)
+                },
+                onInput: (event: Event) => {
+                  const el = event.target as HTMLInputElement
+                  syncScalarListInputWidth(el)
+                  updateScalarListRow(rowIndex, el.value)
+                },
+              })
+              : h("textarea", {
+                ...itemControlProps,
+                rows: 1,
+                wrap: "soft",
+                onVnodeMounted: (vnode: any) => {
+                  const el = vnode.el as HTMLTextAreaElement
+                  syncScalarListTextInputLayout(el)
+                },
+                onVnodeUpdated: (vnode: any) => {
+                  const el = vnode.el as HTMLTextAreaElement
+                  syncScalarListTextInputLayout(el)
+                },
+                onInput: (event: Event) => {
+                  const el = event.target as HTMLTextAreaElement
+                  syncScalarListTextInputLayout(el)
+                  updateScalarListRow(rowIndex, el.value)
+                },
+              }),
+            canRemoveRow
+              ? h("button", {
+                type: "button",
+                class: "aimd-rec-scalar-list__remove",
+                title: props.messages.scalarList.removeItem,
+                "aria-label": props.messages.scalarList.removeItem,
+                onClick: () => removeScalarListRow(rowIndex),
+              }, [
+                renderUtilityIcon("clear"),
+                h("span", { class: "aimd-rec-scalar-list__icon-label" }, props.messages.scalarList.removeItem),
+              ])
+              : null,
+          ])
+        }))
+        const addButton = !disabled
+          ? h("button", {
+            type: "button",
+            class: "aimd-rec-scalar-list__add",
+            title: props.messages.scalarList.addItem,
+            onClick: addScalarListRow,
+          }, [
+            renderUtilityIcon("add"),
+            h("span", { class: "aimd-rec-scalar-list__add-label" }, props.messages.scalarList.addItem),
+          ])
+          : null
+        const itemsControl = h("span", { class: "aimd-rec-scalar-list__items" }, [
+          rowsControl,
+          addButton,
+        ].filter((child): child is VNode => Boolean(child)))
+        const jsonControl = h("span", { class: "aimd-rec-scalar-list__json-wrap" }, [
+          h(AimdCodeField, {
+            "data-rec-focus-key": `var:${id}:json`,
+            class: [
+              "aimd-rec-scalar-list__json-editor",
+              scalarListJsonError.value ? "aimd-rec-scalar-list__json-editor--invalid" : undefined,
+            ],
+            modelValue: getScalarListJsonDraft(),
+            language: "json",
+            disabled,
+            compact: true,
+            "aria-label": getScalarListJsonPlaceholder(scalarListItemType),
+            "onUpdate:modelValue": (nextValue: string) => emitScalarListJsonDraft(nextValue),
+            onBlur: onVarBlur,
+          }),
+          scalarListJsonError.value
+            ? h("span", { class: "aimd-rec-scalar-list__json-error" }, scalarListJsonError.value)
+            : null,
+        ])
+
+        return renderStackedVar(
+          h("span", {
+            class: "aimd-rec-inline__value-control aimd-rec-inline__scalar-list",
+            onVnodeMounted: (vnode: any) => syncCompositeControlLayout(vnode.el as HTMLElement),
+            onVnodeUpdated: (vnode: any) => syncCompositeControlLayout(vnode.el as HTMLElement),
+          }, [
+            ...(scalarListMode.value === "json"
+              ? [jsonControl]
+              : [itemsControl]),
+          ]),
+          "aimd-rec-inline--var-stacked--scalar-list",
+          { controlRow: false, headerAction: modeToolbar },
         )
       }
 

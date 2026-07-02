@@ -12,6 +12,16 @@ import AimdVarField from '../components/AimdVarField.vue'
 import AimdVarTableField from '../components/AimdVarTableField.vue'
 import { createAimdRecorderMessages } from '../locales'
 
+vi.mock('../components/AimdCodeField.vue', () => ({
+  __esModule: true,
+  default: {
+    name: 'AimdCodeField',
+    props: ['modelValue', 'language', 'disabled', 'compact'],
+    emits: ['update:modelValue', 'blur'],
+    template: '<textarea class="aimd-code-field-stub" :value="modelValue" :disabled="disabled" @input="$emit(\'update:modelValue\', $event.target.value)" @blur="$emit(\'blur\')" />',
+  },
+}))
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const source = readFileSync(resolve(__dirname, '../components/AimdVarField.vue'), 'utf8')
@@ -49,12 +59,16 @@ describe('AimdVarField render behavior', () => {
     expect(source).toMatch(/if \(inputKind === "code"\)/)
     expect(source).toMatch(/language: codeLanguage/)
     expect(source).toMatch(/"aimd-rec-inline--var-stacked--code"/)
+    expect(source).toMatch(/language: "json"/)
   })
 
-  it('starts CodeStr and PyStr editors at a compact content-driven height', () => {
+  it('starts code editors at a content-driven height and supports compact density', () => {
     expect(codeFieldSource).toContain('createMonacoAutoHeight')
     expect(codeFieldSource).toMatch(/const editorHeight = codeAutoHeight\.editorHeight/)
     expect(codeFieldSource).toMatch(/codeAutoHeight\.attachEditor\(monacoEditor\)/)
+    expect(codeFieldSource).toContain('compact?: boolean')
+    expect(codeFieldSource).toContain("verticalPadding: props.compact ? 12 : 24")
+    expect(codeFieldSource).toContain("padding: props.compact ? { top: 6, bottom: 6 } : { top: 12, bottom: 12 }")
     expect(codeFieldSource).toContain('--aimd-code-field-editor-height')
     expect(codeFieldSource).not.toContain('min-height: 240px;')
   })
@@ -265,9 +279,314 @@ describe('AimdVarField render behavior', () => {
   })
 
   it('places code assigner actions in the field header instead of a side prefix', () => {
-    expect(source).toContain('["file", "code"].includes(inputKind)')
+    expect(source).toContain('["file", "code", "scalar-list"].includes(inputKind)')
     expect(source).toMatch(/if \(inputKind === "code"\) \{[\s\S]*?"aimd-rec-inline--var-stacked--code",[\s\S]*?\{ controlRow: false \}/)
-    expect(recorderSource).toContain('["number", "date", "datetime", "time", "text", "textarea", "checkbox", "file", "code"].includes(inputKind)')
+    expect(recorderSource).toContain('["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "checkbox", "file", "code"].includes(inputKind)')
+  })
+
+  it('renders scalar-list fields as full-row controls with horizontal items before wrapping', () => {
+    expect(source).toContain('{ controlRow: false, headerAction: modeToolbar }')
+    expect(source).toContain('context.measureText(line).width')
+    expect(source).toContain('syncScalarListTextInputLayout(el)')
+    expect(source).toContain('"--aimd-rec-scalar-list-input-width"')
+    expect(source).toContain('hasExplicitLineBreak(item)')
+    expect(source).toMatch(/isNumericScalarList\s*\?\s*h\("input"/)
+    expect(source).toContain('h("textarea"')
+    expect(source).toContain('syncAutoWrapTextareaHeight(control)')
+    expect(source).toContain('props.messages.scalarList.itemIndex(rowIndex + 1)')
+    expect(recorderSource).toContain('.aimd-rec-inline__header-extra-action')
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked--scalar-list\) \{[\s\S]*?display: flex;[\s\S]*?width: 100%;[\s\S]*?margin: 12px 0;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__items\) \{[\s\S]*?flex-flow: row wrap;[\s\S]*?gap: 5px;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__rows\) \{[\s\S]*?display: contents;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row\) \{[\s\S]*?display: inline-flex;[\s\S]*?align-items: stretch;[\s\S]*?gap: 0;[\s\S]*?width: fit-content;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row--has-drag\.aimd-rec-scalar-list__row--has-remove\) \{[\s\S]*?--aimd-rec-scalar-list-control-offset: 68px;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row--multiline\) \{[\s\S]*?flex: 1 1 100%;[\s\S]*?width: 100%;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__input\) \{[\s\S]*?width: var\(--aimd-rec-scalar-list-input-width, calc\(8em \+ 16px\)\);[\s\S]*?max-width: min\(calc\(42em \+ 16px\), calc\(100% - var\(--aimd-rec-scalar-list-control-offset, 0px\)\)\);/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__input--text\) \{[\s\S]*?resize: none;[\s\S]*?overflow: hidden;[\s\S]*?white-space: pre-wrap;[\s\S]*?overflow-wrap: anywhere;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row--multiline \.aimd-rec-scalar-list__input--text\) \{[\s\S]*?flex: 1 1 auto;[\s\S]*?width: auto;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__index\) \{[\s\S]*?min-width: 22px;[\s\S]*?min-height: 26px;[\s\S]*?font-size: 10px;[\s\S]*?font-variant-numeric: tabular-nums;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__drag\) \{[\s\S]*?width: 20px;[\s\S]*?min-height: 26px;[\s\S]*?font-size: 12px;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__remove\) \{[\s\S]*?width: 26px;[\s\S]*?min-height: 26px;[\s\S]*?font-size: 13px;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row--drop-target-before\)::before,[\s\S]*?\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row--drop-target-after\)::after \{[\s\S]*?animation: aimd-rec-scalar-list-insert-pulse/)
+    expect(recorderSource).toContain('@keyframes aimd-rec-scalar-list-insert-pulse')
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__mode-button:first-child\) \{[\s\S]*?border-radius: 5px 0 0 5px;/)
+    expect(recorderSource).not.toContain('min-height: 72px;')
+  })
+
+  it('renders explicit multiline list string items as full-row controls', async () => {
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'sample_notes',
+      raw: '{{var|sample_notes}}',
+      definition: {
+        id: 'sample_notes',
+        type: 'list[str]',
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        value: ['a\nb\nc'] as any,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '["a\\nb\\nc"]',
+        inputKind: 'scalar-list',
+        initialized: true,
+      },
+    })
+
+    const row = wrapper.find('.aimd-rec-scalar-list__row')
+    expect(row.classes()).toContain('aimd-rec-scalar-list__row--multiline')
+    expect(wrapper.find<HTMLTextAreaElement>('.aimd-rec-scalar-list__input').element.value).toBe('a\nb\nc')
+  })
+
+  it('renders list[str] vars as repeatable string inputs', async () => {
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'sample_tags',
+      raw: '{{var|sample_tags}}',
+      definition: {
+        id: 'sample_tags',
+        type: 'list[str]',
+        kwargs: {
+          title: 'Sample tags',
+        },
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        value: ['alpha'] as any,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '["alpha"]',
+        inputKind: 'scalar-list',
+        initialized: true,
+      },
+    })
+
+    const getInputs = () => wrapper.findAll<HTMLInputElement>('.aimd-rec-scalar-list__input')
+    const getLatestChange = () => {
+      const changes = wrapper.emitted('change') ?? []
+      return changes[changes.length - 1]?.[0]
+    }
+    expect(getInputs()).toHaveLength(1)
+    expect(getInputs()[0].element.tagName).toBe('TEXTAREA')
+    expect(getInputs()[0].element.value).toBe('alpha')
+    expect(wrapper.findAll('.aimd-rec-scalar-list__index').map(index => index.text())).toEqual(['1'])
+    expect(wrapper.find('.aimd-rec-scalar-list__index').attributes('title')).toBe('Item 1')
+    expect(wrapper.find('.aimd-rec-scalar-list__add').text()).toBe('Add item')
+
+    await wrapper.find('.aimd-rec-scalar-list__add').trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(getInputs()).toHaveLength(2)
+    expect(wrapper.findAll('.aimd-rec-scalar-list__index').map(index => index.text())).toEqual(['1', '2'])
+    expect(getLatestChange()).toMatchObject({
+      id: 'sample_tags',
+      value: ['alpha'],
+      type: 'list[str]',
+      inputKind: 'scalar-list',
+    })
+
+    await getInputs()[1].setValue('beta')
+    await wrapper.vm.$nextTick()
+    expect(getLatestChange()).toMatchObject({
+      value: ['alpha', 'beta'],
+    })
+
+    const dragButtons = wrapper.findAll('.aimd-rec-scalar-list__drag')
+    expect(dragButtons).toHaveLength(2)
+    await dragButtons[1].trigger('dragstart', {
+      dataTransfer: {
+        effectAllowed: '',
+        setData: vi.fn(),
+      },
+    })
+    await wrapper.findAll('.aimd-rec-scalar-list__row')[0].trigger('dragover')
+    expect(wrapper.findAll('.aimd-rec-scalar-list__row')[0].classes()).toContain('aimd-rec-scalar-list__row--drop-target-before')
+    await wrapper.findAll('.aimd-rec-scalar-list__row')[0].trigger('drop')
+    await wrapper.vm.$nextTick()
+    expect(getLatestChange()).toMatchObject({
+      value: ['beta', 'alpha'],
+    })
+
+    await wrapper.findAll('.aimd-rec-scalar-list__remove')[0].trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(getLatestChange()).toMatchObject({
+      value: ['alpha'],
+    })
+  })
+
+  it('renders list[int] vars as repeatable number inputs', async () => {
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'counts',
+      raw: '{{var|counts}}',
+      definition: {
+        id: 'counts',
+        type: 'list[int]',
+        kwargs: {
+          title: 'Counts',
+        },
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        value: [1] as any,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '[1]',
+        inputKind: 'scalar-list',
+        initialized: true,
+      },
+    })
+
+    const getInputs = () => wrapper.findAll<HTMLInputElement>('.aimd-rec-scalar-list__input')
+    const getLatestChange = () => {
+      const changes = wrapper.emitted('change') ?? []
+      return changes[changes.length - 1]?.[0]
+    }
+    expect(getInputs()).toHaveLength(1)
+    expect(getInputs()[0].attributes('type')).toBe('number')
+    expect(getInputs()[0].attributes('step')).toBe('1')
+    expect(getInputs()[0].element.value).toBe('1')
+
+    await wrapper.find('.aimd-rec-scalar-list__add').trigger('click')
+    await wrapper.vm.$nextTick()
+    await getInputs()[1].setValue('2')
+    await wrapper.vm.$nextTick()
+    expect(getLatestChange()).toMatchObject({
+      id: 'counts',
+      value: [1, 2],
+      type: 'list[int]',
+      inputKind: 'scalar-list',
+    })
+  })
+
+  it('edits scalar-list vars in JSON mode without emitting invalid JSON', async () => {
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'sample_tags',
+      raw: '{{var|sample_tags}}',
+      definition: {
+        id: 'sample_tags',
+        type: 'list[str]',
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        value: ['alpha'] as any,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '["alpha"]',
+        inputKind: 'scalar-list',
+        initialized: true,
+      },
+    })
+
+    const modeButtons = wrapper.findAll('.aimd-rec-scalar-list__mode-button')
+    expect(modeButtons.map(button => button.text())).toEqual(['Items', 'JSON'])
+    expect(wrapper.find('.aimd-field__label .aimd-rec-scalar-list__toolbar').exists()).toBe(true)
+    expect(wrapper.find('.aimd-rec-inline__scalar-list > .aimd-rec-scalar-list__toolbar').exists()).toBe(false)
+
+    await modeButtons[1].trigger('click')
+    await wrapper.vm.$nextTick()
+    await vi.dynamicImportSettled()
+    await wrapper.vm.$nextTick()
+    const jsonEditor = wrapper.findComponent({ name: 'AimdCodeField' })
+    expect(jsonEditor.exists()).toBe(true)
+    expect(jsonEditor.props('modelValue')).toContain('"alpha"')
+    expect(jsonEditor.props('language')).toBe('json')
+    expect(jsonEditor.props('compact')).toBe(true)
+
+    await jsonEditor.vm.$emit('update:modelValue', '["aaa", "bbb"]')
+    await wrapper.vm.$nextTick()
+    const getLatestChange = () => {
+      const changes = wrapper.emitted('change') ?? []
+      return changes[changes.length - 1]?.[0]
+    }
+    expect(getLatestChange()).toMatchObject({
+      id: 'sample_tags',
+      value: ['aaa', 'bbb'],
+      type: 'list[str]',
+      inputKind: 'scalar-list',
+    })
+
+    const emittedCount = (wrapper.emitted('change') ?? []).length
+    await jsonEditor.vm.$emit('update:modelValue', '{"bad": true}')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.aimd-rec-scalar-list__json-error').text()).toBe('JSON value must be an array.')
+    expect((wrapper.emitted('change') ?? [])).toHaveLength(emittedCount)
+
+    await modeButtons[0].trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findAll<HTMLInputElement>('.aimd-rec-scalar-list__input').map(input => input.element.value)).toEqual(['aaa', 'bbb'])
+  })
+
+  it('parses numeric scalar-list JSON according to the item type', async () => {
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'counts',
+      raw: '{{var|counts}}',
+      definition: {
+        id: 'counts',
+        type: 'list[int]',
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        value: [] as any,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '[]',
+        inputKind: 'scalar-list',
+        initialized: true,
+      },
+    })
+
+    await wrapper.findAll('.aimd-rec-scalar-list__mode-button')[1].trigger('click')
+    await wrapper.vm.$nextTick()
+    await vi.dynamicImportSettled()
+    await wrapper.vm.$nextTick()
+    const jsonEditor = wrapper.findComponent({ name: 'AimdCodeField' })
+    await jsonEditor.vm.$emit('update:modelValue', '[1, 2]')
+    await wrapper.vm.$nextTick()
+    const getLatestChange = () => {
+      const changes = wrapper.emitted('change') ?? []
+      return changes[changes.length - 1]?.[0]
+    }
+    expect(getLatestChange()).toMatchObject({
+      value: [1, 2],
+    })
+
+    const emittedCount = (wrapper.emitted('change') ?? []).length
+    await jsonEditor.vm.$emit('update:modelValue', '[1.2]')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.aimd-rec-scalar-list__json-error').text()).toBe('JSON array items do not match this list type.')
+    expect((wrapper.emitted('change') ?? [])).toHaveLength(emittedCount)
   })
 
   it('shows file ids as user-facing file cards instead of raw ids', async () => {
@@ -626,6 +945,49 @@ describe('AimdVarField render behavior', () => {
     const updates = wrapper.emitted('update:modelValue') ?? []
     const latest = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
     expect(latest?.var?.blood_type).toBe(enumValues[0])
+  })
+
+  it('renders scalar list vars as repeatable inputs in AimdRecorder', async () => {
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: 'Tags: {{var|sample_tags: list[str], title = "Sample tags"}} Counts: {{var|counts: list[int], title = "Counts"}}',
+        locale: 'en-US',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    await vi.dynamicImportSettled()
+    await wrapper.vm.$nextTick()
+
+    const getInputs = () => wrapper.findAll<HTMLInputElement>('.aimd-rec-scalar-list__input')
+    expect(getInputs()).toHaveLength(2)
+    expect(getInputs()[0].attributes('data-rec-focus-key')).toBe('var:sample_tags')
+    expect(getInputs()[1].attributes('data-rec-focus-key')).toBe('var:counts')
+    expect(getInputs()[1].attributes('type')).toBe('number')
+
+    expect(getInputs()[0].element.tagName).toBe('TEXTAREA')
+
+    await wrapper.find<HTMLTextAreaElement>('textarea[data-rec-focus-key="var:sample_tags"]').setValue('qc')
+    await flushPromises()
+
+    await wrapper.findAll('.aimd-rec-scalar-list__add')[0].trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.find<HTMLTextAreaElement>('textarea[data-rec-focus-key="var:sample_tags:1"]').setValue('rna')
+    await flushPromises()
+
+    await wrapper.find<HTMLInputElement>('input[data-rec-focus-key="var:counts"]').setValue('1')
+    await flushPromises()
+    await wrapper.findAll('.aimd-rec-scalar-list__add')[1].trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.find<HTMLInputElement>('input[data-rec-focus-key="var:counts:1"]').setValue('2')
+    await flushPromises()
+
+    const updates = wrapper.emitted('update:modelValue') ?? []
+    const latest = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    expect(latest?.var?.sample_tags).toEqual(['qc', 'rna'])
+    expect(latest?.var?.counts).toEqual([1, 2])
   })
 
   it('renders AIMD var_table and column metadata', () => {

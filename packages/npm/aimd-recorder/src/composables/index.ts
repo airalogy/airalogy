@@ -44,6 +44,8 @@ export {
 export {
   normalizeVarTypeName,
   getVarInputKind,
+  getScalarListItemType,
+  isScalarListVarType,
   isStructuredVarType,
   unwrapStructuredValue,
   toBooleanValue,
@@ -58,12 +60,16 @@ export {
   getVarEnumSelectValue,
   getVarEnumValueFromSelectValue,
   getVarInputDisplayValue,
+  getScalarListInputItems,
+  normalizeScalarListInputItems,
   parseVarInputValue,
   calculateVarStackWidth,
   measureVarLabelWidth,
   measureSingleLineControlWidth,
   syncAutoWrapTextareaHeight,
   applyVarStackWidth,
+  type ScalarListInputItem,
+  type ScalarListItemType,
 } from './useVarHelpers'
 export type { AimdVarEnumOption, FileInputConfig, FileInputDisplayKind, VarInputKind } from './useVarHelpers'
 

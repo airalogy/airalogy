@@ -7,9 +7,11 @@ const props = withDefaults(defineProps<{
   modelValue?: string | number
   language: string
   disabled?: boolean
+  compact?: boolean
 }>(), {
   modelValue: '',
   disabled: false,
+  compact: false,
 })
 
 const emit = defineEmits<{
@@ -24,7 +26,8 @@ const draftValue = ref(normalizeCodeFieldValue(props.modelValue))
 const codeAutoHeight = createMonacoAutoHeight({
   getInitialValue: () => draftValue.value,
   getLayoutElement: () => editorContainer.value,
-  maxHeight: 520,
+  verticalPadding: props.compact ? 12 : 24,
+  maxHeight: props.compact ? 220 : 520,
 })
 const editorHeight = codeAutoHeight.editorHeight
 const editorStyle = computed(() => ({
@@ -91,7 +94,7 @@ async function createEditor() {
       wordWrap: 'on',
       lineHeight: codeAutoHeight.lineHeight,
       tabSize: 2,
-      padding: { top: 12, bottom: 12 },
+      padding: props.compact ? { top: 6, bottom: 6 } : { top: 12, bottom: 12 },
       scrollbar: { vertical: 'auto', horizontal: 'auto' },
       readOnly: props.disabled,
     })
@@ -164,7 +167,7 @@ watch(() => props.language, async (language) => {
 </script>
 
 <template>
-  <div class="aimd-code-field" :class="{ 'aimd-code-field--disabled': disabled }" :style="editorStyle">
+  <div class="aimd-code-field" :class="{ 'aimd-code-field--disabled': disabled, 'aimd-code-field--compact': compact }" :style="editorStyle">
     <div v-if="loadError" class="aimd-code-field__fallback-shell">
       <textarea
         class="aimd-code-field__fallback"
@@ -235,6 +238,11 @@ watch(() => props.language, async (language) => {
   font-size: 13px;
   line-height: 1.6;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.aimd-code-field--compact .aimd-code-field__fallback {
+  padding: 6px 10px;
+  line-height: 1.45;
 }
 
 .aimd-code-field--disabled {
