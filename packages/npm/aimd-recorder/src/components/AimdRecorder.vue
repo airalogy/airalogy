@@ -1817,10 +1817,59 @@ defineExpose({
   text-align: center;
 }
 
-.aimd-protocol-recorder__content :deep(table) { border-collapse: collapse; margin: 10px 0; font-size: 14px; }
-.aimd-protocol-recorder__content :deep(th),
-.aimd-protocol-recorder__content :deep(td) { border: 1px solid #e2e8f0; padding: 6px 10px; text-align: left; }
-.aimd-protocol-recorder__content :deep(th) { background: #f8fafc; }
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table)) {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: 12px 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+  font-size: 14px;
+}
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) th),
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) td) {
+  min-width: 120px;
+  max-width: 420px;
+  border: 0;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) th) {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+  font-weight: 700;
+}
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) th:first-child),
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) td:first-child) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 92px;
+  max-width: 180px;
+  box-shadow: 1px 0 0 #e2e8f0;
+}
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) th:first-child) {
+  z-index: 3;
+  background: #f8fafc;
+}
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) tr:first-child > th),
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) tr:first-child > td) {
+  border-top: 1px solid #e2e8f0;
+}
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) tr > :first-child) {
+  border-left: 1px solid #e2e8f0;
+}
 .aimd-protocol-recorder__content :deep(blockquote) { margin: 8px 0; padding: 8px 12px; border-left: 3px solid #d8dee8; color: #666; background: #fafbfc; }
 .aimd-protocol-recorder__content :deep(:not(pre) > code) { background: #f0f2f5; border-radius: 4px; padding: 2px 5px; }
 .aimd-protocol-recorder__content :deep(.aimd-code-block) {
@@ -2168,7 +2217,33 @@ defineExpose({
 	  line-height: 1.2;
 	  color: #64748b;
 	}
-	.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__id) { display: flex; flex: 1; align-items: center; padding: 0 10px 0 6px; font-size: 13px; font-weight: 500; color: #1565c0; white-space: nowrap; }
+.aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__id) { display: flex; flex: 1; align-items: center; padding: 0 10px 0 6px; font-size: 13px; font-weight: 500; color: #1565c0; white-space: nowrap; }
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) .aimd-rec-inline--var-stacked) {
+  width: min(360px, 100%);
+  min-width: min(240px, 100%);
+  max-width: min(360px, 100%);
+  margin: 4px 0;
+}
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) .aimd-rec-inline--var-stacked .aimd-field--no-style.aimd-field__label) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) .aimd-rec-inline--var-stacked .aimd-field__name) {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) .aimd-rec-inline--var-stacked .aimd-field__title),
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) .aimd-rec-inline--var-stacked .aimd-field__key) {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline__header-assigner-actions) {
   display: inline-flex;
   flex: 0 0 auto;

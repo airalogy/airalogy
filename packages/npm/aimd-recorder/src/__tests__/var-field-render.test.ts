@@ -151,6 +151,15 @@ describe('AimdVarField render behavior', () => {
     expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked \.aimd-field__key\) \{[\s\S]*?overflow: visible;[\s\S]*?white-space: nowrap;/)
   })
 
+  it('keeps complex markdown tables scrollable without expanding the recorder', () => {
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\)\) \{[\s\S]*?display: block;[\s\S]*?max-width: 100%;[\s\S]*?overflow-x: auto;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) th:first-child\),[\s\S]*?\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) td:first-child\) \{[\s\S]*?position: sticky;[\s\S]*?left: 0;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) \.aimd-rec-inline--var-stacked\) \{[\s\S]*?width: min\(360px, 100%\);[\s\S]*?max-width: min\(360px, 100%\);/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) \.aimd-rec-inline--var-stacked \.aimd-field__title\),[\s\S]*?\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) \.aimd-rec-inline--var-stacked \.aimd-field__key\) \{[\s\S]*?overflow: hidden;[\s\S]*?text-overflow: ellipsis;/)
+    expect(source).toContain('class: "aimd-field__title", title: displayTitle')
+    expect(source).toContain('class: "aimd-field__key", title: id')
+  })
+
   it('normalizes stacked var value typography across native control types', () => {
     expect(recorderSource).toContain('--rec-body-font-size: 14px;')
     expect(recorderSource).toContain('--rec-var-value-font-size: var(--rec-body-font-size);')
@@ -799,7 +808,9 @@ describe('AimdVarField render behavior', () => {
     })
 
     expect(wrapper.find('.aimd-field__title').text()).toBe('Record date')
+    expect(wrapper.find('.aimd-field__title').attributes('title')).toBe('Record date')
     expect(wrapper.find('.aimd-field__key').text()).toBe('record_date')
+    expect(wrapper.find('.aimd-field__key').attributes('title')).toBe('record_date')
     expect(wrapper.find('.aimd-field__description').exists()).toBe(false)
     expect(wrapper.find('.aimd-field__metadata-popover').text()).toContain('ISO date')
     expect(wrapper.find('.aimd-field__metadata-examples-label').text()).toBe('e.g.')

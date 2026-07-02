@@ -761,8 +761,8 @@ export default defineComponent({
             tabindex: hasHelp ? 0 : undefined,
             "aria-label": help.tooltip || undefined,
           }, [
-            h("span", { class: "aimd-field__title" }, displayTitle),
-            hasCustomTitle ? h("span", { class: "aimd-field__key" }, id) : null,
+            h("span", { class: "aimd-field__title", title: displayTitle }, displayTitle),
+            hasCustomTitle ? h("span", { class: "aimd-field__key", title: id }, id) : null,
             renderFieldMetadataPopover(help),
           ]),
           renderHeaderAssignerActions(headerAction),
