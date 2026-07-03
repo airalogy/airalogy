@@ -1108,6 +1108,12 @@ export function applyVarStackWidth(target: HTMLElement, inputKind: VarInputKind)
     return
   }
 
+  if (wrapper.closest("table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table)")) {
+    wrapper.style.width = "max-content"
+    wrapper.style.maxWidth = "min(680px, 100%)"
+    return
+  }
+
   const labelWidth = measureVarLabelWidth(wrapper)
 
   let controlWidth = 0

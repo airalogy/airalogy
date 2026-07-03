@@ -1870,6 +1870,10 @@ defineExpose({
 .aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) tr > :first-child) {
   border-left: 1px solid #e2e8f0;
 }
+.aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) td:has(.aimd-rec-inline--var-stacked)) {
+  min-width: min(360px, 80vw);
+  max-width: min(680px, 80vw);
+}
 .aimd-protocol-recorder__content :deep(blockquote) { margin: 8px 0; padding: 8px 12px; border-left: 3px solid #d8dee8; color: #666; background: #fafbfc; }
 .aimd-protocol-recorder__content :deep(:not(pre) > code) { background: #f0f2f5; border-radius: 4px; padding: 2px 5px; }
 .aimd-protocol-recorder__content :deep(.aimd-code-block) {
@@ -2219,9 +2223,9 @@ defineExpose({
 	}
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline--var-stacked .aimd-field__id) { display: flex; flex: 1; align-items: center; padding: 0 10px 0 6px; font-size: 13px; font-weight: 500; color: #1565c0; white-space: nowrap; }
 .aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) .aimd-rec-inline--var-stacked) {
-  width: min(360px, 100%);
+  width: max-content;
   min-width: min(240px, 100%);
-  max-width: min(360px, 100%);
+  max-width: min(680px, 100%);
   margin: 4px 0;
 }
 .aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) .aimd-rec-inline--var-stacked .aimd-field--no-style.aimd-field__label) {
@@ -2233,16 +2237,18 @@ defineExpose({
   flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
+  overflow: visible;
+  white-space: normal;
 }
 .aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) .aimd-rec-inline--var-stacked .aimd-field__title),
 .aimd-protocol-recorder__content :deep(table:not(.aimd-rec-inline-table__table):not(.aimd-scale__table) .aimd-rec-inline--var-stacked .aimd-field__key) {
   display: block;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  overflow-wrap: break-word;
+  white-space: normal;
+  word-break: normal;
 }
 .aimd-protocol-recorder__content :deep(.aimd-rec-inline__header-assigner-actions) {
   display: inline-flex;

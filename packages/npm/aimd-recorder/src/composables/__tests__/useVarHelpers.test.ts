@@ -712,6 +712,27 @@ describe('applyVarStackWidth', () => {
     expect(wrapper.style.width).toBe('100%')
     expect(wrapper.style.maxWidth).toBe('100%')
   })
+
+  it('lets stacked vars inside markdown tables size from content before wrapping', () => {
+    const table = document.createElement('table')
+    const row = document.createElement('tr')
+    const cell = document.createElement('td')
+    const wrapper = document.createElement('span')
+    wrapper.className = 'aimd-rec-inline--var-stacked'
+    const control = document.createElement('input')
+    control.className = 'aimd-rec-inline__input--stacked'
+
+    wrapper.appendChild(control)
+    cell.appendChild(wrapper)
+    row.appendChild(cell)
+    table.appendChild(row)
+    document.body.appendChild(table)
+
+    applyVarStackWidth(control, 'text')
+
+    expect(wrapper.style.width).toBe('max-content')
+    expect(wrapper.style.maxWidth).toBe('min(680px, 100%)')
+  })
 })
 
 // ---------------------------------------------------------------------------
