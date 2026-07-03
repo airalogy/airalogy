@@ -7,6 +7,7 @@ Reusable recording UI for AIMD (Airalogy Markdown), including inline protocol re
 
 Built-in variable input types include `CurrentTime`, `UserName`, `AiralogyMarkdown`, and `DNASequence`.
 Official named enum types such as `BloodType` render as select inputs using metadata generated from the Python `airalogy.types` registry.
+Select-backed types combined with `None`, such as `bool | None`, `Literal[...] | None`, and `BloodType | None`, show a localized `Not set` option and store that selection as `null`; required selects omit this empty option.
 Scalar list variables such as `list[str]`, `list[int]`, and `list[float]` render as full-row fields with repeatable drag-reorderable item inputs plus a JSON array mode, then store clean scalar arrays.
 `AiralogyMarkdown` now uses a full-width embedded AIMD/Markdown field in recorder mode with rendered preview and source-editing modes; source editing keeps the full top toolbar and still supports switching to `WYSIWYG` instead of a plain textarea.
 In recorder/edit mode, `ref_var` references display current var values as readonly inline content when available.

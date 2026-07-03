@@ -53,6 +53,7 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - `DNASequence` 会渲染专用序列控件，支持交互式模式、原始结构模式、文件导入导出、拓扑切换、feature 编辑，以及基于 `SeqViz` 的可视化。
 - `ref_var` 如果已有记录值，会优先以内联只读内容显示当前值。
 - `var` 和 `var_table` 标签会显示 AIMD 里的 `title`，设置标题时仍显示规范 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。没有显式 placeholder 覆盖时，第一个标量示例会作为默认占位文案。
+- `bool | None`、`Literal[...] | None`、`BloodType | None` 这类带 `None` 的下拉型字段会显示本地化的 `未填写` 选项，并把该选项保存为 `null`。必填下拉字段不会显示空值选项，用户仍然需要选择真实枚举值。
 - `list[str]`、`list[int]`、`list[float]` 以及等价的可选标量列表变量会渲染为整行字段，支持可重复添加、可拖拽排序的逐项输入，并额外支持 JSON 数组模式，最终保存为标量数组，而不是只能使用通用结构化 textarea。
 - `choice`、`true_false`、`blank`、`open`、`scale` 五类 quiz 都有内建 recorder 输入。
 - 数值 `var` 输入会识别 `gt`、`ge`、`lt`、`le`、`multiple_of` 这类 Pydantic 风格约束；这些约束只对 `int`、`integer`、`float`、`number` 类型生效。

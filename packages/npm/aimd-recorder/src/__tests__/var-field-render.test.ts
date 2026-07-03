@@ -982,7 +982,7 @@ describe('AimdVarField render behavior', () => {
     const select = wrapper.find('select[data-rec-focus-key="var:blood_type"]')
     expect(select.exists()).toBe(true)
     expect(select.findAll('option').map(option => option.text())).toEqual([
-      '',
+      'Not set',
       ...enumValues.map(value => String(value)),
     ])
 
@@ -995,7 +995,7 @@ describe('AimdVarField render behavior', () => {
 
     const selectedSelect = wrapper.find('select[data-rec-focus-key="var:blood_type"]')
     expect(selectedSelect.findAll('option').map(option => option.text())).toEqual([
-      '',
+      'Not set',
       ...enumValues.map(value => String(value)),
     ])
 
@@ -1391,7 +1391,7 @@ describe('AimdVarField render behavior', () => {
     })
 
     const select = wrapper.find('select[data-rec-focus-key="var_table:screening:0:decision"]')
-    expect(select.findAll('option').map(option => option.text())).toEqual(['', 'include', 'exclude'])
+    expect(select.findAll('option').map(option => option.text())).toEqual(['Not set', 'include', 'exclude'])
 
     await select.setValue('')
 

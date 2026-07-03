@@ -184,6 +184,7 @@ export interface AimdRecorderMessages {
     segmentOutOfBounds: (end: number, length: number) => string
   }
   common: {
+    emptyValue?: string
     emptyContent: string
   }
 }
@@ -385,6 +386,7 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     segmentOutOfBounds: (end, length) => `Segment end ${end} exceeds sequence length ${length}.`,
   },
   common: {
+    emptyValue: "Not set",
     emptyContent: "No renderable protocol content.",
   },
 }
@@ -559,6 +561,7 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     segmentOutOfBounds: (end, length) => `片段终点 ${end} 超出了序列长度 ${length}。`,
   },
   common: {
+    emptyValue: "未填写",
     emptyContent: "没有可渲染的协议内容。",
   },
 }
@@ -647,6 +650,12 @@ export function getAimdRecorderScopeLabel(
     default:
       return scope
   }
+}
+
+export function getAimdRecorderEmptyValueLabel(
+  messages: Pick<AimdRecorderMessages, "common" | "boolean">,
+): string {
+  return messages.common.emptyValue ?? messages.boolean.unset
 }
 
 export function getAimdRecorderQuizTypeLabel(

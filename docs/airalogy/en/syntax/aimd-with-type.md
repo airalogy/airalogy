@@ -37,6 +37,18 @@ School: {{var|school: str}}
 
 In this new syntax, you add type information after the variable name with a colon (analogous to Python type annotations), such as `: str` and `: int`.
 
+## Optional or Clearable Values
+
+When a field may intentionally be left empty, add `| None` to its type annotation. If the field should also start empty by default, set its default value to `None`:
+
+```aimd
+Blood Type: {{var|blood_type: BloodType | None = None}}
+Review Type: {{var|review_type: Literal["quick", "scoping"] | None = None}}
+Observed Rash: {{var|reaction_rash: bool | None = None}}
+```
+
+This syntax means the record value may be the declared type or `None`. In browser recorder UIs, select-backed nullable fields show a localized empty option such as `Not set`; selecting it stores `null` in the JSON record. If the user must choose one real value, omit `| None`.
+
 ## Adding Extra Information to Airalogy Fields
 
 In the traditional two-file approach, you can add extra information such as descriptions and default values in `model.py`:

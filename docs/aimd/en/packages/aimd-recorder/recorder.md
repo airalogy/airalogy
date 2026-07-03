@@ -53,6 +53,7 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - `DNASequence` renders a dedicated sequence widget with interactive and raw-structure modes, file import/export, topology switching, feature editing, and `SeqViz`-based visualization.
 - `ref_var` references display current var values as readonly inline content when available.
 - `var` and `var_table` labels display AIMD `title`, keep the canonical id visible when a title is present, and show `description` plus `example`/`examples` details only on hover or keyboard focus. The first scalar example becomes the default placeholder when no explicit placeholder override is provided.
+- Select-backed nullable types such as `bool | None`, `Literal[...] | None`, and `BloodType | None` show a localized `Not set` option and store that choice as `null`. Required selects omit the empty option, so choosing a real enum value remains mandatory.
 - `list[str]`, `list[int]`, `list[float]`, and equivalent optional scalar-list vars render as full-row fields with repeatable, drag-reorderable item inputs plus JSON array mode, then save scalar arrays instead of forcing the generic structured textarea.
 - `choice`, `true_false`, `blank`, `open`, and `scale` quiz types all have built-in recorder inputs.
 - Numeric `var` inputs honor Pydantic-style constraints such as `gt`, `ge`, `lt`, `le`, and `multiple_of`; these constraints apply to `int`, `integer`, `float`, and `number` var types.

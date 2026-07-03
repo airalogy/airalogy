@@ -37,6 +37,18 @@ class VarModel(BaseModel):
 
 在这个新的语法中，我们通过在变量名后使用`:`（该语法和Python的类型注解类似）来添加类型信息（如`:str`和`:int`）。
 
+## 可选或可清空的值
+
+当某个字段允许用户留空时，可以在类型注解中追加 `| None`。如果这个字段默认也应该为空，可以同时把默认值写成 `None`：
+
+```aimd
+血型：{{var|blood_type: BloodType | None = None}}
+审核类型：{{var|review_type: Literal["quick", "scoping"] | None = None}}
+是否观察到皮疹：{{var|reaction_rash: bool | None = None}}
+```
+
+这个语法表示记录值可以是声明的类型，也可以是 `None`。在浏览器 recorder UI 中，带 `None` 的下拉型字段会显示本地化的空值选项，例如 `未填写`；选择该项后，JSON Record 中保存为 `null`。如果用户必须选择一个真实值，就不要写 `| None`。
+
 ## 为Airalogy字段添加额外信息
 
 在传统双文件语法下，我们可以通过在`model.py`中为AF添加额外的信息，例如描述、默认值等：

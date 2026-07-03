@@ -18,7 +18,7 @@ import type {
   AimdVarInputKind,
 } from "../types"
 import type { AimdRecorderMessages } from "../locales"
-import { getAimdRecorderScopeLabel } from "../locales"
+import { getAimdRecorderEmptyValueLabel, getAimdRecorderScopeLabel } from "../locales"
 import { resolveAimdCodeEditorLanguage } from "../code-types"
 import {
   normalizeVarTypeName,
@@ -798,6 +798,9 @@ export default defineComponent({
         const selectedEnumValue = getVarEnumSelectValue(enumOptions, props.value)
         const emptyEnumValue = isNullableVarType(type) ? null : ""
         const showEmptyEnumOption = emptyEnumValue === null || selectedEnumValue === ""
+        const emptyEnumLabel = emptyEnumValue === null
+          ? getAimdRecorderEmptyValueLabel(props.messages)
+          : placeholder ?? ""
         return h("span", {
           class: [
             "aimd-rec-inline aimd-rec-inline--var-stacked aimd-field-wrapper",
@@ -818,7 +821,7 @@ export default defineComponent({
             onBlur: onVarBlur,
           }, [
             showEmptyEnumOption
-              ? h("option", { value: "" }, placeholder ?? "")
+              ? h("option", { value: "" }, emptyEnumLabel)
               : null,
             ...enumOptions.map((opt, index) => h("option", { key: `${index}:${String(opt.value)}`, value: String(index) }, opt.label)),
           ])),
@@ -879,7 +882,7 @@ export default defineComponent({
             onChange: (event: Event) => onVarChange((event.target as HTMLSelectElement).value),
             onBlur: onVarBlur,
           }, [
-            h("option", { value: "" }, props.messages.boolean.unset),
+            h("option", { value: "" }, getAimdRecorderEmptyValueLabel(props.messages)),
             h("option", { value: "true" }, props.messages.boolean.true),
             h("option", { value: "false" }, props.messages.boolean.false),
           ]),

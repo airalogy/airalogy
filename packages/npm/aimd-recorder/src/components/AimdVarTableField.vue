@@ -11,7 +11,7 @@ import {
 } from "@airalogy/aimd-core/utils"
 import type { AimdFieldMeta, AimdFieldState } from "../types"
 import type { AimdRecorderMessages } from "../locales"
-import { getAimdRecorderScopeLabel } from "../locales"
+import { getAimdRecorderEmptyValueLabel, getAimdRecorderScopeLabel } from "../locales"
 import { getVarTableColumns, getVarTableRowKey } from "../composables/useVarTableDragDrop"
 import { getVarEnumSelectValue, getVarEnumValueFromSelectValue, isNullableVarType } from "../composables/useVarHelpers"
 
@@ -354,6 +354,9 @@ export default defineComponent({
         const selectedEnumValue = getVarEnumSelectValue(enumOptions, row[column])
         const emptyEnumValue = isNullableVarType(getColumnDefinition(column)?.type) ? null : ""
         const showEmptyEnumOption = emptyEnumValue === null || selectedEnumValue === ""
+        const emptyEnumLabel = emptyEnumValue === null
+          ? getAimdRecorderEmptyValueLabel(props.messages)
+          : placeholder
         return h("select", {
           "data-rec-focus-key": focusKey,
           class: [className, "aimd-rec-enum-select"],
@@ -371,7 +374,7 @@ export default defineComponent({
           onBlur: () => emit("cell-blur", { tableName, column }),
         }, [
           showEmptyEnumOption
-            ? h("option", { value: "" }, placeholder)
+            ? h("option", { value: "" }, emptyEnumLabel)
             : null,
           ...enumOptions.map((option, optionIndex) => h("option", {
             key: `${optionIndex}:${String(option.value)}`,
