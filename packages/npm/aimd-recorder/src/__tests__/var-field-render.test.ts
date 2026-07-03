@@ -989,8 +989,21 @@ describe('AimdVarField render behavior', () => {
     await flushPromises()
 
     const updates = wrapper.emitted('update:modelValue') ?? []
-    const latest = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    let latest = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
     expect(latest?.var?.blood_type).toBe(enumValues[0])
+
+    const selectedSelect = wrapper.find('select[data-rec-focus-key="var:blood_type"]')
+    expect(selectedSelect.findAll('option').map(option => option.text())).toEqual([
+      '',
+      ...enumValues.map(value => String(value)),
+    ])
+
+    await selectedSelect.setValue('')
+    await flushPromises()
+
+    const clearUpdates = wrapper.emitted('update:modelValue') ?? []
+    latest = clearUpdates[clearUpdates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    expect(latest?.var?.blood_type).toBeNull()
   })
 
   it('renders scalar list vars as repeatable inputs in AimdRecorder', async () => {
@@ -1330,6 +1343,63 @@ describe('AimdVarField render behavior', () => {
       column: 'decision',
       rowIndex: 0,
       value: 'include',
+    })
+  })
+
+  it('keeps nullable var_table enum cells clearable to null', async () => {
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      callback(0)
+      return 1
+    })
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+
+    const node: AimdVarTableNode = {
+      type: 'aimd',
+      fieldType: 'var_table',
+      scope: 'var_table',
+      id: 'screening',
+      raw: '{{var_table|screening}}',
+      columns: ['decision'],
+      definition: {
+        id: 'screening',
+        subvars: {
+          decision: {
+            id: 'decision',
+            type: 'Literal["include", "exclude"] | None',
+            enum: ['include', 'exclude'],
+          },
+        },
+      },
+    }
+
+    const wrapper = mount(AimdVarTableField, {
+      props: {
+        node,
+        rows: [{ decision: 'include' }],
+        columns: ['decision'],
+        disabled: false,
+        readonly: false,
+        settlingRowKey: null,
+        messages: createAimdRecorderMessages('en-US'),
+      },
+    })
+
+    const select = wrapper.find('select[data-rec-focus-key="var_table:screening:0:decision"]')
+    expect(select.findAll('option').map(option => option.text())).toEqual(['', 'include', 'exclude'])
+
+    await select.setValue('')
+
+    const cellUpdates = wrapper.emitted('cell-input') ?? []
+    expect(cellUpdates[cellUpdates.length - 1]?.[0]).toMatchObject({
+      tableName: 'screening',
+      column: 'decision',
+      rowIndex: 0,
+      value: null,
     })
   })
 })

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { useFieldRendering } from '../useFieldRendering'
 
 import {
   normalizeVarTypeName,
@@ -17,6 +18,7 @@ import {
   formatDateForInput,
   getFileDisplayName,
   getFileInputConfig,
+  getVarEnumValueFromSelectValue,
   getVarInputDisplayValue,
   parseVarInputValue,
   getNumericConstraintViolation,
@@ -528,6 +530,13 @@ describe('parseVarInputValue', () => {
     expect(parseVarInputValue('', 'int | None', 'number')).toBeNull()
   })
 
+  it('returns null for empty nullable date, time, and text inputs', () => {
+    expect(parseVarInputValue('', 'date | None', 'date')).toBeNull()
+    expect(parseVarInputValue('', 'datetime | None', 'datetime')).toBeNull()
+    expect(parseVarInputValue('', 'time | None', 'time')).toBeNull()
+    expect(parseVarInputValue('', 'str | None', 'text')).toBeNull()
+  })
+
   it('parses nullable boolean select values', () => {
     expect(parseVarInputValue('', 'bool | None', 'boolean-select')).toBeNull()
     expect(parseVarInputValue('true', 'bool | None', 'boolean-select')).toBe(true)
@@ -550,6 +559,51 @@ describe('parseVarInputValue', () => {
     expect(parseVarInputValue('["1", "2", ""]', 'list[int]', 'scalar-list')).toEqual([1, 2])
     expect(parseVarInputValue('1\n2.5\n', 'list[float]', 'scalar-list')).toEqual([1, 2.5])
     expect(parseVarInputValue('1.2', 'list[int]', 'scalar-list')).toEqual(['1.2'])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// enum helpers
+// ---------------------------------------------------------------------------
+
+describe('enum helpers', () => {
+  it('uses caller-provided empty values for nullable enum selects', () => {
+    const options = [{ label: 'A', value: 'a' }]
+    expect(getVarEnumValueFromSelectValue(options, '0', null)).toBe('a')
+    expect(getVarEnumValueFromSelectValue(options, '', null)).toBeNull()
+    expect(getVarEnumValueFromSelectValue(options, '')).toBe('')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// field rendering value defaults
+// ---------------------------------------------------------------------------
+
+describe('field rendering nullable defaults', () => {
+  const rendering = useFieldRendering({
+    readonly: () => false,
+    currentUserName: () => undefined,
+    now: () => new Date('2024-01-01T00:00:00Z'),
+    fieldMeta: () => ({}),
+    fieldState: () => ({}),
+    typePlugins: () => [],
+    wrapField: () => undefined,
+  })
+
+  it('initializes nullable scalar fields as null instead of empty strings', () => {
+    const node = (type: string) => ({
+      id: 'value',
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      raw: '',
+      definition: { id: 'value', type },
+    })
+
+    expect(rendering.getVarInitialValue(node('int | None') as never, 'int | None', 'var:value')).toBeNull()
+    expect(rendering.getVarInitialValue(node('date | None') as never, 'date | None', 'var:value')).toBeNull()
+    expect(rendering.getVarInitialValue(node('str | None') as never, 'str | None', 'var:value')).toBeNull()
+    expect(rendering.getVarInitialValue(node('list[str] | None') as never, 'list[str] | None', 'var:value')).toEqual([])
   })
 })
 

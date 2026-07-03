@@ -139,11 +139,15 @@ export function getVarEnumSelectValue(options: AimdVarEnumOption[], value: unkno
   return ""
 }
 
-export function getVarEnumValueFromSelectValue(options: AimdVarEnumOption[], selectValue: string): unknown {
+export function getVarEnumValueFromSelectValue(
+  options: AimdVarEnumOption[],
+  selectValue: string,
+  emptyValue: unknown = "",
+): unknown {
   const index = Number.parseInt(selectValue, 10)
   return Number.isInteger(index) && index >= 0 && index < options.length
     ? options[index].value
-    : ""
+    : emptyValue
 }
 
 function resolveOverrideInputKind(inputType: string | undefined, codeLanguage: string | undefined): VarInputKind | undefined {
@@ -816,6 +820,10 @@ export function parseVarInputValue(
   const nullableType = isNullableVarType(type)
   const normalizedType = normalizeVarTypeName(unwrapOptionalTypeAnnotation(type))
 
+  if ((kind === "date" || kind === "datetime" || kind === "time") && nullableType && rawValue.trim() === "") {
+    return null
+  }
+
   if (kind === "datetime") {
     return normalizeDateTimeValueWithTimezone(rawValue)
   }
@@ -862,6 +870,10 @@ export function parseVarInputValue(
     } catch {
       return rawValue
     }
+  }
+
+  if (nullableType && rawValue.trim() === "") {
+    return null
   }
 
   return rawValue

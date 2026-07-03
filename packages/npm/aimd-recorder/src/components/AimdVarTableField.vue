@@ -13,7 +13,7 @@ import type { AimdFieldMeta, AimdFieldState } from "../types"
 import type { AimdRecorderMessages } from "../locales"
 import { getAimdRecorderScopeLabel } from "../locales"
 import { getVarTableColumns, getVarTableRowKey } from "../composables/useVarTableDragDrop"
-import { getVarEnumSelectValue, getVarEnumValueFromSelectValue } from "../composables/useVarHelpers"
+import { getVarEnumSelectValue, getVarEnumValueFromSelectValue, isNullableVarType } from "../composables/useVarHelpers"
 
 function renderTrashIcon(): VNode {
   return h("svg", {
@@ -352,6 +352,8 @@ export default defineComponent({
 
       if (enumOptions.length > 0) {
         const selectedEnumValue = getVarEnumSelectValue(enumOptions, row[column])
+        const emptyEnumValue = isNullableVarType(getColumnDefinition(column)?.type) ? null : ""
+        const showEmptyEnumOption = emptyEnumValue === null || selectedEnumValue === ""
         return h("select", {
           "data-rec-focus-key": focusKey,
           class: [className, "aimd-rec-enum-select"],
@@ -362,13 +364,13 @@ export default defineComponent({
               tableName,
               column,
               rowIndex,
-              value: getVarEnumValueFromSelectValue(enumOptions, (event.target as HTMLSelectElement).value),
+              value: getVarEnumValueFromSelectValue(enumOptions, (event.target as HTMLSelectElement).value, emptyEnumValue),
               row,
             })
           },
           onBlur: () => emit("cell-blur", { tableName, column }),
         }, [
-          selectedEnumValue === ""
+          showEmptyEnumOption
             ? h("option", { value: "" }, placeholder)
             : null,
           ...enumOptions.map((option, optionIndex) => h("option", {

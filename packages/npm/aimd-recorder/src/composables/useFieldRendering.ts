@@ -8,6 +8,7 @@ import {
   getVarInputDisplayValue,
   getScalarListInputItems,
   getScalarListItemType,
+  isNullableVarType,
   normalizeScalarListInputItems,
   toBooleanValue,
   unwrapStructuredValue,
@@ -221,6 +222,7 @@ export function useFieldRendering(options: FieldRenderingOptions) {
       typePlugin,
     })
     if (inputKind === "boolean-select") return null
+    if (isNullableVarType(type) && inputKind !== "scalar-list" && inputKind !== "checkbox") return null
     if (inputKind === "checkbox") return false
     if (inputKind === "scalar-list") return []
     if (inputKind === "dna") return normalizeDnaSequenceValue(undefined)
@@ -260,6 +262,12 @@ export function useFieldRendering(options: FieldRenderingOptions) {
         return null
       }
       return toBooleanValue(value)
+    }
+
+    if (isNullableVarType(type) && inputKind !== "checkbox") {
+      if (value === null || typeof value === "undefined" || value === "") {
+        return null
+      }
     }
 
     return value

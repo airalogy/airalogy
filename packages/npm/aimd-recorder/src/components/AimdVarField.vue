@@ -36,6 +36,7 @@ import {
   getScalarListItemType,
   getVarEnumSelectValue,
   getVarEnumValueFromSelectValue,
+  isNullableVarType,
   normalizeScalarListInputItems,
   type NumericInputAttributes,
   type ScalarListInputItem,
@@ -795,6 +796,8 @@ export default defineComponent({
       const enumOptions = meta?.enumOptions ?? []
       if (enumOptions.length) {
         const selectedEnumValue = getVarEnumSelectValue(enumOptions, props.value)
+        const emptyEnumValue = isNullableVarType(type) ? null : ""
+        const showEmptyEnumOption = emptyEnumValue === null || selectedEnumValue === ""
         return h("span", {
           class: [
             "aimd-rec-inline aimd-rec-inline--var-stacked aimd-field-wrapper",
@@ -809,12 +812,12 @@ export default defineComponent({
             disabled,
             value: selectedEnumValue,
             onChange: (e: Event) => {
-              const value = getVarEnumValueFromSelectValue(enumOptions, (e.target as HTMLSelectElement).value)
+              const value = getVarEnumValueFromSelectValue(enumOptions, (e.target as HTMLSelectElement).value, emptyEnumValue)
               emit("change", { id, value, type, inputKind })
             },
             onBlur: onVarBlur,
           }, [
-            selectedEnumValue === ""
+            showEmptyEnumOption
               ? h("option", { value: "" }, placeholder ?? "")
               : null,
             ...enumOptions.map((opt, index) => h("option", { key: `${index}:${String(opt.value)}`, value: String(index) }, opt.label)),
@@ -955,7 +958,7 @@ export default defineComponent({
           fileUploadError.value = ""
           lastSelectedFileInfo.value = null
           resolvedFileInfo.value = null
-          emit("change", { id, value: "", type, inputKind })
+          emit("change", { id, value: isNullableVarType(type) ? null : "", type, inputKind })
         }
         const actionButton = (
           kind: "download" | "open" | "clear" | "replace" | "preview",
