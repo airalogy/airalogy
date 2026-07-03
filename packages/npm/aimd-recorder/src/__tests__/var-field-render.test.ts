@@ -290,7 +290,42 @@ describe('AimdVarField render behavior', () => {
   it('places code assigner actions in the field header instead of a side prefix', () => {
     expect(source).toContain('["file", "code", "scalar-list"].includes(inputKind)')
     expect(source).toMatch(/if \(inputKind === "code"\) \{[\s\S]*?"aimd-rec-inline--var-stacked--code",[\s\S]*?\{ controlRow: false \}/)
-    expect(recorderSource).toContain('["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "checkbox", "file", "code"].includes(inputKind)')
+    expect(recorderSource).toContain('["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "checkbox", "boolean-select", "file", "code"].includes(inputKind)')
+  })
+
+  it('renders nullable boolean vars as tri-state select fields', async () => {
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: 'Rash: {{var|reaction_rash: bool | None}}',
+        locale: 'en-US',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    await vi.dynamicImportSettled()
+    await wrapper.vm.$nextTick()
+
+    const select = wrapper.find<HTMLSelectElement>('select[data-rec-focus-key="var:reaction_rash"]')
+    expect(select.exists()).toBe(true)
+    expect(select.classes()).toContain('aimd-rec-inline__boolean-select')
+    expect(select.findAll('option').map(option => option.text())).toEqual(['Not set', 'True', 'False'])
+    expect(select.element.value).toBe('')
+
+    await select.setValue('true')
+    await flushPromises()
+
+    let updates = wrapper.emitted('update:modelValue') ?? []
+    let latest = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    expect(latest?.var?.reaction_rash).toBe(true)
+
+    await select.setValue('')
+    await flushPromises()
+
+    updates = wrapper.emitted('update:modelValue') ?? []
+    latest = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    expect(latest?.var?.reaction_rash).toBeNull()
   })
 
   it('renders scalar-list fields as full-row controls with horizontal items before wrapping', () => {

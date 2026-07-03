@@ -293,8 +293,26 @@ function unwrapOptionalTypeAnnotation(type: string | undefined): string {
   return raw
 }
 
+export function isNullableVarType(type: string | undefined): boolean {
+  const raw = typeof type === "string" ? type.trim() : ""
+  if (!raw) {
+    return false
+  }
+
+  const compact = canonicalizeTypeExpression(raw)
+  if (/^(?:typing\.)?optional\[.*\]$/.test(compact)) {
+    return true
+  }
+
+  const unionParts = splitTopLevelTypeUnion(raw)
+  return unionParts.length > 1 && unionParts.some(part => {
+    const normalized = canonicalizeTypeExpression(part)
+    return normalized === "none" || normalized === "null" || normalized === "undefined"
+  })
+}
+
 export function isNumericVarType(type: string | undefined): boolean {
-  const normalized = normalizeVarTypeName(type)
+  const normalized = normalizeVarTypeName(unwrapOptionalTypeAnnotation(type))
   return normalized === "float" || normalized === "int" || normalized === "integer" || normalized === "number"
 }
 
@@ -359,14 +377,15 @@ export function getVarInputKind(type: string | undefined, options: VarInputKindO
     return "scalar-list"
   }
 
-  const normalized = normalizeVarTypeName(type)
+  const unwrappedType = unwrapOptionalTypeAnnotation(type)
+  const normalized = normalizeVarTypeName(unwrappedType)
 
   if (normalized === "float" || normalized === "int" || normalized === "integer" || normalized === "number") {
     return "number"
   }
 
   if (normalized === "bool" || normalized === "boolean" || normalized === "checkbox") {
-    return "checkbox"
+    return isNullableVarType(type) ? "boolean-select" : "checkbox"
   }
 
   if (normalized === "date") {
@@ -393,11 +412,11 @@ export function getVarInputKind(type: string | undefined, options: VarInputKindO
     return "textarea"
   }
 
-  if (isFileLikeVarType(type, options.kwargs, options.fieldMeta)) {
+  if (isFileLikeVarType(unwrappedType, options.kwargs, options.fieldMeta)) {
     return "file"
   }
 
-  if (isAimdCodeEditorType(type, { codeLanguage: options.codeLanguage })) {
+  if (isAimdCodeEditorType(unwrappedType, { codeLanguage: options.codeLanguage })) {
     return 'code'
   }
 
@@ -728,6 +747,22 @@ export function getVarInputDisplayValue(
     return typeof normalized === "number" ? normalized : (typeof normalized === "string" ? normalized : "")
   }
 
+  if (kind === "boolean-select") {
+    if (typeof normalized === "boolean") {
+      return normalized ? "true" : "false"
+    }
+    if (typeof normalized === "string") {
+      const text = normalized.trim().toLowerCase()
+      if (["true", "1", "yes", "on"].includes(text)) {
+        return "true"
+      }
+      if (["false", "0", "no", "off"].includes(text)) {
+        return "false"
+      }
+    }
+    return ""
+  }
+
   if (kind === "dna") {
     return typeof normalized === "string" ? normalized : JSON.stringify(normalized)
   }
@@ -778,7 +813,8 @@ export function parseVarInputValue(
     return typePlugin.parseInputValue(context)
   }
 
-  const normalizedType = normalizeVarTypeName(type)
+  const nullableType = isNullableVarType(type)
+  const normalizedType = normalizeVarTypeName(unwrapOptionalTypeAnnotation(type))
 
   if (kind === "datetime") {
     return normalizeDateTimeValueWithTimezone(rawValue)
@@ -787,7 +823,7 @@ export function parseVarInputValue(
   if (kind === "number") {
     const text = rawValue.trim()
     if (!text) {
-      return ""
+      return nullableType ? null : ""
     }
     const parsed = normalizedType === "int" || normalizedType === "integer"
       ? Number.parseInt(text, 10)
@@ -802,10 +838,24 @@ export function parseVarInputValue(
     )
   }
 
+  if (kind === "boolean-select") {
+    const text = rawValue.trim().toLowerCase()
+    if (!text) {
+      return null
+    }
+    if (text === "true") {
+      return true
+    }
+    if (text === "false") {
+      return false
+    }
+    return rawValue
+  }
+
   if (isStructuredVarType(type)) {
     const text = rawValue.trim()
     if (!text) {
-      return ""
+      return nullableType ? null : ""
     }
     try {
       return JSON.parse(text)

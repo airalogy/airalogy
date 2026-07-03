@@ -107,6 +107,11 @@ export interface AimdRecorderMessages {
     jsonInvalidArray: string
     jsonInvalidItem: string
   }
+  boolean: {
+    unset: string
+    true: string
+    false: string
+  }
   dna: {
     editMode: string
     interactiveMode: string
@@ -303,6 +308,11 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     jsonInvalidArray: "JSON value must be an array.",
     jsonInvalidItem: "JSON array items do not match this list type.",
   },
+  boolean: {
+    unset: "Not set",
+    true: "True",
+    false: "False",
+  },
   dna: {
     editMode: "Edit mode",
     interactiveMode: "Interactive",
@@ -471,6 +481,11 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     jsonInvalidSyntax: "JSON 格式无效。",
     jsonInvalidArray: "JSON 值必须是数组。",
     jsonInvalidItem: "JSON 数组项与当前列表类型不匹配。",
+  },
+  boolean: {
+    unset: "未填写",
+    true: "是",
+    false: "否",
   },
   dna: {
     editMode: "编辑模式",

@@ -9,6 +9,7 @@ import {
   getScalarListInputItems,
   getScalarListItemType,
   normalizeScalarListInputItems,
+  toBooleanValue,
   unwrapStructuredValue,
   formatDateTimeWithTimezone,
   type VarInputKind,
@@ -219,6 +220,7 @@ export function useFieldRendering(options: FieldRenderingOptions) {
       fieldMeta: options.fieldMeta()?.[fieldKey],
       typePlugin,
     })
+    if (inputKind === "boolean-select") return null
     if (inputKind === "checkbox") return false
     if (inputKind === "scalar-list") return []
     if (inputKind === "dna") return normalizeDnaSequenceValue(undefined)
@@ -251,6 +253,13 @@ export function useFieldRendering(options: FieldRenderingOptions) {
         getScalarListInputItems(value),
         getScalarListItemType(type) ?? "string",
       )
+    }
+
+    if (inputKind === "boolean-select") {
+      if (value === null || typeof value === "undefined" || value === "") {
+        return null
+      }
+      return toBooleanValue(value)
     }
 
     return value

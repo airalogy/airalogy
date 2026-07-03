@@ -864,6 +864,26 @@ export default defineComponent({
         )
       }
 
+      if (inputKind === "boolean-select") {
+        return renderStackedVar(
+          h("select", {
+            "data-rec-focus-key": `var:${id}`,
+            class: "aimd-rec-inline__value-control aimd-rec-inline__input aimd-rec-inline__input--stacked aimd-rec-inline__select aimd-rec-inline__boolean-select",
+            disabled,
+            value: String(displayValue),
+            onVnodeMounted: (vnode: any) => applyVarStackWidth(vnode.el as HTMLElement, inputKind),
+            onVnodeUpdated: (vnode: any) => applyVarStackWidth(vnode.el as HTMLElement, inputKind),
+            onChange: (event: Event) => onVarChange((event.target as HTMLSelectElement).value),
+            onBlur: onVarBlur,
+          }, [
+            h("option", { value: "" }, props.messages.boolean.unset),
+            h("option", { value: "true" }, props.messages.boolean.true),
+            h("option", { value: "false" }, props.messages.boolean.false),
+          ]),
+          "aimd-rec-inline--var-stacked--boolean-select",
+        )
+      }
+
       if (inputKind === "textarea" || inputKind === "dna") {
         return renderStackedVar(
           h("textarea", {

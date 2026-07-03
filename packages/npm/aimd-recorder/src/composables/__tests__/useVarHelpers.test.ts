@@ -5,6 +5,7 @@ import {
   getVarInputKind,
   getScalarListInputItems,
   getScalarListItemType,
+  isNullableVarType,
   isScalarListVarType,
   isStructuredVarType,
   normalizeScalarListInputItems,
@@ -80,6 +81,18 @@ describe('getVarInputKind', () => {
     expect(getVarInputKind('bool')).toBe('checkbox')
     expect(getVarInputKind('boolean')).toBe('checkbox')
     expect(getVarInputKind('checkbox')).toBe('checkbox')
+  })
+
+  it('returns "boolean-select" for nullable boolean types', () => {
+    expect(getVarInputKind('bool | None')).toBe('boolean-select')
+    expect(getVarInputKind('None | bool')).toBe('boolean-select')
+    expect(getVarInputKind('Optional[bool]')).toBe('boolean-select')
+    expect(getVarInputKind('typing.Optional[boolean]')).toBe('boolean-select')
+  })
+
+  it('unwraps nullable annotations for built-in input kinds', () => {
+    expect(getVarInputKind('int | None')).toBe('number')
+    expect(getVarInputKind('Optional[datetime]')).toBe('datetime')
   })
 
   it('returns "date" for date', () => {
@@ -478,6 +491,12 @@ describe('getVarInputDisplayValue', () => {
     expect(getVarInputDisplayValue([' a ', 'b', ''], 'scalar-list', { type: 'list[str]' })).toBe(JSON.stringify(['a', 'b']))
     expect(getVarInputDisplayValue(['1', '2', ''], 'scalar-list', { type: 'list[int]' })).toBe(JSON.stringify([1, 2]))
   })
+
+  it('formats nullable boolean values for a tri-state select', () => {
+    expect(getVarInputDisplayValue(true, 'boolean-select', { type: 'bool | None' })).toBe('true')
+    expect(getVarInputDisplayValue(false, 'boolean-select', { type: 'bool | None' })).toBe('false')
+    expect(getVarInputDisplayValue(null, 'boolean-select', { type: 'bool | None' })).toBe('')
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -505,6 +524,16 @@ describe('parseVarInputValue', () => {
     expect(parseVarInputValue('', 'int', 'number')).toBe('')
   })
 
+  it('returns null for empty nullable number input', () => {
+    expect(parseVarInputValue('', 'int | None', 'number')).toBeNull()
+  })
+
+  it('parses nullable boolean select values', () => {
+    expect(parseVarInputValue('', 'bool | None', 'boolean-select')).toBeNull()
+    expect(parseVarInputValue('true', 'bool | None', 'boolean-select')).toBe(true)
+    expect(parseVarInputValue('false', 'bool | None', 'boolean-select')).toBe(false)
+  })
+
   it('normalizes datetime input', () => {
     const result = parseVarInputValue('2024-06-15T10:30', undefined, 'datetime')
     expect(typeof result).toBe('string')
@@ -529,6 +558,12 @@ describe('parseVarInputValue', () => {
 // ---------------------------------------------------------------------------
 
 describe('list type helpers', () => {
+  it('detects nullable type annotations', () => {
+    expect(isNullableVarType('bool | None')).toBe(true)
+    expect(isNullableVarType('Optional[bool]')).toBe(true)
+    expect(isNullableVarType('bool')).toBe(false)
+  })
+
   it('detects explicit structured types without matching unrelated names', () => {
     expect(isStructuredVarType('list[str]')).toBe(true)
     expect(isStructuredVarType('list[str] | None')).toBe(true)

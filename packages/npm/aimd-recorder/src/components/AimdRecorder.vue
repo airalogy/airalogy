@@ -1058,7 +1058,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
   const disabled = fieldRendering.isFieldDisabled(fieldKey)
   const extraClasses = fieldRendering.fieldStateClasses(fieldKey)
   const canUseInternalAssignerControl = Boolean(meta?.enumOptions?.length)
-    || ["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "checkbox", "file", "code"].includes(inputKind)
+    || ["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "checkbox", "boolean-select", "file", "code"].includes(inputKind)
   const fieldAssignerControl = resolveAssignerControl("var", fieldKey)
   const internalAssignerControl = canUseInternalAssignerControl ? fieldAssignerControl : null
 
