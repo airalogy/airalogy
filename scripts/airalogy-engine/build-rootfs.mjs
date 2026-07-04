@@ -15,6 +15,7 @@ const defaultRootfsDir = path.join(runtimeDir, 'airalogy-engine-image')
 const defaultTarPath = path.join(runtimeDir, 'airalogy-engine-image.tar')
 const manifestName = '.airalogy-rootfs.json'
 const localPythonPackageDir = path.join(repoRoot, 'packages/pypi/airalogy')
+const protocolExamplesDir = path.join(repoRoot, 'examples/protocols')
 const defaultBuildxBuilder = 'airalogy-engine-oci'
 const fallbackBuildxBuilder = `${defaultBuildxBuilder}-container`
 
@@ -163,6 +164,7 @@ async function hashSources() {
     hash.update('\0')
   }
   await hashDirectory(hash, localPythonPackageDir)
+  await hashDirectory(hash, protocolExamplesDir)
   return hash.digest('hex')
 }
 
@@ -300,6 +302,7 @@ async function main() {
       path.relative(repoRoot, dockerfilePath),
       path.relative(repoRoot, requirementsPath),
       path.relative(repoRoot, localPythonPackageDir),
+      path.relative(repoRoot, protocolExamplesDir),
     ],
   })
 

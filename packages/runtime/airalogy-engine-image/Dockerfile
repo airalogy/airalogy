@@ -7,6 +7,7 @@ COPY packages/runtime/airalogy-engine-image/protocol_requirements.txt ./
 # Install requirements
 RUN pip install --no-cache-dir -r protocol_requirements.txt
 COPY packages/pypi/airalogy ./packages/pypi/airalogy
+COPY examples/protocols ./examples/protocols
 RUN pip install --no-cache-dir './packages/pypi/airalogy[markitdown]'
 
 # run stage
