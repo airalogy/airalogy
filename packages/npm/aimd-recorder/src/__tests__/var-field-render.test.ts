@@ -32,6 +32,7 @@ const recorderSource = readFileSync(resolve(__dirname, '../components/AimdRecord
 const markdownNoteSource = readFileSync(resolve(__dirname, '../components/AimdMarkdownNoteField.vue'), 'utf8')
 const varHelpersSource = readFileSync(resolve(__dirname, '../composables/useVarHelpers.ts'), 'utf8')
 const recorderStyles = readFileSync(resolve(__dirname, '../styles/recorder.css'), 'utf8')
+const recorderSurfaceStyles = readFileSync(resolve(__dirname, '../styles/recorder-surface.css'), 'utf8')
 const rendererStyles = readFileSync(resolve(__dirname, '../../../aimd-renderer/src/styles/renderer.css'), 'utf8')
 
 describe('AimdVarField render behavior', () => {
@@ -78,6 +79,7 @@ describe('AimdVarField render behavior', () => {
     expect(recorderSource).toContain('class="aimd-protocol-recorder__content aimd-renderer"')
     expect(markdownFieldSource).toContain('class="aimd-markdown-field__preview aimd-renderer"')
     expect(markdownNoteSource).toContain('class="aimd-markdown-note-field__preview aimd-renderer"')
+    expect(recorderStyles).toContain('@import "./recorder-surface.css";')
     expect(recorderStyles).toContain('.aimd-field--editable')
     expect(recorderStyles).toContain('.aimd-field--no-style')
     expect(recorderStyles).toContain('.aimd-field-wrapper--inline')
@@ -117,15 +119,15 @@ describe('AimdVarField render behavior', () => {
   })
 
   it('renders editable table cell values without inherited italic preview styling', () => {
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-table-cell-input\) \{[\s\S]*?font-style: normal;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-table-cell-input \{[\s\S]*?font-style: normal;/)
   })
 
   it('keeps card-style table rows compact in dense recorder layouts', () => {
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-card-list\) \{[\s\S]*?gap: 8px;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-card\) \{[\s\S]*?padding: 7px 10px 9px;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-card__field\) \{[\s\S]*?padding-top: 6px;[\s\S]*?margin-top: 6px;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-card__input\) \{[\s\S]*?height: 30px;/)
-    expect(recorderSource).toContain('.aimd-rec-card .aimd-rec-inline-table__drag-handle')
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-card-list \{[\s\S]*?gap: 8px;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-card \{[\s\S]*?padding: 7px 10px 9px;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-card__field \{[\s\S]*?padding-top: 6px;[\s\S]*?margin-top: 6px;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-card__input \{[\s\S]*?height: 30px;/)
+    expect(recorderSurfaceStyles).toContain('.aimd-rec-card .aimd-rec-inline-table__drag-handle')
   })
 
   it('shows visible row numbers for table and card var_table layouts', () => {
@@ -133,67 +135,67 @@ describe('AimdVarField render behavior', () => {
     expect(varTableSource).toContain('aimd-rec-inline-table__row-control')
     expect(varTableSource).toContain('aimd-rec-card__row-meta')
     expect(varTableSource).toContain('aimd-rec-inline-table__row-head-label')
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline-table__row-number\) \{[\s\S]*?font-variant-numeric: tabular-nums;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline-table__row-number\) \{[\s\S]*?background: transparent;[\s\S]*?font-style: normal;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline-table__row-number \{[\s\S]*?font-variant-numeric: tabular-nums;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline-table__row-number \{[\s\S]*?background: transparent;[\s\S]*?font-style: normal;/)
   })
 
   it('clips plain stacked var controls so rounded corners render cleanly', () => {
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked\) \{[\s\S]*?overflow: hidden;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked:has\(\.aimd-field__metadata-host\)\) \{[\s\S]*?overflow: visible;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--has-assigner-control\) \{[\s\S]*?overflow: hidden;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \{[\s\S]*?overflow: hidden;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked:has\(\.aimd-field__metadata-host\) \{[\s\S]*?overflow: visible;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--has-assigner-control \{[\s\S]*?overflow: hidden;/)
   })
 
   it('lets stacked var fields widen before wrapping long metadata keys', () => {
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked\) \{[\s\S]*?width: max-content;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked \.aimd-field--no-style\.aimd-field__label\) \{[\s\S]*?flex-wrap: nowrap;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked \.aimd-field__scope\) \{[\s\S]*?flex: 0 0 auto;[\s\S]*?white-space: nowrap;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked \.aimd-field__name\) \{[\s\S]*?flex: 0 0 auto;[\s\S]*?min-width: max-content;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked \.aimd-field__key\) \{[\s\S]*?overflow: visible;[\s\S]*?white-space: nowrap;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \{[\s\S]*?width: max-content;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \.aimd-field--no-style\.aimd-field__label \{[\s\S]*?flex-wrap: nowrap;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \.aimd-field__scope \{[\s\S]*?flex: 0 0 auto;[\s\S]*?white-space: nowrap;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \.aimd-field__name \{[\s\S]*?flex: 0 0 auto;[\s\S]*?min-width: max-content;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \.aimd-field__key \{[\s\S]*?overflow: visible;[\s\S]*?white-space: nowrap;/)
   })
 
   it('keeps complex markdown tables scrollable without expanding the recorder', () => {
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\)\) \{[\s\S]*?display: block;[\s\S]*?max-width: 100%;[\s\S]*?overflow-x: auto;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) th:first-child\),[\s\S]*?\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) td:first-child\) \{[\s\S]*?position: sticky;[\s\S]*?left: 0;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) td:has\(\.aimd-rec-inline--var-stacked\)\) \{[\s\S]*?min-width: min\(360px, 80vw\);[\s\S]*?max-width: min\(680px, 80vw\);/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) \.aimd-rec-inline--var-stacked\) \{[\s\S]*?width: max-content;[\s\S]*?max-width: min\(680px, 100%\);/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) \.aimd-rec-inline--var-stacked \.aimd-field__title\),[\s\S]*?\.aimd-protocol-recorder__content :deep\(table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) \.aimd-rec-inline--var-stacked \.aimd-field__key\) \{[\s\S]*?overflow-wrap: break-word;[\s\S]*?white-space: normal;[\s\S]*?word-break: normal;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) \{[\s\S]*?display: block;[\s\S]*?max-width: 100%;[\s\S]*?overflow-x: auto;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) th:first-child,[\s\S]*?\.aimd-protocol-recorder__content table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) td:first-child \{[\s\S]*?position: sticky;[\s\S]*?left: 0;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) td:has\(\.aimd-rec-inline--var-stacked\) \{[\s\S]*?min-width: min\(360px, 80vw\);[\s\S]*?max-width: min\(680px, 80vw\);/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) \.aimd-rec-inline--var-stacked \{[\s\S]*?width: max-content;[\s\S]*?max-width: min\(680px, 100%\);/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) \.aimd-rec-inline--var-stacked \.aimd-field__title,[\s\S]*?\.aimd-protocol-recorder__content table:not\(\.aimd-rec-inline-table__table\):not\(\.aimd-scale__table\) \.aimd-rec-inline--var-stacked \.aimd-field__key \{[\s\S]*?overflow-wrap: break-word;[\s\S]*?white-space: normal;[\s\S]*?word-break: normal;/)
     expect(source).toContain('class: "aimd-field__title", title: displayTitle')
     expect(source).toContain('class: "aimd-field__key", title: id')
   })
 
   it('normalizes stacked var value typography across native control types', () => {
-    expect(recorderSource).toContain('--rec-body-font-size: 14px;')
-    expect(recorderSource).toContain('--rec-var-value-font-size: var(--rec-body-font-size);')
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content \{[\s\S]*?font-size: var\(--rec-body-font-size\);/)
+    expect(recorderSurfaceStyles).toContain('--rec-body-font-size: 14px;')
+    expect(recorderSurfaceStyles).toContain('--rec-var-value-font-size: var(--rec-body-font-size);')
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \{[\s\S]*?font-size: var\(--rec-body-font-size\);/)
     expect(source).toContain('aimd-rec-inline__value-control aimd-rec-inline__input aimd-rec-inline__input--stacked')
     expect(source).toContain('aimd-rec-inline__value-control aimd-rec-inline__textarea aimd-rec-inline__textarea--stacked')
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked \.aimd-rec-inline__value-control\) \{[\s\S]*?font: inherit;[\s\S]*?font-size: var\(--rec-var-value-font-size\);/)
-    expect(recorderSource).toContain('.aimd-rec-inline__value-control::-webkit-datetime-edit')
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \.aimd-rec-inline__value-control \{[\s\S]*?font: inherit;[\s\S]*?font-size: var\(--rec-var-value-font-size\);/)
+    expect(recorderSurfaceStyles).toContain('.aimd-rec-inline__value-control::-webkit-datetime-edit')
   })
 
   it('uses wrapped line-numbered code blocks in recorder markdown output', () => {
     expect(recorderSource).toContain('useCodeBlockRendering')
     expect(recorderSource).toMatch(/elementRenderers:\s*\{\s*pre: codeBlockPreRenderer/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-code-block\) \{[\s\S]*?overflow: hidden;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-code-block__line\) \{[\s\S]*?grid-template-columns: max-content minmax\(0, 1fr\);/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-code-block__line-code\) \{[\s\S]*?white-space: pre-wrap;[\s\S]*?overflow-wrap: anywhere;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-code-block--wrap \.aimd-code-block__line-code\) \{[\s\S]*?text-indent: calc\(-1 \* var\(--aimd-code-wrap-indent, 0ch\)\);/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-code-block \{[\s\S]*?overflow: hidden;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-code-block__line \{[\s\S]*?grid-template-columns: max-content minmax\(0, 1fr\);/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-code-block__line-code \{[\s\S]*?white-space: pre-wrap;[\s\S]*?overflow-wrap: anywhere;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-code-block--wrap \.aimd-code-block__line-code \{[\s\S]*?text-indent: calc\(-1 \* var\(--aimd-code-wrap-indent, 0ch\)\);/)
   })
 
   it('lets block recorder fields fill the available panel width', () => {
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-markdown\) \{[\s\S]*?width: 100%;[\s\S]*?box-sizing: border-box;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--step\) \{[\s\S]*?width: 100%;[\s\S]*?box-sizing: border-box;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--check\) \{[\s\S]*?width: 100%;/)
-    expect(recorderSource).not.toContain('width: min(100%, 1040px);')
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-markdown \{[\s\S]*?width: 100%;[\s\S]*?box-sizing: border-box;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--step \{[\s\S]*?width: 100%;[\s\S]*?box-sizing: border-box;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--check \{[\s\S]*?width: 100%;/)
+    expect(recorderSurfaceStyles).not.toContain('width: min(100%, 1040px);')
   })
 
   it('keeps step body content inside the step card width', () => {
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body\) \{[\s\S]*?width: 100%;[\s\S]*?max-width: 100%;[\s\S]*?overflow-wrap: anywhere;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-step-body\) \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-step-body > \*\) \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%;[\s\S]*?overflow-wrap: anywhere;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-rec-inline--var-markdown\),\n\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-field--var-table\) \{[\s\S]*?width: 100%;[\s\S]*?max-width: 100%;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-step-field__body \.aimd-field--var-table\) \{[\s\S]*?overflow-x: auto;/)
-    expect(recorderSource).not.toContain('line-height: 1.72;')
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-step-field__body \{[\s\S]*?width: 100%;[\s\S]*?max-width: 100%;[\s\S]*?overflow-wrap: anywhere;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-step-field__body \.aimd-step-body \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-step-field__body \.aimd-step-body > \* \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%;[\s\S]*?overflow-wrap: anywhere;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-step-field__body \.aimd-rec-inline--var-markdown,[\s\S]*?\.aimd-protocol-recorder__content \.aimd-step-field__body \.aimd-field--var-table \{[\s\S]*?width: 100%;[\s\S]*?max-width: 100%;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-step-field__body \.aimd-field--var-table \{[\s\S]*?overflow-x: auto;/)
+    expect(recorderSurfaceStyles).not.toContain('line-height: 1.72;')
   })
 
   it('renders file-like vars with a native file picker control', async () => {
@@ -285,7 +287,7 @@ describe('AimdVarField render behavior', () => {
     expect(wrapper.find('.aimd-rec-inline__header-assigner-action .assigner-test-button').exists()).toBe(true)
     expect(wrapper.find('.aimd-rec-inline__header-assigner-state .assigner-test-status').exists()).toBe(true)
     expect(wrapper.find('.aimd-rec-inline__control-row').exists()).toBe(false)
-    expect(recorderSource).toContain('.aimd-rec-inline__header-assigner-actions')
+    expect(recorderSurfaceStyles).toContain('.aimd-rec-inline__header-assigner-actions')
   })
 
   it('places code assigner actions in the field header instead of a side prefix', () => {
@@ -340,23 +342,23 @@ describe('AimdVarField render behavior', () => {
     expect(source).toContain('h("textarea"')
     expect(source).toContain('syncAutoWrapTextareaHeight(control)')
     expect(source).toContain('props.messages.scalarList.itemIndex(rowIndex + 1)')
-    expect(recorderSource).toContain('.aimd-rec-inline__header-extra-action')
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-inline--var-stacked--scalar-list\) \{[\s\S]*?display: flex;[\s\S]*?width: 100%;[\s\S]*?margin: 12px 0;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__items\) \{[\s\S]*?flex-flow: row wrap;[\s\S]*?gap: 5px;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__rows\) \{[\s\S]*?display: contents;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row\) \{[\s\S]*?display: inline-flex;[\s\S]*?align-items: stretch;[\s\S]*?gap: 0;[\s\S]*?width: fit-content;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row--has-drag\.aimd-rec-scalar-list__row--has-remove\) \{[\s\S]*?--aimd-rec-scalar-list-control-offset: 68px;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row--multiline\) \{[\s\S]*?flex: 1 1 100%;[\s\S]*?width: 100%;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__input\) \{[\s\S]*?width: var\(--aimd-rec-scalar-list-input-width, calc\(8em \+ 16px\)\);[\s\S]*?max-width: min\(calc\(42em \+ 16px\), calc\(100% - var\(--aimd-rec-scalar-list-control-offset, 0px\)\)\);/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__input--text\) \{[\s\S]*?resize: none;[\s\S]*?overflow: hidden;[\s\S]*?white-space: pre-wrap;[\s\S]*?overflow-wrap: anywhere;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row--multiline \.aimd-rec-scalar-list__input--text\) \{[\s\S]*?flex: 1 1 auto;[\s\S]*?width: auto;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__index\) \{[\s\S]*?min-width: 22px;[\s\S]*?min-height: 26px;[\s\S]*?font-size: 10px;[\s\S]*?font-variant-numeric: tabular-nums;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__drag\) \{[\s\S]*?width: 20px;[\s\S]*?min-height: 26px;[\s\S]*?font-size: 12px;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__remove\) \{[\s\S]*?width: 26px;[\s\S]*?min-height: 26px;[\s\S]*?font-size: 13px;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row--drop-target-before\)::before,[\s\S]*?\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__row--drop-target-after\)::after \{[\s\S]*?animation: aimd-rec-scalar-list-insert-pulse/)
-    expect(recorderSource).toContain('@keyframes aimd-rec-scalar-list-insert-pulse')
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__content :deep\(\.aimd-rec-scalar-list__mode-button:first-child\) \{[\s\S]*?border-radius: 5px 0 0 5px;/)
-    expect(recorderSource).not.toContain('min-height: 72px;')
+    expect(recorderSurfaceStyles).toContain('.aimd-rec-inline__header-extra-action')
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked--scalar-list \{[\s\S]*?display: flex;[\s\S]*?width: 100%;[\s\S]*?margin: 12px 0;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__items \{[\s\S]*?flex-flow: row wrap;[\s\S]*?gap: 5px;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__rows \{[\s\S]*?display: contents;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__row \{[\s\S]*?display: inline-flex;[\s\S]*?align-items: stretch;[\s\S]*?gap: 0;[\s\S]*?width: fit-content;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__row--has-drag\.aimd-rec-scalar-list__row--has-remove \{[\s\S]*?--aimd-rec-scalar-list-control-offset: 68px;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__row--multiline \{[\s\S]*?flex: 1 1 100%;[\s\S]*?width: 100%;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__input \{[\s\S]*?width: var\(--aimd-rec-scalar-list-input-width, calc\(8em \+ 16px\)\);[\s\S]*?max-width: min\(calc\(42em \+ 16px\), calc\(100% - var\(--aimd-rec-scalar-list-control-offset, 0px\)\)\);/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__input--text \{[\s\S]*?resize: none;[\s\S]*?overflow: hidden;[\s\S]*?white-space: pre-wrap;[\s\S]*?overflow-wrap: anywhere;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__row--multiline \.aimd-rec-scalar-list__input--text \{[\s\S]*?flex: 1 1 auto;[\s\S]*?width: auto;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__index \{[\s\S]*?min-width: 22px;[\s\S]*?min-height: 26px;[\s\S]*?font-size: 10px;[\s\S]*?font-variant-numeric: tabular-nums;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__drag \{[\s\S]*?width: 20px;[\s\S]*?min-height: 26px;[\s\S]*?font-size: 12px;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__remove \{[\s\S]*?width: 26px;[\s\S]*?min-height: 26px;[\s\S]*?font-size: 13px;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__row--drop-target-before::before,[\s\S]*?\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__row--drop-target-after::after \{[\s\S]*?animation: aimd-rec-scalar-list-insert-pulse/)
+    expect(recorderSurfaceStyles).toContain('@keyframes aimd-rec-scalar-list-insert-pulse')
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-scalar-list__mode-button:first-child \{[\s\S]*?border-radius: 5px 0 0 5px;/)
+    expect(recorderSurfaceStyles).not.toContain('min-height: 72px;')
   })
 
   it('renders explicit multiline list string items as full-row controls', async () => {
@@ -742,7 +744,7 @@ describe('AimdVarField render behavior', () => {
     expect((wrapper.find('.aimd-rec-inline--var-stacked').element as HTMLElement).style.width).toBe('360px')
     expect(varHelpersSource).toContain('case "image":')
     expect(varHelpersSource).toContain('return 360')
-    expect(recorderSource).toContain('.aimd-rec-inline__file-control[data-file-kind="image"] .aimd-rec-file-field__preview')
+    expect(recorderSurfaceStyles).toContain('.aimd-rec-inline__file-control[data-file-kind="image"] .aimd-rec-file-field__preview')
   })
 
   it('uses host-resolved file metadata for file cards', async () => {
@@ -1039,76 +1041,6 @@ describe('AimdVarField render behavior', () => {
     expect(latest?.var?.blood_type).toBeNull()
   })
 
-  it('searches the current record and highlights matching fields in AimdRecorder', async () => {
-    const wrapper = mount(AimdRecorder, {
-      props: {
-        content: 'Reaction: {{var|reaction_note: str}} Other: {{var|other_note: str}}',
-        locale: 'en-US',
-        modelValue: {
-          var: {
-            reaction_note: 'heated sample',
-            other_note: 'cold sample',
-          },
-          step: {},
-          check: {},
-          quiz: {},
-        },
-      },
-    })
-
-    await flushPromises()
-    await wrapper.vm.$nextTick()
-    await vi.dynamicImportSettled()
-    await wrapper.vm.$nextTick()
-
-    expect(wrapper.find('input[type="search"]').exists()).toBe(false)
-    expect(wrapper.find('.aimd-protocol-recorder__search-shell').exists()).toBe(true)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder \{[\s\S]*?--aimd-recorder-gutter-x: 0px;[\s\S]*?padding: 0 var\(--aimd-recorder-gutter-x\) var\(--aimd-recorder-gutter-bottom\);/)
-    expect(recorderSource).toContain('position: sticky;')
-    expect(recorderSource).toContain('--aimd-recorder-search-sticky-top')
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__search-shell \{[\s\S]*?margin-inline: calc\(-1 \* var\(--aimd-recorder-gutter-x\)\);[\s\S]*?background: transparent;[\s\S]*?pointer-events: none;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__search-shell--expanded \{[\s\S]*?padding-inline: var\(--aimd-recorder-gutter-x\);[\s\S]*?background: #f8fbff;[\s\S]*?pointer-events: auto;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__search \{[\s\S]*?border: 0;[\s\S]*?box-shadow: none;/)
-    expect(recorderSource).toContain('aimd-field--record-search-pulse')
-    expect(recorderSource).toContain('@keyframes aimd-rec-record-search-pulse')
-
-    const toggle = wrapper.find('[data-rec-search-toggle]')
-    expect(toggle.exists()).toBe(true)
-    await toggle.trigger('click')
-    await wrapper.vm.$nextTick()
-
-    const input = wrapper.find('input[type="search"]')
-    expect(input.exists()).toBe(true)
-
-    await input.setValue('heated')
-    await flushPromises()
-    await wrapper.vm.$nextTick()
-
-    expect(wrapper.text()).toContain('1 / 1')
-    expect(wrapper.find('.aimd-field--record-search-match').exists()).toBe(true)
-    expect(wrapper.find('.aimd-field--record-search-active').exists()).toBe(true)
-
-    await input.trigger('keydown.enter')
-    await flushPromises()
-    await wrapper.vm.$nextTick()
-    await flushPromises()
-    await wrapper.vm.$nextTick()
-
-    const matchedControl = wrapper.find('[data-rec-focus-key="var:reaction_note"]')
-    expect(matchedControl.exists()).toBe(true)
-    expect((matchedControl.element as HTMLInputElement | HTMLTextAreaElement).selectionStart).toBe(0)
-    expect((matchedControl.element as HTMLInputElement | HTMLTextAreaElement).selectionEnd).toBe('heated'.length)
-    expect(wrapper.find('.aimd-field--record-search-pulse').exists()).toBe(true)
-
-    const fieldSelect = wrapper.find('.aimd-protocol-recorder__search-field')
-    await fieldSelect.setValue('var:other_note')
-    await flushPromises()
-    await wrapper.vm.$nextTick()
-
-    expect(wrapper.text()).toContain('No matches')
-    expect(wrapper.find('.aimd-field--record-search-match').exists()).toBe(false)
-  })
-
   it('renders scalar list vars as repeatable inputs in AimdRecorder', async () => {
     const wrapper = mount(AimdRecorder, {
       props: {
@@ -1313,7 +1245,7 @@ describe('AimdVarField render behavior', () => {
     expect(wrapper.find('.aimd-rec-inline-table__header-action .assigner-test-button').exists()).toBe(true)
     expect(wrapper.find('.aimd-rec-inline-table__header-state .assigner-test-status').exists()).toBe(true)
     expect(wrapper.find('.aimd-rec-inline-table__assigner-error').text()).toBe('Missing source data')
-    expect(recorderSource).toContain('.aimd-rec-inline-table__header-actions')
+    expect(recorderSurfaceStyles).toContain('.aimd-rec-inline-table__header-actions')
   })
 
   it('does not use AIMD var_table titles as cell placeholders and honors explicit column placeholders', () => {

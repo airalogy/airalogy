@@ -6,6 +6,7 @@
  */
 
 import { defineAsyncComponent } from "vue"
+import "../styles/recorder.css"
 import AimdAssignerGraph from "./AimdAssignerGraph.vue"
 import AimdRecorder from "./AimdRecorder.vue"
 import AimdRecorderEditor from "./AimdRecorderEditor.vue"

@@ -5,6 +5,7 @@
  * This file keeps recorder-only wrappers, editing states, and interactive controls.
  */
 @import "@airalogy/aimd-renderer/styles";
+@import "./recorder-surface.css";
 
 /* Recorder-specific reference wrappers */
 .aimd-ref--step .research-step__sequence {
