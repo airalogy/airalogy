@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.21.0
+
+### Minor Changes
+
+- e6cbe13: Render `list[str]`, `list[int]`, and `list[float]` variables as full-row recorder fields with repeatable, drag-reorderable item inputs plus a JSON array mode.
+
+### Patch Changes
+
+- 6947d33: Keep complex Markdown tables with embedded recorder fields inside the recorder width by making the table area horizontally scrollable and constraining long variable labels inside table cells.
+- 67cfd5b: Render nullable boolean variables such as `bool | None` and `Optional[bool]` as tri-state select fields instead of text inputs.
+- d9bcb48: Preserve `None` semantics for nullable variable fields by storing empty nullable scalar, datetime, enum, and file values as `null`.
+- 9cea118: Show a localized "Not set" option for nullable enum selects instead of a blank option label.
+- 0e63459: Render long scalar list text items as full-row controls even when they wrap without explicit newline characters.
+- ba4bae5: Show long variable IDs completely inside markdown tables by wrapping stacked variable titles instead of truncating them.
+
 ## 1.20.0
 
 ### Minor Changes
