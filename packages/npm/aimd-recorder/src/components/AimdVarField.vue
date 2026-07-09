@@ -193,6 +193,7 @@ function areArraysEqual(left: unknown[], right: unknown[]): boolean {
 
 const SCALAR_LIST_INPUT_MIN_WIDTH_PX = 50
 const SCALAR_LIST_INPUT_EXTRA_SPACE_PX = 8
+const SCALAR_LIST_COMPACT_MAX_WIDTH_EM = 42
 let scalarListTextMeasureContext: CanvasRenderingContext2D | null | undefined
 
 function getApproximateTextWidthEm(text: string): number {
@@ -242,6 +243,10 @@ function getScalarListInputWidthEm(value: string, placeholder: string | undefine
 
 function getScalarListInputFallbackWidthPx(value: string, placeholder: string | undefined): number {
   return Math.ceil(getScalarListInputWidthEm(value, placeholder) * 14 + 16)
+}
+
+function isWideScalarListTextItem(value: string, placeholder: string | undefined): boolean {
+  return value.trim().length > 0 && getScalarListInputWidthEm(value, placeholder) > SCALAR_LIST_COMPACT_MAX_WIDTH_EM
 }
 
 function getScalarListTextMeasureContext(): CanvasRenderingContext2D | null {
@@ -1236,6 +1241,7 @@ export default defineComponent({
           const itemIndexLabel = props.messages.scalarList.itemIndex(rowIndex + 1)
           const itemPlaceholder = placeholder ?? props.messages.scalarList.itemPlaceholder
           const isExplicitMultilineItem = !isNumericScalarList && hasExplicitLineBreak(item)
+          const isWideTextItem = !isNumericScalarList && isWideScalarListTextItem(item, itemPlaceholder)
           const itemControlProps = {
             "data-rec-focus-key": rowIndex === 0 ? `var:${id}` : `var:${id}:${rowIndex}`,
             class: [
@@ -1258,7 +1264,7 @@ export default defineComponent({
               canDragRow ? "aimd-rec-scalar-list__row--has-drag" : undefined,
               canRemoveRow ? "aimd-rec-scalar-list__row--has-remove" : undefined,
               isNumericScalarList ? "aimd-rec-scalar-list__row--number" : "aimd-rec-scalar-list__row--text",
-              isExplicitMultilineItem ? "aimd-rec-scalar-list__row--multiline" : undefined,
+              isExplicitMultilineItem || isWideTextItem ? "aimd-rec-scalar-list__row--multiline" : undefined,
               scalarListDragIndex.value === rowIndex ? "aimd-rec-scalar-list__row--dragging" : undefined,
               isDropTarget ? "aimd-rec-scalar-list__row--drop-target" : undefined,
               isDropTarget ? `aimd-rec-scalar-list__row--drop-target-${dropPlacement}` : undefined,

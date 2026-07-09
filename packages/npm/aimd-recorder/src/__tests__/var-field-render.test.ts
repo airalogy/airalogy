@@ -335,6 +335,7 @@ describe('AimdVarField render behavior', () => {
     expect(source).toContain('syncScalarListTextInputLayout(el)')
     expect(source).toContain('"--aimd-rec-scalar-list-input-width"')
     expect(source).toContain('hasExplicitLineBreak(item)')
+    expect(source).toContain('isWideScalarListTextItem(item, itemPlaceholder)')
     expect(source).toMatch(/isNumericScalarList\s*\?\s*h\("input"/)
     expect(source).toContain('h("textarea"')
     expect(source).toContain('syncAutoWrapTextareaHeight(control)')
@@ -387,6 +388,37 @@ describe('AimdVarField render behavior', () => {
     const row = wrapper.find('.aimd-rec-scalar-list__row')
     expect(row.classes()).toContain('aimd-rec-scalar-list__row--multiline')
     expect(wrapper.find<HTMLTextAreaElement>('.aimd-rec-scalar-list__input').element.value).toBe('a\nb\nc')
+  })
+
+  it('renders long auto-wrapped list string items as full-row controls', async () => {
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'sample_notes',
+      raw: '{{var|sample_notes}}',
+      definition: {
+        id: 'sample_notes',
+        type: 'list[str]',
+      },
+    }
+    const longText = 'This is a long list item without explicit line breaks. It should occupy the full row once it exceeds the compact scalar-list width.'
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        value: [longText] as any,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: JSON.stringify([longText]),
+        inputKind: 'scalar-list',
+        initialized: true,
+      },
+    })
+
+    expect(wrapper.find('.aimd-rec-scalar-list__row').classes()).toContain('aimd-rec-scalar-list__row--multiline')
+    expect(wrapper.find<HTMLTextAreaElement>('.aimd-rec-scalar-list__input').element.value).toBe(longText)
   })
 
   it('renders list[str] vars as repeatable string inputs', async () => {
