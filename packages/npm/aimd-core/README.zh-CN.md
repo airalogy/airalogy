@@ -143,6 +143,10 @@ import {
 
 如果宿主工具需要在保存或执行前预检 fenced `assigner runtime=client` 函数，可使用 `validateClientAssignerFunctionSource()`。如果你想在作者填写 AIMD var 默认值时提示类型不匹配警告，可使用 `validateVarDefaultType()`。如果工具还需要提示 `gt`、`ge`、`lt`、`le`、`multiple_of` 这类 Pydantic 风格数值约束被用在非数值类型上，可使用 `validateVarKwargs()` 或 `validateVarDefinition()`。
 
+## Record 查询工具
+
+`@airalogy/aimd-core/utils` 导出 `collectAimdRecordFieldRefs()`、`searchAimdRecordFields()`、`filterAimdRecord()`、`filterAimdRecords()` 等 protocol-aware record 辅助函数。这些函数使用解析后的字段元数据搜索全部字段或指定字段，也支持存放在 `record.var` 下的 `var_table` subvar，因此宿主应用可以构建 Record 搜索和筛选 UI，而不需要重新实现 AIMD 字段遍历逻辑。
+
 ## 内置类型元数据
 
 `@airalogy/aimd-core/utils` 导出 `getAimdBuiltInTypeMetadata()` 和 `getAimdBuiltInTypeEnumValues()`。随包发布的元数据由 Python `airalogy.types` 注册表生成，因此 `BloodType` 这类官方命名枚举类型可以在浏览器工具中复用同一组取值，不需要在 npm 代码里重新维护 Python 类型定义。

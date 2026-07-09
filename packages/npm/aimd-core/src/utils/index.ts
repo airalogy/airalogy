@@ -77,6 +77,25 @@ export {
   type AimdRecordDataValue,
 } from './record-display'
 
+export {
+  collectAimdRecordFieldRefs,
+  doesAimdRecordValueMatch,
+  filterAimdRecord,
+  filterAimdRecords,
+  findAimdRecordFieldRef,
+  getAimdRecordFieldValue,
+  searchAimdRecordFields,
+  stringifyAimdRecordSearchValue,
+  type AimdRecordFieldRef,
+  type AimdRecordFilter,
+  type AimdRecordFilterOperator,
+  type AimdRecordFilterRecordsOptions,
+  type AimdRecordFilterResult,
+  type AimdRecordQueryFieldScope,
+  type AimdRecordSearchMatch,
+  type AimdRecordSearchOptions,
+} from './record-query'
+
 // Domain constants
 export {
   getRecordDataKey,

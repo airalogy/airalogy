@@ -55,6 +55,7 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - `var` 和 `var_table` 标签会显示 AIMD 里的 `title`，设置标题时仍显示规范 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。没有显式 placeholder 覆盖时，第一个标量示例会作为默认占位文案。
 - `bool | None`、`Literal[...] | None`、`BloodType | None` 这类带 `None` 的下拉型字段会显示本地化的 `未填写` 选项，并把该选项保存为 `null`。必填下拉字段不会显示空值选项，用户仍然需要选择真实枚举值。
 - `list[str]`、`list[int]`、`list[float]` 以及等价的可选标量列表变量会渲染为整行字段，支持可重复添加、可拖拽排序的逐项输入，并额外支持 JSON 数组模式，最终保存为标量数组，而不是只能使用通用结构化 textarea。
+- `AimdRecorder` 内建默认折叠的 protocol-aware 当前 Record 搜索控件，可以搜索全部字段或某个指定字段；展开后会 sticky 保持在 recorder 顶部，高亮匹配字段控件，在匹配项之间跳转，并在原生文本输入控件中尽量选中命中的文本片段。
 - `choice`、`true_false`、`blank`、`open`、`scale` 五类 quiz 都有内建 recorder 输入。
 - 数值 `var` 输入会识别 `gt`、`ge`、`lt`、`le`、`multiple_of` 这类 Pydantic 风格约束；这些约束只对 `int`、`integer`、`float`、`number` 类型生效。
 - client assigner 会用同一组数值约束判断依赖是否就绪；依赖字段违反声明边界时会跳过执行。

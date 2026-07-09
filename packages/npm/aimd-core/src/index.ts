@@ -222,6 +222,25 @@ export {
   type AimdRecordDataValue,
 } from './utils/record-display'
 
+export {
+  collectAimdRecordFieldRefs,
+  doesAimdRecordValueMatch,
+  filterAimdRecord,
+  filterAimdRecords,
+  findAimdRecordFieldRef,
+  getAimdRecordFieldValue,
+  searchAimdRecordFields,
+  stringifyAimdRecordSearchValue,
+  type AimdRecordFieldRef,
+  type AimdRecordFilter,
+  type AimdRecordFilterOperator,
+  type AimdRecordFilterRecordsOptions,
+  type AimdRecordFilterResult,
+  type AimdRecordQueryFieldScope,
+  type AimdRecordSearchMatch,
+  type AimdRecordSearchOptions,
+} from './utils/record-query'
+
 // Domain constants
 export {
   getRecordDataKey,

@@ -125,6 +125,15 @@ export interface DemoMessages {
       packageImportNoRecords: string
       packageImportMissingProtocol: string
       importedRecordSelect: string
+      importedRecordNoMatches: string
+      importedRecordFilterField: string
+      importedRecordFilterOperator: string
+      importedRecordFilterAllFields: string
+      importedRecordFilterContains: string
+      importedRecordFilterEquals: string
+      importedRecordFilterRegex: string
+      importedRecordFilterPlaceholder: string
+      importedRecordFilterCount: (shown: number, total: number) => string
       downloadAimd: string
       downloadAira: string
       packagingDownload: string
@@ -313,6 +322,15 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         packageImportNoRecords: 'The records archive does not contain any record entries.',
         packageImportMissingProtocol: 'The record does not reference a protocol included in the archive',
         importedRecordSelect: 'Imported record',
+        importedRecordNoMatches: 'No matching records',
+        importedRecordFilterField: 'Record filter field',
+        importedRecordFilterOperator: 'Record filter operator',
+        importedRecordFilterAllFields: 'All fields',
+        importedRecordFilterContains: 'contains',
+        importedRecordFilterEquals: 'equals',
+        importedRecordFilterRegex: 'regex',
+        importedRecordFilterPlaceholder: 'Filter records',
+        importedRecordFilterCount: (shown, total) => `${shown} / ${total}`,
         downloadAimd: 'Download .aimd',
         downloadAira: 'Download .aira',
         packagingDownload: 'Packaging...',
@@ -499,6 +517,15 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         packageImportNoRecords: 'Records 归档中没有 Record 条目。',
         packageImportMissingProtocol: '这个 Record 没有引用归档中内嵌的 Protocol',
         importedRecordSelect: '已导入 Record',
+        importedRecordNoMatches: '没有匹配的 Records',
+        importedRecordFilterField: 'Record 过滤字段',
+        importedRecordFilterOperator: 'Record 过滤方式',
+        importedRecordFilterAllFields: '全部字段',
+        importedRecordFilterContains: '包含',
+        importedRecordFilterEquals: '等于',
+        importedRecordFilterRegex: '正则',
+        importedRecordFilterPlaceholder: '过滤 Records',
+        importedRecordFilterCount: (shown, total) => `${shown} / ${total}`,
         downloadAimd: '下载 .aimd',
         downloadAira: '下载 .aira',
         packagingDownload: '正在打包...',

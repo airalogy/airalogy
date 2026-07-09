@@ -9,6 +9,7 @@ Built-in variable input types include `CurrentTime`, `UserName`, `AiralogyMarkdo
 Official named enum types such as `BloodType` render as select inputs using metadata generated from the Python `airalogy.types` registry.
 Select-backed types combined with `None`, such as `bool | None`, `Literal[...] | None`, and `BloodType | None`, show a localized `Not set` option and store that selection as `null`; required selects omit this empty option.
 Scalar list variables such as `list[str]`, `list[int]`, and `list[float]` render as full-row fields with repeatable drag-reorderable item inputs plus a JSON array mode, then store clean scalar arrays.
+`AimdRecorder` includes a collapsed-by-default protocol-aware record search control for searching all fields or one selected field; when expanded it stays sticky at the top of the recorder, highlights matching fields, jumps between matching controls, and selects the matched substring inside native text inputs when possible.
 `AiralogyMarkdown` now uses a full-width embedded AIMD/Markdown field in recorder mode with rendered preview and source-editing modes; source editing keeps the full top toolbar and still supports switching to `WYSIWYG` instead of a plain textarea.
 In recorder/edit mode, `ref_var` references display current var values as readonly inline content when available.
 `var` and `var_table` labels display AIMD `title`, keep canonical ids visible, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus. Host `fieldMeta` can override the same display fields at runtime.

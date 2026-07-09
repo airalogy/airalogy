@@ -143,6 +143,7 @@ export default defineComponent({
     columns: { type: Array as PropType<string[]>, required: true },
     disabled: { type: Boolean, default: false },
     readonly: { type: Boolean, default: false },
+    extraClasses: { type: Array as PropType<string[]>, default: () => [] },
     settlingRowKey: { type: String as PropType<string | null>, default: null },
     messages: { type: Object as PropType<AimdRecorderMessages>, required: true },
     fieldMeta: { type: Object as PropType<Record<string, AimdFieldMeta> | undefined>, default: undefined },
@@ -534,7 +535,7 @@ export default defineComponent({
 
       return h("div", {
         ref: wrapperRef,
-        class: "aimd-field aimd-field--var-table aimd-rec-inline-table",
+        class: ["aimd-field aimd-field--var-table aimd-rec-inline-table", ...props.extraClasses],
         "data-aimd-table-name": tableName,
         "data-aimd-table-layout": layoutReady.value && isOverflow.value ? "cards" : "table",
       }, [

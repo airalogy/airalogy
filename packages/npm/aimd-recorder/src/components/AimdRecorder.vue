@@ -11,7 +11,13 @@ import type {
   AimdVarTableNode,
   ExtractedAimdFields,
 } from "@airalogy/aimd-core/types"
-import { getAimdFieldEnumValues } from "@airalogy/aimd-core/utils"
+import {
+  collectAimdRecordFieldRefs,
+  getAimdFieldEnumValues,
+  searchAimdRecordFields,
+  type AimdRecordFieldRef,
+  type AimdRecordSearchMatch,
+} from "@airalogy/aimd-core/utils"
 import { parseAndExtract, renderToVue } from "@airalogy/aimd-renderer"
 import type { AimdComponentRenderer } from "@airalogy/aimd-renderer"
 import type { AimdRecorderMessagesInput } from "../locales"
@@ -118,6 +124,10 @@ const props = withDefaults(defineProps<{
   scaleGradeDisplayMode?: AimdScaleGradeDisplayMode
   /** Controls whether step timer / note details stay expanded */
   stepDetailDisplay?: AimdStepDetailDisplay
+  /** Shows the built-in record search toolbar. */
+  showSearch?: boolean
+  /** Expands the built-in record search toolbar by default. */
+  searchDefaultExpanded?: boolean
 
   // ── Extension props ──────────────────────────────────────────────────────
 
@@ -198,6 +208,8 @@ const props = withDefaults(defineProps<{
   choiceOptionExplanationMode: "hidden",
   scaleGradeDisplayMode: "hidden",
   stepDetailDisplay: "auto",
+  showSearch: true,
+  searchDefaultExpanded: false,
   fieldMeta: undefined,
   serverAssigners: undefined,
   assigners: undefined,
@@ -257,6 +269,7 @@ let pendingFocusSnapshot: FocusSnapshot | null = null
 let pendingInlineBuildRequestId: number | null = null
 const timerNowMs = ref(Date.now())
 let protocolTimerTicker: ReturnType<typeof setInterval> | null = null
+let recordSearchPulseTimer: ReturnType<typeof setTimeout> | null = null
 const serverAssignerAbortControllers = new Map<string, AbortController>()
 const autoServerAssignerSignatures = new Map<string, string>()
 let autoServerAssignerScheduled = false
@@ -615,6 +628,63 @@ const showProtocolTimingSummary = computed(() => protocolEstimatedDurationMs.val
 const protocolEstimatedDurationLabel = computed(() => formatStepDuration(protocolEstimatedDurationMs.value, resolvedLocale.value))
 const protocolRecordedDurationLabel = computed(() => formatStepDuration(protocolRecordedDurationMs.value, resolvedLocale.value))
 const hasRunningStepTimer = computed(() => Object.values(localRecord.step).some(step => isStepTimerRunning(step)))
+const recordSearchQuery = ref("")
+const recordSearchFieldKey = ref("")
+const activeRecordSearchMatchIndex = ref(0)
+const recordSearchExpanded = ref(props.searchDefaultExpanded)
+const recordSearchInputRef = ref<HTMLInputElement | null>(null)
+const recordSearchPulseFieldKeys = ref<Set<string>>(new Set())
+const recordSearchFieldRefs = computed<AimdRecordFieldRef[]>(() => collectAimdRecordFieldRefs(extractedFields.value))
+const showRecordSearchToolbar = computed(() => props.showSearch && recordSearchFieldRefs.value.length > 0)
+const recordSearchHasCriteria = computed(() => Boolean(recordSearchQuery.value.trim() || recordSearchFieldKey.value))
+const recordSearchPanelVisible = computed(() => recordSearchExpanded.value || recordSearchHasCriteria.value)
+const recordSearchMatches = computed(() => searchAimdRecordFields(
+  localRecord,
+  recordSearchQuery.value,
+  recordSearchFieldRefs.value,
+  {
+    fieldKeys: recordSearchFieldKey.value ? [recordSearchFieldKey.value] : undefined,
+    includeFieldLabels: true,
+  },
+))
+const activeRecordSearchMatch = computed(() => {
+  if (recordSearchMatches.value.length === 0) {
+    return null
+  }
+  const index = Math.min(Math.max(activeRecordSearchMatchIndex.value, 0), recordSearchMatches.value.length - 1)
+  return recordSearchMatches.value[index] ?? null
+})
+const recordSearchMatchedFieldKeys = computed(() => {
+  const keys = new Set<string>()
+  for (const match of recordSearchMatches.value) {
+    keys.add(match.field.key)
+    if (match.field.parentKey) {
+      keys.add(match.field.parentKey)
+    }
+  }
+  return keys
+})
+const recordSearchActiveFieldKeys = computed(() => {
+  const keys = new Set<string>()
+  const match = activeRecordSearchMatch.value
+  if (match) {
+    keys.add(match.field.key)
+    if (match.field.parentKey) {
+      keys.add(match.field.parentKey)
+    }
+  }
+  return keys
+})
+const recordSearchResultLabel = computed(() => {
+  const total = recordSearchMatches.value.length
+  if (!recordSearchQuery.value.trim()) {
+    return ""
+  }
+  if (total === 0) {
+    return resolvedMessages.value.search.noMatches
+  }
+  return resolvedMessages.value.search.matchCount(activeRecordSearchMatchIndex.value + 1, total)
+})
 
 function syncProtocolTimerTicker() {
   if (protocolTimerTicker) {
@@ -629,6 +699,168 @@ function syncProtocolTimerTicker() {
   protocolTimerTicker = setInterval(() => {
     timerNowMs.value = Date.now()
   }, 1000)
+}
+
+function getRecordSearchFieldClasses(fieldKey: string): string[] {
+  if (!recordSearchQuery.value.trim()) {
+    return []
+  }
+
+  const classes: string[] = []
+  if (recordSearchMatchedFieldKeys.value.has(fieldKey)) {
+    classes.push("aimd-field--record-search-match")
+  }
+  if (recordSearchActiveFieldKeys.value.has(fieldKey)) {
+    classes.push("aimd-field--record-search-active")
+  }
+  if (recordSearchPulseFieldKeys.value.has(fieldKey)) {
+    classes.push("aimd-field--record-search-pulse")
+  }
+  return classes
+}
+
+function findRecordSearchFocusTarget(focusKey: string): HTMLElement | null {
+  if (!contentRoot.value) {
+    return null
+  }
+  const candidates = contentRoot.value.querySelectorAll<HTMLElement>("[data-rec-focus-key]")
+  for (let index = 0; index < candidates.length; index += 1) {
+    if (candidates[index].dataset.recFocusKey === focusKey) {
+      return candidates[index]
+    }
+  }
+  for (let index = 0; index < candidates.length; index += 1) {
+    const candidateKey = candidates[index].dataset.recFocusKey
+    if (candidateKey?.startsWith(`${focusKey}:`)) {
+      return candidates[index]
+    }
+  }
+  return null
+}
+
+function isRecordSearchTextControl(element: Element | null): element is HTMLInputElement | HTMLTextAreaElement {
+  return (
+    (typeof HTMLInputElement !== "undefined" && element instanceof HTMLInputElement)
+    || (typeof HTMLTextAreaElement !== "undefined" && element instanceof HTMLTextAreaElement)
+  )
+}
+
+function getRecordSearchFocusableElement(target: HTMLElement): HTMLElement {
+  if (target.matches("input, textarea, select, button, [tabindex]:not([tabindex='-1'])")) {
+    return target
+  }
+  return target.querySelector<HTMLElement>("input, textarea, select, button, [tabindex]:not([tabindex='-1'])") ?? target
+}
+
+function getRecordSearchTextControl(target: HTMLElement): HTMLInputElement | HTMLTextAreaElement | null {
+  if (isRecordSearchTextControl(target)) {
+    return target
+  }
+  return target.querySelector<HTMLInputElement | HTMLTextAreaElement>("textarea, input")
+}
+
+function selectRecordSearchTextMatch(target: HTMLElement, match: AimdRecordSearchMatch) {
+  const control = getRecordSearchTextControl(target)
+  if (!control) {
+    return
+  }
+
+  const needle = recordSearchQuery.value.trim()
+  if (!needle) {
+    return
+  }
+
+  const sourceText = control.value || match.text
+  const haystack = sourceText.toLocaleLowerCase()
+  const start = haystack.indexOf(needle.toLocaleLowerCase())
+  if (start < 0) {
+    return
+  }
+
+  try {
+    control.setSelectionRange(start, start + needle.length)
+  }
+  catch {
+    // Some input types do not support text selection. Focusing the control is still useful.
+  }
+}
+
+function pulseRecordSearchMatch(match: AimdRecordSearchMatch) {
+  if (recordSearchPulseTimer) {
+    clearTimeout(recordSearchPulseTimer)
+    recordSearchPulseTimer = null
+  }
+
+  recordSearchPulseFieldKeys.value = new Set()
+  void nextTick().then(() => {
+    const keys = new Set<string>([match.field.key])
+    if (match.field.parentKey) {
+      keys.add(match.field.parentKey)
+    }
+    recordSearchPulseFieldKeys.value = keys
+    recordSearchPulseTimer = setTimeout(() => {
+      recordSearchPulseFieldKeys.value = new Set()
+      recordSearchPulseTimer = null
+    }, 680)
+  })
+}
+
+async function focusRecordSearchMatch(index: number) {
+  if (recordSearchMatches.value.length === 0) {
+    return
+  }
+
+  const total = recordSearchMatches.value.length
+  activeRecordSearchMatchIndex.value = ((index % total) + total) % total
+  await nextTick()
+
+  const match = recordSearchMatches.value[activeRecordSearchMatchIndex.value]
+  if (!match) {
+    return
+  }
+
+  const target = findRecordSearchFocusTarget(match.field.focusKey)
+  pulseRecordSearchMatch(match)
+  if (!target) {
+    return
+  }
+
+  target.scrollIntoView?.({ block: "center", inline: "nearest", behavior: "smooth" })
+  const focusTarget = getRecordSearchFocusableElement(target)
+  try {
+    focusTarget.focus({ preventScroll: true })
+  }
+  catch {
+    focusTarget.focus()
+  }
+  selectRecordSearchTextMatch(focusTarget, match)
+}
+
+async function expandRecordSearch() {
+  recordSearchExpanded.value = true
+  await nextTick()
+  recordSearchInputRef.value?.focus()
+}
+
+function collapseRecordSearch() {
+  if (recordSearchHasCriteria.value) {
+    return
+  }
+  recordSearchExpanded.value = false
+}
+
+function focusPreviousRecordSearchMatch() {
+  void focusRecordSearchMatch(activeRecordSearchMatchIndex.value - 1)
+}
+
+function focusNextRecordSearchMatch() {
+  void focusRecordSearchMatch(activeRecordSearchMatchIndex.value + 1)
+}
+
+function clearRecordSearch() {
+  recordSearchQuery.value = ""
+  recordSearchFieldKey.value = ""
+  activeRecordSearchMatchIndex.value = 0
 }
 
 function getStepTimerPayload(step: AimdStepRecordItem) {
@@ -1056,7 +1288,10 @@ function renderInlineVar(node: AimdVarNode): VNode {
     fieldKey,
   )
   const disabled = fieldRendering.isFieldDisabled(fieldKey)
-  const extraClasses = fieldRendering.fieldStateClasses(fieldKey)
+  const extraClasses = [
+    ...fieldRendering.fieldStateClasses(fieldKey),
+    ...getRecordSearchFieldClasses(fieldKey),
+  ]
   const canUseInternalAssignerControl = Boolean(meta?.enumOptions?.length)
     || ["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "checkbox", "boolean-select", "file", "code"].includes(inputKind)
   const fieldAssignerControl = resolveAssignerControl("var", fieldKey)
@@ -1147,6 +1382,10 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
   const disabled = fieldRendering.isFieldDisabled(fieldKey)
   const disabledColumns = columns.filter(column => !!effectiveFieldMeta.value[`var_table:${tableName}:${column}`]?.disabled)
   const tableAssignerControl = resolveAssignerControl("var_table", fieldKey)
+  const extraClasses = [
+    ...fieldRendering.fieldStateClasses(fieldKey),
+    ...getRecordSearchFieldClasses(fieldKey),
+  ]
 
   const vnode = h(AimdVarTableField, {
     node,
@@ -1154,6 +1393,7 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
     columns,
     disabled,
     readonly: props.readonly,
+    extraClasses,
     settlingRowKey: tableDragDrop.getSettlingVarTableRowKey(),
     messages: resolvedMessages.value,
     fieldMeta: effectiveFieldMeta.value,
@@ -1380,7 +1620,10 @@ function renderInlineStep(node: AimdStepNode, bodyNodes: VNodeChild[] = []): VNo
 
   const state = localRecord.step[id]
   const disabled = fieldRendering.isFieldDisabled(fieldKey)
-  const extraClasses = fieldRendering.fieldStateClasses(fieldKey)
+  const extraClasses = [
+    ...fieldRendering.fieldStateClasses(fieldKey),
+    ...getRecordSearchFieldClasses(fieldKey),
+  ]
   const normalizedBodyNodes = normalizeStepBodyNodes(bodyNodes)
 
   const vnode = h(AimdStepField, {
@@ -1450,7 +1693,10 @@ function renderInlineCheck(node: AimdCheckNode, bodyNodes: VNodeChild[] = []): V
 
   const state = localRecord.check[id]
   const disabled = fieldRendering.isFieldDisabled(fieldKey)
-  const extraClasses = fieldRendering.fieldStateClasses(fieldKey)
+  const extraClasses = [
+    ...fieldRendering.fieldStateClasses(fieldKey),
+    ...getRecordSearchFieldClasses(fieldKey),
+  ]
   const normalizedBodyNodes = normalizeCheckBodyNodes(bodyNodes)
 
   const vnode = h(AimdCheckField, {
@@ -1507,6 +1753,7 @@ function renderInlineQuiz(node: AimdQuizNode): VNode {
 
   const vnode = h(AimdQuizRecorder, {
     class: "aimd-rec-inline aimd-rec-inline--quiz",
+    extraClasses: getRecordSearchFieldClasses(fieldKey),
     quiz: quizField,
     modelValue: localRecord.quiz[quizId],
     grade: props.quizGrades?.[quizId] ?? null,
@@ -1640,6 +1887,45 @@ watch(hasRunningStepTimer, () => {
   syncProtocolTimerTicker()
 }, { immediate: true })
 
+watch([recordSearchQuery, recordSearchFieldKey], () => {
+  activeRecordSearchMatchIndex.value = 0
+  scheduleInlineRebuild()
+})
+
+watch(recordSearchFieldRefs, (refs) => {
+  if (recordSearchFieldKey.value && !refs.some(ref => ref.key === recordSearchFieldKey.value)) {
+    recordSearchFieldKey.value = ""
+  }
+}, { deep: true })
+
+watch(recordSearchMatches, (matches) => {
+  if (matches.length === 0) {
+    activeRecordSearchMatchIndex.value = 0
+    if (recordSearchQuery.value.trim()) {
+      scheduleInlineRebuild()
+    }
+    return
+  }
+  if (activeRecordSearchMatchIndex.value >= matches.length) {
+    activeRecordSearchMatchIndex.value = matches.length - 1
+  }
+  if (recordSearchQuery.value.trim()) {
+    scheduleInlineRebuild()
+  }
+}, { deep: true })
+
+watch(activeRecordSearchMatchIndex, () => {
+  if (recordSearchQuery.value.trim()) {
+    scheduleInlineRebuild()
+  }
+})
+
+watch(recordSearchPulseFieldKeys, () => {
+  if (recordSearchQuery.value.trim()) {
+    scheduleInlineRebuild()
+  }
+}, { deep: true })
+
 watch(
   () => ({
     content: props.content,
@@ -1712,6 +1998,10 @@ onBeforeUnmount(() => {
   if (protocolTimerTicker) {
     clearInterval(protocolTimerTicker)
   }
+  if (recordSearchPulseTimer) {
+    clearTimeout(recordSearchPulseTimer)
+    recordSearchPulseTimer = null
+  }
 })
 
 defineExpose({
@@ -1725,6 +2015,92 @@ defineExpose({
     <div v-if="renderError" class="aimd-protocol-recorder__error">{{ renderError }}</div>
 
     <template v-else>
+      <div
+        v-if="showRecordSearchToolbar"
+        class="aimd-protocol-recorder__search-shell"
+        :class="{ 'aimd-protocol-recorder__search-shell--expanded': recordSearchPanelVisible }"
+      >
+        <button
+          v-if="!recordSearchPanelVisible"
+          type="button"
+          class="aimd-protocol-recorder__search-toggle"
+          data-rec-search-toggle
+          :aria-label="resolvedMessages.search.label"
+          @click="expandRecordSearch"
+        >
+          {{ resolvedMessages.search.label }}
+        </button>
+        <div v-else class="aimd-protocol-recorder__search">
+          <select
+            v-model="recordSearchFieldKey"
+            class="aimd-protocol-recorder__search-field"
+            :aria-label="resolvedMessages.search.fieldLabel"
+          >
+            <option value="">{{ resolvedMessages.search.allFields }}</option>
+            <option
+              v-for="field in recordSearchFieldRefs"
+              :key="field.key"
+              :value="field.key"
+            >
+              {{ field.label }}
+            </option>
+          </select>
+          <input
+            ref="recordSearchInputRef"
+            v-model="recordSearchQuery"
+            class="aimd-protocol-recorder__search-input"
+            type="search"
+            :placeholder="resolvedMessages.search.placeholder"
+            :aria-label="resolvedMessages.search.label"
+            @keydown.enter.prevent="focusNextRecordSearchMatch"
+          >
+          <span v-if="recordSearchResultLabel" class="aimd-protocol-recorder__search-count">
+            {{ recordSearchResultLabel }}
+          </span>
+          <button
+            type="button"
+            class="aimd-protocol-recorder__search-button"
+            :disabled="recordSearchMatches.length === 0"
+            :aria-label="resolvedMessages.search.previous"
+            :title="resolvedMessages.search.previous"
+            @click="focusPreviousRecordSearchMatch"
+          >
+            &lt;
+          </button>
+          <button
+            type="button"
+            class="aimd-protocol-recorder__search-button"
+            :disabled="recordSearchMatches.length === 0"
+            :aria-label="resolvedMessages.search.next"
+            :title="resolvedMessages.search.next"
+            @click="focusNextRecordSearchMatch"
+          >
+            &gt;
+          </button>
+          <button
+            v-if="recordSearchQuery || recordSearchFieldKey"
+            type="button"
+            class="aimd-protocol-recorder__search-button aimd-protocol-recorder__search-button--clear"
+            :aria-label="resolvedMessages.search.clear"
+            :title="resolvedMessages.search.clear"
+            @click="clearRecordSearch"
+          >
+            x
+          </button>
+          <button
+            v-else
+            type="button"
+            class="aimd-protocol-recorder__search-button aimd-protocol-recorder__search-button--collapse"
+            data-rec-search-collapse
+            :aria-label="resolvedMessages.search.collapse"
+            :title="resolvedMessages.search.collapse"
+            @click="collapseRecordSearch"
+          >
+            {{ resolvedMessages.search.collapse }}
+          </button>
+        </div>
+      </div>
+
       <div v-if="showProtocolTimingSummary" class="aimd-protocol-recorder__timing">
         <span
           v-if="protocolEstimatedDurationMs > 0"
@@ -1797,6 +2173,129 @@ defineExpose({
   border-color: #f1d39a;
   background: #fff8ea;
   color: #9a5800;
+}
+
+.aimd-protocol-recorder__search-shell {
+  position: sticky;
+  top: var(--aimd-recorder-search-sticky-top, 0px);
+  z-index: 30;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0;
+  padding: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.aimd-protocol-recorder__search-shell--expanded {
+  justify-content: stretch;
+  margin-bottom: 10px;
+  padding: 4px 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.9));
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+}
+
+.aimd-protocol-recorder__search {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #d8e4f2;
+  border-radius: 10px;
+  background: #f8fbff;
+  box-shadow: 0 4px 14px rgba(23, 45, 77, 0.08);
+  pointer-events: auto;
+}
+
+.aimd-protocol-recorder__search-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #c8d4e3;
+  border-radius: 8px;
+  background: #fff;
+  color: #0b63c7;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(23, 45, 77, 0.06);
+  pointer-events: auto;
+}
+
+.aimd-protocol-recorder__search-field,
+.aimd-protocol-recorder__search-input {
+  min-height: 32px;
+  border: 1px solid #c8d4e3;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--rec-text);
+  font: inherit;
+}
+
+.aimd-protocol-recorder__search-field {
+  max-width: min(240px, 100%);
+  padding: 0 28px 0 10px;
+}
+
+.aimd-protocol-recorder__search-input {
+  flex: 1 1 240px;
+  min-width: min(220px, 100%);
+  padding: 0 10px;
+}
+
+.aimd-protocol-recorder__search-field:focus,
+.aimd-protocol-recorder__search-input:focus,
+.aimd-protocol-recorder__search-toggle:focus,
+.aimd-protocol-recorder__search-button:focus {
+  outline: 2px solid color-mix(in srgb, var(--rec-focus) 26%, transparent);
+  outline-offset: 1px;
+  border-color: #75b7ff;
+}
+
+.aimd-protocol-recorder__search-count {
+  min-width: 72px;
+  color: var(--rec-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.aimd-protocol-recorder__search-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #c8d4e3;
+  border-radius: 8px;
+  background: #fff;
+  color: #0b63c7;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.aimd-protocol-recorder__search-button:disabled {
+  color: #98a2b3;
+  cursor: default;
+  opacity: 0.65;
+}
+
+.aimd-protocol-recorder__search-button--clear {
+  color: #475467;
+}
+
+.aimd-protocol-recorder__search-button--collapse {
+  width: auto;
+  min-width: 48px;
+  padding: 0 10px;
+  color: #475467;
+  font-size: 12px;
 }
 
 .aimd-protocol-recorder__content {
@@ -1925,6 +2424,33 @@ defineExpose({
   margin: 6px 0;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
+
+.aimd-protocol-recorder__content :deep(.aimd-field--record-search-match) {
+  outline: 2px solid rgba(47, 111, 237, 0.28);
+  outline-offset: 2px;
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-field--record-search-active) {
+  outline-color: rgba(47, 111, 237, 0.72);
+  box-shadow: 0 0 0 4px rgba(47, 111, 237, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.aimd-protocol-recorder__content :deep(.aimd-field--record-search-pulse) {
+  animation: aimd-rec-record-search-pulse 0.62s ease-out;
+}
+
+@keyframes aimd-rec-record-search-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(47, 111, 237, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+  55% {
+    box-shadow: 0 0 0 8px rgba(47, 111, 237, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+  100% {
+    box-shadow: 0 0 0 4px rgba(47, 111, 237, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+}
+
 .aimd-protocol-recorder__content :deep(.aimd-field__scope) {
   border-radius: 6px;
   padding: 1px 7px;

@@ -112,6 +112,18 @@ export interface AimdRecorderMessages {
     true: string
     false: string
   }
+  search: {
+    label: string
+    fieldLabel: string
+    placeholder: string
+    allFields: string
+    previous: string
+    next: string
+    clear: string
+    collapse: string
+    noMatches: string
+    matchCount: (current: number, total: number) => string
+  }
   dna: {
     editMode: string
     interactiveMode: string
@@ -314,6 +326,18 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     true: "True",
     false: "False",
   },
+  search: {
+    label: "Search record",
+    fieldLabel: "Search field",
+    placeholder: "Search this record",
+    allFields: "All fields",
+    previous: "Previous match",
+    next: "Next match",
+    clear: "Clear search",
+    collapse: "Hide",
+    noMatches: "No matches",
+    matchCount: (current, total) => `${current} / ${total}`,
+  },
   dna: {
     editMode: "Edit mode",
     interactiveMode: "Interactive",
@@ -488,6 +512,18 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     unset: "未填写",
     true: "是",
     false: "否",
+  },
+  search: {
+    label: "搜索记录",
+    fieldLabel: "搜索字段",
+    placeholder: "搜索当前记录",
+    allFields: "全部字段",
+    previous: "上一个匹配",
+    next: "下一个匹配",
+    clear: "清除搜索",
+    collapse: "收起",
+    noMatches: "无匹配",
+    matchCount: (current, total) => `${current} / ${total}`,
   },
   dna: {
     editMode: "编辑模式",

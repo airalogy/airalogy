@@ -38,6 +38,7 @@ const props = withDefaults(defineProps<{
   grade?: AimdQuizGradeResult | null
   submitted?: boolean
   readonly?: boolean
+  extraClasses?: string[]
   focusKeyPrefix?: string
   locale?: string
   messages?: AimdRecorderMessagesInput
@@ -47,6 +48,7 @@ const props = withDefaults(defineProps<{
   grade: null,
   submitted: false,
   readonly: false,
+  extraClasses: () => [],
   focusKeyPrefix: undefined,
   locale: undefined,
   messages: undefined,
@@ -547,7 +549,7 @@ function shouldShowChoiceOptionExplanation(optionKey: string, explanation?: stri
 </script>
 
 <template>
-  <div class="aimd-quiz-recorder aimd-field aimd-field--quiz">
+  <div :class="['aimd-quiz-recorder aimd-field aimd-field--quiz', ...extraClasses]">
     <div class="aimd-quiz__meta">
       <span class="aimd-field__scope">{{ getAimdRecorderScopeLabel('quiz', resolvedMessages) }}</span>
       <span class="aimd-field__name">{{ quiz.id }}</span>

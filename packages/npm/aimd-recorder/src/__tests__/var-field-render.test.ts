@@ -1039,6 +1039,74 @@ describe('AimdVarField render behavior', () => {
     expect(latest?.var?.blood_type).toBeNull()
   })
 
+  it('searches the current record and highlights matching fields in AimdRecorder', async () => {
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: 'Reaction: {{var|reaction_note: str}} Other: {{var|other_note: str}}',
+        locale: 'en-US',
+        modelValue: {
+          var: {
+            reaction_note: 'heated sample',
+            other_note: 'cold sample',
+          },
+          step: {},
+          check: {},
+          quiz: {},
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    await vi.dynamicImportSettled()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('input[type="search"]').exists()).toBe(false)
+    expect(wrapper.find('.aimd-protocol-recorder__search-shell').exists()).toBe(true)
+    expect(recorderSource).toContain('position: sticky;')
+    expect(recorderSource).toContain('--aimd-recorder-search-sticky-top')
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__search-shell \{[\s\S]*?background: transparent;[\s\S]*?pointer-events: none;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__search-shell--expanded \{[\s\S]*?background: linear-gradient[\s\S]*?pointer-events: auto;/)
+    expect(recorderSource).toContain('aimd-field--record-search-pulse')
+    expect(recorderSource).toContain('@keyframes aimd-rec-record-search-pulse')
+
+    const toggle = wrapper.find('[data-rec-search-toggle]')
+    expect(toggle.exists()).toBe(true)
+    await toggle.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const input = wrapper.find('input[type="search"]')
+    expect(input.exists()).toBe(true)
+
+    await input.setValue('heated')
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain('1 / 1')
+    expect(wrapper.find('.aimd-field--record-search-match').exists()).toBe(true)
+    expect(wrapper.find('.aimd-field--record-search-active').exists()).toBe(true)
+
+    await input.trigger('keydown.enter')
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    const matchedControl = wrapper.find('[data-rec-focus-key="var:reaction_note"]')
+    expect(matchedControl.exists()).toBe(true)
+    expect((matchedControl.element as HTMLInputElement | HTMLTextAreaElement).selectionStart).toBe(0)
+    expect((matchedControl.element as HTMLInputElement | HTMLTextAreaElement).selectionEnd).toBe('heated'.length)
+    expect(wrapper.find('.aimd-field--record-search-pulse').exists()).toBe(true)
+
+    const fieldSelect = wrapper.find('.aimd-protocol-recorder__search-field')
+    await fieldSelect.setValue('var:other_note')
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain('No matches')
+    expect(wrapper.find('.aimd-field--record-search-match').exists()).toBe(false)
+  })
+
   it('renders scalar list vars as repeatable inputs in AimdRecorder', async () => {
     const wrapper = mount(AimdRecorder, {
       props: {

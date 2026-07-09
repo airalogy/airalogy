@@ -12,11 +12,17 @@ import {
 } from '@airalogy/aira-core'
 import { AimdEditor, type AimdEditorImageRequest } from '@airalogy/aimd-editor'
 import {
+  collectAimdRecordFieldRefs,
+  filterAimdRecords,
+  type AimdRecordFieldRef,
+  type AimdRecordFilterOperator,
+} from '@airalogy/aimd-core/utils'
+import {
   AimdRecorder,
   createEmptyProtocolRecordData,
   type AimdProtocolRecordData,
 } from '@airalogy/aimd-recorder'
-import { renderToVue } from '@airalogy/aimd-renderer'
+import { parseAndExtract, renderToVue } from '@airalogy/aimd-renderer'
 import DemoExamplePicker from '../components/DemoExamplePicker.vue'
 import { useDemoLocale, useDemoMessages, type DemoLocale } from '../composables/demoI18n'
 import {
@@ -152,6 +158,9 @@ const activeTemplateLocale = ref<DemoLocale>(locale.value)
 const archiveStatus = ref('')
 const importedRecordOptions = ref<ImportedRecordOption[]>([])
 const selectedImportedRecordId = ref('')
+const importedRecordFilterQuery = ref('')
+const importedRecordFilterFieldKey = ref('')
+const importedRecordFilterOperator = ref<AimdRecordFilterOperator>('contains')
 const isPackagingArchive = ref(false)
 const isImportingPackage = ref(false)
 const showImageInsertPanel = ref(false)
@@ -176,6 +185,47 @@ let isRestoringDraft = false
 
 const protocolFileCount = computed(() => protocolFiles.value.length)
 const importedRecordCount = computed(() => importedRecordOptions.value.length)
+const importedRecordFieldRefs = computed<AimdRecordFieldRef[]>(() => {
+  const byKey = new Map<string, AimdRecordFieldRef>()
+  const parsedByAimd = new Map<string, AimdRecordFieldRef[]>()
+  for (const record of importedRecordOptions.value) {
+    let refs = parsedByAimd.get(record.aimd)
+    if (!refs) {
+      try {
+        refs = collectAimdRecordFieldRefs(parseAndExtract(record.aimd))
+      }
+      catch {
+        refs = []
+      }
+      parsedByAimd.set(record.aimd, refs)
+    }
+    for (const ref of refs) {
+      if (!byKey.has(ref.key)) {
+        byKey.set(ref.key, ref)
+      }
+    }
+  }
+  return [...byKey.values()]
+})
+const filteredImportedRecordOptions = computed(() => {
+  const query = importedRecordFilterQuery.value.trim()
+  if (!query) {
+    return importedRecordOptions.value
+  }
+  return filterAimdRecords(importedRecordOptions.value, {
+    fieldKey: importedRecordFilterFieldKey.value || undefined,
+    operator: importedRecordFilterOperator.value,
+    value: query,
+  }, {
+    fields: importedRecordFieldRefs.value,
+    getRecordData: record => record.recordData,
+  }).map(result => result.record)
+})
+const importedRecordFilterResultLabel = computed(() => (
+  importedRecordCount.value > 1 && importedRecordFilterQuery.value.trim()
+    ? messages.value.pages.editor.importedRecordFilterCount(filteredImportedRecordOptions.value.length, importedRecordCount.value)
+    : ''
+))
 const protocolFileTotalSize = computed(() => protocolFiles.value.reduce((total, file) => total + file.file.size, 0))
 const archiveStatusLabel = computed(() => archiveStatus.value || messages.value.pages.editor.ready)
 const figurePopoverStyle = computed(() => ({
@@ -321,6 +371,9 @@ function resetRecorderData() {
 function clearImportedRecords() {
   importedRecordOptions.value = []
   selectedImportedRecordId.value = ''
+  importedRecordFilterQuery.value = ''
+  importedRecordFilterFieldKey.value = ''
+  importedRecordFilterOperator.value = 'contains'
 }
 
 async function saveEditorDraftNow(): Promise<void> {
@@ -1262,6 +1315,16 @@ watch([content, locale, protocolFileCount], renderPreview, { immediate: true })
 watch([content, locale], () => {
   recorderError.value = ''
 })
+watch(filteredImportedRecordOptions, (records) => {
+  if (importedRecordCount.value <= 1 || records.length === 0) {
+    return
+  }
+  if (records.some(record => record.id === selectedImportedRecordId.value)) {
+    return
+  }
+  selectedImportedRecordId.value = records[0].id
+  applyImportedRecordOption(records[0])
+})
 watch([content, protocolFileCount, activeTemplateExampleId, activeTemplateLocale], scheduleEditorDraftSave)
 
 function handleEditorPageHide() {
@@ -1414,13 +1477,48 @@ onBeforeUnmount(() => {
               v-if="importedRecordCount > 1"
               v-model="selectedImportedRecordId"
               class="workspace-panel__record-select"
+              :disabled="filteredImportedRecordOptions.length === 0"
               :aria-label="messages.pages.editor.importedRecordSelect"
               @change="handleImportedRecordSelected"
             >
-              <option v-for="record in importedRecordOptions" :key="record.id" :value="record.id">
+              <option v-if="filteredImportedRecordOptions.length === 0" value="">
+                {{ messages.pages.editor.importedRecordNoMatches }}
+              </option>
+              <option v-for="record in filteredImportedRecordOptions" :key="record.id" :value="record.id">
                 {{ record.label }}
               </option>
             </select>
+            <div v-if="importedRecordCount > 1" class="workspace-panel__record-filter">
+              <select
+                v-model="importedRecordFilterFieldKey"
+                class="workspace-panel__record-filter-field"
+                :aria-label="messages.pages.editor.importedRecordFilterField"
+              >
+                <option value="">{{ messages.pages.editor.importedRecordFilterAllFields }}</option>
+                <option v-for="field in importedRecordFieldRefs" :key="field.key" :value="field.key">
+                  {{ field.label }}
+                </option>
+              </select>
+              <select
+                v-model="importedRecordFilterOperator"
+                class="workspace-panel__record-filter-operator"
+                :aria-label="messages.pages.editor.importedRecordFilterOperator"
+              >
+                <option value="contains">{{ messages.pages.editor.importedRecordFilterContains }}</option>
+                <option value="equals">{{ messages.pages.editor.importedRecordFilterEquals }}</option>
+                <option value="regex">{{ messages.pages.editor.importedRecordFilterRegex }}</option>
+              </select>
+              <input
+                v-model="importedRecordFilterQuery"
+                class="workspace-panel__record-filter-input"
+                type="search"
+                :placeholder="messages.pages.editor.importedRecordFilterPlaceholder"
+                :aria-label="messages.pages.editor.importedRecordFilterPlaceholder"
+              >
+              <span v-if="importedRecordFilterResultLabel" class="workspace-panel__record-filter-count">
+                {{ importedRecordFilterResultLabel }}
+              </span>
+            </div>
             <span v-if="protocolFileCount > 0" class="workspace-panel__status workspace-panel__file-summary">
               {{ messages.pages.editor.fileCount }}: {{ protocolFileCount }} · {{ messages.pages.editor.fileTotalSize }} {{ formatFileSize(protocolFileTotalSize) }}
             </span>
@@ -1884,6 +1982,61 @@ onBeforeUnmount(() => {
 }
 
 .workspace-panel__record-select:focus {
+  border-color: #1a73e8;
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(26 115 232 / 14%);
+}
+
+.workspace-panel__record-filter {
+  display: inline-flex;
+  min-width: min(100%, 420px);
+  max-width: min(100%, 720px);
+  flex: 1 1 420px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.workspace-panel__record-filter-field,
+.workspace-panel__record-filter-operator,
+.workspace-panel__record-filter-input {
+  height: 32px;
+  min-width: 0;
+  border: 1px solid #c8d2df;
+  border-radius: 7px;
+  background: #fff;
+  color: #243447;
+  font-size: 13px;
+}
+
+.workspace-panel__record-filter-field {
+  flex: 0 1 180px;
+  padding: 0 30px 0 10px;
+}
+
+.workspace-panel__record-filter-operator {
+  flex: 0 0 92px;
+  padding: 0 28px 0 10px;
+}
+
+.workspace-panel__record-filter-input {
+  flex: 1 1 180px;
+  padding: 0 10px;
+}
+
+.workspace-panel__record-filter-count {
+  min-width: 54px;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 650;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.workspace-panel__record-filter-field:focus,
+.workspace-panel__record-filter-operator:focus,
+.workspace-panel__record-filter-input:focus {
   border-color: #1a73e8;
   outline: none;
   box-shadow: 0 0 0 2px rgb(26 115 232 / 14%);

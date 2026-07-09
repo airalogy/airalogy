@@ -143,6 +143,10 @@ import {
 
 Use `validateClientAssignerFunctionSource()` when host tooling needs to preflight fenced `assigner runtime=client` functions before saving or executing them. Use `validateVarDefaultType()` to surface warnings when an authored AIMD var default does not match its declared type. Use `validateVarKwargs()` or `validateVarDefinition()` when tooling also needs to warn about Pydantic-style numeric constraints such as `gt`, `ge`, `lt`, `le`, and `multiple_of` on non-numeric var types.
 
+## Record Query Utilities
+
+`@airalogy/aimd-core/utils` exports protocol-aware record helpers such as `collectAimdRecordFieldRefs()`, `searchAimdRecordFields()`, `filterAimdRecord()`, and `filterAimdRecords()`. These helpers use parsed field metadata to search all record fields or a selected field, including `var_table` subvars stored under `record.var`, so host apps can build record search and filtering UI without reimplementing AIMD field traversal.
+
 ## Built-in Type Metadata
 
 `@airalogy/aimd-core/utils` exports `getAimdBuiltInTypeMetadata()` and `getAimdBuiltInTypeEnumValues()`. The bundled metadata is generated from the Python `airalogy.types` registry, so official named enum types such as `BloodType` expose the same values to browser tools without duplicating Python type definitions in npm code.
