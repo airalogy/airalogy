@@ -118,9 +118,13 @@ export interface DemoMessages {
       importPackageHint: string
       importingPackage: string
       packageImported: string
+      packageImportedRecords: string
       packageImportFailed: string
       packageImportNoAimd: string
       packageImportUnsupportedAira: string
+      packageImportNoRecords: string
+      packageImportMissingProtocol: string
+      importedRecordSelect: string
       downloadAimd: string
       downloadAira: string
       packagingDownload: string
@@ -299,12 +303,16 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         clearContent: 'Clear',
         contentCleared: 'Content cleared',
         importPackage: 'Import package',
-        importPackageHint: 'Import a .zip folder bundle or a single-protocol .aira.\n\nRecommended ZIP structure:\nmy-protocol/\n├─ protocol.aimd\n└─ files/\n   ├─ workflow.png\n   └─ chart.svg\n\nThe outer folder is optional. The editor looks for protocol.aimd first, then index.aimd, then the first .aimd file. Figure src paths must match the files inside the package, for example src: files/workflow.png.',
+        importPackageHint: 'Import a .zip folder bundle, a single-protocol .aira, or a records .aira that embeds its protocol.\n\nRecommended ZIP structure:\nmy-protocol/\n├─ protocol.aimd\n└─ files/\n   ├─ workflow.png\n   └─ chart.svg\n\nThe outer folder is optional. The editor looks for protocol.aimd first, then index.aimd, then the first .aimd file. Figure src paths must match the files inside the package, for example src: files/workflow.png.',
         importingPackage: 'Importing...',
         packageImported: 'Package imported',
+        packageImportedRecords: 'Record imported',
         packageImportFailed: 'Package import failed',
         packageImportNoAimd: 'No .aimd file was found in the package.',
-        packageImportUnsupportedAira: 'Only single-protocol .aira archives can be imported into this editor.',
+        packageImportUnsupportedAira: 'Only protocol .aira and records .aira archives can be imported into this editor.',
+        packageImportNoRecords: 'The records archive does not contain any record entries.',
+        packageImportMissingProtocol: 'The record does not reference a protocol included in the archive',
+        importedRecordSelect: 'Imported record',
         downloadAimd: 'Download .aimd',
         downloadAira: 'Download .aira',
         packagingDownload: 'Packaging...',
@@ -481,12 +489,16 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         clearContent: '清空',
         contentCleared: '已清空',
         importPackage: '导入包',
-        importPackageHint: '导入 .zip 文件夹包，或单 Protocol 的 .aira。\n\n推荐 ZIP 结构：\nmy-protocol/\n├─ protocol.aimd\n└─ files/\n   ├─ workflow.png\n   └─ chart.svg\n\n外层文件夹可以省略。编辑器会优先读取 protocol.aimd，其次读取 index.aimd，再其次读取第一个 .aimd 文件。图片的 fig.src 要和包内文件路径一致，例如 src: files/workflow.png。',
+        importPackageHint: '导入 .zip 文件夹包、单 Protocol 的 .aira，或内嵌 Protocol 的 Records .aira。\n\n推荐 ZIP 结构：\nmy-protocol/\n├─ protocol.aimd\n└─ files/\n   ├─ workflow.png\n   └─ chart.svg\n\n外层文件夹可以省略。编辑器会优先读取 protocol.aimd，其次读取 index.aimd，再其次读取第一个 .aimd 文件。图片的 fig.src 要和包内文件路径一致，例如 src: files/workflow.png。',
         importingPackage: '正在导入...',
         packageImported: '已导入包',
+        packageImportedRecords: '已导入 Record',
         packageImportFailed: '导入包失败',
         packageImportNoAimd: '压缩包中没有找到 .aimd 文件。',
-        packageImportUnsupportedAira: '当前编辑器只支持导入单 Protocol 的 .aira 归档。',
+        packageImportUnsupportedAira: '当前编辑器支持导入 Protocol .aira 或 Records .aira 归档。',
+        packageImportNoRecords: 'Records 归档中没有 Record 条目。',
+        packageImportMissingProtocol: '这个 Record 没有引用归档中内嵌的 Protocol',
+        importedRecordSelect: '已导入 Record',
         downloadAimd: '下载 .aimd',
         downloadAira: '下载 .aira',
         packagingDownload: '正在打包...',

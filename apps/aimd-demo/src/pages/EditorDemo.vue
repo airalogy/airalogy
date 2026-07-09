@@ -5,6 +5,9 @@ import {
   openAiraArchive,
   openZipArchive,
   type AiraArchive,
+  type AiralogyRecordPayload,
+  type AiraProtocolManifest,
+  type AiraRecordManifest,
   type ZipArchive,
 } from '@airalogy/aira-core'
 import { AimdEditor, type AimdEditorImageRequest } from '@airalogy/aimd-editor'
@@ -64,10 +67,38 @@ interface FigureBlockInput {
   legend?: string
 }
 
-interface ImportedProtocolPackage {
-  aimd: string
-  files: ProtocolFigureFile[]
+interface ImportedProtocolFileSource {
+  path: string
+  bytes: Uint8Array
 }
+
+interface ImportedProtocolPackage {
+  kind: 'protocol'
+  aimd: string
+  fileSources: ImportedProtocolFileSource[]
+}
+
+interface ImportedRecordOption {
+  id: string
+  label: string
+  aimd: string
+  fileSources: ImportedProtocolFileSource[]
+  recordData: AimdProtocolRecordData
+}
+
+interface ImportedRecordsPackage {
+  kind: 'records'
+  records: ImportedRecordOption[]
+  selectedRecordId: string
+}
+
+interface ImportedAiraProtocolEntry {
+  protocol: AiraProtocolManifest
+  root: string
+  path: string
+}
+
+type ImportedPackage = ImportedProtocolPackage | ImportedRecordsPackage
 
 type FigureInsertSource = 'local' | 'remote'
 type PreviewMode = 'render' | 'recorder'
@@ -119,6 +150,8 @@ const protocolFilesExpanded = ref(false)
 const activeTemplateExampleId = ref<string | null>(null)
 const activeTemplateLocale = ref<DemoLocale>(locale.value)
 const archiveStatus = ref('')
+const importedRecordOptions = ref<ImportedRecordOption[]>([])
+const selectedImportedRecordId = ref('')
 const isPackagingArchive = ref(false)
 const isImportingPackage = ref(false)
 const showImageInsertPanel = ref(false)
@@ -142,6 +175,7 @@ let isDraftReady = false
 let isRestoringDraft = false
 
 const protocolFileCount = computed(() => protocolFiles.value.length)
+const importedRecordCount = computed(() => importedRecordOptions.value.length)
 const protocolFileTotalSize = computed(() => protocolFiles.value.reduce((total, file) => total + file.file.size, 0))
 const archiveStatusLabel = computed(() => archiveStatus.value || messages.value.pages.editor.ready)
 const figurePopoverStyle = computed(() => ({
@@ -284,6 +318,11 @@ function resetRecorderData() {
   recorderError.value = ''
 }
 
+function clearImportedRecords() {
+  importedRecordOptions.value = []
+  selectedImportedRecordId.value = ''
+}
+
 async function saveEditorDraftNow(): Promise<void> {
   if (!isDraftReady || isRestoringDraft) return
   if (!isEditorDraftStorageAvailable()) return
@@ -338,6 +377,7 @@ async function restoreEditorDraft() {
     if (!draft) return
 
     clearProtocolFiles()
+    clearImportedRecords()
     resetRecorderData()
     content.value = draft.content
     selectedExampleId.value = draft.selectedExampleId || selectedExampleId.value
@@ -359,6 +399,7 @@ async function restoreEditorDraft() {
 
 function handleExampleTemplateSelect(id: string) {
   clearProtocolFiles()
+  clearImportedRecords()
   resetRecorderData()
   const example = loadExample(id, locale.value)
   activeTemplateExampleId.value = example.id
@@ -368,6 +409,7 @@ function handleExampleTemplateSelect(id: string) {
 
 function loadSelectedExampleTemplate() {
   clearProtocolFiles()
+  clearImportedRecords()
   resetRecorderData()
   const example = resetToSelectedExample(locale.value)
   activeTemplateExampleId.value = example.id
@@ -552,6 +594,98 @@ function toProtocolRelativePath(path: string, root: string): string | null {
   return relativePath
 }
 
+function isPlainRecordObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function normalizeArchiveRoot(root: string | null | undefined): string {
+  return root?.replace(/^\/+|\/+$/g, '') ?? ''
+}
+
+function joinArchivePath(root: string, path: string): string {
+  const normalizedPath = path.replace(/^\/+/g, '')
+  return root ? `${root}/${normalizedPath}` : normalizedPath
+}
+
+function cloneRecordSection(value: unknown): Record<string, unknown> {
+  return isPlainRecordObject(value) ? { ...value } : {}
+}
+
+function cloneRecorderData(data: AimdProtocolRecordData): AimdProtocolRecordData {
+  return {
+    var: { ...data.var },
+    step: { ...data.step },
+    check: { ...data.check },
+    quiz: { ...data.quiz },
+  }
+}
+
+function recordPayloadToRecorderData(payload: AiralogyRecordPayload | null | undefined): AimdProtocolRecordData {
+  const data = isPlainRecordObject(payload?.data) ? payload.data : {}
+  return {
+    var: cloneRecordSection(data.var),
+    step: cloneRecordSection(data.step) as AimdProtocolRecordData['step'],
+    check: cloneRecordSection(data.check) as AimdProtocolRecordData['check'],
+    quiz: cloneRecordSection(data.quiz),
+  }
+}
+
+function collectAiraProtocolEntries(archive: AiraArchive): ImportedAiraProtocolEntry[] {
+  if (archive.manifest.kind === 'protocol') {
+    const protocol = archive.manifest.protocol
+    if (!protocol) {
+      return []
+    }
+    const entrypoint = protocol.entrypoint || 'protocol.aimd'
+    return [{ protocol, root: '', path: entrypoint }]
+  }
+
+  const protocols = Array.isArray(archive.manifest.protocols) ? archive.manifest.protocols : []
+  return protocols.map(protocol => {
+    const root = normalizeArchiveRoot(protocol.archive_root)
+    const entrypoint = protocol.entrypoint || 'protocol.aimd'
+    return { protocol, root, path: joinArchivePath(root, entrypoint) }
+  })
+}
+
+function findAiraProtocolForRecord(
+  record: AiraRecordManifest,
+  entries: ImportedAiraProtocolEntry[],
+): ImportedAiraProtocolEntry | null {
+  const embeddedRoot = normalizeArchiveRoot(record.embedded_protocol_root)
+  if (embeddedRoot) {
+    const match = entries.find(entry => entry.root === embeddedRoot)
+    if (match) {
+      return match
+    }
+  }
+
+  if (record.protocol_id || record.protocol_version) {
+    const exactMatch = entries.find(entry =>
+      entry.protocol.protocol_id === record.protocol_id
+      && entry.protocol.protocol_version === record.protocol_version,
+    )
+    if (exactMatch) {
+      return exactMatch
+    }
+  }
+
+  if (record.protocol_id) {
+    const protocolIdMatches = entries.filter(entry => entry.protocol.protocol_id === record.protocol_id)
+    if (protocolIdMatches.length === 1) {
+      return protocolIdMatches[0]
+    }
+  }
+
+  return entries.length === 1 ? entries[0] : null
+}
+
+function getImportedRecordLabel(record: AiraRecordManifest, payload: AiralogyRecordPayload | null, index: number): string {
+  const id = payload?.record_id || payload?.airalogy_record_id || record.record_id || record.path || `Record ${index + 1}`
+  const version = payload?.record_version ?? record.record_version
+  return version === undefined || version === null ? id : `${id} v${version}`
+}
+
 function makeFigureId(baseName: string, index: number): string {
   const id = baseName
     .replace(/[^A-Za-z0-9]+/g, '_')
@@ -619,28 +753,116 @@ function createImportedProtocolFile(path: string, bytes: Uint8Array, index: numb
   }
 }
 
+function createImportedProtocolFiles(fileSources: ImportedProtocolFileSource[]): ProtocolFigureFile[] {
+  return fileSources.map((source, index) => createImportedProtocolFile(source.path, source.bytes, index + 1))
+}
+
+function listAiraProtocolFiles(archive: AiraArchive, entry: ImportedAiraProtocolEntry): string[] {
+  const entrypoint = entry.protocol.entrypoint || 'protocol.aimd'
+  if (Array.isArray(entry.protocol.files)) {
+    return entry.protocol.files
+  }
+
+  const rootPrefix = entry.root ? `${entry.root}/` : ''
+  return archive.entries
+    .map(item => item.name)
+    .filter(path => path !== '_airalogy_archive/manifest.json')
+    .filter(path => !rootPrefix || path.startsWith(rootPrefix))
+    .map(path => rootPrefix ? path.slice(rootPrefix.length) : path)
+    .filter(path => path && path !== entrypoint)
+}
+
+async function readAiraProtocolEntryPackage(
+  archive: AiraArchive,
+  entry: ImportedAiraProtocolEntry,
+): Promise<Omit<ImportedProtocolPackage, 'kind'>> {
+  const entrypoint = entry.protocol.entrypoint || 'protocol.aimd'
+  const aimd = await archive.readText(entry.path)
+  const imagePaths = listAiraProtocolFiles(archive, entry)
+    .filter(path => {
+      const archivePath = joinArchivePath(entry.root, path)
+      return path !== entrypoint && archive.has(archivePath) && !isIgnoredZipEntry(path) && isImagePath(path)
+    })
+    .sort((a, b) => a.localeCompare(b))
+
+  const fileSources: ImportedProtocolFileSource[] = []
+  for (const path of imagePaths) {
+    fileSources.push({
+      path,
+      bytes: await archive.readBytes(joinArchivePath(entry.root, path)),
+    })
+  }
+
+  return { aimd, fileSources }
+}
+
 async function readAiraProtocolPackage(archive: AiraArchive): Promise<ImportedProtocolPackage> {
-  if (archive.manifest.kind !== 'protocol' || !archive.manifest.protocol) {
+  if (archive.manifest.kind !== 'protocol') {
     throw new Error(messages.value.pages.editor.packageImportUnsupportedAira)
   }
 
-  const entrypoint = archive.manifest.protocol.entrypoint || 'protocol.aimd'
-  const aimd = await archive.readText(entrypoint)
-  const manifestFiles = Array.isArray(archive.manifest.protocol.files)
-    ? archive.manifest.protocol.files
-    : archive.entries
-        .map(entry => entry.name)
-        .filter(path => path !== entrypoint && path !== '_airalogy_archive/manifest.json')
-
-  const imagePaths = manifestFiles
-    .filter(path => path !== entrypoint && archive.has(path) && !isIgnoredZipEntry(path) && isImagePath(path))
-    .sort((a, b) => a.localeCompare(b))
-  const files: ProtocolFigureFile[] = []
-  for (const [index, path] of imagePaths.entries()) {
-    files.push(createImportedProtocolFile(path, await archive.readBytes(path), index + 1))
+  const entry = collectAiraProtocolEntries(archive)[0]
+  if (!entry) {
+    throw new Error(messages.value.pages.editor.packageImportUnsupportedAira)
   }
 
-  return { aimd, files }
+  return {
+    kind: 'protocol',
+    ...await readAiraProtocolEntryPackage(archive, entry),
+  }
+}
+
+async function readAiraRecordsPackage(archive: AiraArchive): Promise<ImportedRecordsPackage> {
+  if (archive.manifest.kind !== 'records') {
+    throw new Error(messages.value.pages.editor.packageImportUnsupportedAira)
+  }
+
+  const records = Array.isArray(archive.manifest.records) ? archive.manifest.records : []
+  if (records.length === 0) {
+    throw new Error(messages.value.pages.editor.packageImportNoRecords)
+  }
+
+  const protocolEntries = collectAiraProtocolEntries(archive)
+  const protocolPackageCache = new Map<string, Omit<ImportedProtocolPackage, 'kind'>>()
+  const importedRecords: ImportedRecordOption[] = []
+
+  for (const [index, record] of records.entries()) {
+    const protocolEntry = findAiraProtocolForRecord(record, protocolEntries)
+    if (!protocolEntry) {
+      throw new Error(`${messages.value.pages.editor.packageImportMissingProtocol}: ${record.path}`)
+    }
+
+    let protocolPackage = protocolPackageCache.get(protocolEntry.path)
+    if (!protocolPackage) {
+      protocolPackage = await readAiraProtocolEntryPackage(archive, protocolEntry)
+      protocolPackageCache.set(protocolEntry.path, protocolPackage)
+    }
+
+    const payload = await archive.readJson<AiralogyRecordPayload>(record.path)
+    importedRecords.push({
+      id: record.path || `record-${index + 1}`,
+      label: getImportedRecordLabel(record, payload, index),
+      aimd: protocolPackage.aimd,
+      fileSources: protocolPackage.fileSources,
+      recordData: recordPayloadToRecorderData(payload),
+    })
+  }
+
+  return {
+    kind: 'records',
+    records: importedRecords,
+    selectedRecordId: importedRecords[0]?.id ?? '',
+  }
+}
+
+async function readAiraPackage(archive: AiraArchive): Promise<ImportedPackage> {
+  if (archive.manifest.kind === 'protocol') {
+    return readAiraProtocolPackage(archive)
+  }
+  if (archive.manifest.kind === 'records') {
+    return readAiraRecordsPackage(archive)
+  }
+  throw new Error(messages.value.pages.editor.packageImportUnsupportedAira)
 }
 
 async function readZipFolderPackage(archive: ZipArchive): Promise<ImportedProtocolPackage> {
@@ -658,15 +880,18 @@ async function readZipFolderPackage(archive: ZipArchive): Promise<ImportedProtoc
     .filter((item): item is { path: string; relativePath: string } => Boolean(item.relativePath) && isImagePath(item.relativePath))
     .sort((a, b) => a.relativePath.localeCompare(b.relativePath))
 
-  const files: ProtocolFigureFile[] = []
-  for (const [index, item] of imageEntries.entries()) {
-    files.push(createImportedProtocolFile(item.relativePath, await archive.readBytes(item.path), index + 1))
+  const fileSources: ImportedProtocolFileSource[] = []
+  for (const item of imageEntries) {
+    fileSources.push({
+      path: item.relativePath,
+      bytes: await archive.readBytes(item.path),
+    })
   }
 
-  return { aimd, files }
+  return { kind: 'protocol', aimd, fileSources }
 }
 
-async function readProtocolPackage(file: File): Promise<ImportedProtocolPackage> {
+async function readProtocolPackage(file: File): Promise<ImportedPackage> {
   let airaArchive: AiraArchive | null = null
   try {
     airaArchive = await openAiraArchive(file)
@@ -674,21 +899,65 @@ async function readProtocolPackage(file: File): Promise<ImportedProtocolPackage>
   catch {}
 
   if (airaArchive) {
-    return readAiraProtocolPackage(airaArchive)
+    return readAiraPackage(airaArchive)
   }
 
   return readZipFolderPackage(await openZipArchive(file))
 }
 
 function applyImportedProtocolPackage(protocolPackage: ImportedProtocolPackage) {
+  clearImportedRecords()
   clearProtocolFiles()
   resetRecorderData()
   activeTemplateExampleId.value = null
   content.value = protocolPackage.aimd
-  protocolFiles.value = protocolPackage.files
+  const files = createImportedProtocolFiles(protocolPackage.fileSources)
+  protocolFiles.value = files
   protocolFilesExpanded.value = false
-  uploadedFigureSerial = Math.max(protocolPackage.files.length + 1, 1)
-  archiveStatus.value = `${messages.value.pages.editor.packageImported}: ${protocolPackage.files.length}`
+  uploadedFigureSerial = Math.max(files.length + 1, 1)
+  archiveStatus.value = `${messages.value.pages.editor.packageImported}: ${files.length}`
+}
+
+function applyImportedRecordOption(record: ImportedRecordOption) {
+  clearProtocolFiles()
+  activeTemplateExampleId.value = null
+  content.value = record.aimd
+  const files = createImportedProtocolFiles(record.fileSources)
+  protocolFiles.value = files
+  protocolFilesExpanded.value = false
+  uploadedFigureSerial = Math.max(files.length + 1, 1)
+  recorderData.value = cloneRecorderData(record.recordData)
+  recorderError.value = ''
+  previewMode.value = 'recorder'
+  archiveStatus.value = `${messages.value.pages.editor.packageImportedRecords}: ${record.label}`
+}
+
+function applyImportedRecordsPackage(packageData: ImportedRecordsPackage) {
+  clearImportedRecords()
+  importedRecordOptions.value = packageData.records
+  selectedImportedRecordId.value = packageData.selectedRecordId
+  const selectedRecord = packageData.records.find(record => record.id === packageData.selectedRecordId) ?? packageData.records[0]
+  if (selectedRecord) {
+    applyImportedRecordOption(selectedRecord)
+  }
+}
+
+function applyImportedPackage(packageData: ImportedPackage) {
+  if (packageData.kind === 'records') {
+    applyImportedRecordsPackage(packageData)
+    return
+  }
+  applyImportedProtocolPackage(packageData)
+}
+
+function handleImportedRecordSelected(event: Event) {
+  const selectedId = (event.target as HTMLSelectElement).value
+  const selectedRecord = importedRecordOptions.value.find(record => record.id === selectedId)
+  if (!selectedRecord) {
+    return
+  }
+  selectedImportedRecordId.value = selectedId
+  applyImportedRecordOption(selectedRecord)
 }
 
 function toAimdScalar(value: string): string {
@@ -777,6 +1046,7 @@ function clearProtocolFiles() {
 
 function clearEditorContent() {
   clearProtocolFiles()
+  clearImportedRecords()
   resetRecorderData()
   activeTemplateExampleId.value = null
   content.value = ''
@@ -811,7 +1081,7 @@ async function handlePackageFileSelected(event: Event) {
   archiveStatus.value = messages.value.pages.editor.importingPackage
   try {
     const protocolPackage = await readProtocolPackage(file)
-    applyImportedProtocolPackage(protocolPackage)
+    applyImportedPackage(protocolPackage)
   }
   catch (error: any) {
     archiveStatus.value = `${messages.value.pages.editor.packageImportFailed}: ${error?.message || String(error)}`
@@ -1140,6 +1410,17 @@ onBeforeUnmount(() => {
               @change="handlePackageFileSelected"
             >
             <span class="workspace-panel__status">{{ archiveStatusLabel }}</span>
+            <select
+              v-if="importedRecordCount > 1"
+              v-model="selectedImportedRecordId"
+              class="workspace-panel__record-select"
+              :aria-label="messages.pages.editor.importedRecordSelect"
+              @change="handleImportedRecordSelected"
+            >
+              <option v-for="record in importedRecordOptions" :key="record.id" :value="record.id">
+                {{ record.label }}
+              </option>
+            </select>
             <span v-if="protocolFileCount > 0" class="workspace-panel__status workspace-panel__file-summary">
               {{ messages.pages.editor.fileCount }}: {{ protocolFileCount }} · {{ messages.pages.editor.fileTotalSize }} {{ formatFileSize(protocolFileTotalSize) }}
             </span>
@@ -1584,6 +1865,28 @@ onBeforeUnmount(() => {
   color: #667085;
   font-size: 12px;
   white-space: nowrap;
+}
+
+.workspace-panel__record-select {
+  max-width: 220px;
+  height: 32px;
+  min-width: 132px;
+  padding: 0 30px 0 10px;
+  overflow: hidden;
+  border: 1px solid #c8d2df;
+  border-radius: 7px;
+  background: #fff;
+  color: #243447;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+}
+
+.workspace-panel__record-select:focus {
+  border-color: #1a73e8;
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(26 115 232 / 14%);
 }
 
 .workspace-panel__file-toggle {
