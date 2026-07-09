@@ -13,7 +13,10 @@
 | `@airalogy/aimd-editor` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Faimd-editor?logo=npm&color=cb3837)](https://www.npmjs.com/package/@airalogy/aimd-editor) | [README](./aimd-editor/README.zh-CN.md) · [站点](https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-editor/) | AIMD 的 Monaco 编辑器集成与 Vue 编辑流程 |
 | `@airalogy/aimd-renderer` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Faimd-renderer?logo=npm&color=cb3837)](https://www.npmjs.com/package/@airalogy/aimd-renderer) | [README](./aimd-renderer/README.zh-CN.md) · [站点](https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-renderer/) | 将 AIMD 渲染为 HTML 与 Vue |
 | `@airalogy/aimd-recorder` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Faimd-recorder?logo=npm&color=cb3837)](https://www.npmjs.com/package/@airalogy/aimd-recorder) | [README](./aimd-recorder/README.zh-CN.md) · [站点](https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-recorder/) | 面向结构化 AIMD 记录的 Vue UI 组件与样式 |
+| `@airalogy/aira-core` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Faira-core?logo=npm&color=cb3837)](https://www.npmjs.com/package/@airalogy/aira-core) | [README](./aira-core/README.md) | 面向浏览器的 Airalogy `.aira` 归档解析、创建与校验工具 |
 | `@airalogy/airalogy-engine` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Fairalogy-engine?logo=npm&color=cb3837)](https://www.npmjs.com/package/@airalogy/airalogy-engine) | [README](./airalogy-engine/README.md) · [站点](https://airalogy.github.io/airalogy/airalogy-engine/) | Airalogy 协议执行沙箱的 Node.js API |
+
+包边界：`@airalogy/aira-core` 工作在 `.aira` 归档和 Record payload 层，负责打开 ZIP 容器、读取 manifest 和文件、校验归档引用，并在浏览器侧创建 protocol archive。`@airalogy/aimd-core` 工作在 AIMD 文本层，负责解析 `.aimd` Markdown、提取协议字段，并为 renderer、recorder 和宿主应用提供字段感知工具。需要打开 `.aira` 文件的应用通常会组合使用两者：先用 `aira-core` 读取归档内容，再用 `aimd-core` 解释其中的 AIMD protocol 文本。
 
 ## 案例
 

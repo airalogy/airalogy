@@ -8,10 +8,13 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2506.18586-b31b1b.svg)](https://arxiv.org/abs/2506.18586)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
+[中文说明](README.zh-CN.md)
+
 Airalogy is the monorepo for the Airalogy protocol ecosystem:
 
 - `packages/pypi/airalogy`: Python protocol core, AIMD parsing, validation, models, records, and CLI.
 - `packages/pypi/airalogy-engine`: Python protocol execution sandbox package.
+- `packages/npm/aira-core`: TypeScript `.aira` archive parser, creator, and validator.
 - `packages/npm/aimd-*`: TypeScript AIMD parser, renderer, editor, and recorder packages.
 - `packages/npm/airalogy-engine`: Node.js protocol execution sandbox package.
 - `packages/runtime/airalogy-engine-image`: sandbox image definition used by engine packages.
@@ -30,6 +33,7 @@ Airalogy is the monorepo for the Airalogy protocol ecosystem:
 | `@airalogy/aimd-editor` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Faimd-editor?logo=npm&color=CB3837)](https://www.npmjs.com/package/@airalogy/aimd-editor) | [`packages/npm/aimd-editor`](packages/npm/aimd-editor) | Monaco editor integration and Vue authoring workflows |
 | `@airalogy/aimd-renderer` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Faimd-renderer?logo=npm&color=CB3837)](https://www.npmjs.com/package/@airalogy/aimd-renderer) | [`packages/npm/aimd-renderer`](packages/npm/aimd-renderer) | AIMD rendering to HTML and Vue |
 | `@airalogy/aimd-recorder` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Faimd-recorder?logo=npm&color=CB3837)](https://www.npmjs.com/package/@airalogy/aimd-recorder) | [`packages/npm/aimd-recorder`](packages/npm/aimd-recorder) | Vue UI components for structured AIMD recording |
+| `@airalogy/aira-core` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Faira-core?logo=npm&color=CB3837)](https://www.npmjs.com/package/@airalogy/aira-core) | [`packages/npm/aira-core`](packages/npm/aira-core) | Browser-compatible `.aira` archive parser, creator, and validator |
 | `@airalogy/airalogy-engine` | [![npm version](https://img.shields.io/npm/v/%40airalogy%2Fairalogy-engine?logo=npm&color=CB3837)](https://www.npmjs.com/package/@airalogy/airalogy-engine) | [`packages/npm/airalogy-engine`](packages/npm/airalogy-engine) | Node.js protocol execution sandbox API |
 
 ## Development
