@@ -2127,6 +2127,8 @@ defineExpose({
 
 <style scoped>
 .aimd-protocol-recorder {
+  --aimd-recorder-gutter-x: 0px;
+  --aimd-recorder-gutter-bottom: 0px;
   --rec-text: #253041;
   --rec-muted: #667085;
   --rec-border: #e3e8ef;
@@ -2137,6 +2139,8 @@ defineExpose({
   --rec-var-value-font-size: var(--rec-body-font-size);
   --rec-var-single-line-height: 1.4;
   --rec-var-text-wrap-line-height: 1.4;
+  box-sizing: border-box;
+  padding: 0 var(--aimd-recorder-gutter-x) var(--aimd-recorder-gutter-bottom);
 }
 
 .aimd-protocol-recorder__error {
@@ -2181,18 +2185,24 @@ defineExpose({
   z-index: 30;
   display: flex;
   justify-content: flex-end;
+  box-sizing: border-box;
+  margin-inline: calc(-1 * var(--aimd-recorder-gutter-x));
   margin-bottom: 0;
-  padding: 0;
+  padding: 0 var(--aimd-recorder-gutter-x);
   background: transparent;
   pointer-events: none;
 }
 
 .aimd-protocol-recorder__search-shell--expanded {
   justify-content: stretch;
-  margin-bottom: 10px;
-  padding: 4px 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.9));
+  margin-bottom: 8px;
+  padding-block: 0;
+  padding-inline: var(--aimd-recorder-gutter-x);
+  border: 1px solid #d8e4f2;
+  border-radius: 0 0 10px 10px;
+  background: #f8fbff;
   backdrop-filter: blur(4px);
+  box-shadow: 0 1px 0 rgba(23, 45, 77, 0.06);
   pointer-events: auto;
 }
 
@@ -2203,10 +2213,10 @@ defineExpose({
   align-items: center;
   gap: 8px;
   padding: 8px;
-  border: 1px solid #d8e4f2;
-  border-radius: 10px;
-  background: #f8fbff;
-  box-shadow: 0 4px 14px rgba(23, 45, 77, 0.08);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   pointer-events: auto;
 }
 

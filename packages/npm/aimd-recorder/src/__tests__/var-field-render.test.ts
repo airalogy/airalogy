@@ -1063,10 +1063,12 @@ describe('AimdVarField render behavior', () => {
 
     expect(wrapper.find('input[type="search"]').exists()).toBe(false)
     expect(wrapper.find('.aimd-protocol-recorder__search-shell').exists()).toBe(true)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder \{[\s\S]*?--aimd-recorder-gutter-x: 0px;[\s\S]*?padding: 0 var\(--aimd-recorder-gutter-x\) var\(--aimd-recorder-gutter-bottom\);/)
     expect(recorderSource).toContain('position: sticky;')
     expect(recorderSource).toContain('--aimd-recorder-search-sticky-top')
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__search-shell \{[\s\S]*?background: transparent;[\s\S]*?pointer-events: none;/)
-    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__search-shell--expanded \{[\s\S]*?background: linear-gradient[\s\S]*?pointer-events: auto;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__search-shell \{[\s\S]*?margin-inline: calc\(-1 \* var\(--aimd-recorder-gutter-x\)\);[\s\S]*?background: transparent;[\s\S]*?pointer-events: none;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__search-shell--expanded \{[\s\S]*?padding-inline: var\(--aimd-recorder-gutter-x\);[\s\S]*?background: #f8fbff;[\s\S]*?pointer-events: auto;/)
+    expect(recorderSource).toMatch(/\.aimd-protocol-recorder__search \{[\s\S]*?border: 0;[\s\S]*?box-shadow: none;/)
     expect(recorderSource).toContain('aimd-field--record-search-pulse')
     expect(recorderSource).toContain('@keyframes aimd-rec-record-search-pulse')
 

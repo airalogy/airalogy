@@ -2135,11 +2135,13 @@ onBeforeUnmount(() => {
 }
 
 .recorder-preview {
-  padding: 14px;
+  padding: 0;
   background: #f8fafc;
 }
 
 .recorder-preview :deep(.aimd-protocol-recorder) {
+  --aimd-recorder-gutter-x: 14px;
+  --aimd-recorder-gutter-bottom: 14px;
   min-height: 100%;
 }
 

@@ -160,6 +160,8 @@ describe('EditorDemo archive export', () => {
     expect(source).toMatch(/\.render-preview \{[\s\S]*?overflow-wrap: anywhere;/)
     expect(source).toMatch(/\.render-preview \{[\s\S]*?padding: 0 20px 20px;/)
     expect(source).toMatch(/\.render-preview::before \{[\s\S]*?height: 20px;/)
+    expect(source).toMatch(/\.recorder-preview \{[\s\S]*?padding: 0;/)
+    expect(source).toMatch(/\.recorder-preview :deep\(\.aimd-protocol-recorder\) \{[\s\S]*?--aimd-recorder-gutter-x: 14px;[\s\S]*?--aimd-recorder-gutter-bottom: 14px;/)
     expect(source).toMatch(/\.render-preview :deep\(table:not\(\.aimd-field__table-preview\)\) \{[\s\S]*?overflow-x: auto;/)
     expect(source).toMatch(/\.render-preview :deep\(\.aimd-field__table-preview\) \{[\s\S]*?display: table;/)
     expect(source).toMatch(/\.render-preview :deep\(pre\) \{[\s\S]*?overflow-x: auto;/)
