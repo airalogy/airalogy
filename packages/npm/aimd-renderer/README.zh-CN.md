@@ -138,7 +138,7 @@ const { nodes } = await renderToVue(content, {
 ## 只读 Record 渲染
 
 ```ts
-import { renderReadonlyRecordToVue } from "@airalogy/aimd-renderer"
+import { AimdMarkdownPreview, renderReadonlyRecordToVue } from "@airalogy/aimd-renderer"
 
 const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
   data: {
@@ -154,6 +154,22 @@ const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
 ```
 
 当宿主应用需要把已完成的 AIMD Protocol 展示为静态文档时，可以使用这个 helper。它既接受带 `data` 的 Record payload，也接受 `data` 对象本身，然后在只读字段上下文中渲染协议内容。
+
+Vue 宿主可以直接使用现成的 `AimdMarkdownPreview` 组件，而不是在本地维护 AIMD-aware Markdown preview：
+
+```vue
+<script setup lang="ts">
+import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
+</script>
+
+<template>
+  <AimdMarkdownPreview
+    :content="protocolContent"
+    :readonly-record-data="record"
+    :resolve-asset="resolveAsset"
+  />
+</template>
+```
 
 `resolveAsset` 由宿主应用负责把 Record 文件 id、字段路径或 archive manifest 条目映射成 `ReadonlyRecordAsset`。renderer 会基于这个映射把图片、音频、视频字段内嵌渲染，把普通文件渲染为只读链接，并解析指向 Airalogy file id 的 Markdown 图片 `src`。`.aira` 读取、`blob:` URL 创建、对象存储签名 URL 等存储细节应留在宿主应用中，renderer 只接收可显示的 URL。
 

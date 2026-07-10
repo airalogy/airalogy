@@ -2,6 +2,22 @@
 
 Use the host-integration APIs when AIMD needs to render through your own preview components instead of the default HTML output.
 
+For ordinary Vue previews and readonly record reports, prefer the shared `AimdMarkdownPreview` component before creating host-specific Markdown preview code:
+
+```vue
+<script setup lang="ts">
+import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
+</script>
+
+<template>
+  <AimdMarkdownPreview
+    :content="protocolContent"
+    :readonly-record-data="record"
+    :resolve-asset="resolveAsset"
+  />
+</template>
+```
+
 ## Host Custom Elements
 
 When integrating AIMD into a host application with its own preview components, use `aimdElementRenderers` to replace the default HTML for specific AIMD nodes:

@@ -24,6 +24,13 @@ export {
 } from './vue-renderer'
 
 export {
+  AimdMarkdownPreview,
+  type AimdMarkdownPreviewRenderOptions,
+  type AimdMarkdownPreviewRenderResult,
+  type AimdMarkdownPreviewReadonlyRecordData,
+} from './markdown-preview'
+
+export {
   AIMD_RECORD_RENDER_SCOPES,
   createReadonlyRecordAimdRenderers,
   createReadonlyRecordElementRenderers,

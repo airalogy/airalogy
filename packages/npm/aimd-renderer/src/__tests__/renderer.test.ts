@@ -13,10 +13,11 @@ import {
 } from '../common/processor'
 import { getFinalIndent, parseFieldTag } from '../index'
 import {
+  AimdMarkdownPreview,
   createReadonlyRecordRenderContext,
   normalizeRecordRenderValue,
   renderReadonlyRecordToVue,
-} from '../vue/readonly-record-renderer'
+} from '../vue'
 import { createCodeBlockRenderer, createStepCardRenderer } from '../vue/vue-renderer'
 
 const rendererStylesPath = existsSync('src/styles/renderer.css')
@@ -1576,6 +1577,30 @@ describe('readonly record rendering', () => {
       expect(wrapper.find('.aimd-record-field--markdown img').attributes('src')).toBe('blob:chart')
     })
     expect(wrapper.find('.aimd-record-field--markdown').text()).toContain('Nested value')
+    wrapper.unmount()
+  })
+
+  it('mounts the shared readonly record preview component with renderer classes', async () => {
+    const wrapper = mount(AimdMarkdownPreview, {
+      props: {
+        content: 'Sample {{var|sample_id: str}}',
+        readonlyRecordData: {
+          data: {
+            var: {
+              sample_id: 'S-006',
+            },
+          },
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('S-006')
+    })
+
+    expect(wrapper.find('.aimd-renderer').exists()).toBe(true)
+    expect(wrapper.find('.rendered-aimd-document').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('sample_id')
     wrapper.unmount()
   })
 })

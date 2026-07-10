@@ -138,7 +138,7 @@ Use this when you want a ready-made Vue step-card surface without first mapping 
 ## Readonly Record Rendering
 
 ```ts
-import { renderReadonlyRecordToVue } from "@airalogy/aimd-renderer"
+import { AimdMarkdownPreview, renderReadonlyRecordToVue } from "@airalogy/aimd-renderer"
 
 const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
   data: {
@@ -154,6 +154,22 @@ const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
 ```
 
 Use this when a host app needs to show a completed AIMD protocol as a static document. The helper accepts either a Record payload wrapper with `data` or the `data` object itself, then renders the protocol in a readonly field context.
+
+Vue hosts can use the ready-made `AimdMarkdownPreview` component instead of maintaining a local AIMD-aware Markdown preview:
+
+```vue
+<script setup lang="ts">
+import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
+</script>
+
+<template>
+  <AimdMarkdownPreview
+    :content="protocolContent"
+    :readonly-record-data="record"
+    :resolve-asset="resolveAsset"
+  />
+</template>
+```
 
 `resolveAsset` lets the host map Record file ids, field paths, or archive manifest entries to `ReadonlyRecordAsset` objects. The renderer uses that mapping to show image/audio/video fields inline, render ordinary files as readonly links, and resolve Markdown image `src` values that point at Airalogy file ids. Archive readers should keep storage-specific work, such as building `blob:` URLs from `.aira` payloads, in the host app and pass only display-ready URLs into the renderer.
 

@@ -2,6 +2,22 @@
 
 当 AIMD 需要通过你自己的预览组件来渲染，而不是使用默认 HTML 输出时，使用这些宿主集成 API。
 
+对于普通 Vue 预览和只读 Record 报告，优先使用共享的 `AimdMarkdownPreview` 组件，不要先在宿主应用里另写一套 Markdown preview：
+
+```vue
+<script setup lang="ts">
+import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
+</script>
+
+<template>
+  <AimdMarkdownPreview
+    :content="protocolContent"
+    :readonly-record-data="record"
+    :resolve-asset="resolveAsset"
+  />
+</template>
+```
+
 ## 宿主自定义元素
 
 当 AIMD 需要接入宿主应用自己的预览组件时，可以通过 `aimdElementRenderers` 把特定 AIMD 节点的默认 HTML 替换成自定义元素：

@@ -14,7 +14,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 
 - `renderToHtml(content)` for HTML output.
 - `renderToVue(content)` for Vue vnode output.
-- `renderReadonlyRecordToVue(content, recordData, { resolveAsset })` for readonly Vue rendering with Record data and file assets embedded in matching AIMD fields.
+- `renderReadonlyRecordToVue(content, recordData, { resolveAsset })` and `AimdMarkdownPreview` for readonly Vue rendering with Record data and file assets embedded in matching AIMD fields.
 - `parseAndExtract(content)` for canonical core field metadata extraction, including simple `var` definitions in `fields.var_definitions` and BibTeX references in `fields.refs`.
 - Default previews for `var` and `var_table` display AIMD `title`, preserve the canonical field id, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus.
 - Numbered citation markers with hover/focus reference details and generated end-of-document references lists for `{{cite|...}}` plus fenced `refs` blocks.
@@ -95,7 +95,7 @@ CriticMarkup inside inline code and fenced code blocks remains literal source te
 ## Readonly Record Rendering
 
 ```ts
-import { renderReadonlyRecordToVue } from "@airalogy/aimd-renderer"
+import { AimdMarkdownPreview, renderReadonlyRecordToVue } from "@airalogy/aimd-renderer"
 
 const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
   data: {
@@ -111,6 +111,22 @@ const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
 ```
 
 Use this when a viewer needs to show a completed protocol as a static document rather than as an editable recorder. The helper accepts either a Record payload wrapper with `data` or the `data` object itself, then renders the protocol in a readonly field context.
+
+Vue hosts can render the same path through the ready-made component:
+
+```vue
+<script setup lang="ts">
+import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
+</script>
+
+<template>
+  <AimdMarkdownPreview
+    :content="protocolContent"
+    :readonly-record-data="record"
+    :resolve-asset="resolveAsset"
+  />
+</template>
+```
 
 `resolveAsset` is the host integration point for file-backed fields. Map Record file ids, field paths, or archive manifest entries to `ReadonlyRecordAsset` objects; the renderer will show image/audio/video fields inline, render ordinary files as readonly links, and resolve Markdown image `src` values that point at Airalogy file ids. Storage-specific work, including reading `.aira` blobs and creating `blob:` URLs, should stay in the host app.
 

@@ -47,6 +47,13 @@ export {
 
 // Vue renderer exports
 export {
+  AimdMarkdownPreview,
+  type AimdMarkdownPreviewRenderOptions,
+  type AimdMarkdownPreviewRenderResult,
+  type AimdMarkdownPreviewReadonlyRecordData,
+} from './vue/markdown-preview'
+
+export {
   AIMD_RECORD_RENDER_SCOPES,
   createReadonlyRecordAimdRenderers,
   createReadonlyRecordElementRenderers,
