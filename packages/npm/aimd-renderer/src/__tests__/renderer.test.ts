@@ -1601,6 +1601,27 @@ describe('readonly record rendering', () => {
     expect(wrapper.find('.aimd-renderer').exists()).toBe(true)
     expect(wrapper.find('.rendered-aimd-document').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('sample_id')
+    const exposed = wrapper.vm as unknown as {
+      env: { fields: { var: string[] } }
+      rootElement: HTMLElement | null
+    }
+    expect(exposed.env.fields.var).toEqual(['sample_id'])
+    expect(exposed.rootElement).toBeInstanceOf(HTMLElement)
+    wrapper.unmount()
+  })
+
+  it('resolves relative rendered URLs through the shared preview component', async () => {
+    const wrapper = mount(AimdMarkdownPreview, {
+      props: {
+        content: '![Plot](files/plot.png)',
+        resolveUrl: async url => ({ url: `/resolved/${url}` }),
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('img').attributes('src')).toBe('/resolved/files/plot.png')
+    })
+
     wrapper.unmount()
   })
 })

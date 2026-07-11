@@ -51,6 +51,8 @@ export {
   type AimdMarkdownPreviewRenderOptions,
   type AimdMarkdownPreviewRenderResult,
   type AimdMarkdownPreviewReadonlyRecordData,
+  type AimdMarkdownPreviewUrlResolver,
+  type AimdMarkdownPreviewUrlResolverResult,
 } from './vue/markdown-preview'
 
 export {

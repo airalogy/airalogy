@@ -18,6 +18,8 @@ import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
 </template>
 ```
 
+`AimdMarkdownPreview` loads the shared renderer styles, accepts asynchronous relative URL resolution through `resolveUrl`, and can receive a host Mermaid component through `mermaidComponent`. The exposed `env`, `fields`, `rootElement`, and `reload` values cover field parsing and host selection-menu integration without duplicating the render pipeline.
+
 ## Host Custom Elements
 
 When integrating AIMD into a host application with its own preview components, use `aimdElementRenderers` to replace the default HTML for specific AIMD nodes:

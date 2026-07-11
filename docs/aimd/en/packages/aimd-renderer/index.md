@@ -128,6 +128,8 @@ import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
 </template>
 ```
 
+The component loads the canonical renderer styles itself. Use `resolveUrl` for an asynchronous host resolver for relative rendered `src`, `poster`, and `href` values, and pass a host Mermaid component through `mermaidComponent` when Mermaid fences need interactive rendering. Its exposed instance includes `env`, `fields`, `rootElement`, and `reload` for host integrations that need parsed field metadata or selection UI.
+
 `resolveAsset` is the host integration point for file-backed fields. Map Record file ids, field paths, or archive manifest entries to `ReadonlyRecordAsset` objects; the renderer will show image/audio/video fields inline, render ordinary files as readonly links, and resolve Markdown image `src` values that point at Airalogy file ids. Storage-specific work, including reading `.aira` blobs and creating `blob:` URLs, should stay in the host app.
 
 Readonly `AiralogyMarkdown` values are rendered through the AIMD Vue renderer, so headings, lists, nested AIMD preview tokens, and resolved Markdown image assets appear as document content instead of raw Markdown source.

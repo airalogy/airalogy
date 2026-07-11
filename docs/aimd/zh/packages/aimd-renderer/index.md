@@ -128,6 +128,8 @@ import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
 </template>
 ```
 
+该组件会自行加载规范 renderer 样式。宿主若需要异步解析渲染结果中的相对 `src`、`poster` 与 `href`，可传入 `resolveUrl`；若 Mermaid fenced code 需要交互式渲染，可通过 `mermaidComponent` 注入宿主 Mermaid 组件。组件实例会暴露 `env`、`fields`、`rootElement` 与 `reload`，供宿主读取字段元数据或挂接文本选择 UI。
+
 `resolveAsset` 是文件字段的宿主集成点。宿主应用把 Record 文件 id、字段路径或 archive manifest 条目映射成 `ReadonlyRecordAsset`；renderer 会把图片、音频、视频字段内嵌渲染，把普通文件渲染成只读链接，并解析指向 Airalogy file id 的 Markdown 图片 `src`。读取 `.aira` blob、创建 `blob:` URL 等存储细节应该留在宿主应用中。
 
 只读 `AiralogyMarkdown` 值会通过 AIMD Vue renderer 渲染，因此标题、列表、嵌套 AIMD 预览 token，以及已解析的 Markdown 图片资源都会作为文档内容显示，而不是显示原始 Markdown 文本。

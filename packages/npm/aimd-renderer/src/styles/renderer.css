@@ -70,6 +70,11 @@
   line-height: 1.48;
 }
 
+.aimd-renderer :where(img, video) {
+  max-width: 100%;
+  height: auto;
+}
+
 .aimd-renderer li::marker {
   color: #64748b;
 }
@@ -1350,4 +1355,198 @@
 
 .aimd-critic__comment-body {
   color: inherit;
+}
+
+.rendered-aimd-document .aimd-record-field {
+  margin: 0 1px;
+  vertical-align: middle;
+}
+
+.rendered-aimd-document .aimd-record-field--scalar {
+  display: inline;
+  padding: 0 2px;
+  border-bottom: 1px solid rgba(31, 143, 99, 0.28);
+  background: transparent;
+  color: #162f35;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.rendered-aimd-document .aimd-record-field--empty,
+.rendered-aimd-document .aimd-record-table--empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 7px;
+  border: 1px dashed #c5d2d6;
+  border-radius: 4px;
+  background: #fbfdfd;
+  color: #6d7c82;
+  font-size: 13px;
+}
+
+.rendered-aimd-document .aimd-record-table--empty {
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.rendered-aimd-document .aimd-record-field__missing-label {
+  color: #8a6b2b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.rendered-aimd-document .aimd-record-field__missing-name,
+.rendered-aimd-document .aimd-record-field__filename {
+  overflow-wrap: anywhere;
+}
+
+.rendered-aimd-document .aimd-record-field--boolean,
+.rendered-aimd-document .aimd-record-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #253f38;
+}
+
+.rendered-aimd-document .aimd-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #1f8f63;
+}
+
+.rendered-aimd-document .aimd-record-field--asset {
+  max-width: 100%;
+  margin: 10px 0 16px;
+}
+
+.rendered-aimd-document a.aimd-record-field--asset,
+.rendered-aimd-document span.aimd-record-field--asset {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #d5e1e4;
+  border-radius: 6px;
+  background: #fff;
+  color: #21373d;
+  text-decoration: none;
+}
+
+.rendered-aimd-document a.aimd-record-field--asset:hover {
+  border-color: #216dff;
+  color: #164eb8;
+}
+
+.rendered-aimd-document .aimd-record-field__badge {
+  flex: 0 0 auto;
+  min-width: 34px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #e5f0f2;
+  color: #275059;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.rendered-aimd-document .aimd-record-field--image,
+.rendered-aimd-document .aimd-record-field--video {
+  display: block;
+}
+
+.rendered-aimd-document .aimd-record-field__image,
+.rendered-aimd-document .aimd-record-field__video {
+  max-width: 100%;
+  max-height: 520px;
+  border: 1px solid #e0e8ea;
+  border-radius: 8px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.rendered-aimd-document .aimd-record-field__audio {
+  width: min(100%, 520px);
+}
+
+.rendered-aimd-document .aimd-record-field__caption {
+  margin-top: 6px;
+  color: #65777d;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.rendered-aimd-document .aimd-record-field--code,
+.rendered-aimd-document .aimd-record-field--dna {
+  display: block;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #d8e5e8;
+  border-radius: 8px;
+  background: #f8fbfc;
+}
+
+.rendered-aimd-document .aimd-record-field--markdown {
+  display: block;
+  margin: 8px 0 14px;
+  padding: 10px 12px;
+  border-left: 3px solid #7bb7bd;
+  background: #f7fbfb;
+  overflow-wrap: anywhere;
+}
+
+.rendered-aimd-document .aimd-record-field--markdown > :first-child {
+  margin-top: 0;
+}
+
+.rendered-aimd-document .aimd-record-field--markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.rendered-aimd-document .aimd-record-field--markdown img {
+  max-width: 100%;
+  height: auto;
+}
+
+.rendered-aimd-document .aimd-record-field__markdown-fallback,
+.rendered-aimd-document .aimd-record-field__sequence {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  white-space: pre-wrap;
+}
+
+.rendered-aimd-document .aimd-record-table {
+  margin: 12px 0 16px;
+  overflow: auto;
+}
+
+.rendered-aimd-document .aimd-record-table table {
+  min-width: 420px;
+}
+
+.rendered-aimd-document .aimd-record-table th {
+  background: #f7fafb;
+  color: #53686f;
+}
+
+.rendered-aimd-document .aimd-record-quiz {
+  margin: 12px 0 16px;
+  padding: 12px;
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  background: #fbfcff;
+}
+
+.rendered-aimd-document .aimd-record-quiz__stem {
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.rendered-aimd-document .aimd-record-quiz__answer--empty {
+  color: #748489;
+  font-style: italic;
 }

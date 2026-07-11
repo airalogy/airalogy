@@ -18,6 +18,8 @@ import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
 </template>
 ```
 
+`AimdMarkdownPreview` 会加载共享 renderer 样式，通过 `resolveUrl` 接收异步相对 URL 解析，也可以通过 `mermaidComponent` 注入宿主 Mermaid 组件。组件暴露的 `env`、`fields`、`rootElement` 与 `reload` 足以支持字段解析和宿主文本选择菜单，无需复制渲染流程。
+
 ## 宿主自定义元素
 
 当 AIMD 需要接入宿主应用自己的预览组件时，可以通过 `aimdElementRenderers` 把特定 AIMD 节点的默认 HTML 替换成自定义元素：
