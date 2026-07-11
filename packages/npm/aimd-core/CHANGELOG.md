@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.13.0
+
+### Minor Changes
+
+- feb8623: Add protocol-aware record field search and filtering utilities, and expose a collapsed, sticky current-record search control in `AimdRecorder`.
+
 ## 2.12.0
 
 ### Minor Changes
