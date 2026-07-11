@@ -1174,6 +1174,18 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
 }
 
 /**
+ * Render one AIMD node with the canonical built-in Vue renderer.
+ * Host adapters can use this as a fallback without copying default markup.
+ */
+export function renderDefaultAimdNode(
+  fieldType: string,
+  node: AimdNode,
+  context: AimdRendererContext,
+): ReturnType<AimdComponentRenderer> {
+  return defaultAimdRenderers[fieldType]?.(node, context) ?? null
+}
+
+/**
  * Render options
  */
 export interface VueRendererOptions {

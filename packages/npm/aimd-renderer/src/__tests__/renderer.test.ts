@@ -12,13 +12,14 @@ import {
   createRenderer,
 } from '../common/processor'
 import { getFinalIndent, parseFieldTag } from '../index'
+import { createAimdRendererMessages } from '../locales'
 import {
   AimdMarkdownPreview,
   createReadonlyRecordRenderContext,
   normalizeRecordRenderValue,
   renderReadonlyRecordToVue,
 } from '../vue'
-import { createCodeBlockRenderer, createStepCardRenderer } from '../vue/vue-renderer'
+import { createCodeBlockRenderer, createStepCardRenderer, renderDefaultAimdNode } from '../vue/vue-renderer'
 
 const rendererStylesPath = existsSync('src/styles/renderer.css')
   ? 'src/styles/renderer.css'
@@ -1623,6 +1624,25 @@ describe('readonly record rendering', () => {
     })
 
     wrapper.unmount()
+  })
+})
+
+describe('default Vue renderer fallback', () => {
+  it('lets host adapters reuse canonical field markup', async () => {
+    const rendered = await renderDefaultAimdNode('var', {
+      type: 'aimd',
+      fieldType: 'var',
+      id: 'sample_id',
+      scope: 'var',
+      raw: '{{var|sample_id}}',
+    }, {
+      mode: 'preview',
+      readonly: true,
+      locale: 'en-US',
+      messages: createAimdRendererMessages('en-US'),
+    })
+
+    expect(rendered?.props?.class).toContain('aimd-field--var')
   })
 })
 

@@ -13,6 +13,7 @@ export {
   createMermaidRenderer,
   createStepCardRenderer,
   loadShikiHighlighter,
+  renderDefaultAimdNode,
   type CodeBlockRendererOptions,
   type ElementRenderer,
   hastToVue,
