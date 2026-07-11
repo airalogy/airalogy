@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.22.0
+
+### Minor Changes
+
+- feb8623: Add protocol-aware record field search and filtering utilities, and expose a collapsed, sticky current-record search control in `AimdRecorder`.
+
+### Patch Changes
+
+- Updated dependencies [feb8623]
+- Updated dependencies [53b2b6f]
+  - @airalogy/aimd-core@2.13.0
+  - @airalogy/aimd-renderer@2.10.0
+
 ## 1.21.0
 
 ### Minor Changes

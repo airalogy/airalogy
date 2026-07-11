@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.10.0
+
+### Minor Changes
+
+- 53b2b6f: Add a shared `AimdMarkdownPreview` Vue component for AIMD Markdown previews and readonly Record reports, including canonical renderer styles, template environment exposure, Mermaid integration, asynchronous rendered URL resolution, and a default-node fallback for host field adapters.
+
+### Patch Changes
+
+- Updated dependencies [feb8623]
+  - @airalogy/aimd-core@2.13.0
+
 ## 2.9.1
 
 ### Patch Changes
