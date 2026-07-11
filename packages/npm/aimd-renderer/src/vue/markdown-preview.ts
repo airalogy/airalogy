@@ -16,7 +16,7 @@ type VueClassValue = string | unknown[] | Record<string, boolean>
 export interface AimdMarkdownPreviewRenderOptions extends AimdRendererOptions, VueRendererOptions {}
 
 export type AimdMarkdownPreviewRenderResult = RenderResult
-export type AimdMarkdownPreviewReadonlyRecordData = Record<string, unknown>
+export type AimdMarkdownPreviewReadonlyRecordData = object
 export type AimdMarkdownPreviewUrlResolverResult = string | { href?: string, url?: string } | null | undefined
 export type AimdMarkdownPreviewUrlResolver = (
   url: string,
