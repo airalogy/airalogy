@@ -161,6 +161,7 @@ const selectedImportedRecordId = ref('')
 const importedRecordFilterQuery = ref('')
 const importedRecordFilterFieldKey = ref('')
 const importedRecordFilterOperator = ref<AimdRecordFilterOperator>('contains')
+const importedRecordFilterExpanded = ref(false)
 const isPackagingArchive = ref(false)
 const isImportingPackage = ref(false)
 const showImageInsertPanel = ref(false)
@@ -226,6 +227,16 @@ const importedRecordFilterResultLabel = computed(() => (
     ? messages.value.pages.editor.importedRecordFilterCount(filteredImportedRecordOptions.value.length, importedRecordCount.value)
     : ''
 ))
+const importedRecordFilterToggleLabel = computed(() => {
+  const label = importedRecordFilterExpanded.value
+    ? messages.value.pages.editor.hideImportedRecordFilter
+    : messages.value.pages.editor.showImportedRecordFilter
+  return importedRecordFilterResultLabel.value
+    ? `${label} (${importedRecordFilterResultLabel.value})`
+    : label
+})
+const isImportedRecordFilterActive = computed(() => importedRecordFilterQuery.value.trim().length > 0)
+const showImportedRecordFilterPanel = computed(() => importedRecordCount.value > 1 && importedRecordFilterExpanded.value)
 const protocolFileTotalSize = computed(() => protocolFiles.value.reduce((total, file) => total + file.file.size, 0))
 const archiveStatusLabel = computed(() => archiveStatus.value || messages.value.pages.editor.ready)
 const archiveStatusDisplayLabel = computed(() => (
@@ -379,6 +390,7 @@ function clearImportedRecords() {
   importedRecordFilterQuery.value = ''
   importedRecordFilterFieldKey.value = ''
   importedRecordFilterOperator.value = 'contains'
+  importedRecordFilterExpanded.value = false
 }
 
 async function saveEditorDraftNow(): Promise<void> {
@@ -1008,6 +1020,10 @@ function applyImportedPackage(packageData: ImportedPackage) {
   applyImportedProtocolPackage(packageData)
 }
 
+function toggleImportedRecordFilter() {
+  importedRecordFilterExpanded.value = !importedRecordFilterExpanded.value
+}
+
 function handleImportedRecordSelected(event: Event) {
   const selectedId = (event.target as HTMLSelectElement).value
   const selectedRecord = importedRecordOptions.value.find(record => record.id === selectedId)
@@ -1493,6 +1509,16 @@ onBeforeUnmount(() => {
                 {{ record.label }}
               </option>
             </select>
+            <button
+              v-if="importedRecordCount > 1"
+              type="button"
+              :class="['archive-button', 'workspace-panel__record-filter-toggle', { 'workspace-panel__record-filter-toggle--active': isImportedRecordFilterActive }]"
+              :aria-expanded="showImportedRecordFilterPanel"
+              aria-controls="editor-record-filter"
+              @click="toggleImportedRecordFilter"
+            >
+              {{ importedRecordFilterToggleLabel }}
+            </button>
             <span v-if="protocolFileCount > 0" class="workspace-panel__status workspace-panel__file-summary">
               {{ messages.pages.editor.fileCount }}: {{ protocolFileCount }} · {{ messages.pages.editor.fileTotalSize }} {{ formatFileSize(protocolFileTotalSize) }}
             </span>
@@ -1538,6 +1564,37 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </div>
+        <div v-if="showImportedRecordFilterPanel" id="editor-record-filter" class="workspace-panel__record-filter">
+          <select
+            v-model="importedRecordFilterFieldKey"
+            class="workspace-panel__record-filter-field"
+            :aria-label="messages.pages.editor.importedRecordFilterField"
+          >
+            <option value="">{{ messages.pages.editor.importedRecordFilterAllFields }}</option>
+            <option v-for="field in importedRecordFieldRefs" :key="field.key" :value="field.key">
+              {{ field.label }}
+            </option>
+          </select>
+          <select
+            v-model="importedRecordFilterOperator"
+            class="workspace-panel__record-filter-operator"
+            :aria-label="messages.pages.editor.importedRecordFilterOperator"
+          >
+            <option value="contains">{{ messages.pages.editor.importedRecordFilterContains }}</option>
+            <option value="equals">{{ messages.pages.editor.importedRecordFilterEquals }}</option>
+            <option value="regex">{{ messages.pages.editor.importedRecordFilterRegex }}</option>
+          </select>
+          <input
+            v-model="importedRecordFilterQuery"
+            class="workspace-panel__record-filter-input"
+            type="search"
+            :placeholder="messages.pages.editor.importedRecordFilterPlaceholder"
+            :aria-label="messages.pages.editor.importedRecordFilterPlaceholder"
+          >
+          <span v-if="importedRecordFilterResultLabel" class="workspace-panel__record-filter-count">
+            {{ importedRecordFilterResultLabel }}
+          </span>
+        </div>
         <ul v-if="protocolFileCount > 0 && protocolFilesExpanded" id="editor-protocol-file-list" class="protocol-file-list">
           <li v-for="file in protocolFiles" :key="file.path" class="protocol-file">
             <img class="protocol-file__preview" :src="file.previewUrl" :alt="file.title">
@@ -1582,37 +1639,6 @@ onBeforeUnmount(() => {
               {{ messages.pages.editor.recorderMode }}
             </button>
           </div>
-        </div>
-        <div v-if="previewMode === 'recorder' && importedRecordCount > 1" class="workspace-panel__record-filter">
-          <select
-            v-model="importedRecordFilterFieldKey"
-            class="workspace-panel__record-filter-field"
-            :aria-label="messages.pages.editor.importedRecordFilterField"
-          >
-            <option value="">{{ messages.pages.editor.importedRecordFilterAllFields }}</option>
-            <option v-for="field in importedRecordFieldRefs" :key="field.key" :value="field.key">
-              {{ field.label }}
-            </option>
-          </select>
-          <select
-            v-model="importedRecordFilterOperator"
-            class="workspace-panel__record-filter-operator"
-            :aria-label="messages.pages.editor.importedRecordFilterOperator"
-          >
-            <option value="contains">{{ messages.pages.editor.importedRecordFilterContains }}</option>
-            <option value="equals">{{ messages.pages.editor.importedRecordFilterEquals }}</option>
-            <option value="regex">{{ messages.pages.editor.importedRecordFilterRegex }}</option>
-          </select>
-          <input
-            v-model="importedRecordFilterQuery"
-            class="workspace-panel__record-filter-input"
-            type="search"
-            :placeholder="messages.pages.editor.importedRecordFilterPlaceholder"
-            :aria-label="messages.pages.editor.importedRecordFilterPlaceholder"
-          >
-          <span v-if="importedRecordFilterResultLabel" class="workspace-panel__record-filter-count">
-            {{ importedRecordFilterResultLabel }}
-          </span>
         </div>
         <div v-if="previewMode === 'render'" class="workspace-panel__body render-preview aimd-renderer">
           <div v-if="previewError" class="preview-error">
@@ -2003,6 +2029,24 @@ onBeforeUnmount(() => {
   border-color: #1a73e8;
   outline: none;
   box-shadow: 0 0 0 2px rgb(26 115 232 / 14%);
+}
+
+.workspace-panel__record-filter-toggle {
+  height: 32px;
+  border-color: #bdd3ff;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.workspace-panel__record-filter-toggle:hover {
+  border-color: #8fb6ff;
+  background: #dbeafe;
+}
+
+.workspace-panel__record-filter-toggle--active {
+  border-color: #1a73e8;
+  background: #dbeafe;
+  color: #1557b0;
 }
 
 .workspace-panel__record-filter {

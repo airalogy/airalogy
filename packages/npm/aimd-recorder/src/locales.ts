@@ -327,7 +327,7 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     false: "False",
   },
   search: {
-    label: "Search record",
+    label: "Search current record",
     fieldLabel: "Search field",
     placeholder: "Search this record",
     allFields: "All fields",
@@ -514,7 +514,7 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     false: "否",
   },
   search: {
-    label: "搜索记录",
+    label: "搜索当前记录",
     fieldLabel: "搜索字段",
     placeholder: "搜索当前记录",
     allFields: "全部字段",

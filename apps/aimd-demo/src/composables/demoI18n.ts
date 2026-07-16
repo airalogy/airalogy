@@ -135,6 +135,8 @@ export interface DemoMessages {
       importedRecordFilterRegex: string
       importedRecordFilterPlaceholder: string
       importedRecordFilterCount: (shown: number, total: number) => string
+      showImportedRecordFilter: string
+      hideImportedRecordFilter: string
       downloadAimd: string
       downloadAira: string
       packagingDownload: string
@@ -333,6 +335,8 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         importedRecordFilterRegex: 'regex',
         importedRecordFilterPlaceholder: 'Filter records',
         importedRecordFilterCount: (shown, total) => `${shown} / ${total}`,
+        showImportedRecordFilter: 'Filter records',
+        hideImportedRecordFilter: 'Hide filter',
         downloadAimd: 'Download .aimd',
         downloadAira: 'Download .aira',
         packagingDownload: 'Packaging...',
@@ -529,6 +533,8 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         importedRecordFilterRegex: '正则',
         importedRecordFilterPlaceholder: '过滤 Records',
         importedRecordFilterCount: (shown, total) => `${shown} / ${total}`,
+        showImportedRecordFilter: '筛选记录',
+        hideImportedRecordFilter: '收起筛选',
         downloadAimd: '下载 .aimd',
         downloadAira: '下载 .aira',
         packagingDownload: '正在打包...',

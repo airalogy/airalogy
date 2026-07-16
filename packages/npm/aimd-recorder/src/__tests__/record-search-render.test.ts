@@ -71,6 +71,7 @@ describe('AimdRecorder record search', () => {
 
     const toggle = wrapper.find('[data-rec-search-toggle]')
     expect(toggle.exists()).toBe(true)
+    expect(toggle.text()).toContain('Search current record')
     await toggle.trigger('click')
     await wrapper.vm.$nextTick()
 
