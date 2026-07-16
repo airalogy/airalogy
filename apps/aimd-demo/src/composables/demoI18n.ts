@@ -119,6 +119,7 @@ export interface DemoMessages {
       importingPackage: string
       packageImported: string
       packageImportedRecords: string
+      packageImportedRecordCount: (count: number) => string
       packageImportFailed: string
       packageImportNoAimd: string
       packageImportUnsupportedAira: string
@@ -316,6 +317,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         importingPackage: 'Importing...',
         packageImported: 'Package imported',
         packageImportedRecords: 'Record imported',
+        packageImportedRecordCount: count => `${count} records imported`,
         packageImportFailed: 'Package import failed',
         packageImportNoAimd: 'No .aimd file was found in the package.',
         packageImportUnsupportedAira: 'Only protocol .aira and records .aira archives can be imported into this editor.',
@@ -511,6 +513,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         importingPackage: '正在导入...',
         packageImported: '已导入包',
         packageImportedRecords: '已导入 Record',
+        packageImportedRecordCount: count => `已导入 ${count} 个 Records`,
         packageImportFailed: '导入包失败',
         packageImportNoAimd: '压缩包中没有找到 .aimd 文件。',
         packageImportUnsupportedAira: '当前编辑器支持导入 Protocol .aira 或 Records .aira 归档。',

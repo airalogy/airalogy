@@ -228,6 +228,11 @@ const importedRecordFilterResultLabel = computed(() => (
 ))
 const protocolFileTotalSize = computed(() => protocolFiles.value.reduce((total, file) => total + file.file.size, 0))
 const archiveStatusLabel = computed(() => archiveStatus.value || messages.value.pages.editor.ready)
+const archiveStatusDisplayLabel = computed(() => (
+  importedRecordCount.value > 1
+    ? messages.value.pages.editor.packageImportedRecordCount(importedRecordCount.value)
+    : archiveStatusLabel.value
+))
 const figurePopoverStyle = computed(() => ({
   top: `${figurePopoverPosition.value.top}px`,
   left: `${figurePopoverPosition.value.left}px`,
@@ -1472,7 +1477,7 @@ onBeforeUnmount(() => {
               accept=".zip,.aira,application/zip,application/vnd.airalogy.archive+zip"
               @change="handlePackageFileSelected"
             >
-            <span class="workspace-panel__status">{{ archiveStatusLabel }}</span>
+            <span class="workspace-panel__status" :title="archiveStatusLabel">{{ archiveStatusDisplayLabel }}</span>
             <select
               v-if="importedRecordCount > 1"
               v-model="selectedImportedRecordId"
@@ -1488,37 +1493,6 @@ onBeforeUnmount(() => {
                 {{ record.label }}
               </option>
             </select>
-            <div v-if="importedRecordCount > 1" class="workspace-panel__record-filter">
-              <select
-                v-model="importedRecordFilterFieldKey"
-                class="workspace-panel__record-filter-field"
-                :aria-label="messages.pages.editor.importedRecordFilterField"
-              >
-                <option value="">{{ messages.pages.editor.importedRecordFilterAllFields }}</option>
-                <option v-for="field in importedRecordFieldRefs" :key="field.key" :value="field.key">
-                  {{ field.label }}
-                </option>
-              </select>
-              <select
-                v-model="importedRecordFilterOperator"
-                class="workspace-panel__record-filter-operator"
-                :aria-label="messages.pages.editor.importedRecordFilterOperator"
-              >
-                <option value="contains">{{ messages.pages.editor.importedRecordFilterContains }}</option>
-                <option value="equals">{{ messages.pages.editor.importedRecordFilterEquals }}</option>
-                <option value="regex">{{ messages.pages.editor.importedRecordFilterRegex }}</option>
-              </select>
-              <input
-                v-model="importedRecordFilterQuery"
-                class="workspace-panel__record-filter-input"
-                type="search"
-                :placeholder="messages.pages.editor.importedRecordFilterPlaceholder"
-                :aria-label="messages.pages.editor.importedRecordFilterPlaceholder"
-              >
-              <span v-if="importedRecordFilterResultLabel" class="workspace-panel__record-filter-count">
-                {{ importedRecordFilterResultLabel }}
-              </span>
-            </div>
             <span v-if="protocolFileCount > 0" class="workspace-panel__status workspace-panel__file-summary">
               {{ messages.pages.editor.fileCount }}: {{ protocolFileCount }} · {{ messages.pages.editor.fileTotalSize }} {{ formatFileSize(protocolFileTotalSize) }}
             </span>
@@ -1608,6 +1582,37 @@ onBeforeUnmount(() => {
               {{ messages.pages.editor.recorderMode }}
             </button>
           </div>
+        </div>
+        <div v-if="previewMode === 'recorder' && importedRecordCount > 1" class="workspace-panel__record-filter">
+          <select
+            v-model="importedRecordFilterFieldKey"
+            class="workspace-panel__record-filter-field"
+            :aria-label="messages.pages.editor.importedRecordFilterField"
+          >
+            <option value="">{{ messages.pages.editor.importedRecordFilterAllFields }}</option>
+            <option v-for="field in importedRecordFieldRefs" :key="field.key" :value="field.key">
+              {{ field.label }}
+            </option>
+          </select>
+          <select
+            v-model="importedRecordFilterOperator"
+            class="workspace-panel__record-filter-operator"
+            :aria-label="messages.pages.editor.importedRecordFilterOperator"
+          >
+            <option value="contains">{{ messages.pages.editor.importedRecordFilterContains }}</option>
+            <option value="equals">{{ messages.pages.editor.importedRecordFilterEquals }}</option>
+            <option value="regex">{{ messages.pages.editor.importedRecordFilterRegex }}</option>
+          </select>
+          <input
+            v-model="importedRecordFilterQuery"
+            class="workspace-panel__record-filter-input"
+            type="search"
+            :placeholder="messages.pages.editor.importedRecordFilterPlaceholder"
+            :aria-label="messages.pages.editor.importedRecordFilterPlaceholder"
+          >
+          <span v-if="importedRecordFilterResultLabel" class="workspace-panel__record-filter-count">
+            {{ importedRecordFilterResultLabel }}
+          </span>
         </div>
         <div v-if="previewMode === 'render'" class="workspace-panel__body render-preview aimd-renderer">
           <div v-if="previewError" class="preview-error">
@@ -1907,14 +1912,20 @@ onBeforeUnmount(() => {
 }
 
 .workspace-panel__header--split {
+  align-content: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
+  padding-top: 5px;
+  padding-bottom: 5px;
 }
 
 .workspace-panel__title {
+  flex: 0 0 auto;
   color: #243447;
   font-size: 14px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .preview-mode-tabs {
@@ -1952,20 +1963,27 @@ onBeforeUnmount(() => {
 
 .workspace-panel__actions {
   display: inline-flex;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
+  min-width: 0;
 }
 
 .workspace-panel__status {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: min(240px, 100%);
+  overflow: hidden;
   color: #667085;
   font-size: 12px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .workspace-panel__record-select {
+  flex: 0 1 220px;
   max-width: 220px;
   height: 32px;
   min-width: 132px;
@@ -1988,14 +2006,14 @@ onBeforeUnmount(() => {
 }
 
 .workspace-panel__record-filter {
-  display: inline-flex;
-  min-width: min(100%, 420px);
-  max-width: min(100%, 720px);
-  flex: 1 1 420px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(92px, max-content) minmax(180px, 1fr) auto;
   align-items: center;
-  justify-content: flex-end;
   gap: 6px;
+  min-width: 0;
+  padding: 7px 14px;
+  border-bottom: 1px solid #e5edf6;
+  background: #fff;
 }
 
 .workspace-panel__record-filter-field,
@@ -2011,17 +2029,14 @@ onBeforeUnmount(() => {
 }
 
 .workspace-panel__record-filter-field {
-  flex: 0 1 180px;
   padding: 0 30px 0 10px;
 }
 
 .workspace-panel__record-filter-operator {
-  flex: 0 0 92px;
   padding: 0 28px 0 10px;
 }
 
 .workspace-panel__record-filter-input {
-  flex: 1 1 180px;
   padding: 0 10px;
 }
 
@@ -2299,6 +2314,10 @@ onBeforeUnmount(() => {
   .workspace-panel__actions {
     flex-wrap: wrap;
     justify-content: space-between;
+  }
+
+  .workspace-panel__record-filter {
+    grid-template-columns: 1fr;
   }
 
   .editor-workspace {

@@ -197,6 +197,12 @@ test('AimdEditorToolbar uses non-submit buttons for host safety', () => {
   assert.match(toolbarSource, /type="button"/)
 })
 
+test('AimdEditor toolbar wraps actions instead of hiding them behind a scrollbar', () => {
+  assert.match(editorSource, /\.aimd-editor-toolbar \{[^}]*flex-wrap: wrap;/)
+  assert.match(editorSource, /\.aimd-editor-toolbar \{[^}]*overflow: visible;/)
+  assert.doesNotMatch(editorSource, /\.aimd-editor-toolbar \{[^}]*overflow-x: auto;/)
+})
+
 test('wysiwyg entry exports the lightweight embedded editor surface', () => {
   assert.match(wysiwygEntrySource, /export \{ default as AimdWysiwygEditor \} from '\.\/vue\/AimdWysiwygEditor\.vue'/)
   assert.match(wysiwygEntrySource, /createAimdEditorMessages/)

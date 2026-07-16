@@ -274,11 +274,13 @@ defineExpose({
 .aimd-editor-toolbar {
   display: flex;
   align-items: center;
+  align-content: flex-start;
   gap: 2px;
+  row-gap: 4px;
   padding: 4px 8px;
   background: #fafbfc;
   border-bottom: 1px solid #e0e0e0;
-  overflow-x: auto;
+  overflow: visible;
   flex-wrap: wrap;
 }
 
