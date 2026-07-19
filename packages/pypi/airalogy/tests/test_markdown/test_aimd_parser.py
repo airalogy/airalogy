@@ -11,6 +11,7 @@ from airalogy.markdown import (
     AimdParser,
     AssignerBlockNode,
     CheckNode,
+    ConnectorsNode,
     DuplicateNameError,
     InvalidNameError,
     InvalidSyntaxError,
@@ -22,8 +23,10 @@ from airalogy.markdown import (
     VarTableNode,
     WorkflowNode,
     extract_assigner_blocks,
+    generate_model,
     is_aimd_workflow_reference,
     parse_aimd,
+    parse_connectors_content,
     parse_workflow_content,
 )
 
@@ -1628,6 +1631,95 @@ assigner(
         assert "def assign_field_a" in result["templates"]["assigner"][0].code
 
 
+class TestConnectorsBlocks:
+    """Tests for fenced connectors code blocks in AIMD."""
+
+    def test_parse_connectors_block(self):
+        content = """
+```connectors
+lab_plasmid_registry:
+  kind: entity_source
+  entity: plasmid
+  descriptor: https://lims.example.com/airalogy/entity-sources/plasmid.json
+  auth:
+    token_env: LAB_PLASMID_TOKEN
+```
+
+{{var|parent_plasmid: EntityRef, entity="plasmid", source="lab_plasmid_registry"}}
+"""
+        result = parse_aimd(content)
+
+        assert len(result["templates"]["connectors"]) == 1
+        block = result["templates"]["connectors"][0]
+        assert block["connectors"]["lab_plasmid_registry"] == {
+            "id": "lab_plasmid_registry",
+            "kind": "entity_source",
+            "entity": "plasmid",
+            "descriptor": "https://lims.example.com/airalogy/entity-sources/plasmid.json",
+            "auth": {
+                "type": "bearer",
+                "token_env": "LAB_PLASMID_TOKEN",
+            },
+        }
+        assert result["templates"]["var"][0]["type_annotation"] == "EntityRef"
+        assert result["templates"]["var"][0]["kwargs"]["entity"] == "plasmid"
+        assert result["templates"]["var"][0]["kwargs"]["source"] == "lab_plasmid_registry"
+
+        parsed = AimdParser(content).parse()
+        parsed_block = parsed["templates"]["connectors"][0]
+        assert isinstance(parsed_block, ConnectorsNode)
+        assert parsed_block.version == 1
+
+    def test_parse_connectors_block_accepts_legacy_wrapped_shape(self):
+        content = """
+```connectors
+version: 1
+connectors:
+  lab_plasmid_registry:
+    kind: entity_source
+    entity: plasmid
+    descriptor: https://lims.example.com/airalogy/entity-sources/plasmid.json
+```
+"""
+        result = parse_aimd(content)
+
+        assert result["templates"]["connectors"][0]["connectors"]["lab_plasmid_registry"] == {
+            "id": "lab_plasmid_registry",
+            "kind": "entity_source",
+            "entity": "plasmid",
+            "descriptor": "https://lims.example.com/airalogy/entity-sources/plasmid.json",
+        }
+
+    def test_connectors_block_rejects_inline_secret_values(self):
+        content = """
+```connectors
+lab_plasmid_registry:
+  kind: entity_source
+  entity: plasmid
+  auth:
+    token: super-secret
+```
+"""
+        with pytest.raises(InvalidSyntaxError, match="must not inline secret values"):
+            parse_aimd(content)
+
+    def test_connectors_block_rejects_duplicate_connector_ids(self):
+        content = """
+```connectors
+lab_plasmid_registry:
+  kind: entity_source
+  entity: plasmid
+  descriptor: https://lims.example.com/plasmids.json
+lab_plasmid_registry:
+  kind: entity_source
+  entity: sample
+  descriptor: https://lims.example.com/samples.json
+```
+"""
+        with pytest.raises(InvalidSyntaxError, match="duplicate key"):
+            parse_aimd(content)
+
+
 class TestParseAimd:
     """Tests for parse_aimd function."""
 
@@ -2000,3 +2092,77 @@ options:
         assert len(workflows[0]["transitions"]) == 4
         assert result["templates"]["var"] == []
         assert result["templates"]["step"] == []
+
+    def test_parse_aimd_extracts_connectors_blocks(self):
+        result = parse_aimd(
+            textwrap.dedent(
+                """
+                ```connectors
+                lab_plasmid_registry:
+                  kind: entity_source
+                  entity: plasmid
+                  descriptor: https://lims.example.com/airalogy/entity-sources/plasmid.json
+                  auth:
+                    token_env: LAB_PLASMID_TOKEN
+                ```
+
+                Parent: {{var|parent_plasmid: EntityRef | None, entity="plasmid", source="lab_plasmid_registry"}}
+                """
+            )
+        )
+
+        connectors = result["templates"]["connectors"]
+        assert len(connectors) == 1
+        assert connectors[0]["version"] == 1
+        assert connectors[0]["connectors"]["lab_plasmid_registry"] == {
+            "id": "lab_plasmid_registry",
+            "kind": "entity_source",
+            "entity": "plasmid",
+            "descriptor": "https://lims.example.com/airalogy/entity-sources/plasmid.json",
+            "auth": {
+                "type": "bearer",
+                "token_env": "LAB_PLASMID_TOKEN",
+            },
+        }
+        assert result["templates"]["var"][0]["kwargs"] == {
+            "entity": "plasmid",
+            "source": "lab_plasmid_registry",
+        }
+
+    def test_parse_connectors_content_rejects_inline_secret_values(self):
+        with pytest.raises(InvalidSyntaxError, match="must not inline secret values"):
+            parse_connectors_content(
+                textwrap.dedent(
+                    """
+                    lab_plasmid_registry:
+                      kind: entity_source
+                      entity: plasmid
+                      descriptor: https://lims.example.com/plasmid.json
+                      auth:
+                        token: super-secret
+                    """
+                )
+            )
+
+    def test_generate_model_imports_and_validates_entity_ref(self):
+        code = generate_model(
+            '{{var|parent_plasmids: list[EntityRef] | None, entity="plasmid", source="lab_plasmid_registry"}}'
+        )
+        assert "from airalogy.types import EntityRef" in code
+        namespace: dict[str, object] = {}
+        exec(code, namespace)
+        model = namespace["VarModel"]
+
+        record = model(
+            parent_plasmids=[
+                {
+                    "entity": "plasmid",
+                    "source": "lab_plasmid_registry",
+                    "id": "pUC19",
+                    "label": "pUC19 cloning vector",
+                }
+            ]
+        )
+
+        assert record.parent_plasmids[0].entity == "plasmid"
+        assert record.parent_plasmids[0].id == "pUC19"

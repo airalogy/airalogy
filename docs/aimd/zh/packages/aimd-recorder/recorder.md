@@ -51,6 +51,7 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - `CurrentTime` 和 `UserName` 可以从运行时上下文自动填值。
 - `AiralogyMarkdown` 会渲染为横铺的 AIMD/Markdown 字段，支持 `预览` 与 `源码` 切换；预览会通过 AIMD renderer 输出 Markdown 并渲染 Mermaid 代码块，源码编辑仍保留切换到 `所见即所得` 的能力。
 - `DNASequence` 会渲染专用序列控件，支持交互式模式、原始结构模式、文件导入导出、拓扑切换、feature 编辑，以及基于 `SeqViz` 的可视化。
+- `EntityRef` 和 `list[EntityRef]` 会在宿主传入 `entityResolvers` 后渲染为实体引用控件；resolver key 可以匹配 AIMD `source` connector id，也可以匹配 `entity` namespace。
 - `ref_var` 如果已有记录值，会优先以内联只读内容显示当前值。
 - `var` 和 `var_table` 标签会显示 AIMD 里的 `title`，设置标题时仍显示规范 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。没有显式 placeholder 覆盖时，第一个标量示例会作为默认占位文案。
 - `bool | None`、`Literal[...] | None`、`BloodType | None` 这类带 `None` 的下拉型字段会显示本地化的 `未填写` 选项，并把该选项保存为 `null`。必填下拉字段不会显示空值选项，用户仍然需要选择真实枚举值。

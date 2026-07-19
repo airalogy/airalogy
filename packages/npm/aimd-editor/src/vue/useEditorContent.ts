@@ -58,7 +58,7 @@ export function useEditorContent(options: UseEditorContentOptions) {
 
   function shouldReparseInsertedText(text: string): boolean {
     return /\{\{(?:var_table|var|quiz|step|check|ref_step|ref_var|ref_fig|cite|fig)\|/.test(text)
-      || /```(?:quiz|fig|assigner)\b/.test(text)
+      || /```(?:quiz|fig|assigner|connectors)\b/.test(text)
   }
 
   function reparseMilkdownMarkdown() {

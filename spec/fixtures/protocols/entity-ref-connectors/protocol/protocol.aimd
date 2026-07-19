@@ -1,0 +1,15 @@
+# Entity Reference Connector Fixture
+
+This fixture declares a connector-backed entity reference field.
+
+```connectors
+lab_plasmid_registry:
+  kind: entity_source
+  entity: plasmid
+  descriptor: https://lims.example.com/airalogy/entity-sources/plasmid.json
+  auth:
+    token_env: LAB_PLASMID_TOKEN
+```
+
+Source plasmid: {{var|parent_plasmid: EntityRef | None, title="Source plasmid", entity="plasmid", source="lab_plasmid_registry"}}
+Source plasmids: {{var|parent_plasmids: list[EntityRef] | None, title="Source plasmids", entity="plasmid", source="lab_plasmid_registry"}}

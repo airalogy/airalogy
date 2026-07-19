@@ -9,6 +9,7 @@ Built-in variable input types include `CurrentTime`, `UserName`, `AiralogyMarkdo
 Official named enum types such as `BloodType` render as select inputs using metadata generated from the Python `airalogy.types` registry.
 Select-backed types combined with `None`, such as `bool | None`, `Literal[...] | None`, and `BloodType | None`, show a localized `Not set` option and store that selection as `null`; required selects omit this empty option.
 Scalar list variables such as `list[str]`, `list[int]`, and `list[float]` render as full-row fields with repeatable drag-reorderable item inputs plus a JSON array mode, then store clean scalar arrays.
+`EntityRef` and `list[EntityRef]` variables render as entity-reference controls when the host supplies `entityResolvers`, so recorder users can search/select existing external or protocol-backed entities without hard-coding every entity type into AIMD.
 `AimdRecorder` includes a collapsed-by-default protocol-aware record search control for searching all fields or one selected field; when expanded it stays sticky at the top of the recorder, highlights matching fields, jumps between matching controls, and selects the matched substring inside native text inputs when possible.
 `AiralogyMarkdown` now uses a full-width embedded AIMD/Markdown field in recorder mode with rendered preview and source-editing modes; source editing keeps the full top toolbar and still supports switching to `WYSIWYG` instead of a plain textarea.
 In recorder/edit mode, `ref_var` references display current var values as readonly inline content when available.
@@ -61,6 +62,39 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 ```
 
 `AiralogyMarkdown` fields render a full-width embedded AIMD/Markdown area with `Preview` and `Source` modes; preview uses the AIMD renderer and renders Mermaid code blocks. Source editing keeps the full top toolbar and still supports switching to `WYSIWYG`. Even when the field is authored mid-sentence, recorder lifts it into its own block row instead of keeping it as a tiny inline control.
+
+`EntityRef` fields use protocol metadata such as `entity="plasmid"` and `source="lab_plasmid_registry"` to choose a resolver. Resolver map keys can be connector ids or entity namespaces:
+
+```vue
+<script setup lang="ts">
+const content = 'Parent: {{var|parent_plasmid: EntityRef | None, entity="plasmid", source="lab_plasmid_registry"}}'
+
+const entityResolvers = {
+  lab_plasmid_registry: {
+    async search(query) {
+      return [
+        {
+          entity: "plasmid",
+          source: "lab_plasmid_registry",
+          id: "pUC19",
+          label: "pUC19 cloning vector",
+        },
+      ].filter(item => item.id.toLowerCase().includes(query.toLowerCase()) || item.label.toLowerCase().includes(query.toLowerCase()))
+    },
+  },
+}
+</script>
+
+<template>
+  <AimdRecorder
+    v-model="record"
+    :content="content"
+    :entity-resolvers="entityResolvers"
+  />
+</template>
+```
+
+The selected value is stored as an object like `{ entity, source, id, label? }`; `list[EntityRef]` stores an array of those objects. `id` is the stable key, while `label` is an optional display cache and the recorder falls back to `id` when it is absent. The recorder does not fetch AIMD `connectors` descriptors by itself, so hosts remain in control of network access and authentication.
 
 Numeric `var` inputs honor Pydantic-style constraints such as `gt`, `ge`, `lt`, `le`, and `multiple_of`; these constraints apply to `int`, `integer`, `float`, and `number` var types.
 Client assigners also use these constraints for dependency readiness, so an assigner will not run while a dependent numeric field violates its declared bounds.

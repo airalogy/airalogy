@@ -21,6 +21,7 @@
 - `var_table[]` 提供规范字段 `id`，以及可选的表级 `title`、`description`、`examples` 和原始 AIMD `kwargs`
 - `var_table[].subvars[]` 提供规范字段 `id`，以及可选的列级 `title`、`description`、`examples`
 - `client_assigner[]` 提供 `id`、`mode`、`dependent_fields`、`assigned_fields`、`function_source`，它们来自 `assigner(config, function ...)` 形式的前端代码块
+- `connectors[]` 提供 fenced `connectors` 代码块中的 connector registry，包括 `version`、connector id、`kind`、`entity`、`descriptor`、`search`、`resolve`，以及 `token_env` 这类非 secret auth metadata
 - `workflow[]` 提供 fenced `workflow` 代码块中的 workflow 定义，包括 `version`、`id`、`nodes`、`assigners`、transition id、归一化后的 `from` / `to` 数组、transition `inputs`、按目标分组的 `assign`、`logic` 和 `default_initial_node`
 - `quiz[]` 本来就使用 `id`
 - `fig[]` 提供 fenced `fig` 代码块中的 `id`、`src`、`title`、`legend`

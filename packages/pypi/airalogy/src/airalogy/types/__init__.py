@@ -13,6 +13,7 @@ __all__ = [
     "CurrentTime",
     "CurrentProtocolId",
     "CurrentRecordId",
+    "EntityRef",
     "BloodType",
     "ChineseEducationLevel",
     "ChineseEthnicGroup",
@@ -87,6 +88,7 @@ from .atcg import ATCG
 from .dna import DNASequence
 from .aimd import AiralogyMarkdown
 from .blood import BloodType
+from .entity_ref import EntityRef
 from .protocol import SnakeStr, VersionStr, ProtocolId, RecordId
 from .chinese import (
     ChineseEthnicGroup,
@@ -101,6 +103,7 @@ for descriptor in (
     AiralogyTypeDescriptor("CurrentTime", storage_kind="scalar", ui_kind="current-time"),
     AiralogyTypeDescriptor("CurrentProtocolId", storage_kind="scalar"),
     AiralogyTypeDescriptor("CurrentRecordId", storage_kind="scalar"),
+    AiralogyTypeDescriptor("EntityRef", storage_kind="reference", ui_kind="entity-ref"),
     AiralogyTypeDescriptor("BloodType", storage_kind="scalar"),
     AiralogyTypeDescriptor("ChineseEducationLevel", storage_kind="scalar"),
     AiralogyTypeDescriptor("ChineseEthnicGroup", storage_kind="scalar"),

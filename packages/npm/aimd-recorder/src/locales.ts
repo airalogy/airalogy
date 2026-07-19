@@ -107,6 +107,17 @@ export interface AimdRecorderMessages {
     jsonInvalidArray: string
     jsonInvalidItem: string
   }
+  entityRef: {
+    searchPlaceholder: (entity: string) => string
+    manualIdPlaceholder: string
+    add: string
+    select: string
+    clear: string
+    remove: string
+    noResolver: string
+    noMatches: string
+    searchFailed: string
+  }
   boolean: {
     unset: string
     true: string
@@ -321,6 +332,17 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     jsonInvalidArray: "JSON value must be an array.",
     jsonInvalidItem: "JSON array items do not match this list type.",
   },
+  entityRef: {
+    searchPlaceholder: entity => `Search ${entity}`,
+    manualIdPlaceholder: "Entity id",
+    add: "Add",
+    select: "Select",
+    clear: "Clear",
+    remove: "Remove",
+    noResolver: "No entity source is connected. Enter an id manually.",
+    noMatches: "No matching entities",
+    searchFailed: "Entity search failed.",
+  },
   boolean: {
     unset: "Not set",
     true: "True",
@@ -507,6 +529,17 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     jsonInvalidSyntax: "JSON 格式无效。",
     jsonInvalidArray: "JSON 值必须是数组。",
     jsonInvalidItem: "JSON 数组项与当前列表类型不匹配。",
+  },
+  entityRef: {
+    searchPlaceholder: entity => `搜索${entity}`,
+    manualIdPlaceholder: "实体 ID",
+    add: "添加",
+    select: "选择",
+    clear: "清除",
+    remove: "移除",
+    noResolver: "未连接实体来源，可手动输入 ID。",
+    noMatches: "没有匹配的实体",
+    searchFailed: "实体搜索失败。",
   },
   boolean: {
     unset: "未填写",

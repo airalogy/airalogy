@@ -153,6 +153,7 @@ export type AimdScopeKey =
   | "fig"
   | "media"
   | "refs"
+  | "connectors"
 
 /**
  * High-level scope names for semantic grouping
@@ -437,6 +438,57 @@ export interface AimdReferenceField {
 }
 
 /**
+ * Authentication metadata for a connector. Protocols may reference environment
+ * variable names, but must not inline secret values.
+ */
+export interface AimdConnectorAuthField {
+  /** Authentication scheme, for example bearer, none, api_key, oauth2. */
+  type?: string
+  /** Environment variable name that stores a bearer token or API key. */
+  token_env?: string
+  /** Additional connector-specific auth metadata. */
+  [key: string]: unknown
+}
+
+/**
+ * One connector entry from a fenced `connectors` block.
+ */
+export interface AimdConnectorField {
+  /** Stable connector id from the fenced `connectors` mapping key. */
+  id: string
+  /** Connector kind, for example entity_source. */
+  kind: string
+  /** Domain entity exposed by the connector, such as plasmid or patient. */
+  entity?: string
+  /** Optional descriptor URL or protocol-local descriptor path. */
+  descriptor?: string
+  /** Human-readable title. */
+  title?: string
+  /** Human-readable description. */
+  description?: string
+  /** Optional search endpoint or declarative search metadata. */
+  search?: unknown
+  /** Optional resolve endpoint or declarative resolve metadata. */
+  resolve?: unknown
+  /** Auth metadata that references external secrets. */
+  auth?: AimdConnectorAuthField
+  /** Additional connector-specific metadata. */
+  [key: string]: unknown
+}
+
+/**
+ * Connector registry extracted from a fenced `connectors` block.
+ */
+export interface AimdConnectorsField {
+  /** Optional schema/config version for the connectors payload. */
+  version?: string | number
+  /** Connector entries keyed by stable connector id. */
+  connectors: Record<string, AimdConnectorField>
+  /** Raw YAML payload inside the fenced block. */
+  raw: string
+}
+
+/**
  * Client runtime assigner modes currently supported by the recorder runtime.
  */
 export type AimdClientAssignerMode = "auto" | "auto_first" | "manual"
@@ -584,6 +636,8 @@ export interface ExtractedAimdFields {
   var_table: AimdVarTableField[]
   /** Frontend-only assigners from fenced `assigner runtime=client` blocks */
   client_assigner: AimdClientAssignerField[]
+  /** Connector registries from fenced `connectors` blocks */
+  connectors?: AimdConnectorsField[]
   /** Workflow definitions from fenced `workflow` blocks */
   workflow?: AimdWorkflowField[]
   /** Quiz definitions from ```quiz code blocks */

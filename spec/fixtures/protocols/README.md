@@ -16,3 +16,4 @@ These fixtures are regression and compatibility inputs for parser, assigner, fil
 | `multi-level-assigner` | Multi-level assigner chains with auto/manual/auto-first behavior. |
 | `critic-markup` | CriticMarkup-style review marks inside Airalogy Markdown text. |
 | `media` | AIMD media blocks and `ref_media` links. |
+| `entity-ref-connectors` | AIMD connectors blocks and `EntityRef` field metadata. |

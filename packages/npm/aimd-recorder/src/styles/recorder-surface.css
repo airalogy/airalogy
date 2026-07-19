@@ -452,6 +452,11 @@
   vertical-align: top;
   box-sizing: border-box;
 }
+.aimd-protocol-recorder__content .aimd-rec-inline--var-stacked--entity-ref {
+  display: inline-flex;
+  width: min(100%, 520px);
+  max-width: 100%;
+}
 .aimd-protocol-recorder__content .aimd-rec-inline--var-stacked:focus-within {
   border-color: var(--aimd-border-color-focus, #4181fd);
   box-shadow: 0 0 0 2px rgba(65, 129, 253, 0.14);
@@ -1035,6 +1040,164 @@
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border-top: 1px solid var(--aimd-border-color, #90caf9);
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__selected,
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 28px;
+  overflow: hidden;
+  border: 1px solid #b7d7ff;
+  border-radius: 7px;
+  background: #eef6ff;
+  color: #1f3656;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__entity {
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border-right: 1px solid #c8dcf1;
+  background: #d8ebff;
+  color: #075ebf;
+  font-size: 12px;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__label {
+  min-width: 0;
+  max-width: min(34ch, 52vw);
+  overflow: hidden;
+  padding: 0 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__id {
+  overflow: hidden;
+  max-width: 22ch;
+  padding: 0 8px 0 0;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__chip-remove {
+  align-self: stretch;
+  width: 28px;
+  border: 0;
+  border-left: 1px solid #c8dcf1;
+  background: #f8fbff;
+  color: #56657a;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__input {
+  flex: 1 1 180px;
+  min-width: 120px;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__action,
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__option {
+  min-height: 30px;
+  border: 1px solid #bfd0e5;
+  border-radius: 7px;
+  background: #f8fbff;
+  color: #075ebf;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__action {
+  flex: 0 0 auto;
+  padding: 0 10px;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__action--secondary {
+  color: #4b5f7a;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__hint,
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__error {
+  color: #667085;
+  font-size: 12px;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__error {
+  color: var(--rec-error);
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__option {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: min(100%, 260px);
+  padding: 6px 9px;
+  text-align: left;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__option:hover:not(:disabled),
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__action:hover:not(:disabled),
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__chip-remove:hover:not(:disabled) {
+  border-color: #76b9ff;
+  background: #edf6ff;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__option:disabled,
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__action:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__option-label,
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__option-id,
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__option-description {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__option-id,
+.aimd-protocol-recorder__content .aimd-rec-entity-ref__option-description {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .aimd-protocol-recorder__content .aimd-rec-inline__file-control {

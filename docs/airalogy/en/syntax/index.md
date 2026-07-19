@@ -23,6 +23,7 @@ This folder contains detailed documentation of the syntax rules for Airalogy Pro
 
 - [Quiz](./quiz.md)
 - [Environment](./env.md)
+- [Connectors](./connectors.md)
 - [Workflow](./workflow.md)
 - [Types](./types.md)
 - [Assigner type constraints](./assigner_type.md)

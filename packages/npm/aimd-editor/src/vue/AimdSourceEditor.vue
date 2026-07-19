@@ -21,6 +21,7 @@ const emit = defineEmits<{
 const CLIENT_ASSIGNER_FENCE = /^\s*(```|~~~)\s*assigner(?:\s+.*\bruntime\s*=\s*(?:"client"|'client'|client)\b.*)\s*$/
 const SERVER_ASSIGNER_FENCE = /^\s*(```|~~~)\s*assigner(?:\s+.*)?\s*$/
 const QUIZ_FENCE = /^\s*(```|~~~)\s*quiz(?:\s+.*)?\s*$/
+const CONNECTORS_FENCE = /^\s*(```|~~~)\s*connectors(?:\s+.*)?\s*$/
 const GENERIC_CODE_FENCE = /^\s*(```|~~~)\s*((?:\w|[/#-])+)(?:\s+.*)?\s*$/
 const EMPTY_CODE_FENCE = /^\s*(```|~~~)\s*$/
 const AIMD_DIAGNOSTIC_OWNER = 'airalogy-aimd'
@@ -77,6 +78,7 @@ function registerAimdLanguage(monaco: any) {
         [/\{\{/, { token: 'delimiter.bracket.aimd', next: '@aimdField' }],
         [/^#{1,6}\s.*$/, 'keyword.md'],
         [QUIZ_FENCE, { token: 'string.code', next: '@embeddedCodeblock', nextEmbedded: 'yaml' }],
+        [CONNECTORS_FENCE, { token: 'string.code', next: '@embeddedCodeblock', nextEmbedded: 'yaml' }],
         [CLIENT_ASSIGNER_FENCE, { token: 'string.code', next: '@embeddedCodeblock', nextEmbedded: 'javascript' }],
         [SERVER_ASSIGNER_FENCE, { token: 'string.code', next: '@embeddedCodeblock', nextEmbedded: 'python' }],
         [GENERIC_CODE_FENCE, { token: 'string.code', next: '@embeddedCodeblock', nextEmbedded: '$2' }],

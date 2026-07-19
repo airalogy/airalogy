@@ -10,6 +10,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const require = createRequire(import.meta.url)
 const editorContentPath = resolve(__dirname, '../src/vue/useEditorContent.ts')
+const sourceEditorPath = resolve(__dirname, '../src/vue/AimdSourceEditor.vue')
+const languageConfigPath = resolve(__dirname, '../src/language-config.ts')
 
 function loadTsModuleExports(path) {
   const source = readFileSync(path, 'utf8')
@@ -86,4 +88,20 @@ test('useEditorContent does not re-emit modelValue when syncFromProp updates int
   await vue.nextTick()
 
   assert.deepEqual(emitted, ['Exampleaa'])
+})
+
+test('source editor treats connectors blocks as AIMD YAML metadata blocks', () => {
+  const sourceEditor = readFileSync(sourceEditorPath, 'utf8')
+  const languageConfig = readFileSync(languageConfigPath, 'utf8')
+
+  assert.match(sourceEditor, /CONNECTORS_FENCE/)
+  assert.match(sourceEditor, /CONNECTORS_FENCE,[\s\S]*nextEmbedded: 'yaml'/)
+  assert.match(languageConfig, /connectors\(\?:\\s\+\.\*\)\?/)
+  assert.match(languageConfig, /nextEmbedded: "yaml"/)
+})
+
+test('inserted connectors blocks trigger WYSIWYG reparse', () => {
+  const source = readFileSync(editorContentPath, 'utf8')
+
+  assert.match(source, /quiz\|fig\|assigner\|connectors/)
 })

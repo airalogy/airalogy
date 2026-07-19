@@ -112,7 +112,51 @@ export type AimdFileInfoResolver = (
   context: AimdFileResolveContext,
 ) => AimdResolvedFileInfo | string | null | undefined | Promise<AimdResolvedFileInfo | string | null | undefined>
 
-export type AimdVarInputKind = "text" | "number" | "checkbox" | "boolean-select" | "textarea" | "scalar-list" | "date" | "datetime" | "time" | "dna" | "code" | "file"
+export interface AimdEntityRefValue {
+  entity: string
+  id: string
+  source?: string
+  label?: string
+  version?: string | number
+  snapshot?: Record<string, unknown>
+  [key: string]: unknown
+}
+
+export interface AimdEntityRefOption extends AimdEntityRefValue {
+  description?: string
+  disabled?: boolean
+}
+
+export interface AimdEntityResolveContext {
+  type: string
+  normalizedType: string
+  fieldKey: string
+  node: AimdVarNode
+  fieldMeta?: AimdFieldMeta
+  entity?: string
+  source?: string
+  query: string
+  multiple: boolean
+  record: AimdProtocolRecordData
+}
+
+export type AimdEntitySearchHandler = (
+  query: string,
+  context: AimdEntityResolveContext,
+) => AimdEntityRefOption[] | Promise<AimdEntityRefOption[]>
+
+export interface AimdEntityResolver {
+  search: AimdEntitySearchHandler
+  resolve?: (
+    id: string,
+    context: AimdEntityResolveContext,
+  ) => AimdEntityRefOption | null | undefined | Promise<AimdEntityRefOption | null | undefined>
+}
+
+export type AimdEntityResolverEntry = AimdEntityResolver | AimdEntitySearchHandler
+export type AimdEntityResolverMap = Record<string, AimdEntityResolverEntry>
+
+export type AimdVarInputKind = "text" | "number" | "checkbox" | "boolean-select" | "textarea" | "scalar-list" | "entity-ref" | "date" | "datetime" | "time" | "dna" | "code" | "file"
 export type AimdStepDetailDisplay = "auto" | "always"
 export type AimdChoiceOptionExplanationMode = "hidden" | "selected" | "submitted" | "graded"
 export type AimdScaleGradeDisplayMode = "hidden" | "completed" | "submitted" | "graded"
@@ -146,6 +190,8 @@ export interface AimdFieldMeta {
   disabled?: boolean
   placeholder?: string
   accept?: string              // native file input accept string for file-like vars
+  entity?: string              // entity namespace for EntityRef fields
+  source?: string              // connector id/source for EntityRef fields
   assigner?: { mode: AimdAssignerMode }
 }
 
@@ -280,6 +326,7 @@ export interface AimdTypePluginRenderContext extends AimdTypePluginValueContext 
   uploadFile?: AimdFileUploadHandler
   resolveFile?: (src: string) => string | null
   resolveFileInfo?: AimdFileInfoResolver
+  entityResolvers?: AimdEntityResolverMap
   emitChange: (value: unknown) => void
   emitBlur: () => void
 }

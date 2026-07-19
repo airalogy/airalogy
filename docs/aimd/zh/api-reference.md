@@ -26,6 +26,7 @@ import {
   rehypeAimd,
   protectAimdInlineTemplates,
   protectCriticMarkupSubstitutions,
+  parseConnectorsContent,
   parseWorkflowContent,
   parseMediaContent,
   parseRefsContent,
@@ -36,7 +37,7 @@ import {
 } from "@airalogy/aimd-core/parser"
 ```
 
-**`remarkAimd`**：用于 Unified remark 流水线的插件，把 AIMD 行内模板与 fenced `workflow` / `quiz` / `fig` / `media` / `refs` / `assigner` 块解析成类型化 metadata 和 AST 节点。Workflow block 会提取到 `file.data.aimdFields.workflow`，同时保留为 Markdown code block，避免 renderer 必须同步改造。
+**`remarkAimd`**：用于 Unified remark 流水线的插件，把 AIMD 行内模板与 fenced `connectors` / `workflow` / `quiz` / `fig` / `media` / `refs` / `assigner` 块解析成类型化 metadata 和 AST 节点。Connector block 会提取到 `file.data.aimdFields.connectors`，Workflow block 会提取到 `file.data.aimdFields.workflow`，同时 workflow 会保留为 Markdown code block，避免 renderer 必须同步改造。
 
 **`rehypeAimd`**：HTML AST 阶段对应的 rehype 插件。
 
@@ -51,6 +52,8 @@ import {
 **`parseRefsContent(content: string): AimdReferenceField[]`**：解析 fenced `refs` 代码块里的 BibTeX 内容，返回结构化 reference 条目，包括标准化后的 `title`、`author`、`year`、`doi`、`url` 等字段。
 
 **`parseMediaContent(content: string): AimdMediaField`**：解析 fenced `media` 代码块里的 key-value 内容，返回媒体定义；parser 会尽量保留字段，不负责强制标准化 `kind`。
+
+**`parseConnectorsContent(content: string): AimdConnectorsField`**：解析 fenced `connectors` 代码块里的 YAML 内容，返回 connector metadata。它会校验 connector id、`entity_source` 必要字段和 secret 安全规则，但不会拉取 descriptor、不调用 endpoint，也不会读取环境变量。
 
 **`parseWorkflowContent(content: string): AimdWorkflowField`**：解析 fenced `workflow` 代码块里的 YAML 内容，并校验 workflow version、nodes、transition id、来源/目标 node 引用、assigner 声明、transition inputs、按目标分组的 assign、权限和重试次数。parser 不执行 assigner，也不调用外部服务。
 
@@ -164,6 +167,7 @@ interface ExtractedAimdFields {
   var: string[]
   var_table: AimdVarTableField[]
   client_assigner: AimdClientAssignerField[]
+  connectors?: AimdConnectorsField[]
   workflow?: AimdWorkflowField[]
   quiz: AimdQuizField[]
   step: string[]

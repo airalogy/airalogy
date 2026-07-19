@@ -21,6 +21,7 @@ import type {
   AimdChoiceOptionExplanationMode,
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
+  AimdEntityResolverMap,
   AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
@@ -63,6 +64,7 @@ export interface RecorderMilkdownSurfaceState {
   wrapField?: (fieldKey: string, fieldType: string, defaultVNode: any) => any
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
+  entityResolvers?: AimdEntityResolverMap
   resolveFile?: (src: string) => string | null
   resolveFileInfo?: AimdFileInfoResolver
   uploadFile?: AimdFileUploadHandler

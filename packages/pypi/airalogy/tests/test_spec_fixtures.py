@@ -154,6 +154,34 @@ def test_media_fixture_extracts_python_media_templates():
     assert media["legend"] == "A local video resource packaged with the AIMD protocol."
 
 
+def test_entity_ref_connectors_fixture_extracts_python_templates():
+    content = (
+        PROTOCOL_FIXTURES_ROOT
+        / "entity-ref-connectors/protocol/protocol.aimd"
+    ).read_text(encoding="utf-8")
+
+    parsed = parse_aimd(content)
+
+    assert [field_name(field) for field in parsed["templates"]["var"]] == [
+        "parent_plasmid",
+        "parent_plasmids",
+    ]
+    assert parsed["templates"]["connectors"][0]["connectors"]["lab_plasmid_registry"] == {
+        "id": "lab_plasmid_registry",
+        "kind": "entity_source",
+        "entity": "plasmid",
+        "descriptor": "https://lims.example.com/airalogy/entity-sources/plasmid.json",
+        "auth": {
+            "type": "bearer",
+            "token_env": "LAB_PLASMID_TOKEN",
+        },
+    }
+    parent_plasmid = parsed["templates"]["var"][0]
+    assert parent_plasmid["type_annotation"] == "EntityRef | None"
+    assert parent_plasmid["kwargs"]["entity"] == "plasmid"
+    assert parent_plasmid["kwargs"]["source"] == "lab_plasmid_registry"
+
+
 def protocol_example_resource(relative_path: str):
     resource = protocols_root()
     for part in relative_path.split("/"):

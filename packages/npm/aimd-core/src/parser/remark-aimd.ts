@@ -45,6 +45,7 @@ import {
   getAimdFieldExamples,
   getAimdFieldTitle,
 } from "../utils/field-metadata"
+import { parseConnectorsContent } from "./connectors-parser"
 import { parseQuizContent } from "./quiz-parser"
 import { parseWorkflowContent } from "./workflow-parser"
 import { SKIP, visit } from "unist-util-visit"
@@ -314,6 +315,7 @@ export interface RemarkAimdOptions {
  * - ```fig blocks - Figure definitions
  * - ```media blocks - Media definitions
  * - ```refs blocks - BibTeX reference definitions
+ * - ```connectors blocks - Connector metadata definitions
  */
 const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
   const { extractFields = true } = options
@@ -325,6 +327,7 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
       var_definitions: [],
       var_table: [],
       client_assigner: [],
+      connectors: [],
       workflow: [],
       quiz: [],
       step: [],
@@ -369,6 +372,18 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
 
       if (lang === "assigner") {
         graphAssigners.push(...extractPythonAssignerGraphNodes(node.value))
+      }
+
+      if (lang === "connectors" && extractFields) {
+        try {
+          const connectors = parseConnectorsContent(node.value)
+          fields.connectors?.push(connectors)
+          parent.children.splice(index, 1)
+          return [SKIP, index] as const
+        }
+        catch (error) {
+          console.error("Failed to parse connectors block:", error)
+        }
       }
 
       if (lang === "workflow" && extractFields) {

@@ -31,6 +31,15 @@
       "type": "string",
       "description": "The ID of the current Airalogy Record."
     },
+    "EntityRef": {
+      "type_name": "EntityRef",
+      "import_from": "airalogy.types",
+      "storage_kind": "reference",
+      "ui_kind": "entity-ref",
+      "type": "object",
+      "title": "EntityRef",
+      "description": "Reference to a named entity in a connector-backed source.\n\n`entity` is the entity namespace, such as plasmid or strain. `id` is the\nstable identifier inside that namespace/source. Extra fields are allowed so\nhosts can retain display snapshots or source-specific reference metadata."
+    },
     "BloodType": {
       "type_name": "BloodType",
       "import_from": "airalogy.types",

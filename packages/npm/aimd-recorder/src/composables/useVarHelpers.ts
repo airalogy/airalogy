@@ -70,6 +70,12 @@ export type FileInputConfig = AimdFileInputConfig
 export type ScalarListItemType = "string" | "int" | "float"
 export type ScalarListInputItem = string | number
 
+export interface EntityRefTypeConfig {
+  multiple: boolean
+  entity?: string
+  source?: string
+}
+
 export function getFileInputConfig(
   type: string | undefined,
   kwargs?: Record<string, unknown>,
@@ -187,6 +193,10 @@ function resolveOverrideInputKind(inputType: string | undefined, codeLanguage: s
 
   if (normalized === 'scalarlist' || normalized === 'stringlist' || normalized === 'strlist') {
     return 'scalar-list'
+  }
+
+  if (normalized === 'entityref' || normalized === 'entityreference' || normalized === 'entity-ref') {
+    return 'entity-ref'
   }
 
   if (normalized === 'dna') {
@@ -334,6 +344,83 @@ function getScalarListItemTypeFromExpression(type: string | undefined): ScalarLi
   return undefined
 }
 
+function normalizeEntityRefMetadataString(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined
+  }
+  const trimmed = value.trim()
+  return trimmed || undefined
+}
+
+function stripTypeArgumentQuotes(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined
+  }
+  const trimmed = value.trim()
+  if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1).trim() || undefined
+  }
+  return trimmed || undefined
+}
+
+function getEntityFromEntityRefExpression(type: string | undefined): string | undefined {
+  const normalized = canonicalizeTypeExpression(type).replace(/^typing\./, "")
+  const match = normalized.match(/^(?:airalogy\.types\.)?entityref(?:\[(.*)\])?$/)
+  return match ? stripTypeArgumentQuotes(match[1]) : undefined
+}
+
+function isEntityRefExpression(type: string | undefined): boolean {
+  const normalized = canonicalizeTypeExpression(type).replace(/^typing\./, "")
+  return /^(?:airalogy\.types\.)?entityref(?:\[.*\])?$/.test(normalized)
+}
+
+export function getEntityRefTypeConfig(
+  type: string | undefined,
+  kwargs?: Record<string, unknown>,
+  fieldMeta?: AimdFieldMeta,
+): EntityRefTypeConfig | undefined {
+  const unwrapped = unwrapOptionalTypeAnnotation(type)
+  const compact = canonicalizeTypeExpression(unwrapped).replace(/^typing\./, "")
+  const directEntity = getEntityFromEntityRefExpression(unwrapped)
+
+  let multiple = false
+  let expressionEntity = directEntity
+  let isEntityRef = isEntityRefExpression(unwrapped)
+
+  const listMatch = compact.match(/^(?:list|array)\[(.*)\]$/)
+  if (listMatch) {
+    multiple = true
+    expressionEntity = getEntityFromEntityRefExpression(listMatch[1])
+    isEntityRef = isEntityRefExpression(listMatch[1])
+  } else if (compact.endsWith("[]")) {
+    multiple = true
+    const itemType = compact.slice(0, -2)
+    expressionEntity = getEntityFromEntityRefExpression(itemType)
+    isEntityRef = isEntityRefExpression(itemType)
+  }
+
+  if (!isEntityRef) {
+    return undefined
+  }
+
+  return {
+    multiple,
+    entity: normalizeEntityRefMetadataString(fieldMeta?.entity)
+      ?? normalizeEntityRefMetadataString(kwargs?.entity)
+      ?? expressionEntity,
+    source: normalizeEntityRefMetadataString(fieldMeta?.source)
+      ?? normalizeEntityRefMetadataString(kwargs?.source),
+  }
+}
+
+export function isEntityRefVarType(
+  type: string | undefined,
+  kwargs?: Record<string, unknown>,
+  fieldMeta?: AimdFieldMeta,
+): boolean {
+  return getEntityRefTypeConfig(type, kwargs, fieldMeta) !== undefined
+}
+
 export function getScalarListItemType(type: string | undefined): ScalarListItemType | undefined {
   const compact = canonicalizeTypeExpression(unwrapOptionalTypeAnnotation(type)).replace(/^typing\./, "")
 
@@ -375,6 +462,10 @@ export function getVarInputKind(type: string | undefined, options: VarInputKindO
   const typePlugin = options.typePlugin ?? resolveAimdTypePlugin(type, options.typePlugins)
   if (typePlugin?.inputKind) {
     return typePlugin.inputKind
+  }
+
+  if (isEntityRefVarType(type, options.kwargs, options.fieldMeta)) {
+    return "entity-ref"
   }
 
   if (isScalarListVarType(type)) {
@@ -494,6 +585,37 @@ export function getScalarListInputItems(value: unknown): string[] {
   }
 
   return [String(normalized)]
+}
+
+function getEntityRefDisplayToken(value: unknown): string {
+  const normalized = unwrapStructuredValue(value)
+  if (typeof normalized === "string") {
+    return normalized.trim()
+  }
+  if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) {
+    return ""
+  }
+
+  const record = normalized as Record<string, unknown>
+  const label = record.label ?? record.name ?? record.title
+  const id = record.id ?? record.value ?? record.key
+  const labelText = typeof label === "string" ? label.trim() : ""
+  const idText = typeof id === "string" || typeof id === "number" ? String(id).trim() : ""
+  if (labelText && idText && labelText !== idText) {
+    return `${labelText} (${idText})`
+  }
+  return labelText || idText
+}
+
+function getEntityRefDisplayValue(value: unknown): string {
+  const normalized = unwrapStructuredValue(value)
+  if (Array.isArray(normalized)) {
+    return normalized
+      .map(item => getEntityRefDisplayToken(item))
+      .filter(Boolean)
+      .join(", ")
+  }
+  return getEntityRefDisplayToken(normalized)
 }
 
 function toFiniteNumber(value: unknown): number | undefined {
@@ -782,6 +904,10 @@ export function getVarInputDisplayValue(
     ))
   }
 
+  if (kind === "entity-ref") {
+    return getEntityRefDisplayValue(normalized)
+  }
+
   if (isStructuredVarType(options.type)) {
     return stringifyStructuredInputValue(normalized)
   }
@@ -890,7 +1016,8 @@ function getVarControlMinWidth(inputKind: VarInputKind): number {
     case "code":
     case "file":
     case "scalar-list":
-      return inputKind === "scalar-list" ? 220 : 160
+    case "entity-ref":
+      return inputKind === "scalar-list" || inputKind === "entity-ref" ? 220 : 160
     default:
       return 0
   }
@@ -907,6 +1034,7 @@ function getVarControlExtraWidth(inputKind: VarInputKind): number {
     case "file":
       return 24
     case "scalar-list":
+    case "entity-ref":
       return 16
     default:
       return 4
@@ -1102,7 +1230,7 @@ export function applyVarStackWidth(target: HTMLElement, inputKind: VarInputKind)
     return
   }
 
-  if (inputKind === "scalar-list") {
+  if (inputKind === "scalar-list" || inputKind === "entity-ref") {
     wrapper.style.width = "100%"
     wrapper.style.maxWidth = "100%"
     return

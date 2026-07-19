@@ -14,12 +14,14 @@ import AimdQuizRecorder from "./AimdQuizRecorder.vue"
 
 const AimdDnaSequenceField = defineAsyncComponent(() => import("./AimdDnaSequenceField.vue"))
 const AimdMarkdownField = defineAsyncComponent(() => import("./AimdMarkdownField.vue"))
+const AimdEntityRefField = defineAsyncComponent(() => import("./AimdEntityRefField.vue"))
 
 export {
   AimdAssignerGraph,
   AimdRecorder,
   AimdRecorderEditor,
   AimdQuizRecorder,
+  AimdEntityRefField,
   AimdDnaSequenceField,
   AimdMarkdownField,
 }

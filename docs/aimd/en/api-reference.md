@@ -26,6 +26,7 @@ import {
   rehypeAimd,
   protectAimdInlineTemplates,
   protectCriticMarkupSubstitutions,
+  parseConnectorsContent,
   parseWorkflowContent,
   parseMediaContent,
   parseRefsContent,
@@ -36,7 +37,7 @@ import {
 } from "@airalogy/aimd-core/parser"
 ```
 
-**`remarkAimd`** — Unified remark plugin that parses AIMD inline templates and fenced blocks (`workflow`, `quiz`, `fig`, `media`, `refs`, `assigner`) into typed metadata and AST nodes. Attach to a `unified().use(remarkParse)` pipeline. Workflow blocks are extracted into `file.data.aimdFields.workflow` and left as Markdown code blocks for renderers.
+**`remarkAimd`** — Unified remark plugin that parses AIMD inline templates and fenced blocks (`connectors`, `workflow`, `quiz`, `fig`, `media`, `refs`, `assigner`) into typed metadata and AST nodes. Attach to a `unified().use(remarkParse)` pipeline. Connector blocks are extracted into `file.data.aimdFields.connectors`, workflow blocks are extracted into `file.data.aimdFields.workflow`, and workflow blocks are left as Markdown code blocks for renderers.
 
 **`rehypeAimd`** — Rehype plugin counterpart for the HTML AST stage.
 
@@ -51,6 +52,8 @@ import {
 **`parseRefsContent(content: string): AimdReferenceField[]`** — Parses fenced `refs` block content in BibTeX format and returns structured reference entries with normalized fields such as `title`, `author`, `year`, `doi`, and `url`.
 
 **`parseMediaContent(content: string): AimdMediaField`** — Parses key-value content from a fenced `media` block and returns a media definition; the parser preserves fields and does not enforce standard `kind` values.
+
+**`parseConnectorsContent(content: string): AimdConnectorsField`** — Parses the YAML body of a fenced `connectors` block into connector metadata. It validates connector ids, `entity_source` requirements, and secret hygiene, but it does not fetch descriptors, call endpoints, or read environment variables.
 
 **`parseWorkflowContent(content: string): AimdWorkflowField`** — Parses the YAML body of a fenced `workflow` block and validates workflow version, nodes, transition ids, source/target node references, assigner declarations, transition inputs, grouped target assignments, permissions, and retry limits. The parser does not execute assigners or call external services.
 
@@ -164,6 +167,7 @@ interface ExtractedAimdFields {
   var: string[]
   var_table: AimdVarTableField[]
   client_assigner: AimdClientAssignerField[]
+  connectors?: AimdConnectorsField[]
   workflow?: AimdWorkflowField[]
   quiz: AimdQuizField[]
   step: string[]

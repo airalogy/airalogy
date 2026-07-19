@@ -41,6 +41,7 @@ const renderedContent = computed(() => (
       :wrap-field="surfaceState.wrapField"
       :custom-renderers="surfaceState.customRenderers"
       :field-adapters="surfaceState.fieldAdapters"
+      :entity-resolvers="surfaceState.entityResolvers"
       :resolve-file="surfaceState.resolveFile"
       :resolve-file-info="surfaceState.resolveFileInfo"
       :upload-file="surfaceState.uploadFile"

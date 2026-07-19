@@ -21,6 +21,7 @@ import type {
   AimdChoiceOptionExplanationMode,
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
+  AimdEntityResolverMap,
   AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
@@ -72,6 +73,7 @@ const props = withDefaults(defineProps<{
   wrapField?: (fieldKey: string, fieldType: string, defaultVNode: any) => any
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
+  entityResolvers?: AimdEntityResolverMap
   resolveFile?: (src: string) => string | null
   resolveFileInfo?: AimdFileInfoResolver
   uploadFile?: AimdFileUploadHandler
@@ -100,6 +102,7 @@ const props = withDefaults(defineProps<{
   wrapField: undefined,
   customRenderers: undefined,
   fieldAdapters: undefined,
+  entityResolvers: undefined,
   resolveFile: undefined,
   resolveFileInfo: undefined,
   uploadFile: undefined,
@@ -206,6 +209,7 @@ const surfaceState = reactive<RecorderMilkdownSurfaceState>({
   wrapField: props.wrapField,
   customRenderers: props.customRenderers,
   fieldAdapters: props.fieldAdapters,
+  entityResolvers: props.entityResolvers,
   resolveFile: props.resolveFile,
   resolveFileInfo: props.resolveFileInfo,
   uploadFile: props.uploadFile,
@@ -240,6 +244,7 @@ watchEffect(() => {
   surfaceState.wrapField = props.wrapField
   surfaceState.customRenderers = props.customRenderers
   surfaceState.fieldAdapters = props.fieldAdapters
+  surfaceState.entityResolvers = props.entityResolvers
   surfaceState.resolveFile = props.resolveFile
   surfaceState.resolveFileInfo = props.resolveFileInfo
   surfaceState.uploadFile = props.uploadFile

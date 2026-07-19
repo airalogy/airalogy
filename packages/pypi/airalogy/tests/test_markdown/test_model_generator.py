@@ -204,6 +204,52 @@ options:
         with pytest.raises(ValidationError):
             var_model(blood_type="unknown")
 
+    def test_generate_model_validates_entity_ref(self):
+        code = generate_model(
+            '{{var|parent_plasmid: EntityRef | None, entity="plasmid", source="lab_plasmid_registry"}}'
+        )
+
+        assert "from airalogy.types import EntityRef" in code
+        assert "parent_plasmid: EntityRef | None" in code
+
+        namespace = {}
+        exec(code, namespace)
+        var_model = namespace["VarModel"]
+        schema = var_model.model_json_schema()
+        assert schema["properties"]["parent_plasmid"]["entity"] == "plasmid"
+        assert (
+            schema["properties"]["parent_plasmid"]["source"]
+            == "lab_plasmid_registry"
+        )
+        record = var_model(
+            parent_plasmid={
+                "entity": "plasmid",
+                "source": "lab_plasmid_registry",
+                "id": " pUC19 ",
+                "label": " pUC19 cloning vector ",
+            }
+        )
+
+        assert record.parent_plasmid.entity == "plasmid"
+        assert record.parent_plasmid.source == "lab_plasmid_registry"
+        assert record.parent_plasmid.id == "pUC19"
+        assert record.parent_plasmid.label == "pUC19 cloning vector"
+        assert var_model(parent_plasmid=None).parent_plasmid is None
+        with pytest.raises(ValidationError):
+            var_model(parent_plasmid={"entity": "plasmid"})
+
+    def test_generate_model_keeps_entity_ref_generic_annotation_importable(self):
+        code = generate_model('{{var|parent_plasmid: EntityRef["plasmid"]}}')
+
+        assert "from airalogy.types import EntityRef" in code
+        assert 'parent_plasmid: EntityRef["plasmid"]' in code
+
+        namespace = {}
+        exec(code, namespace)
+        var_model = namespace["VarModel"]
+        record = var_model(parent_plasmid={"entity": "plasmid", "id": "pUC19"})
+        assert record.parent_plasmid.id == "pUC19"
+
     def test_generate_simple_var_table(self):
         """Test generating model from simple var table."""
         content = "{{var|students, subvars=[name, age]}}"

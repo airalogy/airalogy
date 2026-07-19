@@ -14,6 +14,9 @@
 export { default as remarkAimd } from './parser/remark-aimd'
 export { default as rehypeAimd } from './parser/rehype-aimd'
 export {
+  parseConnectorsContent,
+} from './parser/connectors-parser'
+export {
   isAimdWorkflowReference,
   parseWorkflowContent,
 } from './parser/workflow-parser'
@@ -36,6 +39,9 @@ export type {
   AimdCheckField,
   AimdClientAssignerField,
   AimdClientAssignerMode,
+  AimdConnectorAuthField,
+  AimdConnectorField,
+  AimdConnectorsField,
   AimdFieldType,
   AimdMediaField,
   AimdQuizField,

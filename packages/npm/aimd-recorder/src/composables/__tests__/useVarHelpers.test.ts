@@ -6,7 +6,9 @@ import {
   getVarInputKind,
   getScalarListInputItems,
   getScalarListItemType,
+  getEntityRefTypeConfig,
   isNullableVarType,
+  isEntityRefVarType,
   isScalarListVarType,
   isStructuredVarType,
   normalizeScalarListInputItems,
@@ -134,6 +136,15 @@ describe('getVarInputKind', () => {
     expect(getVarInputKind('int[]')).toBe('scalar-list')
   })
 
+  it('returns "entity-ref" for EntityRef types before structured list fallback', () => {
+    expect(getVarInputKind('EntityRef')).toBe('entity-ref')
+    expect(getVarInputKind('EntityRef | None')).toBe('entity-ref')
+    expect(getVarInputKind('Optional[EntityRef]')).toBe('entity-ref')
+    expect(getVarInputKind('list[EntityRef] | None')).toBe('entity-ref')
+    expect(getVarInputKind('EntityRef["plasmid"]')).toBe('entity-ref')
+    expect(getVarInputKind('list[EntityRef["plasmid"]]')).toBe('entity-ref')
+  })
+
   it('returns "textarea" for structured non-scalar list and object types', () => {
     expect(getVarInputKind('list')).toBe('textarea')
     expect(getVarInputKind('list[bool]')).toBe('textarea')
@@ -167,6 +178,27 @@ describe('getVarInputKind', () => {
     expect(getVarInputKind('str', { inputType: 'audio' })).toBe('file')
     expect(getVarInputKind('str', { kwargs: { file_extension: 'xlsx' } })).toBe('file')
     expect(getVarInputKind('str', { fieldMeta: { accept: '.pdf' } })).toBe('file')
+  })
+})
+
+describe('EntityRef helpers', () => {
+  it('detects single and list EntityRef annotations', () => {
+    expect(isEntityRefVarType('EntityRef')).toBe(true)
+    expect(isEntityRefVarType('list[EntityRef]')).toBe(true)
+    expect(isEntityRefVarType('list[str]')).toBe(false)
+  })
+
+  it('extracts entity and source metadata from kwargs and generic syntax', () => {
+    expect(getEntityRefTypeConfig('EntityRef', { entity: 'plasmid', source: 'lab_plasmid_registry' })).toEqual({
+      multiple: false,
+      entity: 'plasmid',
+      source: 'lab_plasmid_registry',
+    })
+    expect(getEntityRefTypeConfig('list[EntityRef["plasmid"]] | None')).toEqual({
+      multiple: true,
+      entity: 'plasmid',
+      source: undefined,
+    })
   })
 })
 

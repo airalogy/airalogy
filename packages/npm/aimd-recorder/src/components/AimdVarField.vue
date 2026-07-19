@@ -10,9 +10,11 @@ import {
 } from "@airalogy/aimd-core/utils"
 import type {
   AimdFieldMeta,
+  AimdEntityResolverMap,
   AimdFileInfoResolver,
   AimdFileResolveContext,
   AimdFileUploadHandler,
+  AimdProtocolRecordData,
   AimdResolvedFileInfo,
   AimdTypePlugin,
   AimdVarInputKind,
@@ -34,6 +36,7 @@ import {
   getFileInputConfig,
   getScalarListInputItems,
   getScalarListItemType,
+  getEntityRefTypeConfig,
   getVarEnumSelectValue,
   getVarEnumValueFromSelectValue,
   isNullableVarType,
@@ -44,6 +47,7 @@ import {
 } from "../composables/useVarHelpers"
 
 const AimdCodeField = defineAsyncComponent(() => import("./AimdCodeField.vue"))
+const AimdEntityRefField = defineAsyncComponent(() => import("./AimdEntityRefField.vue"))
 
 function normalizeMetaString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined
@@ -494,6 +498,11 @@ export default defineComponent({
     uploadFile: { type: Function as PropType<AimdFileUploadHandler | undefined>, default: undefined },
     resolveFile: { type: Function as PropType<((src: string) => string | null) | undefined>, default: undefined },
     resolveFileInfo: { type: Function as PropType<AimdFileInfoResolver | undefined>, default: undefined },
+    entityResolvers: { type: Object as PropType<AimdEntityResolverMap | undefined>, default: undefined },
+    record: {
+      type: Object as PropType<AimdProtocolRecordData>,
+      default: () => ({ var: {}, step: {}, check: {}, quiz: {} }),
+    },
   },
   emits: ["change", "blur"],
   setup(props, { emit }) {
@@ -674,7 +683,10 @@ export default defineComponent({
         }
       }
 
-      function syncCompositeControlLayout(control: HTMLElement) {
+      function syncCompositeControlLayout(control: Element | null | undefined) {
+        if (!(control instanceof HTMLElement)) {
+          return
+        }
         applyVarStackWidth(control, inputKind)
       }
 
@@ -720,7 +732,7 @@ export default defineComponent({
       }
 
       const renderHeaderAssignerActions = (headerAction?: VNode | null): VNode | null => {
-        const hasAssignerActions = ["file", "code", "scalar-list"].includes(inputKind) && Boolean(props.assignerControl || props.assignerStatus)
+        const hasAssignerActions = ["file", "code", "scalar-list", "entity-ref"].includes(inputKind) && Boolean(props.assignerControl || props.assignerStatus)
         if (!headerAction && !hasAssignerActions) {
           return null
         }
@@ -922,6 +934,31 @@ export default defineComponent({
             onBlur: onVarBlur,
           }),
           "aimd-rec-inline--var-stacked--code",
+          { controlRow: false },
+        )
+      }
+
+      if (inputKind === "entity-ref") {
+        const entityConfig = getEntityRefTypeConfig(type, node.definition?.kwargs, meta) ?? { multiple: false }
+        return renderStackedVar(
+          h(AimdEntityRefField, {
+            node,
+            value: props.value,
+            disabled,
+            messages: props.messages,
+            fieldMeta: meta,
+            type,
+            entityConfig,
+            entityResolvers: props.entityResolvers,
+            record: props.record,
+            onVnodeMounted: (vnode: any) => syncCompositeControlLayout(vnode.el as HTMLElement),
+            onVnodeUpdated: (vnode: any) => syncCompositeControlLayout(vnode.el as HTMLElement),
+            onChange: (payload: { value: unknown }) => {
+              emit("change", { id, value: payload.value, type, inputKind })
+            },
+            onBlur: onVarBlur,
+          }),
+          "aimd-rec-inline--var-stacked--entity-ref",
           { controlRow: false },
         )
       }

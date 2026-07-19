@@ -22,6 +22,7 @@ const criticMarkupFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/cri
 const quotedTemplateTextFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/quoted-template-text/protocol/protocol.aimd')
 const refsFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/refs/protocol/protocol.aimd')
 const mediaFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/media/protocol/protocol.aimd')
+const entityRefConnectorsFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/entity-ref-connectors/protocol/protocol.aimd')
 const workflowFixture = path.join(monorepoRoot, 'spec/fixtures/workflows/parameter-optimization/workflow.aimd')
 
 function parseAimd(content) {
@@ -95,6 +96,29 @@ test('media fixture extracts media blocks and media references', () => {
     poster: 'files/lecture-poster.jpg',
     title: 'Lecture Video',
     legend: 'A local video resource packaged with the AIMD protocol.',
+  })
+})
+
+test('entity ref connectors fixture extracts connectors and EntityRef metadata', () => {
+  const content = readFileSync(entityRefConnectorsFixture, 'utf8')
+  const fields = parseAimd(content)
+
+  assert.deepEqual(fields.var, ['parent_plasmid', 'parent_plasmids'])
+  assert.equal(fields.connectors.length, 1)
+  assert.deepEqual(fields.connectors[0].connectors.lab_plasmid_registry, {
+    id: 'lab_plasmid_registry',
+    kind: 'entity_source',
+    entity: 'plasmid',
+    descriptor: 'https://lims.example.com/airalogy/entity-sources/plasmid.json',
+    auth: {
+      type: 'bearer',
+      token_env: 'LAB_PLASMID_TOKEN',
+    },
+  })
+  assert.deepEqual(fields.var_definitions.find(field => field.id === 'parent_plasmid').kwargs, {
+    title: 'Source plasmid',
+    entity: 'plasmid',
+    source: 'lab_plasmid_registry',
   })
 })
 

@@ -6,6 +6,7 @@
 Core parser and canonical field extraction for AIMD (Airalogy Markdown).
 
 It also extracts frontend-only assigners from fenced `assigner runtime=client` blocks into `fields.client_assigner`.
+Fenced `connectors` YAML blocks are extracted into `fields.connectors` as protocol metadata for connector-backed fields such as `EntityRef`.
 Simple `var` ids remain available in `fields.var`; their parsed type, default, and kwargs metadata are also exposed through `fields.var_definitions`.
 Display metadata such as `title`, `description`, and `example`/`examples` is extracted for `var` and `var_table` fields so renderer and recorder packages can show human-friendly labels while keeping canonical ids stable.
 It also exposes `remarkCriticMarkup` for CriticMarkup-style review marks in the Markdown AST without adding those marks to extracted AIMD fields.
@@ -133,6 +134,7 @@ answer: true
 
 ```ts
 import {
+  parseConnectorsContent,
   parseVarDefinition,
   validateClientAssignerFunctionSource,
   validateVarDefinition,
@@ -142,6 +144,8 @@ import {
 ```
 
 Use `validateClientAssignerFunctionSource()` when host tooling needs to preflight fenced `assigner runtime=client` functions before saving or executing them. Use `validateVarDefaultType()` to surface warnings when an authored AIMD var default does not match its declared type. Use `validateVarKwargs()` or `validateVarDefinition()` when tooling also needs to warn about Pydantic-style numeric constraints such as `gt`, `ge`, `lt`, `le`, and `multiple_of` on non-numeric var types.
+
+Use `parseConnectorsContent()` when tooling needs to validate the YAML body of a fenced `connectors` block before running a full remark pipeline. The parser reads metadata only; it does not fetch descriptors, call endpoints, or read environment secrets.
 
 ## Record Query Utilities
 

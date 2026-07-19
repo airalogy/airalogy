@@ -138,6 +138,40 @@ class VarModel(BaseModel):
 
 Declaring a field as `RecordId` produces a dropdown that lets the user pick an existing Record; the field is then set to that Record’s string ID.
 
+## `EntityRef`
+
+`EntityRef` stores a reference to an entity that lives in a connector-backed source, such as a plasmid registry, sample inventory, LIMS table, or another Protocol's Records. It is a generic reference container; Airalogy does not hard-code every possible entity class.
+
+```python
+from airalogy.types import EntityRef
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
+    parent_plasmid: EntityRef | None = None
+```
+
+The stored value is a JSON object with at least `entity` and `id`:
+
+```json
+{
+  "entity": "plasmid",
+  "source": "lab_plasmid_registry",
+  "id": "pUC19",
+  "label": "pUC19 cloning vector"
+}
+```
+
+`source`, `label`, `version`, and `snapshot` are optional. `label` is a display cache, not the authoritative key; UIs should fall back to `id` when it is absent. `snapshot` is an optional JSON object for preserving extra source context.
+
+In AIMD, declare the entity namespace and connector source as field metadata:
+
+```md
+Parent plasmid: {{var|parent_plasmid: EntityRef | None, entity="plasmid", source="lab_plasmid_registry"}}
+Parent plasmids: {{var|parent_plasmids: list[EntityRef] | None, entity="plasmid", source="lab_plasmid_registry"}}
+```
+
+The related connector can be declared with a fenced [`connectors` block](/en/syntax/connectors). Host apps and recorder UIs may use that metadata to provide live search/select controls, while Python/Pydantic still validates the saved reference structure.
+
 ## `FileId*` Types
 
 When a field uses any `FileId*` type, the UI shows an upload button. The uploaded file is stored in Airalogy’s file system and assigned a unique string ID.

@@ -25,6 +25,7 @@ import type {
   AimdAssignerRunner,
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
+  AimdEntityResolverMap,
   AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
@@ -168,6 +169,12 @@ const props = withDefaults(defineProps<{
   fieldAdapters?: AimdRecorderFieldAdapters
 
   /**
+   * EntityRef resolver map keyed by connector id/source or entity namespace.
+   * Used by built-in EntityRef fields to search/select related records.
+   */
+  entityResolvers?: AimdEntityResolverMap
+
+  /**
    * Resolves relative paths / Airalogy file IDs to displayable URLs.
    */
   resolveFile?: (src: string) => string | null
@@ -213,6 +220,7 @@ const props = withDefaults(defineProps<{
   wrapField: undefined,
   customRenderers: undefined,
   fieldAdapters: undefined,
+  entityResolvers: undefined,
   resolveFile: undefined,
   resolveFileInfo: undefined,
   uploadFile: undefined,
@@ -1078,7 +1086,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
     ...recordSearch.getFieldClasses(fieldKey),
   ]
   const canUseInternalAssignerControl = Boolean(meta?.enumOptions?.length)
-    || ["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "checkbox", "boolean-select", "file", "code"].includes(inputKind)
+    || ["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "entity-ref", "checkbox", "boolean-select", "file", "code"].includes(inputKind)
   const fieldAssignerControl = resolveAssignerControl("var", fieldKey)
   const internalAssignerControl = canUseInternalAssignerControl ? fieldAssignerControl : null
 
@@ -1114,6 +1122,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
       uploadFile: props.uploadFile,
       resolveFile: props.resolveFile,
       resolveFileInfo: props.resolveFileInfo,
+      entityResolvers: props.entityResolvers,
       emitChange: emitVarChange,
       emitBlur: emitVarBlur,
     })
@@ -1147,6 +1156,8 @@ function renderInlineVar(node: AimdVarNode): VNode {
     uploadFile: props.uploadFile,
     resolveFile: props.resolveFile,
     resolveFileInfo: props.resolveFileInfo,
+    entityResolvers: props.entityResolvers,
+    record: localRecord,
     onChange: (payload: { id: string, value: unknown, type: string, inputKind: string }) => {
       emitVarChange(payload.value)
     },

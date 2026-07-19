@@ -11,6 +11,7 @@ import type {
   AimdChoiceOptionExplanationMode,
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
+  AimdEntityResolverMap,
   AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
@@ -73,6 +74,7 @@ const props = withDefaults(defineProps<{
   wrapField?: (fieldKey: string, fieldType: string, defaultVNode: any) => any
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
+  entityResolvers?: AimdEntityResolverMap
   resolveFile?: (src: string) => string | null
   resolveFileInfo?: AimdFileInfoResolver
   uploadFile?: AimdFileUploadHandler
@@ -121,6 +123,7 @@ const props = withDefaults(defineProps<{
   wrapField: undefined,
   customRenderers: undefined,
   fieldAdapters: undefined,
+  entityResolvers: undefined,
   resolveFile: undefined,
   resolveFileInfo: undefined,
   uploadFile: undefined,
@@ -1453,6 +1456,7 @@ defineExpose({
             :wrap-field="wrapField"
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
+            :entity-resolvers="entityResolvers"
             :resolve-file="resolveFile"
             :resolve-file-info="resolveFileInfo"
             :upload-file="uploadFile"
@@ -1497,6 +1501,7 @@ defineExpose({
             :wrap-field="renderVisualEditWrapper"
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
+            :entity-resolvers="entityResolvers"
             :resolve-file="resolveFile"
             :resolve-file-info="resolveFileInfo"
             :upload-file="uploadFile"

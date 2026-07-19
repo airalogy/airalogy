@@ -51,6 +51,7 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - `CurrentTime` and `UserName` can fill recorder values automatically from runtime context.
 - `AiralogyMarkdown` renders as a full-width embedded AIMD/Markdown field with `Preview` and `Source` modes; preview uses the AIMD renderer and renders Mermaid code blocks, while source editing still supports switching to `WYSIWYG`.
 - `DNASequence` renders a dedicated sequence widget with interactive and raw-structure modes, file import/export, topology switching, feature editing, and `SeqViz`-based visualization.
+- `EntityRef` and `list[EntityRef]` render as entity-reference controls when the host passes `entityResolvers`; resolver keys can match the AIMD `source` connector id or the `entity` namespace.
 - `ref_var` references display current var values as readonly inline content when available.
 - `var` and `var_table` labels display AIMD `title`, keep the canonical id visible when a title is present, and show `description` plus `example`/`examples` details only on hover or keyboard focus. The first scalar example becomes the default placeholder when no explicit placeholder override is provided.
 - Select-backed nullable types such as `bool | None`, `Literal[...] | None`, and `BloodType | None` show a localized `Not set` option and store that choice as `null`. Required selects omit the empty option, so choosing a real enum value remains mandatory.

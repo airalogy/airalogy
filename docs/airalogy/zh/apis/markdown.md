@@ -69,12 +69,15 @@ result = aimd.parse_aimd(content)
     "ref_fig": [],
     "cite": [],
     "refs": [],
-    "assigner": []
+    "assigner": [],
+    "connectors": []
   }
 }
 ```
 
 Fenced `refs` 代码块会按 BibTeX 解析到 `templates.refs`。每个条目包含 `id`、`entry_type`、`raw`、标准化 `fields`，以及 `title`、`author`、`year`、`doi`、`url` 等常用展示字段。
+
+Fenced `connectors` 代码块会解析到 `templates.connectors`，作为 connector metadata。Parser 会校验声明，但不会拉取 descriptor、不调用 endpoint，也不会读取 secret。
 
 最小案例（`var` + `quiz`）：
 

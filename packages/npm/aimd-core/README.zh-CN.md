@@ -6,6 +6,7 @@
 AIMD（Airalogy Markdown）的核心解析器与规范化字段提取能力。
 
 它也会把 fenced `assigner runtime=client` 代码块提取为 `fields.client_assigner` 前端元数据。
+Fenced `connectors` YAML 代码块会被提取到 `fields.connectors`，作为 `EntityRef` 这类 connector-backed 字段的 Protocol metadata。
 普通 `var` 的 id 仍然保留在 `fields.var`；其解析出的类型、默认值和 kwargs 元数据也会通过 `fields.var_definitions` 暴露。
 `title`、`description`、`example`/`examples` 这类显示元数据会被提取到 `var` 和 `var_table` 字段结构里，renderer 与 recorder 可以显示更友好的标签，同时保留稳定的规范 id。
 它也暴露 `remarkCriticMarkup`，用于把 CriticMarkup 风格审阅标记解析进 Markdown AST，但不会把这些审阅标记加入 AIMD 字段提取结果。
@@ -133,6 +134,7 @@ answer: true
 
 ```ts
 import {
+  parseConnectorsContent,
   parseVarDefinition,
   validateClientAssignerFunctionSource,
   validateVarDefinition,
@@ -142,6 +144,8 @@ import {
 ```
 
 如果宿主工具需要在保存或执行前预检 fenced `assigner runtime=client` 函数，可使用 `validateClientAssignerFunctionSource()`。如果你想在作者填写 AIMD var 默认值时提示类型不匹配警告，可使用 `validateVarDefaultType()`。如果工具还需要提示 `gt`、`ge`、`lt`、`le`、`multiple_of` 这类 Pydantic 风格数值约束被用在非数值类型上，可使用 `validateVarKwargs()` 或 `validateVarDefinition()`。
+
+如果工具需要在完整 remark pipeline 之外单独校验 fenced `connectors` 代码块的 YAML body，可以使用 `parseConnectorsContent()`。该 parser 只读取 metadata，不会拉取 descriptor、不调用 endpoint，也不会读取环境 secret。
 
 ## Record 查询工具
 

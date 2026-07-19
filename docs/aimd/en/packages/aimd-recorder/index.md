@@ -18,6 +18,7 @@ pnpm add @airalogy/aimd-recorder @airalogy/aimd-core
 - Reusable quiz answer component: `AimdQuizRecorder`.
 - Built-in recorder widgets for `CurrentTime`, `UserName`, `AiralogyMarkdown`, and `DNASequence`.
 - Automatic select inputs for official named enum types such as `BloodType`, using metadata generated from the Python `airalogy.types` registry.
+- Entity-reference controls for `EntityRef` and `list[EntityRef]` when the host provides `entityResolvers`.
 - Full-row repeatable, drag-reorderable item inputs plus JSON array mode for scalar list variables such as `list[str]`, `list[int]`, and `list[float]`.
 - Frontend-only `assigner runtime=client` execution for pure var computations.
 

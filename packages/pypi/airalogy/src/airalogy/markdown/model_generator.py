@@ -28,6 +28,11 @@ STANDARD_LIBRARY_TYPES: Dict[str, Tuple[str, str]] = {
     "IPv6Address": ("ipaddress", "IPv6Address"),
 }
 
+FIELD_JSON_SCHEMA_EXTRA_KWARGS = {
+    "entity",
+    "source",
+}
+
 
 def _type_matches(type_name: str, annotation: str) -> bool:
     """
@@ -173,6 +178,37 @@ class ModelGenerator:
         else:
             return str(value)
 
+    def _format_field_kwarg(self, key: str, value: Any) -> str:
+        if isinstance(value, str):
+            return f'{key}="{value}"'
+        return f"{key}={value}"
+
+    def _format_field_call(self, default_value: Any, kwargs: Dict[str, Any]) -> str:
+        field_args = []
+
+        if default_value is not None:
+            field_args.append(
+                f"default={self._format_default_value(default_value)}"
+            )
+
+        json_schema_extra: Dict[str, Any] = {}
+        existing_json_schema_extra = kwargs.get("json_schema_extra")
+        if isinstance(existing_json_schema_extra, dict):
+            json_schema_extra.update(existing_json_schema_extra)
+
+        for key, value in kwargs.items():
+            if key in FIELD_JSON_SCHEMA_EXTRA_KWARGS:
+                json_schema_extra[key] = value
+                continue
+            if key == "json_schema_extra" and isinstance(value, dict):
+                continue
+            field_args.append(self._format_field_kwarg(key, value))
+
+        if json_schema_extra:
+            field_args.append(f"json_schema_extra={json_schema_extra!r}")
+
+        return f"Field({', '.join(field_args)})"
+
     def _generate_field_definition(self, var: VarNode) -> str:
         """
         Generate a single field definition for a Pydantic model class.
@@ -190,23 +226,7 @@ class ModelGenerator:
         if var.default_value is None and not var.kwargs:
             return f"    {name}: {type_annotation}"
 
-        # Need to use Field()
-        field_args = []
-
-        # Add default as first positional argument if present
-        if var.default_value is not None:
-            field_args.append(
-                f"default={self._format_default_value(var.default_value)}"
-            )
-
-        # Add kwargs
-        for key, value in var.kwargs.items():
-            if isinstance(value, str):
-                field_args.append(f'{key}="{value}"')
-            else:
-                field_args.append(f"{key}={value}")
-
-        field_call = f"Field({', '.join(field_args)})"
+        field_call = self._format_field_call(var.default_value, var.kwargs)
         return f"    {name}: {type_annotation} = {field_call}"
 
     def _generate_table_model(self, var: VarTableNode, nested_models: List[str]) -> str:
@@ -267,22 +287,7 @@ class ModelGenerator:
         if var.kwargs or var.default_value is not None:
             # Generate the field definition manually since we need the correct type
             name = var.name
-            field_args = []
-
-            # Add default as first positional argument if present
-            if var.default_value is not None:
-                field_args.append(
-                    f"default={self._format_default_value(var.default_value)}"
-                )
-
-            # Add kwargs
-            for key, value in var.kwargs.items():
-                if isinstance(value, str):
-                    field_args.append(f'{key}="{value}"')
-                else:
-                    field_args.append(f"{key}={value}")
-
-            field_call = f"Field({', '.join(field_args)})"
+            field_call = self._format_field_call(var.default_value, var.kwargs)
             field_def = f"    {name}: list[{item_type_name}] = {field_call}"
         else:
             # Simple case: no kwargs or default

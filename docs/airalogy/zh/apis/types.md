@@ -139,6 +139,40 @@ class VarModel(BaseModel):
 
 定义为`RecordId`类型的字段，Airalogy平台会生成一个供用户选择历史Record的下拉框。用户选择后，该字段会被赋值为所选Record的`str`形式的ID。
 
+## EntityRef
+
+`EntityRef` 用于保存一个来自 connector 数据源的实体引用，例如质粒库、样本库存、LIMS 表，或另一个 Protocol 下的 Records。它是通用引用容器，Airalogy 不会把所有可能的实体类型都写死成内置类型。
+
+```py
+from airalogy.types import EntityRef
+from pydantic import BaseModel
+
+class VarModel(BaseModel):
+    parent_plasmid: EntityRef | None = None
+```
+
+保存值至少包含 `entity` 和 `id`：
+
+```json
+{
+  "entity": "plasmid",
+  "source": "lab_plasmid_registry",
+  "id": "pUC19",
+  "label": "pUC19 cloning vector"
+}
+```
+
+`source`、`label`、`version` 和 `snapshot` 都是可选字段。`label` 是显示缓存，不是权威关联键；缺失时 UI 应回退显示 `id`。`snapshot` 是可选 JSON 对象，用来保存更多数据源上下文。
+
+在 AIMD 中，推荐把实体 namespace 和 connector source 写成字段 metadata：
+
+```md
+来源质粒：{{var|parent_plasmid: EntityRef | None, entity="plasmid", source="lab_plasmid_registry"}}
+来源质粒列表：{{var|parent_plasmids: list[EntityRef] | None, entity="plasmid", source="lab_plasmid_registry"}}
+```
+
+对应的数据源可以通过 fenced [`connectors` 代码块](/zh/syntax/connectors) 声明。宿主应用和 recorder UI 可以用这些 metadata 提供实时搜索和选择控件，而 Python/Pydantic 仍然负责校验保存下来的引用结构。
+
 ## FileId
 
 在Airalogy中，允许用户自定义数据字段为`FileId`相关类型，这些数据字段的记录界面的插槽会自动显示文件上传按钮，用户可以通过点击按钮上传文件。上传的文件会被自动保存到Airalogy的文件系统中，并且会被赋予一个唯一的文件ID (type: `str`)。用户可以通过该文件ID来访问该文件。

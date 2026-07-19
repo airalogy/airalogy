@@ -9,6 +9,7 @@ import yaml
 from ..ast_nodes import (
     AssignerBlockNode,
     CheckNode,
+    ConnectorsNode,
     MediaNode,
     ReferenceNode,
     StepNode,
@@ -25,6 +26,7 @@ from ..errors import (
 from ..lexer import Lexer
 from ..tokens import Position, Token, TokenType
 from .common import BLANK_PLACEHOLDER_PATTERN, NAME_PATTERN
+from .connectors import parse_connectors_content
 from .quiz import QuizParserMixin
 from .refs import parse_refs_content
 from .step import StepParserMixin
@@ -219,6 +221,26 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParse
 
         return references
 
+    def _parse_connectors_blocks(self) -> List[ConnectorsNode]:
+        """
+        Extract connector registry code blocks from AIMD content.
+
+        Returns:
+            List of ConnectorsNode objects.
+        """
+        blocks: List[ConnectorsNode] = []
+        for match in self.lexer.CODE_BLOCK_PATTERN.finditer(self.content):
+            lang = (match.group("lang") or "").strip().lower()
+            if lang != "connectors":
+                continue
+
+            raw = match.group(0)
+            code = textwrap.dedent(match.group("code").rstrip("\n\r"))
+            position = self._get_position_from_offset(match.start(), len(raw))
+            blocks.append(parse_connectors_content(code, position))
+
+        return blocks
+
     def _normalize_media_string(
         self, data: Dict[str, Any], key: str
     ) -> Optional[str]:
@@ -318,6 +340,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParse
                     "media": [MediaNode, ...],
                     "refs": [ReferenceNode, ...],
                     "assigner": [AssignerBlockNode, ...],
+                    "connectors": [ConnectorsNode, ...],
                     "workflow": [WorkflowNode, ...],
                 }
             }
@@ -340,6 +363,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParse
         media = self._parse_media_blocks()
         refs = self._parse_refs_blocks()
         assigners = self._parse_assigner_blocks()
+        connectors = self._parse_connectors_blocks()
         workflows = self._parse_workflow_blocks()
 
         for token in self.tokens:
@@ -384,6 +408,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParse
             "media": media,
             "refs": refs,
             "assigner": assigners,
+            "connectors": connectors,
             "workflow": workflows,
         }
 
@@ -520,6 +545,10 @@ def parse_aimd(aimd_content: str) -> dict:
             "refs": [ref.to_dict() for ref in result["templates"]["refs"]],
             "assigner": [
                 assigner.to_dict() for assigner in result["templates"]["assigner"]
+            ],
+            "connectors": [
+                connectors.to_dict()
+                for connectors in result["templates"]["connectors"]
             ],
             "workflow": [
                 workflow.to_dict() for workflow in result["templates"]["workflow"]

@@ -4,6 +4,7 @@ from ..ast_nodes import (
     AssignerBlockNode,
     CheckNode,
     CiteNode,
+    ConnectorsNode,
     MediaNode,
     QuizNode,
     ReferenceNode,
@@ -26,6 +27,7 @@ from ..errors import (
 from ..lexer import Lexer
 from ..tokens import Position, Token, TokenType
 from .core import AimdParser, extract_assigner_blocks, parse_aimd
+from .connectors import parse_connectors_content
 from .workflow import is_aimd_workflow_reference, parse_workflow_content
 
 __all__ = [
@@ -35,6 +37,7 @@ __all__ = [
     "AssignerBlockNode",
     "CheckNode",
     "CiteNode",
+    "ConnectorsNode",
     "MediaNode",
     "QuizNode",
     "ReferenceNode",
@@ -46,6 +49,7 @@ __all__ = [
     "VarNode",
     "VarTableNode",
     "WorkflowNode",
+    "parse_connectors_content",
     "parse_workflow_content",
     "is_aimd_workflow_reference",
     "AimdParseError",

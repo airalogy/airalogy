@@ -6,6 +6,7 @@ import { unified } from 'unified'
 
 import {
   protectAimdInlineTemplates,
+  parseConnectorsContent,
   remarkAimd,
   validateMediaDefinition,
   validateVarDefinition,
@@ -87,6 +88,78 @@ test('var: bool type', () => {
   const { tree } = parseAimd('{{var|flag: bool}}')
   const node = findAimdNode(tree)
   assert.equal(node?.definition?.type, 'bool')
+})
+
+test('var: EntityRef preserves entity connector metadata kwargs', () => {
+  const { tree } = parseAimd('{{var|parent_plasmids: list[EntityRef] | None, entity = "plasmid", source = "lab_plasmid_registry"}}')
+  const node = findAimdNode(tree)
+  assert.equal(node?.definition?.id, 'parent_plasmids')
+  assert.equal(node?.definition?.type, 'list[EntityRef] | None')
+  assert.deepEqual(node?.definition?.kwargs, {
+    entity: 'plasmid',
+    source: 'lab_plasmid_registry',
+  })
+})
+
+test('connectors: extracts connector registry metadata from fenced block', () => {
+  const content = [
+    '```connectors',
+    'lab_plasmid_registry:',
+    '  kind: entity_source',
+    '  entity: plasmid',
+    '  descriptor: https://lims.example.com/airalogy/entity-sources/plasmid.json',
+    '  auth:',
+    '    token_env: LAB_PLASMID_TOKEN',
+    '```',
+    '',
+    'Use {{var|parent_plasmid: EntityRef, entity="plasmid", source="lab_plasmid_registry"}}',
+  ].join('\n')
+  const { tree, fields } = parseAimd(content)
+
+  assert.equal(fields.connectors.length, 1)
+  assert.equal(fields.connectors[0].version, 1)
+  assert.deepEqual(fields.connectors[0].connectors.lab_plasmid_registry, {
+    id: 'lab_plasmid_registry',
+    kind: 'entity_source',
+    entity: 'plasmid',
+    descriptor: 'https://lims.example.com/airalogy/entity-sources/plasmid.json',
+    auth: {
+      type: 'bearer',
+      token_env: 'LAB_PLASMID_TOKEN',
+    },
+  })
+  assert.equal(findAllAimdNodes(tree).length, 1)
+})
+
+test('connectors: accepts legacy nested connectors mapping', () => {
+  const parsed = parseConnectorsContent([
+    'version: 1',
+    'connectors:',
+    '  lab_plasmid_registry:',
+    '    kind: entity_source',
+    '    entity: plasmid',
+    '    descriptor: https://lims.example.com/airalogy/entity-sources/plasmid.json',
+  ].join('\n'))
+
+  assert.deepEqual(parsed.connectors.lab_plasmid_registry, {
+    id: 'lab_plasmid_registry',
+    kind: 'entity_source',
+    entity: 'plasmid',
+    descriptor: 'https://lims.example.com/airalogy/entity-sources/plasmid.json',
+  })
+})
+
+test('connectors: rejects inline secret values', () => {
+  assert.throws(
+    () => parseConnectorsContent([
+      'lab_plasmid_registry:',
+      '  kind: entity_source',
+      '  entity: plasmid',
+      '  auth:',
+      '    token: super-secret',
+    ].join('\n')),
+    /must not inline secret values/,
+  )
 })
 
 // ── parseVarDefinition: defaults ─────────────────────────────────────────────

@@ -291,9 +291,9 @@ describe('AimdVarField render behavior', () => {
   })
 
   it('places code assigner actions in the field header instead of a side prefix', () => {
-    expect(source).toContain('["file", "code", "scalar-list"].includes(inputKind)')
+    expect(source).toContain('["file", "code", "scalar-list", "entity-ref"].includes(inputKind)')
     expect(source).toMatch(/if \(inputKind === "code"\) \{[\s\S]*?"aimd-rec-inline--var-stacked--code",[\s\S]*?\{ controlRow: false \}/)
-    expect(recorderSource).toContain('["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "checkbox", "boolean-select", "file", "code"].includes(inputKind)')
+    expect(recorderSource).toContain('["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "entity-ref", "checkbox", "boolean-select", "file", "code"].includes(inputKind)')
   })
 
   it('renders nullable boolean vars as tri-state select fields', async () => {
@@ -1039,6 +1039,68 @@ describe('AimdVarField render behavior', () => {
     const clearUpdates = wrapper.emitted('update:modelValue') ?? []
     latest = clearUpdates[clearUpdates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
     expect(latest?.var?.blood_type).toBeNull()
+  })
+
+  it('renders EntityRef vars with resolver-backed entity options', async () => {
+    const search = vi.fn(async (query: string) => (
+      query === 'pu'
+        ? [{
+            entity: 'plasmid',
+            source: 'lab_plasmid_registry',
+            id: 'pUC19',
+            label: 'pUC19 cloning vector',
+            description: 'Ampicillin resistance',
+          }]
+        : []
+    ))
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: 'Parent: {{var|parent_plasmid: EntityRef | None, entity = "plasmid", source = "lab_plasmid_registry"}}',
+        locale: 'en-US',
+        modelValue: { var: {}, step: {}, check: {}, quiz: {} },
+        entityResolvers: {
+          lab_plasmid_registry: { search },
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    await vi.dynamicImportSettled()
+    await wrapper.vm.$nextTick()
+
+    const input = wrapper.find<HTMLInputElement>('input[data-rec-focus-key="var:parent_plasmid"]')
+    expect(input.exists()).toBe(true)
+    expect(input.attributes('placeholder')).toBe('Search plasmid')
+
+    await input.setValue('pu')
+    await flushPromises()
+    await vi.dynamicImportSettled()
+    await wrapper.vm.$nextTick()
+
+    expect(search).toHaveBeenCalledWith('pu', expect.objectContaining({
+      entity: 'plasmid',
+      source: 'lab_plasmid_registry',
+      fieldKey: 'var:parent_plasmid',
+      multiple: false,
+    }))
+
+    const option = wrapper.find('.aimd-rec-entity-ref__option')
+    expect(option.exists()).toBe(true)
+    expect(option.text()).toContain('pUC19 cloning vector')
+
+    await option.trigger('click')
+    await flushPromises()
+
+    const updates = wrapper.emitted('update:modelValue') ?? []
+    const latest = updates[updates.length - 1]?.[0] as { var?: Record<string, unknown> } | undefined
+    expect(latest?.var?.parent_plasmid).toEqual({
+      entity: 'plasmid',
+      source: 'lab_plasmid_registry',
+      id: 'pUC19',
+      label: 'pUC19 cloning vector',
+      description: 'Ampicillin resistance',
+    })
   })
 
   it('renders scalar list vars as repeatable inputs in AimdRecorder', async () => {

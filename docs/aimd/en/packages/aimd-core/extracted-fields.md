@@ -21,6 +21,7 @@ These scopes are still simple `string[]`, and each string is an identifier:
 - `var_table[]` exposes canonical `id` plus optional table-level `title`, `description`, `examples`, and raw AIMD `kwargs`
 - `var_table[].subvars[]` exposes canonical `id` plus optional column-level `title`, `description`, and `examples`
 - `client_assigner[]` exposes `id`, `mode`, `dependent_fields`, `assigned_fields`, and `function_source` extracted from `assigner(config, function ...)` client blocks
+- `connectors[]` exposes connector registries from fenced `connectors` blocks, including `version`, connector ids, `kind`, `entity`, `descriptor`, `search`, `resolve`, and non-secret auth metadata such as `token_env`
 - `workflow[]` exposes workflow definitions from fenced `workflow` blocks, including `version`, `id`, `nodes`, `assigners`, transition ids, normalized `from` / `to` arrays, transition `inputs`, grouped target `assign`, `logic`, and `default_initial_node`
 - `quiz[]` already exposes `id`
 - `fig[]` exposes `id`, `src`, `title`, and `legend` from fenced `fig` blocks
