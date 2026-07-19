@@ -17,6 +17,8 @@ pnpm add @airalogy/aimd-core
 - 构建兼容 MDAST 的 AIMD 节点。
 - 构建兼容 MDAST 的 CriticMarkup 审阅节点，包括添加、删除、替换、注释和高亮。
 - 输出标准化字段结构，供 renderer/editor/recorder 复用，包括 `fields.var_definitions` 中的普通 `var` 定义。
+- 把解析出的 `connectors` metadata 转成宿主支持的 `EntityRef` resolver map，供 recorder UI 使用。
+- 提取并交叉校验 `collectors` metadata、data-source connector 引用、生命周期 step 和 `Observation[T]` 字段绑定。
 
 ## 示例
 
@@ -159,6 +161,12 @@ import {
 ## 内置类型元数据
 
 `@airalogy/aimd-core/utils` 导出 `getAimdBuiltInTypeMetadata()` 和 `getAimdBuiltInTypeEnumValues()`。这些元数据由 Python `airalogy.types` 注册表生成，因此 `BloodType` 这类官方命名枚举类型可以在浏览器工具中复用同一组取值，不需要在 npm 代码里重新维护 Python 类型定义。
+
+## Entity Connector 工具
+
+`@airalogy/aimd-core/utils` 也导出 `createAimdEntityResolversFromConnectors()`、`searchAimdEntityConnector()` 和 `resolveAimdEntityConnector()`，供宿主把解析出的 `connectors` metadata 接到 `EntityRef` recorder 控件。`loadDescriptor`、`fetch` 和 `getSecret` 仍然由宿主提供，因此 parser-only 使用仍然离线可用，浏览器 bundle 也不会直接读取 `.env` secret。
+
+`@airalogy/aimd-core/parser` 导出 `parseCollectorsContent()`，可用于单独校验 Collector YAML。完整 AIMD 解析会把 registry 保存到 `fields.collectors`，并拒绝未知或不兼容的 connector、step 和字段绑定，但不会访问声明的数据源。
 
 ## 继续阅读
 

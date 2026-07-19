@@ -170,7 +170,7 @@ Parent plasmid: {{var|parent_plasmid: EntityRef | None, entity="plasmid", source
 Parent plasmids: {{var|parent_plasmids: list[EntityRef] | None, entity="plasmid", source="lab_plasmid_registry"}}
 ```
 
-The related connector can be declared with a fenced [`connectors` block](/en/syntax/connectors). Host apps and recorder UIs may use that metadata to provide live search/select controls, while Python/Pydantic still validates the saved reference structure.
+The related connector can be declared with a fenced [`connectors` block](/en/syntax/connectors). Host apps and recorder UIs may use that metadata to provide live search/select controls, while Python/Pydantic still validates the saved reference structure. Backend tools can use `airalogy.connectors.EntitySourceConnector` or `create_entity_source_connectors_from_aimd()` to execute supported `entity_source` descriptors with secrets supplied from `.env` or a deployment secret manager.
 
 ## `FileId*` Types
 
@@ -342,6 +342,24 @@ This is not a full GenBank flatfile mirror. It is Airalogy's internal canonical 
 Use `DNASequence` when the sequence itself should be editable in the UI. Use `FileIdDNA` when you only need to upload or reference a raw SnapGene `.dna` file.
 
 `DNASequence` is the only supported public type name. Use `DNASequence` consistently in AIMD, Python models, and UI-facing documentation.
+
+## Observation Types
+
+`Observation[T]` stores one typed observation together with acquisition timestamps and structured provenance. Use it for values produced by a Collector or entered through an audited manual fallback:
+
+```python
+from airalogy.types import Observation
+from pydantic import BaseModel
+
+
+class VarModel(BaseModel):
+    temperature: Observation[float] | None = None
+    temperature_log: list[Observation[float]] | None = None
+```
+
+Collector observations require `source.kind="collector"` plus `connector` and `collector`; manual observations require `source.kind="manual"` plus `collector` and `reason`. `observed_at` and `received_at` must be timezone-aware datetimes.
+
+`ObservationSeriesRef[T]` describes a file-backed observation series and requires at least one stable payload reference: `file_id`, `source_uri`, or `blob_id`. The model is available for schema and Record validation, while file-backed Collector writing is reserved for the next runtime phase. See [Collector Syntax and Runtime](/en/syntax/collectors).
 
 ## Blood Type
 

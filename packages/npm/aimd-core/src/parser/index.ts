@@ -9,6 +9,9 @@ export {
   parseConnectorsContent,
 } from './connectors-parser'
 export {
+  parseCollectorsContent,
+} from './collectors-parser'
+export {
   isAimdWorkflowReference,
   parseWorkflowContent,
 } from './workflow-parser'

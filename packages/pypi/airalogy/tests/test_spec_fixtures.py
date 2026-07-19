@@ -182,6 +182,31 @@ def test_entity_ref_connectors_fixture_extracts_python_templates():
     assert parent_plasmid["kwargs"]["source"] == "lab_plasmid_registry"
 
 
+def test_collectors_fixture_extracts_python_templates():
+    content = (
+        PROTOCOL_FIXTURES_ROOT / "collectors/protocol/protocol.aimd"
+    ).read_text(encoding="utf-8")
+
+    parsed = parse_aimd(content)
+
+    assert [field_name(field) for field in parsed["templates"]["var"]] == [
+        "room_temperature",
+        "incubator_temperature",
+    ]
+    collectors = parsed["templates"]["collectors"][0]["collectors"]
+    assert collectors["room_temperature"] == {
+        "id": "room_temperature",
+        "connector": "lab_sensor_gateway",
+        "channel": "room-201.temperature",
+        "mode": "snapshot",
+        "lifecycle": {"start": "manual", "stop": "manual"},
+        "manual_fallback": True,
+        "title": "Room temperature",
+    }
+    assert collectors["incubator_temperature"]["interval_ms"] == 5000
+    assert parsed["templates"]["var"][0]["kwargs"]["collector"] == "room_temperature"
+
+
 def protocol_example_resource(relative_path: str):
     resource = protocols_root()
     for part in relative_path.split("/"):

@@ -96,6 +96,24 @@ export {
   type AimdRecordSearchOptions,
 } from './record-query'
 
+export {
+  createAimdEntityResolversFromConnectors,
+  loadAimdConnectorDescriptor,
+  normalizeAimdEntityRefOption,
+  resolveAimdEntityConnector,
+  searchAimdEntityConnector,
+  type AimdConnectorFetch,
+  type AimdConnectorFetchResponse,
+  type AimdConnectorRuntimeOptions,
+  type AimdEntityRefOption,
+  type AimdEntityRefValue,
+  type AimdEntityResolveContext,
+  type AimdEntityResolver,
+  type AimdEntityResolverEntry,
+  type AimdEntityResolverMap,
+  type AimdEntitySearchHandler,
+} from './entity-connectors'
+
 // Domain constants
 export {
   getRecordDataKey,

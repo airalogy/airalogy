@@ -10,6 +10,7 @@ Official named enum types such as `BloodType` render as select inputs using meta
 Select-backed types combined with `None`, such as `bool | None`, `Literal[...] | None`, and `BloodType | None`, show a localized `Not set` option and store that selection as `null`; required selects omit this empty option.
 Scalar list variables such as `list[str]`, `list[int]`, and `list[float]` render as full-row fields with repeatable drag-reorderable item inputs plus a JSON array mode, then store clean scalar arrays.
 `EntityRef` and `list[EntityRef]` variables render as entity-reference controls when the host supplies `entityResolvers`, so recorder users can search/select existing external or protocol-backed entities without hard-coding every entity type into AIMD.
+Collector-bound `Observation[T]` and `list[Observation[T]]` variables render as acquisition controls when the host supplies `collectorProviders`, with snapshot reads, manually controlled polling, authorization hooks, normalized provenance, cancellation, and explicit manual fallback.
 `AimdRecorder` includes a collapsed-by-default protocol-aware record search control for searching all fields or one selected field; when expanded it stays sticky at the top of the recorder, highlights matching fields, jumps between matching controls, and selects the matched substring inside native text inputs when possible.
 `AiralogyMarkdown` now uses a full-width embedded AIMD/Markdown field in recorder mode with rendered preview and source-editing modes; source editing keeps the full top toolbar and still supports switching to `WYSIWYG` instead of a plain textarea.
 In recorder/edit mode, `ref_var` references display current var values as readonly inline content when available.
@@ -63,7 +64,7 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 
 `AiralogyMarkdown` fields render a full-width embedded AIMD/Markdown area with `Preview` and `Source` modes; preview uses the AIMD renderer and renders Mermaid code blocks. Source editing keeps the full top toolbar and still supports switching to `WYSIWYG`. Even when the field is authored mid-sentence, recorder lifts it into its own block row instead of keeping it as a tiny inline control.
 
-`EntityRef` fields use protocol metadata such as `entity="plasmid"` and `source="lab_plasmid_registry"` to choose a resolver. Resolver map keys can be connector ids or entity namespaces:
+`EntityRef` fields use protocol metadata such as `entity="plasmid"` and `source="lab_plasmid_registry"` to choose a resolver. Resolver map keys can be connector ids or entity namespaces. If the protocol declares a fenced `connectors` block, hosts can build this resolver map with `createAimdEntityResolversFromConnectors()` from `@airalogy/aimd-core/utils`; they can also provide resolvers manually:
 
 ```vue
 <script setup lang="ts">
@@ -94,7 +95,33 @@ const entityResolvers = {
 </template>
 ```
 
-The selected value is stored as an object like `{ entity, source, id, label? }`; `list[EntityRef]` stores an array of those objects. `id` is the stable key, while `label` is an optional display cache and the recorder falls back to `id` when it is absent. The recorder does not fetch AIMD `connectors` descriptors by itself, so hosts remain in control of network access and authentication.
+The selected value is stored as an object like `{ entity, source, id, label? }`; `list[EntityRef]` stores an array of those objects. `id` is the stable key, while `label` is an optional display cache and the recorder falls back to `id` when it is absent. The recorder does not fetch AIMD `connectors` descriptors by itself, so hosts remain in control of network access and authentication even when they use the `aimd-core` connector helper.
+
+Collector providers follow the same host-binding boundary. The Protocol declares a `kind: data_source` connector, a `collectors` block, and an `Observation[T]` field; the host injects a provider by connector id:
+
+```ts
+const collectorProviders = {
+  lab_sensor_gateway: {
+    async read({ collector, signal }) {
+      const response = await fetch(`/api/sensors/${collector.channel}`, { signal })
+      return response.json()
+    },
+  },
+}
+```
+
+```vue
+<AimdRecorder
+  v-model="record"
+  :content="content"
+  :collector-providers="collectorProviders"
+  :request-collector-permission="requestCollectorPermission"
+  :collector-record-key="recordId"
+  collector-actor-id="user-123"
+/>
+```
+
+The provider may return a raw value or `{ value, observed_at?, unit?, quality?, sequence?, metadata?, device_id? }`. Recorder writes a normalized `Observation` with `received_at` and trusted `source` metadata. The permission hook may return `false`, `true`/`"once"`, or `"record"`; record-scoped approval is cleared when `collectorRecordKey` or protocol content changes. The current runtime supports `snapshot` and manually started/stopped `polling`; `stream`, automatic lifecycle execution, and file-backed series are reserved for a later phase.
 
 Numeric `var` inputs honor Pydantic-style constraints such as `gt`, `ge`, `lt`, `le`, and `multiple_of`; these constraints apply to `int`, `integer`, `float`, and `number` var types.
 Client assigners also use these constraints for dependency readiness, so an assigner will not run while a dependent numeric field violates its declared bounds.

@@ -51,7 +51,8 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - `CurrentTime` 和 `UserName` 可以从运行时上下文自动填值。
 - `AiralogyMarkdown` 会渲染为横铺的 AIMD/Markdown 字段，支持 `预览` 与 `源码` 切换；预览会通过 AIMD renderer 输出 Markdown 并渲染 Mermaid 代码块，源码编辑仍保留切换到 `所见即所得` 的能力。
 - `DNASequence` 会渲染专用序列控件，支持交互式模式、原始结构模式、文件导入导出、拓扑切换、feature 编辑，以及基于 `SeqViz` 的可视化。
-- `EntityRef` 和 `list[EntityRef]` 会在宿主传入 `entityResolvers` 后渲染为实体引用控件；resolver key 可以匹配 AIMD `source` connector id，也可以匹配 `entity` namespace。
+- `EntityRef` 和 `list[EntityRef]` 会在宿主传入 `entityResolvers` 后渲染为实体引用控件；resolver key 可以匹配 AIMD `source` connector id，也可以匹配 `entity` namespace。宿主可以使用 `@airalogy/aimd-core/utils` 的 `createAimdEntityResolversFromConnectors()` 从解析出的 `connectors` metadata 生成这些 resolver。
+- Collector 绑定的 `Observation[T]` 和 `list[Observation[T]]` 字段会在宿主传入 `collectorProviders` 后渲染为数据采集控件，支持单次读取、手动轮询控制、授权、取消、来源记录和显式手工回退。
 - `ref_var` 如果已有记录值，会优先以内联只读内容显示当前值。
 - `var` 和 `var_table` 标签会显示 AIMD 里的 `title`，设置标题时仍显示规范 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。没有显式 placeholder 覆盖时，第一个标量示例会作为默认占位文案。
 - `bool | None`、`Literal[...] | None`、`BloodType | None` 这类带 `None` 的下拉型字段会显示本地化的 `未填写` 选项，并把该选项保存为 `null`。必填下拉字段不会显示空值选项，用户仍然需要选择真实枚举值。
@@ -60,6 +61,36 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - `choice`、`true_false`、`blank`、`open`、`scale` 五类 quiz 都有内建 recorder 输入。
 - 数值 `var` 输入会识别 `gt`、`ge`、`lt`、`le`、`multiple_of` 这类 Pydantic 风格约束；这些约束只对 `int`、`integer`、`float`、`number` 类型生效。
 - client assigner 会用同一组数值约束判断依赖是否就绪；依赖字段违反声明边界时会跳过执行。
+
+## Collector Provider
+
+Collector 声明来自 Protocol，真实设备和网络访问由宿主通过 connector id 注入 provider map 来控制：
+
+```ts
+const collectorProviders = {
+  lab_sensor_gateway: {
+    async read({ collector, signal }) {
+      const response = await fetch(`/api/sensors/${collector.channel}`, { signal })
+      return response.json()
+    },
+  },
+}
+```
+
+```vue
+<AimdRecorder
+  v-model="record"
+  :content="content"
+  :collector-providers="collectorProviders"
+  :request-collector-permission="requestCollectorPermission"
+  :collector-record-key="recordId"
+  collector-actor-id="user-123"
+/>
+```
+
+Provider 可以返回裸值或 observation envelope。Recorder 在写入 Record 前会补全 `received_at` 和可信 `source` metadata。授权回调可以返回 `false`、`true`/`"once"` 或 `"record"`；当 Record key 或 Protocol 内容改变时，Record 范围授权会被清除。规范详见 [Collector 语法与运行时](https://airalogy.github.io/airalogy/zh/syntax/collectors)。
+
+当前浏览器运行时支持 `snapshot` 和手动启停的 `polling`。`stream`、自动 record/step 生命周期与文件化 `ObservationSeriesRef[T]` 采集可以解析，但当前不执行。
 
 ## Client Assigner
 

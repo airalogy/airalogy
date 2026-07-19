@@ -17,6 +17,8 @@ pnpm add @airalogy/aimd-core
 - Build MDAST-compatible AIMD nodes.
 - Build MDAST-compatible CriticMarkup review nodes for additions, deletions, substitutions, comments, and highlights.
 - Extract normalized field metadata for downstream renderer/editor/recorder, including simple `var` definitions in `fields.var_definitions`.
+- Convert parsed `connectors` metadata into host-backed `EntityRef` resolver maps for recorder UIs.
+- Extract and cross-validate `collectors` metadata, data-source connector references, lifecycle steps, and `Observation[T]` field bindings.
 
 ## Example
 
@@ -159,6 +161,12 @@ import {
 ## Built-in Type Metadata
 
 `@airalogy/aimd-core/utils` exports `getAimdBuiltInTypeMetadata()` and `getAimdBuiltInTypeEnumValues()`. The metadata is generated from the Python `airalogy.types` registry, so official named enum types such as `BloodType` expose the same values to browser tools without duplicating Python type definitions in npm code.
+
+## Entity Connector Utilities
+
+`@airalogy/aimd-core/utils` also exports `createAimdEntityResolversFromConnectors()`, `searchAimdEntityConnector()`, and `resolveAimdEntityConnector()` for hosts that want parsed `connectors` metadata to power `EntityRef` recorder controls. The host still supplies `loadDescriptor`, `fetch`, and `getSecret`, so parser-only usage remains offline and browser bundles do not read `.env` secrets directly.
+
+`@airalogy/aimd-core/parser` exports `parseCollectorsContent()` for standalone Collector YAML validation. A full AIMD parse stores registries in `fields.collectors` and rejects unknown or incompatible connector, step, and field bindings; it never contacts the declared data source.
 
 ## Further Reading
 

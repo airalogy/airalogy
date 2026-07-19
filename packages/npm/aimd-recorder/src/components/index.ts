@@ -8,6 +8,7 @@
 import { defineAsyncComponent } from "vue"
 import "../styles/recorder.css"
 import AimdAssignerGraph from "./AimdAssignerGraph.vue"
+import AimdCollectorField from "./AimdCollectorField.vue"
 import AimdRecorder from "./AimdRecorder.vue"
 import AimdRecorderEditor from "./AimdRecorderEditor.vue"
 import AimdQuizRecorder from "./AimdQuizRecorder.vue"
@@ -18,6 +19,7 @@ const AimdEntityRefField = defineAsyncComponent(() => import("./AimdEntityRefFie
 
 export {
   AimdAssignerGraph,
+  AimdCollectorField,
   AimdRecorder,
   AimdRecorderEditor,
   AimdQuizRecorder,

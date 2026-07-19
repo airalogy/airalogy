@@ -20,6 +20,7 @@ import {
 import {
   AimdRecorder,
   createEmptyProtocolRecordData,
+  type AimdCollectorProviderMap,
   type AimdProtocolRecordData,
 } from '@airalogy/aimd-recorder'
 import { parseAndExtract, renderToVue } from '@airalogy/aimd-renderer'
@@ -33,6 +34,21 @@ import {
 } from '../composables/sampleContent'
 import '@airalogy/aimd-renderer/styles'
 import '@airalogy/aimd-recorder/styles'
+
+let simulatedCollectorTemperature = 22.4
+const collectorProviders: AimdCollectorProviderMap = {
+  demo_sensor_gateway: {
+    async read({ collector }) {
+      simulatedCollectorTemperature += collector.mode === 'polling' ? 0.1 : 0.2
+      return {
+        value: Number(simulatedCollectorTemperature.toFixed(1)),
+        device_id: collector.channel || 'demo-thermometer',
+        quality: 'simulated',
+        metadata: { demo: true },
+      }
+    },
+  },
+}
 
 interface ProtocolFigureFile {
   id: string
@@ -1662,6 +1678,8 @@ onBeforeUnmount(() => {
             :content="content"
             :locale="locale"
             :resolve-file="resolveRecorderFile"
+            :collector-providers="collectorProviders"
+            collector-actor-id="demo-user"
             @error="recorderError = $event"
           />
         </div>

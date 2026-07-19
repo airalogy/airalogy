@@ -19,6 +19,8 @@ import type {
   AimdAssignerMap,
   AimdAssignerRunner,
   AimdChoiceOptionExplanationMode,
+  AimdCollectorPermissionHandler,
+  AimdCollectorProviderMap,
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
   AimdEntityResolverMap,
@@ -65,6 +67,11 @@ export interface RecorderMilkdownSurfaceState {
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   entityResolvers?: AimdEntityResolverMap
+  collectorProviders?: AimdCollectorProviderMap
+  requestCollectorPermission?: AimdCollectorPermissionHandler
+  collectorActorId?: string
+  collectorRecordKey?: string | number
+  protocolContext?: string
   resolveFile?: (src: string) => string | null
   resolveFileInfo?: AimdFileInfoResolver
   uploadFile?: AimdFileUploadHandler

@@ -118,6 +118,25 @@ export interface AimdRecorderMessages {
     noMatches: string
     searchFailed: string
   }
+  collector: {
+    snapshot: string
+    start: string
+    stop: string
+    retry: string
+    manualEntry: string
+    cancelManual: string
+    saveManual: string
+    valuePlaceholder: string
+    reasonPlaceholder: string
+    reasonRequired: string
+    invalidValue: string
+    providerUnavailable: string
+    permissionDenied: string
+    unsupported: string
+    sampleCount: (count: number) => string
+    lastObserved: (value: string) => string
+    status: Record<"idle" | "waiting_for_permission" | "connecting" | "collecting" | "stopping" | "completed" | "error" | "unsupported", string>
+  }
   boolean: {
     unset: string
     true: string
@@ -343,6 +362,34 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     noMatches: "No matching entities",
     searchFailed: "Entity search failed.",
   },
+  collector: {
+    snapshot: "Read now",
+    start: "Start collecting",
+    stop: "Stop",
+    retry: "Retry",
+    manualEntry: "Enter manually",
+    cancelManual: "Cancel",
+    saveManual: "Save observation",
+    valuePlaceholder: "Observed value",
+    reasonPlaceholder: "Reason for manual entry",
+    reasonRequired: "A reason is required for manual entry.",
+    invalidValue: "Enter a value that matches the Observation type.",
+    providerUnavailable: "This data source is not available in the current host.",
+    permissionDenied: "Collector access was not authorized.",
+    unsupported: "This Collector mode requires a host runtime that is not available here.",
+    sampleCount: count => `${count} sample${count === 1 ? "" : "s"}`,
+    lastObserved: value => `Observed ${value}`,
+    status: {
+      idle: "Ready",
+      waiting_for_permission: "Waiting for permission",
+      connecting: "Connecting",
+      collecting: "Collecting",
+      stopping: "Stopping",
+      completed: "Completed",
+      error: "Error",
+      unsupported: "Unavailable",
+    },
+  },
   boolean: {
     unset: "Not set",
     true: "True",
@@ -540,6 +587,34 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     noResolver: "未连接实体来源，可手动输入 ID。",
     noMatches: "没有匹配的实体",
     searchFailed: "实体搜索失败。",
+  },
+  collector: {
+    snapshot: "立即采集",
+    start: "开始采集",
+    stop: "停止",
+    retry: "重试",
+    manualEntry: "手工填写",
+    cancelManual: "取消",
+    saveManual: "保存观测值",
+    valuePlaceholder: "观测值",
+    reasonPlaceholder: "手工填写原因",
+    reasonRequired: "手工填写必须说明原因。",
+    invalidValue: "请输入符合 Observation 类型的值。",
+    providerUnavailable: "当前宿主未提供这个数据源。",
+    permissionDenied: "未获得 Collector 访问授权。",
+    unsupported: "该 Collector 模式需要当前宿主尚未提供的运行时。",
+    sampleCount: count => `${count} 个观测值`,
+    lastObserved: value => `观测于 ${value}`,
+    status: {
+      idle: "就绪",
+      waiting_for_permission: "等待授权",
+      connecting: "连接中",
+      collecting: "采集中",
+      stopping: "停止中",
+      completed: "已完成",
+      error: "错误",
+      unsupported: "不可用",
+    },
   },
   boolean: {
     unset: "未填写",

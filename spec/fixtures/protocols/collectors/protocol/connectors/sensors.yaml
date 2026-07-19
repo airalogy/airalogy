@@ -1,0 +1,6 @@
+kind: data_source
+provider: fixture_sensor
+capabilities:
+  - snapshot
+config:
+  fixture: true

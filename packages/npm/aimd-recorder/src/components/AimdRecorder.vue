@@ -3,6 +3,7 @@ import { computed, defineComponent, h, nextTick, onBeforeUnmount, reactive, ref,
 import type {
   AimdCheckNode,
   AimdClientAssignerField,
+  AimdCollectorValidationContext,
   AimdQuizField,
   AimdQuizGradeResult,
   AimdQuizNode,
@@ -21,6 +22,8 @@ import {
 } from "../locales"
 import type {
   AimdChoiceOptionExplanationMode,
+  AimdCollectorPermissionHandler,
+  AimdCollectorProviderMap,
   AimdAssignerMap,
   AimdAssignerRunner,
   AimdServerAssignerMap,
@@ -78,6 +81,7 @@ import { useVarTableDragDrop, getVarTableColumns } from "../composables/useVarTa
 import { useFieldRendering } from "../composables/useFieldRendering"
 import { useCodeBlockRendering } from "../composables/useCodeBlockRendering"
 import { useRecordSearch } from "../composables/useRecordSearch"
+import { useCollectors } from "../composables/useCollectors"
 import {
   createEmptyCheckRecordItem,
   createEmptyStepRecordItem,
@@ -92,6 +96,7 @@ import {
 } from "../composables/useStepTimers"
 import { createAimdTypePlugins } from "../type-plugins"
 import AimdVarField from "./AimdVarField.vue"
+import AimdCollectorField from "./AimdCollectorField.vue"
 import AimdVarTableField from "./AimdVarTableField.vue"
 import AimdRecorderSearchToolbar from "./AimdRecorderSearchToolbar.vue"
 import { AimdStepField, AimdCheckField } from "./AimdStepCheckField.vue"
@@ -106,6 +111,8 @@ import AimdAssignerCloudStatusIcon from "./icons/AimdAssignerCloudStatusIcon.vue
 const props = withDefaults(defineProps<{
   /** AIMD markdown content to render */
   content: string
+  /** Metadata-only protocol context used by embedded single-field recorder hosts. */
+  protocolContext?: string
   /** Current record data (v-model) */
   modelValue?: Partial<AimdProtocolRecordData>
   /** When true all inputs are read-only */
@@ -174,6 +181,15 @@ const props = withDefaults(defineProps<{
    */
   entityResolvers?: AimdEntityResolverMap
 
+  /** Data-source providers keyed by connector id for Collector-backed vars. */
+  collectorProviders?: AimdCollectorProviderMap
+  /** Optional host authorization hook invoked before a Collector starts. */
+  requestCollectorPermission?: AimdCollectorPermissionHandler
+  /** Stable actor id recorded when a manual Collector fallback is used. */
+  collectorActorId?: string
+  /** Stable record key used to scope remembered Collector authorization. */
+  collectorRecordKey?: string | number
+
   /**
    * Resolves relative paths / Airalogy file IDs to displayable URLs.
    */
@@ -201,6 +217,7 @@ const props = withDefaults(defineProps<{
   typePlugins?: AimdTypePlugin[]
 }>(), {
   modelValue: undefined,
+  protocolContext: undefined,
   readonly: false,
   currentUserName: undefined,
   now: undefined,
@@ -221,6 +238,10 @@ const props = withDefaults(defineProps<{
   customRenderers: undefined,
   fieldAdapters: undefined,
   entityResolvers: undefined,
+  collectorProviders: undefined,
+  requestCollectorPermission: undefined,
+  collectorActorId: undefined,
+  collectorRecordKey: undefined,
   resolveFile: undefined,
   resolveFileInfo: undefined,
   uploadFile: undefined,
@@ -505,6 +526,8 @@ const EMPTY_FIELDS: ExtractedAimdFields = {
   var_definitions: [],
   var_table: [],
   client_assigner: [],
+  connectors: [],
+  collectors: [],
   quiz: [],
   step: [],
   check: [],
@@ -516,6 +539,7 @@ const EMPTY_FIELDS: ExtractedAimdFields = {
 }
 
 const extractedFields = ref<ExtractedAimdFields>(EMPTY_FIELDS)
+const collectorValidationContext = ref<AimdCollectorValidationContext>()
 const clientAssigners = ref<AimdClientAssignerField[]>([])
 const internalAssignerFieldState = ref<Record<string, AimdFieldState>>({})
 const clientAssignerFieldDefinitions = computed<ClientAssignerFieldDefinitions>(() => {
@@ -997,6 +1021,19 @@ const fieldRendering = useFieldRendering({
   wrapField: () => props.wrapField,
 })
 
+const collectorRuntime = useCollectors({
+  fields: () => extractedFields.value,
+  record: localRecord,
+  providers: () => props.collectorProviders,
+  requestPermission: () => props.requestCollectorPermission,
+  actorId: () => props.collectorActorId,
+  onChange: (fieldId, value) => {
+    localRecord.var[fieldId] = value
+    markRecordChanged({ rebuild: true, runClientAssigners: true })
+    emit("field-change", { section: "var", fieldKey: fieldId, value })
+  },
+})
+
 // ---------------------------------------------------------------------------
 // Inline field renderers
 // ---------------------------------------------------------------------------
@@ -1052,6 +1089,31 @@ function renderInlineVar(node: AimdVarNode): VNode {
       fieldRendering.setVarInputDisplayOverride(id, initialDisplayOverride)
     }
     recordInitializedDuringRender = true
+  }
+  const collectorBinding = collectorRuntime.resolveBinding(id)
+  if (collectorBinding) {
+    const disabled = fieldRendering.isFieldDisabled(fieldKey)
+    const vnode = h(AimdCollectorField, {
+      node,
+      binding: collectorBinding,
+      value: localRecord.var[id],
+      state: collectorRuntime.getState(id),
+      disabled,
+      providerAvailable: collectorRuntime.hasProvider(id),
+      messages: resolvedMessages.value,
+      fieldMeta: meta,
+      extraClasses: [
+        ...fieldRendering.fieldStateClasses(fieldKey),
+        ...recordSearch.getFieldClasses(fieldKey),
+      ],
+      onStart: () => { void collectorRuntime.start(id) },
+      onStop: () => collectorRuntime.stop(id),
+      onManual: (payload: { value: unknown; reason: string }) => {
+        collectorRuntime.writeManual(id, payload.value, payload.reason)
+      },
+      onBlur: emitVarBlur,
+    })
+    return applyFieldAdapter("var", fieldKey, node, localRecord.var[id], vnode)
   }
   if (inputKind === "datetime") {
     const norm = normalizeDateTimeValueWithTimezone(localRecord.var[id])
@@ -1591,6 +1653,7 @@ async function rebuildInlineNodes(
     },
     blockVarTypes: ["AiralogyMarkdown"],
     resolveAssetUrl: props.resolveFile,
+    collectorContext: collectorValidationContext.value,
     elementRenderers: {
       pre: codeBlockPreRenderer,
     },
@@ -1623,7 +1686,17 @@ async function parseAndBuild() {
   autoServerAssignerSignatures.clear()
   try {
     renderError.value = ""
-    const extracted = parseAndExtract(props.content || "")
+    const contextFields = props.protocolContext
+      ? parseAndExtract(props.protocolContext)
+      : undefined
+    collectorValidationContext.value = contextFields
+      ? {
+          connectors: contextFields.connectors,
+          collectors: contextFields.collectors,
+          step: contextFields.step,
+        }
+      : undefined
+    const extracted = parseAndExtract([props.protocolContext, props.content].filter(Boolean).join("\n\n"))
     if (currentRequestId !== buildRequestId) return
 
     extractedFields.value = extracted
@@ -1646,6 +1719,7 @@ async function parseAndBuild() {
     renderError.value = message
     inlineNodes.value = []
     extractedFields.value = EMPTY_FIELDS
+    collectorValidationContext.value = undefined
     clientAssigners.value = []
     emit("fields-change", EMPTY_FIELDS)
     emit("error", message)
@@ -1686,6 +1760,7 @@ watch(hasRunningStepTimer, () => {
 watch(
   () => ({
     content: props.content,
+    protocolContext: props.protocolContext,
     locale: props.locale,
     messages: props.messages,
   }),
@@ -1710,12 +1785,30 @@ watch(
     customRenderers: props.customRenderers,
     fieldAdapters: props.fieldAdapters,
     typePlugins: props.typePlugins,
+    collectorProviders: props.collectorProviders,
   }),
   () => {
     scheduleInlineRebuild()
     scheduleAutoServerAssigners()
   },
   { deep: true },
+)
+
+watch(
+  () => [props.content, props.protocolContext] as const,
+  () => collectorRuntime.stopAll({ resetPermissions: true }),
+)
+
+watch(
+  () => props.collectorRecordKey,
+  () => collectorRuntime.stopAll({ resetPermissions: true }),
+)
+
+watch(
+  () => props.readonly,
+  readonly => {
+    if (readonly) collectorRuntime.stopAll()
+  },
 )
 
 watch(
@@ -1748,6 +1841,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  collectorRuntime.stopAll({ resetPermissions: true })
   for (const controller of serverAssignerAbortControllers.values()) {
     controller.abort()
   }
@@ -1760,6 +1854,8 @@ onBeforeUnmount(() => {
 defineExpose({
   runClientAssigner: clientAssignerRunner.triggerClientAssigner,
   runManualClientAssigners: clientAssignerRunner.triggerManualClientAssigners,
+  startCollector: collectorRuntime.start,
+  stopCollector: collectorRuntime.stop,
 })
 </script>
 

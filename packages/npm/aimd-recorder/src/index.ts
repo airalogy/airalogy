@@ -10,7 +10,7 @@
 import './styles/recorder.css'
 import { AimdProtocolRecorder as DeprecatedAimdProtocolRecorder } from './components'
 
-export { AimdAssignerGraph, AimdRecorder, AimdRecorderEditor, AimdQuizRecorder } from './components'
+export { AimdAssignerGraph, AimdCollectorField, AimdRecorder, AimdRecorderEditor, AimdQuizRecorder } from './components'
 export { AimdDnaSequenceField, AimdEntityRefField, AimdMarkdownField } from './components'
 /**
  * @deprecated Use `AimdRecorder` instead.
@@ -38,6 +38,17 @@ export type {
   AimdServerAssignerRunnerRequest,
   AimdFileUploadContext,
   AimdFileUploadHandler,
+  AimdCollectorObservation,
+  AimdCollectorObservationInput,
+  AimdCollectorObservationSource,
+  AimdCollectorPermissionDecision,
+  AimdCollectorPermissionHandler,
+  AimdCollectorPermissionRequest,
+  AimdCollectorProviderMap,
+  AimdCollectorProviderRequest,
+  AimdCollectorRuntimeState,
+  AimdCollectorRuntimeStatus,
+  AimdDataSourceProvider,
   AimdFileResolveContext,
   AimdFileInfoResolver,
   AimdEntityResolveContext,

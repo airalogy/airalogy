@@ -86,6 +86,9 @@ import {
   mergeVarTableInfo,
   normalizeSubvars,
   toTemplateEnv,
+  createAimdEntityResolversFromConnectors,
+  searchAimdEntityConnector,
+  resolveAimdEntityConnector,
 } from "@airalogy/aimd-core"
 ```
 
@@ -98,6 +101,9 @@ import {
 | `isVarTableField` | `(field) => boolean` | var_table 的类型守卫。 |
 | `normalizeSubvars` | `(subvars) => AimdSubvar[]` | 把 subvar 定义标准化为规范格式。 |
 | `toTemplateEnv` | `(fields) => AimdTemplateEnv` | 由提取结果构造模板环境。 |
+| `createAimdEntityResolversFromConnectors` | `(connectors, options) => AimdEntityResolverMap` | 把解析出的 `connectors` metadata 转成 recorder 可直接使用的 `EntityRef` resolver。descriptor 加载、`fetch` 和 secret 读取由宿主提供。 |
+| `searchAimdEntityConnector` | `(connector, query, options) => Promise<AimdEntityRefOption[]>` | 执行单个 `entity_source` search endpoint，并把结果归一化为 `EntityRef` options。 |
+| `resolveAimdEntityConnector` | `(connector, id, options) => Promise<AimdEntityRefOption \| null>` | 执行单个 `entity_source` resolve endpoint，并把结果归一化为一个 `EntityRef` option。 |
 
 ### Quiz 评分
 

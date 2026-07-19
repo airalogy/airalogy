@@ -4,6 +4,7 @@ import type { VNode } from "vue"
 import type { AimdAssetUrlResolver } from "./assetUrls"
 import type {
   AimdFieldType,
+  AimdCollectorValidationContext,
   AimdNode,
   AimdQuizNode,
   AimdReferenceEntry,
@@ -71,6 +72,8 @@ export interface AimdRendererOptions extends ProcessorOptions, AimdRendererI18nO
   groupStepBodies?: boolean
   groupCheckBodies?: boolean
   blockVarTypes?: string[]
+  /** Protocol-level Collector metadata used when rendering an isolated field fragment. */
+  collectorContext?: AimdCollectorValidationContext
 }
 
 export interface CustomElementAimdRendererOptions {
@@ -565,6 +568,8 @@ const EMPTY_EXTRACTED_FIELDS: ExtractedAimdFields = {
   var_definitions: [],
   var_table: [],
   client_assigner: [],
+  connectors: [],
+  collectors: [],
   quiz: [],
   step: [],
   check: [],
@@ -611,6 +616,8 @@ function createEmptyExtractedFields(): ExtractedAimdFields {
     var_definitions: [...(EMPTY_EXTRACTED_FIELDS.var_definitions || [])],
     var_table: [...EMPTY_EXTRACTED_FIELDS.var_table],
     client_assigner: [...EMPTY_EXTRACTED_FIELDS.client_assigner],
+    connectors: [...(EMPTY_EXTRACTED_FIELDS.connectors || [])],
+    collectors: [...(EMPTY_EXTRACTED_FIELDS.collectors || [])],
     quiz: [...EMPTY_EXTRACTED_FIELDS.quiz],
     step: [...EMPTY_EXTRACTED_FIELDS.step],
     check: [...EMPTY_EXTRACTED_FIELDS.check],
@@ -1773,7 +1780,9 @@ function createBaseProcessor(options: AimdRendererOptions = {}) {
 
   // AIMD syntax support - MUST run before remarkBreaks
   // to properly parse multiline AIMD syntax like var_table with subvars
-  processor.use(remarkAimd)
+  processor.use(remarkAimd, {
+    collectorContext: options.collectorContext,
+  })
   processor.use(remarkStripAssignerCodeBlocks)
   processor.use(remarkCriticMarkup)
 

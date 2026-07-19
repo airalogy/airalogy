@@ -13,7 +13,11 @@ import type {
   AimdVarNode,
   AimdVarTableNode,
 } from "../types/nodes"
-import type { AimdVarField, ExtractedAimdFields } from "../types/aimd"
+import type {
+  AimdCollectorValidationContext,
+  AimdVarField,
+  ExtractedAimdFields,
+} from "../types/aimd"
 import {
   extractPythonAssignerGraphNodes,
   validateAssignerGraph,
@@ -46,9 +50,68 @@ import {
   getAimdFieldTitle,
 } from "../utils/field-metadata"
 import { parseConnectorsContent } from "./connectors-parser"
+import { parseCollectorsContent } from "./collectors-parser"
 import { parseQuizContent } from "./quiz-parser"
 import { parseWorkflowContent } from "./workflow-parser"
 import { SKIP, visit } from "unist-util-visit"
+
+function validateCollectorReferences(fields: ExtractedAimdFields): void {
+  const connectors = new Map<string, NonNullable<ExtractedAimdFields["connectors"]>[number]["connectors"][string]>()
+  for (const registry of fields.connectors ?? []) {
+    for (const [id, connector] of Object.entries(registry.connectors)) {
+      if (connectors.has(id)) throw new Error(`Duplicate connector id: ${id}`)
+      connectors.set(id, connector)
+    }
+  }
+
+  const collectors = new Map<string, NonNullable<ExtractedAimdFields["collectors"]>[number]["collectors"][string]>()
+  for (const registry of fields.collectors ?? []) {
+    for (const [id, collector] of Object.entries(registry.collectors)) {
+      if (collectors.has(id)) throw new Error(`Duplicate collector id: ${id}`)
+      collectors.set(id, collector)
+      const connector = connectors.get(collector.connector)
+      if (!connector) {
+        throw new Error(`Collector ${id} references unknown connector ${collector.connector}`)
+      }
+      if (connector.kind !== "data_source") {
+        throw new Error(`Collector ${id} requires connector ${collector.connector} to use kind data_source`)
+      }
+      for (const trigger of [collector.lifecycle.start, collector.lifecycle.stop]) {
+        if (typeof trigger === "object" && !fields.step.includes(trigger.step)) {
+          throw new Error(`Collector ${id} references unknown step ${trigger.step}`)
+        }
+      }
+    }
+  }
+
+  const collectorBindings = new Map<string, string>()
+  for (const field of fields.var_definitions ?? []) {
+    const rawCollector = field.kwargs?.collector
+    if (rawCollector === undefined) continue
+    if (typeof rawCollector !== "string" || !rawCollector.trim()) {
+      throw new Error(`Variable ${field.id} collector metadata must be a non-empty string`)
+    }
+    const collectorId = rawCollector.trim()
+    const collector = collectors.get(collectorId)
+    if (!collector) throw new Error(`Variable ${field.id} references unknown collector ${collectorId}`)
+    const previousField = collectorBindings.get(collectorId)
+    if (previousField && previousField !== field.id) {
+      throw new Error(`Collector ${collectorId} cannot write directly to both ${previousField} and ${field.id}`)
+    }
+    collectorBindings.set(collectorId, field.id)
+
+    const normalizedType = String(field.type ?? "").replace(/\s+/g, "").toLowerCase()
+    const observation = normalizedType.startsWith("observation[")
+    const observationList = normalizedType.startsWith("list[observation[")
+    const series = normalizedType.startsWith("observationseriesref[")
+    if (!observation && !observationList && !series) {
+      throw new Error(`Variable ${field.id} bound to Collector ${collectorId} must use Observation[T], list[Observation[T]], or ObservationSeriesRef[T]`)
+    }
+    if ((collector.mode === "polling" || collector.mode === "stream") && !observationList && !series) {
+      throw new Error(`Variable ${field.id} must use list[Observation[T]] or ObservationSeriesRef[T] for ${collector.mode} Collector ${collectorId}`)
+    }
+  }
+}
 
 /**
  * Create AIMD node.
@@ -294,6 +357,8 @@ export interface RemarkAimdOptions {
    * Typed configuration for field properties.
    */
   typed?: Record<string, Record<string, any>>
+  /** Protocol-level Collector metadata used to validate an isolated fragment. */
+  collectorContext?: AimdCollectorValidationContext
 }
 
 /**
@@ -328,6 +393,7 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
       var_table: [],
       client_assigner: [],
       connectors: [],
+      collectors: [],
       workflow: [],
       quiz: [],
       step: [],
@@ -384,6 +450,13 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
         catch (error) {
           console.error("Failed to parse connectors block:", error)
         }
+      }
+
+      if (lang === "collectors" && extractFields) {
+        const collectors = parseCollectorsContent(node.value)
+        fields.collectors?.push(collectors)
+        parent.children.splice(index, 1)
+        return [SKIP, index] as const
       }
 
       if (lang === "workflow" && extractFields) {
@@ -650,6 +723,24 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
 
     if (extractFields) {
       validateAssignerGraph(graphAssigners)
+      const collectorValidationFields = options.collectorContext
+        ? {
+            ...fields,
+            connectors: [
+              ...(options.collectorContext.connectors ?? []),
+              ...(fields.connectors ?? []),
+            ],
+            collectors: [
+              ...(options.collectorContext.collectors ?? []),
+              ...(fields.collectors ?? []),
+            ],
+            step: Array.from(new Set([
+              ...(options.collectorContext.step ?? []),
+              ...fields.step,
+            ])),
+          }
+        : fields
+      validateCollectorReferences(collectorValidationFields)
       file.data.aimdFields = fields
     }
 

@@ -116,9 +116,9 @@ resolve:
   url: https://lims.example.com/api/plasmids/{id}
 ```
 
-运行时工具或宿主应用决定如何执行这个 descriptor。解析出来的候选项应归一化成兼容 `EntityRef` 的对象，至少提供 `id`；`label` 和 `snapshot` 是可选展示数据。
+运行时工具或宿主应用决定如何执行这个 descriptor。解析出来的候选项应归一化成兼容 `EntityRef` 的对象，至少提供 `id`；`label` 和 `snapshot` 是可选展示数据。运行时执行 API 不在语法页展开；Python 工具见 [Connectors API](/zh/apis/connectors)，npm resolver helper 见 [@airalogy/aimd-core](https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-core/)。
 
-`protocol.aimd`、`connectors/plasmid.yaml` 和 `.env.example` 可以提交和分享；真实 `.env` 不应该提交，也不应该默认打进公开 `.aira` 包。运行时工具可以从 `.env` 或部署环境的 secret manager 读取 `LAB_PLASMID_TOKEN`，再按 connector 的认证规则把 token 加到请求里。
+`protocol.aimd`、`connectors/plasmid.yaml` 和 `.env.example` 可以提交和分享；真实 `.env` 不应该提交，也不应该默认打进公开 `.aira` 包。需要认证时，由具体运行环境提供 `LAB_PLASMID_TOKEN`。
 
 如果打包成 `.aira`，公开包内也只应包含非 secret 文件：
 
@@ -132,8 +132,8 @@ plasmid-modification.aira
 
 真实 `.env` 仍然留在运行环境外部。
 
-## 运行时绑定
+## 宿主绑定边界
 
-`connectors` 不要求 Airalogy 内置支持无限多实体类型。`entity: plasmid` 是用户自定义 metadata，不是 Airalogy 写死的类型。宿主应用可以把这个 connector 绑定到自己的 search/resolve 实现，`@airalogy/aimd-recorder` 则可以据此为 `EntityRef` 字段渲染实体选择控件。
+`connectors` 不要求 Airalogy 内置支持无限多实体类型。`entity: plasmid` 是用户自定义 metadata，不是 Airalogy 写死的类型。宿主应用可以把这个 connector 绑定到自己的 search/resolve 实现，并据此为 `EntityRef` 字段渲染实体选择控件。
 
 这样 Protocol 可以保持可移植：没有网络访问时也能正常解析；更完整的宿主工具则可以接入实时数据库选择体验。

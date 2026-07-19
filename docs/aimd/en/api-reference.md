@@ -86,6 +86,9 @@ import {
   mergeVarTableInfo,
   normalizeSubvars,
   toTemplateEnv,
+  createAimdEntityResolversFromConnectors,
+  searchAimdEntityConnector,
+  resolveAimdEntityConnector,
 } from "@airalogy/aimd-core"
 ```
 
@@ -98,6 +101,9 @@ import {
 | `isVarTableField` | `(field) => boolean` | Type guard for var_table fields. |
 | `normalizeSubvars` | `(subvars) => AimdSubvar[]` | Normalize subvar definitions to canonical format. |
 | `toTemplateEnv` | `(fields) => AimdTemplateEnv` | Build a template environment from extracted fields. |
+| `createAimdEntityResolversFromConnectors` | `(connectors, options) => AimdEntityResolverMap` | Convert parsed `connectors` metadata into recorder-compatible `EntityRef` resolvers. Descriptor loading, `fetch`, and secret lookup are supplied by the host. |
+| `searchAimdEntityConnector` | `(connector, query, options) => Promise<AimdEntityRefOption[]>` | Execute one `entity_source` search endpoint and normalize results into `EntityRef` options. |
+| `resolveAimdEntityConnector` | `(connector, id, options) => Promise<AimdEntityRefOption \| null>` | Execute one `entity_source` resolve endpoint and normalize the result into an `EntityRef` option. |
 
 ### Quiz Grading
 

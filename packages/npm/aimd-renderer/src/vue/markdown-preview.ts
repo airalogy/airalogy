@@ -27,6 +27,8 @@ function createEmptyFields(): ExtractedAimdFields {
     var: [],
     var_table: [],
     client_assigner: [],
+    connectors: [],
+    collectors: [],
     quiz: [],
     step: [],
     check: [],

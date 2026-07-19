@@ -411,6 +411,27 @@ class ConnectorsNode(ASTNode):
 
 
 @dataclass
+class CollectorsNode(ASTNode):
+    """Collector registry parsed from a fenced collectors block."""
+
+    collectors: Dict[str, Dict[str, Any]]
+    raw: str
+    version: Optional[str | int | float] = None
+
+    def to_dict(self) -> dict:
+        result = super().to_dict()
+        result.update(
+            {
+                "collectors": self.collectors,
+                "raw": self.raw,
+            }
+        )
+        if self.version is not None:
+            result["version"] = self.version
+        return result
+
+
+@dataclass
 class WorkflowNode(ASTNode):
     """Workflow definition parsed from a fenced workflow block."""
 

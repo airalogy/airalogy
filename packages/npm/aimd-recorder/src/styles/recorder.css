@@ -6,6 +6,7 @@
  */
 @import "@airalogy/aimd-renderer/styles";
 @import "./recorder-surface.css";
+@import "./collector-field.css";
 
 /* Recorder-specific reference wrappers */
 .aimd-ref--step .research-step__sequence {

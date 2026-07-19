@@ -116,9 +116,9 @@ resolve:
   url: https://lims.example.com/api/plasmids/{id}
 ```
 
-Runtime tools or host applications decide how to execute this descriptor. Resolved options should be normalized to `EntityRef`-compatible objects with at least `id`; `label` and `snapshot` are optional display data.
+Runtime tools or host applications decide how to execute this descriptor. Resolved options should be normalized to `EntityRef`-compatible objects with at least `id`; `label` and `snapshot` are optional display data. Runtime execution APIs are not expanded on the syntax page; see [Connectors API](/en/apis/connectors) for Python tools and [@airalogy/aimd-core](https://airalogy.github.io/airalogy/aimd/en/packages/aimd-core/) for npm resolver helpers.
 
-`protocol.aimd`, `connectors/plasmid.yaml`, and `.env.example` can be committed and shared. The real `.env` should not be committed and should not be included by default in a public `.aira` archive. Runtime tools can read `LAB_PLASMID_TOKEN` from `.env` or a deployment secret manager, then attach the token to connector requests according to the auth settings.
+`protocol.aimd`, `connectors/plasmid.yaml`, and `.env.example` can be committed and shared. The real `.env` should not be committed and should not be included by default in a public `.aira` archive. When authentication is required, the concrete runtime environment supplies `LAB_PLASMID_TOKEN`.
 
 For `.aira` archives, the public package should still contain only non-secret files:
 
@@ -132,8 +132,8 @@ plasmid-modification.aira
 
 The real `.env` remains outside the runtime package.
 
-## Runtime Binding
+## Host Binding Boundary
 
-`connectors` does not require every Airalogy installation to support every possible entity type. `entity: plasmid` is user-defined metadata, not a hard-coded Airalogy type. A host application can bind the declared connector to a search/resolve implementation, and `@airalogy/aimd-recorder` can use that binding to render an entity picker for `EntityRef` fields.
+`connectors` does not require every Airalogy installation to support every possible entity type. `entity: plasmid` is user-defined metadata, not a hard-coded Airalogy type. A host application can bind the declared connector to a search/resolve implementation and use that binding to render an entity picker for `EntityRef` fields.
 
 This keeps the protocol portable: the same AIMD can be parsed without network access, while richer hosts can attach live database-backed selection UI.

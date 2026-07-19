@@ -154,6 +154,7 @@ export type AimdScopeKey =
   | "media"
   | "refs"
   | "connectors"
+  | "collectors"
 
 /**
  * High-level scope names for semantic grouping
@@ -488,6 +489,69 @@ export interface AimdConnectorsField {
   raw: string
 }
 
+/** Collector acquisition modes supported by the initial runtime contract. */
+export type AimdCollectorMode = "snapshot" | "polling" | "stream"
+
+/** A lifecycle trigger declared by a Collector. */
+export type AimdCollectorLifecycleTrigger =
+  | "manual"
+  | "record_start"
+  | "record_complete"
+  | {
+      event: "step_start" | "step_complete"
+      step: string
+    }
+
+/** Start/stop lifecycle rules for one Collector. */
+export interface AimdCollectorLifecycleField {
+  start: AimdCollectorLifecycleTrigger
+  stop: AimdCollectorLifecycleTrigger
+}
+
+/** One Collector entry from a fenced `collectors` block. */
+export interface AimdCollectorField {
+  /** Stable Collector id from the fenced mapping key. */
+  id: string
+  /** Connector id used to resolve the runtime data source. */
+  connector: string
+  /** Provider-defined channel id. */
+  channel?: string
+  /** Acquisition mode; defaults to snapshot. */
+  mode: AimdCollectorMode
+  /** Poll interval for polling mode, preserved in source form. */
+  interval?: string
+  /** Parsed poll interval in milliseconds. */
+  interval_ms?: number
+  /** Start/stop lifecycle configuration. */
+  lifecycle: AimdCollectorLifecycleField
+  /** Whether an explicit manual observation fallback is allowed. */
+  manual_fallback: boolean
+  /** Optional display title. */
+  title?: string
+  /** Additional Collector-specific metadata. */
+  [key: string]: unknown
+}
+
+/** Collector registry extracted from a fenced `collectors` block. */
+export interface AimdCollectorsField {
+  /** Optional schema/config version retained for forwards compatibility. */
+  version?: string | number
+  /** Collector entries keyed by stable Collector id. */
+  collectors: Record<string, AimdCollectorField>
+  /** Raw YAML payload inside the fenced block. */
+  raw: string
+}
+
+/** Protocol metadata supplied when validating a rendered AIMD fragment. */
+export interface AimdCollectorValidationContext {
+  /** Connector registries declared outside the fragment. */
+  connectors?: AimdConnectorsField[]
+  /** Collector registries declared outside the fragment. */
+  collectors?: AimdCollectorsField[]
+  /** Step ids declared outside the fragment. */
+  step?: string[]
+}
+
 /**
  * Client runtime assigner modes currently supported by the recorder runtime.
  */
@@ -638,6 +702,8 @@ export interface ExtractedAimdFields {
   client_assigner: AimdClientAssignerField[]
   /** Connector registries from fenced `connectors` blocks */
   connectors?: AimdConnectorsField[]
+  /** Collector registries from fenced `collectors` blocks */
+  collectors?: AimdCollectorsField[]
   /** Workflow definitions from fenced `workflow` blocks */
   workflow?: AimdWorkflowField[]
   /** Quiz definitions from ```quiz code blocks */

@@ -117,6 +117,18 @@ export {
 } from './useVarTableDragDrop'
 export type { VarTableDragState, VarTableDragDropOptions } from './useVarTableDragDrop'
 
+export {
+  getAimdCollectorBinding,
+  getAimdCollectorManualValueType,
+  parseAimdCollectorManualValue,
+  useCollectors,
+} from './useCollectors'
+export type {
+  AimdCollectorBinding,
+  AimdCollectorManualValueResult,
+  AimdCollectorRuntimeOptions,
+} from './useCollectors'
+
 export { useFieldRendering } from './useFieldRendering'
 export type { VarInputDisplayOverride, FieldRenderingOptions } from './useFieldRendering'
 

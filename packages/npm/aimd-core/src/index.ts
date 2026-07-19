@@ -17,6 +17,9 @@ export {
   parseConnectorsContent,
 } from './parser/connectors-parser'
 export {
+  parseCollectorsContent,
+} from './parser/collectors-parser'
+export {
   isAimdWorkflowReference,
   parseWorkflowContent,
 } from './parser/workflow-parser'
@@ -42,6 +45,12 @@ export type {
   AimdConnectorAuthField,
   AimdConnectorField,
   AimdConnectorsField,
+  AimdCollectorField,
+  AimdCollectorLifecycleField,
+  AimdCollectorLifecycleTrigger,
+  AimdCollectorMode,
+  AimdCollectorsField,
+  AimdCollectorValidationContext,
   AimdFieldType,
   AimdMediaField,
   AimdQuizField,
@@ -246,6 +255,24 @@ export {
   type AimdRecordSearchMatch,
   type AimdRecordSearchOptions,
 } from './utils/record-query'
+
+export {
+  createAimdEntityResolversFromConnectors,
+  loadAimdConnectorDescriptor,
+  normalizeAimdEntityRefOption,
+  resolveAimdEntityConnector,
+  searchAimdEntityConnector,
+  type AimdConnectorFetch,
+  type AimdConnectorFetchResponse,
+  type AimdConnectorRuntimeOptions,
+  type AimdEntityRefOption,
+  type AimdEntityRefValue,
+  type AimdEntityResolveContext,
+  type AimdEntityResolver,
+  type AimdEntityResolverEntry,
+  type AimdEntityResolverMap,
+  type AimdEntitySearchHandler,
+} from './utils/entity-connectors'
 
 // Domain constants
 export {

@@ -1,0 +1,28 @@
+# 传感器数据采集
+
+```connectors
+demo_sensor_gateway:
+  kind: data_source
+  descriptor: https://demo.airalogy.local/connectors/sensors.yaml
+```
+
+```collectors
+room_temperature:
+  connector: demo_sensor_gateway
+  channel: room.temperature
+  mode: snapshot
+  manual_fallback: true
+  title: 室内温度计
+
+incubator_temperature:
+  connector: demo_sensor_gateway
+  channel: incubator.temperature
+  mode: polling
+  interval: 2s
+  manual_fallback: true
+  title: 培养箱温度计
+```
+
+室内温度：{{var|room_temperature: Observation[float] | None, title="室内温度", unit="Cel", collector="room_temperature"}}
+
+培养箱温度：{{var|incubator_temperature: list[Observation[float]] | None, title="培养箱温度记录", unit="Cel", collector="incubator_temperature"}}

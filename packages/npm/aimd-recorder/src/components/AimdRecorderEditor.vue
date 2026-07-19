@@ -9,6 +9,8 @@ import type {
   AimdAssignerMap,
   AimdAssignerRunner,
   AimdChoiceOptionExplanationMode,
+  AimdCollectorPermissionHandler,
+  AimdCollectorProviderMap,
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
   AimdEntityResolverMap,
@@ -75,6 +77,10 @@ const props = withDefaults(defineProps<{
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   entityResolvers?: AimdEntityResolverMap
+  collectorProviders?: AimdCollectorProviderMap
+  requestCollectorPermission?: AimdCollectorPermissionHandler
+  collectorActorId?: string
+  collectorRecordKey?: string | number
   resolveFile?: (src: string) => string | null
   resolveFileInfo?: AimdFileInfoResolver
   uploadFile?: AimdFileUploadHandler
@@ -124,6 +130,10 @@ const props = withDefaults(defineProps<{
   customRenderers: undefined,
   fieldAdapters: undefined,
   entityResolvers: undefined,
+  collectorProviders: undefined,
+  requestCollectorPermission: undefined,
+  collectorActorId: undefined,
+  collectorRecordKey: undefined,
   resolveFile: undefined,
   resolveFileInfo: undefined,
   uploadFile: undefined,
@@ -1457,6 +1467,10 @@ defineExpose({
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
             :entity-resolvers="entityResolvers"
+            :collector-providers="collectorProviders"
+            :request-collector-permission="requestCollectorPermission"
+            :collector-actor-id="collectorActorId"
+            :collector-record-key="collectorRecordKey"
             :resolve-file="resolveFile"
             :resolve-file-info="resolveFileInfo"
             :upload-file="uploadFile"
@@ -1502,6 +1516,10 @@ defineExpose({
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
             :entity-resolvers="entityResolvers"
+            :collector-providers="collectorProviders"
+            :request-collector-permission="requestCollectorPermission"
+            :collector-actor-id="collectorActorId"
+            :collector-record-key="collectorRecordKey"
             :resolve-file="resolveFile"
             :resolve-file-info="resolveFileInfo"
             :upload-file="uploadFile"

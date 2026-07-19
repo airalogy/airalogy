@@ -1,0 +1,32 @@
+# Data Source Collector Fixture
+
+```connectors
+lab_sensor_gateway:
+  kind: data_source
+  descriptor: ./connectors/sensors.yaml
+  auth:
+    token_env: LAB_SENSOR_TOKEN
+```
+
+```collectors
+room_temperature:
+  connector: lab_sensor_gateway
+  channel: room-201.temperature
+  mode: snapshot
+  manual_fallback: true
+  title: Room temperature
+
+incubator_temperature:
+  connector: lab_sensor_gateway
+  channel: incubator-01.temperature
+  mode: polling
+  interval: 5s
+  lifecycle:
+    start: manual
+    stop: manual
+  title: Incubator temperature
+```
+
+Room temperature: {{var|room_temperature: Observation[float] | None, title="Room temperature", unit="Cel", collector="room_temperature"}}
+
+Incubator temperature: {{var|incubator_temperature: list[Observation[float]] | None, title="Incubator temperature", unit="Cel", collector="incubator_temperature"}}

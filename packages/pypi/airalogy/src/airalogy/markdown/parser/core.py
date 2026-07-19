@@ -9,11 +9,13 @@ import yaml
 from ..ast_nodes import (
     AssignerBlockNode,
     CheckNode,
+    CollectorsNode,
     ConnectorsNode,
     MediaNode,
     ReferenceNode,
     StepNode,
     VarNode,
+    VarTableNode,
     WorkflowNode,
 )
 from ..errors import (
@@ -27,6 +29,7 @@ from ..lexer import Lexer
 from ..tokens import Position, Token, TokenType
 from .common import BLANK_PLACEHOLDER_PATTERN, NAME_PATTERN
 from .connectors import parse_connectors_content
+from .collectors import parse_collectors_content
 from .quiz import QuizParserMixin
 from .refs import parse_refs_content
 from .step import StepParserMixin
@@ -241,6 +244,101 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParse
 
         return blocks
 
+    def _parse_collectors_blocks(self) -> List[CollectorsNode]:
+        """Extract Collector registry code blocks from AIMD content."""
+
+        blocks: List[CollectorsNode] = []
+        for match in self.lexer.CODE_BLOCK_PATTERN.finditer(self.content):
+            lang = (match.group("lang") or "").strip().lower()
+            if lang != "collectors":
+                continue
+
+            raw = match.group(0)
+            code = textwrap.dedent(match.group("code").rstrip("\n\r"))
+            position = self._get_position_from_offset(match.start(), len(raw))
+            blocks.append(parse_collectors_content(code, position))
+
+        return blocks
+
+    def _validate_collector_references(
+        self,
+        vars_list: List[VarNode],
+        steps: list,
+        connector_blocks: List[ConnectorsNode],
+        collector_blocks: List[CollectorsNode],
+    ) -> None:
+        connectors: Dict[str, Dict[str, Any]] = {}
+        for block in connector_blocks:
+            for connector_id, connector in block.connectors.items():
+                if connector_id in connectors:
+                    raise InvalidSyntaxError(f"Duplicate connector id: {connector_id}")
+                connectors[connector_id] = connector
+
+        collectors: Dict[str, Dict[str, Any]] = {}
+        step_ids = {step.name for step in steps}
+        for block in collector_blocks:
+            for collector_id, collector in block.collectors.items():
+                if collector_id in collectors:
+                    raise InvalidSyntaxError(f"Duplicate collector id: {collector_id}")
+                collectors[collector_id] = collector
+                connector_id = collector["connector"]
+                connector = connectors.get(connector_id)
+                if connector is None:
+                    raise InvalidSyntaxError(
+                        f"Collector {collector_id} references unknown connector {connector_id}"
+                    )
+                if connector.get("kind") != "data_source":
+                    raise InvalidSyntaxError(
+                        f"Collector {collector_id} requires connector {connector_id} to use kind data_source"
+                    )
+                lifecycle = collector.get("lifecycle", {})
+                for trigger in (lifecycle.get("start"), lifecycle.get("stop")):
+                    if isinstance(trigger, dict) and trigger.get("step") not in step_ids:
+                        raise InvalidSyntaxError(
+                            f"Collector {collector_id} references unknown step {trigger.get('step')}"
+                        )
+
+        bindings: Dict[str, str] = {}
+        for var in vars_list:
+            raw_collector = var.kwargs.get("collector")
+            if raw_collector is None:
+                continue
+            if isinstance(var, VarTableNode):
+                raise InvalidSyntaxError(
+                    f"Variable table {var.name} cannot bind a Collector in the initial runtime"
+                )
+            if not isinstance(raw_collector, str) or not raw_collector.strip():
+                raise InvalidSyntaxError(
+                    f"Variable {var.name} collector metadata must be a non-empty string"
+                )
+            collector_id = raw_collector.strip()
+            collector = collectors.get(collector_id)
+            if collector is None:
+                raise InvalidSyntaxError(
+                    f"Variable {var.name} references unknown collector {collector_id}"
+                )
+            previous = bindings.get(collector_id)
+            if previous and previous != var.name:
+                raise InvalidSyntaxError(
+                    f"Collector {collector_id} cannot write directly to both {previous} and {var.name}"
+                )
+            bindings[collector_id] = var.name
+
+            normalized_type = re.sub(r"\s+", "", var.type_annotation or "").lower()
+            observation = normalized_type.startswith("observation[")
+            observation_list = normalized_type.startswith("list[observation[")
+            series = normalized_type.startswith("observationseriesref[")
+            if not observation and not observation_list and not series:
+                raise InvalidSyntaxError(
+                    f"Variable {var.name} bound to Collector {collector_id} must use Observation[T], list[Observation[T]], or ObservationSeriesRef[T]"
+                )
+            if collector["mode"] in {"polling", "stream"} and not (
+                observation_list or series
+            ):
+                raise InvalidSyntaxError(
+                    f"Variable {var.name} must use list[Observation[T]] or ObservationSeriesRef[T] for {collector['mode']} Collector {collector_id}"
+                )
+
     def _normalize_media_string(
         self, data: Dict[str, Any], key: str
     ) -> Optional[str]:
@@ -364,6 +462,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParse
         refs = self._parse_refs_blocks()
         assigners = self._parse_assigner_blocks()
         connectors = self._parse_connectors_blocks()
+        collectors = self._parse_collectors_blocks()
         workflows = self._parse_workflow_blocks()
 
         for token in self.tokens:
@@ -395,6 +494,8 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParse
         if unique_name_items or steps or checks:
             self._validate_uniqueness(unique_name_items, steps, checks)
 
+        self._validate_collector_references(vars_list, steps, connectors, collectors)
+
         templates = {
             "var": vars_list,
             "quiz": quizzes,
@@ -409,6 +510,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParse
             "refs": refs,
             "assigner": assigners,
             "connectors": connectors,
+            "collectors": collectors,
             "workflow": workflows,
         }
 
@@ -549,6 +651,10 @@ def parse_aimd(aimd_content: str) -> dict:
             "connectors": [
                 connectors.to_dict()
                 for connectors in result["templates"]["connectors"]
+            ],
+            "collectors": [
+                collectors.to_dict()
+                for collectors in result["templates"]["collectors"]
             ],
             "workflow": [
                 workflow.to_dict() for workflow in result["templates"]["workflow"]

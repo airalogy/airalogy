@@ -51,7 +51,8 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - `CurrentTime` and `UserName` can fill recorder values automatically from runtime context.
 - `AiralogyMarkdown` renders as a full-width embedded AIMD/Markdown field with `Preview` and `Source` modes; preview uses the AIMD renderer and renders Mermaid code blocks, while source editing still supports switching to `WYSIWYG`.
 - `DNASequence` renders a dedicated sequence widget with interactive and raw-structure modes, file import/export, topology switching, feature editing, and `SeqViz`-based visualization.
-- `EntityRef` and `list[EntityRef]` render as entity-reference controls when the host passes `entityResolvers`; resolver keys can match the AIMD `source` connector id or the `entity` namespace.
+- `EntityRef` and `list[EntityRef]` render as entity-reference controls when the host passes `entityResolvers`; resolver keys can match the AIMD `source` connector id or the `entity` namespace. Hosts can use `createAimdEntityResolversFromConnectors()` from `@airalogy/aimd-core/utils` to build these resolvers from parsed `connectors` metadata.
+- Collector-bound `Observation[T]` and `list[Observation[T]]` fields render as acquisition controls when the host passes `collectorProviders`, with snapshot reads, manual polling controls, authorization, cancellation, provenance, and explicit manual fallback.
 - `ref_var` references display current var values as readonly inline content when available.
 - `var` and `var_table` labels display AIMD `title`, keep the canonical id visible when a title is present, and show `description` plus `example`/`examples` details only on hover or keyboard focus. The first scalar example becomes the default placeholder when no explicit placeholder override is provided.
 - Select-backed nullable types such as `bool | None`, `Literal[...] | None`, and `BloodType | None` show a localized `Not set` option and store that choice as `null`. Required selects omit the empty option, so choosing a real enum value remains mandatory.
@@ -60,6 +61,36 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - `choice`, `true_false`, `blank`, `open`, and `scale` quiz types all have built-in recorder inputs.
 - Numeric `var` inputs honor Pydantic-style constraints such as `gt`, `ge`, `lt`, `le`, and `multiple_of`; these constraints apply to `int`, `integer`, `float`, and `number` var types.
 - Client assigners use the same numeric constraints for dependency readiness and skip execution while a dependent numeric field violates its declared bounds.
+
+## Collector Providers
+
+Collector declarations are parsed from the Protocol, while the host controls real device and network access by injecting a provider map keyed by connector id:
+
+```ts
+const collectorProviders = {
+  lab_sensor_gateway: {
+    async read({ collector, signal }) {
+      const response = await fetch(`/api/sensors/${collector.channel}`, { signal })
+      return response.json()
+    },
+  },
+}
+```
+
+```vue
+<AimdRecorder
+  v-model="record"
+  :content="content"
+  :collector-providers="collectorProviders"
+  :request-collector-permission="requestCollectorPermission"
+  :collector-record-key="recordId"
+  collector-actor-id="user-123"
+/>
+```
+
+The provider may return a raw value or an observation envelope. Recorder supplies `received_at` and trusted `source` metadata before writing the Record. The permission callback may return `false`, `true`/`"once"`, or `"record"`; record-scoped approval is cleared when the record key or Protocol content changes. See the normative [Collector syntax and runtime documentation](https://airalogy.github.io/airalogy/en/syntax/collectors).
+
+The current browser runtime supports `snapshot` and manually started/stopped `polling`. It parses but does not execute `stream`, automatic record/step lifecycle triggers, or file-backed `ObservationSeriesRef[T]` acquisition.
 
 ## Client Assigner
 

@@ -19,6 +19,8 @@ import type {
   AimdAssignerMap,
   AimdAssignerRunner,
   AimdChoiceOptionExplanationMode,
+  AimdCollectorPermissionHandler,
+  AimdCollectorProviderMap,
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
   AimdEntityResolverMap,
@@ -74,6 +76,10 @@ const props = withDefaults(defineProps<{
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   entityResolvers?: AimdEntityResolverMap
+  collectorProviders?: AimdCollectorProviderMap
+  requestCollectorPermission?: AimdCollectorPermissionHandler
+  collectorActorId?: string
+  collectorRecordKey?: string | number
   resolveFile?: (src: string) => string | null
   resolveFileInfo?: AimdFileInfoResolver
   uploadFile?: AimdFileUploadHandler
@@ -103,6 +109,10 @@ const props = withDefaults(defineProps<{
   customRenderers: undefined,
   fieldAdapters: undefined,
   entityResolvers: undefined,
+  collectorProviders: undefined,
+  requestCollectorPermission: undefined,
+  collectorActorId: undefined,
+  collectorRecordKey: undefined,
   resolveFile: undefined,
   resolveFileInfo: undefined,
   uploadFile: undefined,
@@ -176,6 +186,12 @@ watch(content, (value) => {
 
 const recordState = reactive(createEmptyProtocolRecordData())
 
+function extractProtocolContext(source: string): string {
+  const registryBlocks = source.match(/```(?:connectors|collectors)(?:[^\n]*)\n[\s\S]*?```/g) ?? []
+  const stepFields = source.match(/\{\{step\|[\s\S]*?\}\}/g) ?? []
+  return [...registryBlocks, ...stepFields].join('\n\n')
+}
+
 watch(() => props.modelValue, (value) => {
   const normalized = normalizeIncomingRecord(value)
   if (getRecordDataSignature(normalized) === getRecordDataSignature(recordState)) {
@@ -210,6 +226,11 @@ const surfaceState = reactive<RecorderMilkdownSurfaceState>({
   customRenderers: props.customRenderers,
   fieldAdapters: props.fieldAdapters,
   entityResolvers: props.entityResolvers,
+  collectorProviders: props.collectorProviders,
+  requestCollectorPermission: props.requestCollectorPermission,
+  collectorActorId: props.collectorActorId,
+  collectorRecordKey: props.collectorRecordKey,
+  protocolContext: extractProtocolContext(content.value),
   resolveFile: props.resolveFile,
   resolveFileInfo: props.resolveFileInfo,
   uploadFile: props.uploadFile,
@@ -245,6 +266,11 @@ watchEffect(() => {
   surfaceState.customRenderers = props.customRenderers
   surfaceState.fieldAdapters = props.fieldAdapters
   surfaceState.entityResolvers = props.entityResolvers
+  surfaceState.collectorProviders = props.collectorProviders
+  surfaceState.requestCollectorPermission = props.requestCollectorPermission
+  surfaceState.collectorActorId = props.collectorActorId
+  surfaceState.collectorRecordKey = props.collectorRecordKey
+  surfaceState.protocolContext = extractProtocolContext(content.value)
   surfaceState.resolveFile = props.resolveFile
   surfaceState.resolveFileInfo = props.resolveFileInfo
   surfaceState.uploadFile = props.uploadFile

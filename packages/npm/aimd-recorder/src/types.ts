@@ -1,5 +1,7 @@
 import type { VNode } from "vue"
 import type {
+  AimdCollectorField,
+  AimdConnectorField,
   AimdCheckNode,
   AimdQuizNode,
   AimdStepNode,
@@ -155,6 +157,83 @@ export interface AimdEntityResolver {
 
 export type AimdEntityResolverEntry = AimdEntityResolver | AimdEntitySearchHandler
 export type AimdEntityResolverMap = Record<string, AimdEntityResolverEntry>
+
+export type AimdCollectorRuntimeStatus =
+  | "idle"
+  | "waiting_for_permission"
+  | "connecting"
+  | "collecting"
+  | "stopping"
+  | "completed"
+  | "error"
+  | "unsupported"
+
+export interface AimdCollectorRuntimeState {
+  status: AimdCollectorRuntimeStatus
+  error?: string
+  lastObservedAt?: string
+  sampleCount: number
+}
+
+export interface AimdCollectorObservationSource {
+  kind: "collector" | "manual"
+  collector: string
+  connector?: string
+  device_id?: string
+  reason?: string
+  actor_id?: string
+}
+
+export interface AimdCollectorObservation<T = unknown> {
+  value: T
+  observed_at: string
+  received_at: string
+  source: AimdCollectorObservationSource
+  unit?: string
+  quality?: string
+  sequence?: number
+  metadata?: Record<string, unknown>
+}
+
+/** Optional structured envelope returned by a Collector provider. */
+export interface AimdCollectorObservationInput<T = unknown> {
+  value: T
+  observed_at?: string
+  unit?: string
+  quality?: string
+  sequence?: number
+  metadata?: Record<string, unknown>
+  device_id?: string
+}
+
+export interface AimdCollectorProviderRequest {
+  connector: AimdConnectorField
+  collector: AimdCollectorField
+  fieldKey: string
+  record: AimdProtocolRecordData
+  signal: AbortSignal
+}
+
+export interface AimdDataSourceProvider {
+  /** Read one sample. A raw scalar or an observation envelope may be returned. */
+  read: (request: AimdCollectorProviderRequest) => unknown | Promise<unknown>
+}
+
+/** Providers are keyed by connector id from the Protocol's `connectors` block. */
+export type AimdCollectorProviderMap = Record<string, AimdDataSourceProvider>
+
+export interface AimdCollectorPermissionRequest {
+  connector: AimdConnectorField
+  collector: AimdCollectorField
+  fieldKey: string
+  record: AimdProtocolRecordData
+}
+
+/** `record` remembers approval for the current Recorder record; `once` applies to one start. */
+export type AimdCollectorPermissionDecision = "once" | "record" | boolean
+export type AimdCollectorPermissionHandler = (
+  request: AimdCollectorPermissionRequest,
+) => AimdCollectorPermissionDecision | Promise<AimdCollectorPermissionDecision>
 
 export type AimdVarInputKind = "text" | "number" | "checkbox" | "boolean-select" | "textarea" | "scalar-list" | "entity-ref" | "date" | "datetime" | "time" | "dna" | "code" | "file"
 export type AimdStepDetailDisplay = "auto" | "always"

@@ -9,6 +9,7 @@ from .ast_nodes import (
     AssignerBlockNode,
     CheckNode,
     CiteNode,
+    CollectorsNode,
     ConnectorsNode,
     MediaNode,
     ReferenceNode,
@@ -33,6 +34,7 @@ from .lexer import Lexer
 from .model_generator import generate_model
 from .parser import AimdParser, extract_assigner_blocks, parse_aimd
 from .parser.connectors import parse_connectors_content
+from .parser.collectors import parse_collectors_content
 from .parser.workflow import is_aimd_workflow_reference, parse_workflow_content
 from .tokens import Position, Token, TokenType
 from .get import get_airalogy_image_ids
@@ -59,11 +61,13 @@ __all__ = [
     "RefMediaNode",
     "MediaNode",
     "CiteNode",
+    "CollectorsNode",
     "ConnectorsNode",
     "ReferenceNode",
     "AssignerBlockNode",
     "WorkflowNode",
     "parse_connectors_content",
+    "parse_collectors_content",
     "parse_workflow_content",
     "is_aimd_workflow_reference",
     # Errors

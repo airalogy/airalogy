@@ -171,7 +171,7 @@ class VarModel(BaseModel):
 来源质粒列表：{{var|parent_plasmids: list[EntityRef] | None, entity="plasmid", source="lab_plasmid_registry"}}
 ```
 
-对应的数据源可以通过 fenced [`connectors` 代码块](/zh/syntax/connectors) 声明。宿主应用和 recorder UI 可以用这些 metadata 提供实时搜索和选择控件，而 Python/Pydantic 仍然负责校验保存下来的引用结构。
+对应的数据源可以通过 fenced [`connectors` 代码块](/zh/syntax/connectors) 声明。宿主应用和 recorder UI 可以用这些 metadata 提供实时搜索和选择控件，而 Python/Pydantic 仍然负责校验保存下来的引用结构。后端工具可以使用 `airalogy.connectors.EntitySourceConnector` 或 `create_entity_source_connectors_from_aimd()` 执行受支持的 `entity_source` descriptor，并从 `.env` 或部署 secret manager 注入 secret。
 
 ## FileId
 
@@ -344,6 +344,24 @@ class VarModel(BaseModel):
 当你希望前端直接编辑序列和 annotation 时，使用 `DNASequence`。如果你只是想上传或引用原始 SnapGene `.dna` 文件，则使用 `FileIdDNA`。
 
 `DNASequence` 是唯一支持的公开类型名。在 AIMD、Python 模型和面向用户的文档中都应统一使用 `DNASequence`。
+
+## Observation 观测类型
+
+`Observation[T]` 用于把一个具体类型的观测值与采集时间、接收时间和结构化来源一起保存。它既可用于 Collector 生成的数据，也可用于需要审计来源的手工回退：
+
+```python
+from airalogy.types import Observation
+from pydantic import BaseModel
+
+
+class VarModel(BaseModel):
+    temperature: Observation[float] | None = None
+    temperature_log: list[Observation[float]] | None = None
+```
+
+Collector 观测需要 `source.kind="collector"`，并同时提供 `connector` 和 `collector`；手工观测需要 `source.kind="manual"`，并提供 `collector` 和 `reason`。`observed_at` 和 `received_at` 必须使用带时区的时间。
+
+`ObservationSeriesRef[T]` 用于描述文件化的观测序列，`file_id`、`source_uri` 和 `blob_id` 中至少需要一个稳定载荷引用。当前模型已可用于 schema 和 Record 校验，Collector 的文件化写入属于下一阶段运行时。详见 [Collector 语法与运行时](/zh/syntax/collectors)。
 
 ## 血型枚举类型
 

@@ -1,0 +1,28 @@
+# Sensor Collector
+
+```connectors
+demo_sensor_gateway:
+  kind: data_source
+  descriptor: https://demo.airalogy.local/connectors/sensors.yaml
+```
+
+```collectors
+room_temperature:
+  connector: demo_sensor_gateway
+  channel: room.temperature
+  mode: snapshot
+  manual_fallback: true
+  title: Room thermometer
+
+incubator_temperature:
+  connector: demo_sensor_gateway
+  channel: incubator.temperature
+  mode: polling
+  interval: 2s
+  manual_fallback: true
+  title: Incubator thermometer
+```
+
+Room temperature: {{var|room_temperature: Observation[float] | None, title="Room temperature", unit="Cel", collector="room_temperature"}}
+
+Incubator temperature: {{var|incubator_temperature: list[Observation[float]] | None, title="Incubator temperature log", unit="Cel", collector="incubator_temperature"}}

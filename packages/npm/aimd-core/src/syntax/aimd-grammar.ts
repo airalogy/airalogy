@@ -26,6 +26,7 @@ export const AIMD_SCOPES = {
   KEYWORD_REFS: "keyword.control.refs.aimd",
   KEYWORD_WORKFLOW: "keyword.control.workflow.aimd",
   KEYWORD_CONNECTORS: "keyword.control.connectors.aimd",
+  KEYWORD_COLLECTORS: "keyword.control.collectors.aimd",
 
   // Variables and types
   VARIABLE_NAME: "variable.other.aimd",
@@ -46,6 +47,7 @@ export const AIMD_SCOPES = {
   MARKUP_REFS_BLOCK: "markup.aimd.refs-block",
   MARKUP_WORKFLOW_BLOCK: "markup.aimd.workflow-block",
   MARKUP_CONNECTORS_BLOCK: "markup.aimd.connectors-block",
+  MARKUP_COLLECTORS_BLOCK: "markup.aimd.collectors-block",
   MARKUP_CRITIC_ADDITION: "markup.inserted.critic.aimd",
   MARKUP_CRITIC_DELETION: "markup.deleted.critic.aimd",
   MARKUP_CRITIC_SUBSTITUTION: "markup.changed.critic.aimd",
@@ -236,6 +238,15 @@ const aimdRepository = {
         name: AIMD_SCOPES.MARKUP_CONNECTORS_BLOCK,
         beginCaptures: {
           2: { name: AIMD_SCOPES.KEYWORD_CONNECTORS },
+        },
+        patterns: [{ include: "#aimd-workflow-yaml" }],
+      },
+      {
+        begin: "^\\s*(```|~~~)\\s*(collectors)\\b.*$",
+        end: "^\\s*\\1\\s*$",
+        name: AIMD_SCOPES.MARKUP_COLLECTORS_BLOCK,
+        beginCaptures: {
+          2: { name: AIMD_SCOPES.KEYWORD_COLLECTORS },
         },
         patterns: [{ include: "#aimd-workflow-yaml" }],
       },

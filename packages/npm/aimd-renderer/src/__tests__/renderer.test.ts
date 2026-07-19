@@ -915,6 +915,37 @@ describe('renderToHtmlSync', () => {
 })
 
 describe('renderToVue', () => {
+  it('validates isolated Collector fields against protocol metadata', async () => {
+    const context = parseAndExtract([
+      '```connectors',
+      'sensor_gateway:',
+      '  kind: data_source',
+      '  descriptor: ./sensor.yaml',
+      '```',
+      '',
+      '```collectors',
+      'temperature_sensor:',
+      '  connector: sensor_gateway',
+      '  channel: room.temperature',
+      '```',
+    ].join('\n'))
+
+    const { fields } = await renderToVue(
+      '{{var|temperature: Observation[float] | None, collector="temperature_sensor"}}',
+      {
+        collectorContext: {
+          connectors: context.connectors,
+          collectors: context.collectors,
+          step: context.step,
+        },
+      },
+    )
+
+    expect(fields.var).toEqual(['temperature'])
+    expect(fields.connectors).toEqual([])
+    expect(fields.collectors).toEqual([])
+  })
+
   it('renders workflow blocks as Vue nodes', async () => {
     const { nodes, fields } = await renderToVue(WORKFLOW_AIMD)
     const workflowNode = findVNodeByClass({ children: nodes }, 'aimd-workflow') as any

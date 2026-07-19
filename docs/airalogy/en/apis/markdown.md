@@ -77,7 +77,7 @@ Output shape (simplified):
 
 Fenced `refs` blocks are parsed from BibTeX into `templates.refs`. Each entry includes `id`, `entry_type`, `raw`, normalized `fields`, and common display fields such as `title`, `author`, `year`, `doi`, and `url`.
 
-Fenced `connectors` blocks are parsed into `templates.connectors` as connector metadata. The parser validates the declaration but does not fetch descriptors, call endpoints, or read secrets.
+Fenced `connectors` blocks are parsed into `templates.connectors` as connector metadata. The parser validates the declaration but does not fetch descriptors, call endpoints, or read secrets. Runtime tools that want to execute those descriptors can use the explicit helpers in `airalogy.connectors`.
 
 Minimal example (`var` + `quiz`):
 

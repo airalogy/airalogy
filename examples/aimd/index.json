@@ -35,6 +35,38 @@
       ]
     },
     {
+      "id": "collector-sensors",
+      "kind": "example",
+      "category": "data-acquisition",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ],
+      "title": {
+        "en-US": "Sensor Collectors",
+        "zh-CN": "传感器 Collector"
+      },
+      "description": {
+        "en-US": "Snapshot and polling Collector fields backed by an injected demo sensor provider, with normalized Observation values and manual fallback.",
+        "zh-CN": "使用宿主注入的模拟传感器 provider 展示单次采集、轮询采集、Observation 归一化和手工回退。"
+      },
+      "protocol_dir": {
+        "en-US": "collector-sensors",
+        "zh-CN": "collector-sensors"
+      },
+      "entry": {
+        "en-US": "collector-sensors/protocol.en-US.aimd",
+        "zh-CN": "collector-sensors/protocol.zh-CN.aimd"
+      },
+      "engine_required": false,
+      "tags": [
+        "collector",
+        "sensor",
+        "observation",
+        "polling"
+      ]
+    },
+    {
       "id": "clinical-information-record",
       "kind": "case",
       "category": "clinical",

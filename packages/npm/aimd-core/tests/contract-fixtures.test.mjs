@@ -23,6 +23,7 @@ const quotedTemplateTextFixture = path.join(monorepoRoot, 'spec/fixtures/protoco
 const refsFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/refs/protocol/protocol.aimd')
 const mediaFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/media/protocol/protocol.aimd')
 const entityRefConnectorsFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/entity-ref-connectors/protocol/protocol.aimd')
+const collectorsFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/collectors/protocol/protocol.aimd')
 const workflowFixture = path.join(monorepoRoot, 'spec/fixtures/workflows/parameter-optimization/workflow.aimd')
 
 function parseAimd(content) {
@@ -120,6 +121,38 @@ test('entity ref connectors fixture extracts connectors and EntityRef metadata',
     entity: 'plasmid',
     source: 'lab_plasmid_registry',
   })
+})
+
+test('collectors fixture extracts data-source and field binding metadata', () => {
+  const content = readFileSync(collectorsFixture, 'utf8')
+  const fields = parseAimd(content)
+
+  assert.deepEqual(fields.var, ['room_temperature', 'incubator_temperature'])
+  assert.equal(fields.collectors.length, 1)
+  assert.deepEqual(fields.collectors[0].collectors.room_temperature, {
+    id: 'room_temperature',
+    connector: 'lab_sensor_gateway',
+    channel: 'room-201.temperature',
+    mode: 'snapshot',
+    lifecycle: { start: 'manual', stop: 'manual' },
+    manual_fallback: true,
+    title: 'Room temperature',
+  })
+  assert.deepEqual(fields.collectors[0].collectors.incubator_temperature, {
+    id: 'incubator_temperature',
+    connector: 'lab_sensor_gateway',
+    channel: 'incubator-01.temperature',
+    mode: 'polling',
+    interval: '5s',
+    interval_ms: 5000,
+    lifecycle: { start: 'manual', stop: 'manual' },
+    manual_fallback: false,
+    title: 'Incubator temperature',
+  })
+  assert.equal(fields.connectors[0].connectors.lab_sensor_gateway.kind, 'data_source')
+  assert.equal(fields.var_definitions[0].type, 'Observation[float] | None')
+  assert.equal(fields.var_definitions[0].kwargs.collector, 'room_temperature')
+  assert.equal(fields.var_definitions[1].kwargs.collector, 'incubator_temperature')
 })
 
 test('workflow fixture parses through AIMD core workflow parser', () => {

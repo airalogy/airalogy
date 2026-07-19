@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import {
   AimdRecorderEditor,
   createEmptyProtocolRecordData,
+  type AimdCollectorProviderMap,
   type AimdProtocolRecordData,
 } from '@airalogy/aimd-recorder'
 import '@airalogy/aimd-recorder/styles'
@@ -20,6 +21,20 @@ const {
 } = useDemoExampleContent(DEFAULT_DEMO_EXAMPLE_ID, locale)
 const recordData = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 const recorderEditorKey = ref(0)
+let simulatedTemperature = 22.4
+const collectorProviders: AimdCollectorProviderMap = {
+  demo_sensor_gateway: {
+    async read({ collector }) {
+      simulatedTemperature += collector.mode === 'polling' ? 0.1 : 0.2
+      return {
+        value: Number(simulatedTemperature.toFixed(1)),
+        device_id: collector.channel || 'demo-thermometer',
+        quality: 'simulated',
+        metadata: { demo: true },
+      }
+    },
+  },
+}
 
 function resetForm() {
   recordData.value = createEmptyProtocolRecordData()
@@ -68,6 +83,9 @@ watch(locale, () => {
       :editor-title="messages.common.aimdSource"
       :recorder-title="messages.pages.recorder.inlineFormTitle"
       :record-data-title="messages.common.collectedData"
+      :collector-providers="collectorProviders"
+      :collector-record-key="recorderEditorKey"
+      collector-actor-id="demo-user"
     />
   </div>
 </template>
