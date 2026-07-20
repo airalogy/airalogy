@@ -191,6 +191,34 @@ export function getAimdDisplayValue(value: unknown): unknown {
   return unwrapAimdStructuredValue(value)
 }
 
+function stringifyAimdDecimalLikeValue(value: unknown): string | undefined {
+  if (!isAimdPlainRecord(value)) {
+    return undefined
+  }
+
+  const toNumber = value.toNumber
+  const toString = value.toString
+  if (typeof toNumber !== 'function' || typeof toString !== 'function') {
+    return undefined
+  }
+
+  try {
+    const numericValue = toNumber.call(value)
+    const displayValue = toString.call(value).trim()
+    if (
+      typeof numericValue === 'number'
+      && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(displayValue)
+    ) {
+      return displayValue
+    }
+  }
+  catch {
+    return undefined
+  }
+
+  return undefined
+}
+
 export function stringifyAimdDisplayValue(value: unknown): string {
   const normalized = getAimdDisplayValue(value)
   if (normalized === null || normalized === undefined) {
@@ -204,6 +232,10 @@ export function stringifyAimdDisplayValue(value: unknown): string {
   }
   if (Array.isArray(normalized)) {
     return normalized.map(item => stringifyAimdDisplayValue(item)).filter(Boolean).join(', ')
+  }
+  const decimalLikeValue = stringifyAimdDecimalLikeValue(normalized)
+  if (decimalLikeValue !== undefined) {
+    return decimalLikeValue
   }
   try {
     return JSON.stringify(normalized, null, 2)

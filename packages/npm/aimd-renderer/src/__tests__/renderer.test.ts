@@ -1482,6 +1482,27 @@ describe('readonly record rendering', () => {
     expect(input.props.disabled).toBe(true)
   })
 
+  it('renders decimal-like record values without JSON string quotes', async () => {
+    const decimal = {
+      toJSON: () => '177',
+      toNumber: () => 177,
+      toString: () => '177',
+    }
+    const { nodes } = await renderReadonlyRecordToVue(
+      'Height: {{var|height: float}}',
+      {
+        data: {
+          var: {
+            height: { value: decimal, displayedValue: '177', type: 'float' },
+          },
+        },
+      },
+    )
+
+    expect(collectVNodeText(nodes)).toMatch(/Height:\s+177/)
+    expect(collectVNodeText(nodes)).not.toContain('"177"')
+  })
+
   it('shows readable missing labels only when record values are absent', async () => {
     const { nodes } = await renderReadonlyRecordToVue(
       'Sample {{var|sample_id: str, title="Sample ID"}}',

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import Big from 'big.js'
 
 import {
   AIMD_FILE_REFERENCE_VALUE_KEYS,
@@ -23,6 +24,14 @@ test('normalizes AIMD type names and structured record values', () => {
   assert.equal(normalizeAimdTypeName(undefined), 'str')
   assert.equal(unwrapAimdStructuredValue({ value: 42, status: 'ok' }), 42)
   assert.equal(stringifyAimdDisplayValue({ value: ['A', 'B'] }), 'A, B')
+})
+
+test('renders decimal-like record values without JSON string quotes', () => {
+  const decimal = new Big('177.25')
+
+  assert.equal(JSON.stringify(decimal), '"177.25"')
+  assert.equal(stringifyAimdDisplayValue(decimal), '177.25')
+  assert.equal(stringifyAimdDisplayValue({ value: decimal, type: 'float' }), '177.25')
 })
 
 test('normalizes Record payloads with nested data', () => {
