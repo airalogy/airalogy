@@ -68,6 +68,28 @@ export interface AimdRendererMessages {
     clientSummary: string
     serverSummary: string
   }
+  recordView: {
+    record: string
+    field: string
+    columns: string
+    actions: string
+    selectAll: string
+    yes: string
+    no: string
+    completed: string
+    incomplete: string
+    notRecorded: string
+    missing: string
+    emptyValue: string
+    file: string
+    noRecords: string
+    compareAtLeastTwo: string
+    showOnlyDifferences: string
+    rows: (count: number) => string
+    records: (count: number) => string
+    selected: (count: number, limit: number) => string
+    selectRecord: (label: string) => string
+  }
 }
 
 export type AimdRendererMessagesInput = DeepPartial<AimdRendererMessages>
@@ -150,6 +172,28 @@ const EN_US_MESSAGES: AimdRendererMessages = {
     clientSummary: "Client assigner",
     serverSummary: "Server assigner",
   },
+  recordView: {
+    record: "Record",
+    field: "Field",
+    columns: "Columns",
+    actions: "Actions",
+    selectAll: "Select records on this page",
+    yes: "Yes",
+    no: "No",
+    completed: "Completed",
+    incomplete: "Incomplete",
+    notRecorded: "Not recorded",
+    missing: "Missing value",
+    emptyValue: "—",
+    file: "File",
+    noRecords: "No records",
+    compareAtLeastTwo: "Select at least two records to compare.",
+    showOnlyDifferences: "Only show differences",
+    rows: count => `${count} ${count === 1 ? "row" : "rows"}`,
+    records: count => `${count} ${count === 1 ? "record" : "records"}`,
+    selected: (count, limit) => limit > 0 ? `${count}/${limit} selected` : `${count} selected`,
+    selectRecord: label => `Select ${label}`,
+  },
 }
 
 const ZH_CN_MESSAGES: AimdRendererMessages = {
@@ -207,6 +251,28 @@ const ZH_CN_MESSAGES: AimdRendererMessages = {
   assigner: {
     clientSummary: "前端 assigner",
     serverSummary: "服务端 assigner",
+  },
+  recordView: {
+    record: "记录",
+    field: "字段",
+    columns: "选择列",
+    actions: "操作",
+    selectAll: "选择当前页记录",
+    yes: "是",
+    no: "否",
+    completed: "已完成",
+    incomplete: "未完成",
+    notRecorded: "未记录",
+    missing: "缺少数据",
+    emptyValue: "—",
+    file: "文件",
+    noRecords: "暂无记录",
+    compareAtLeastTwo: "请至少选择两条记录进行对比。",
+    showOnlyDifferences: "仅显示差异",
+    rows: count => `${count} 行`,
+    records: count => `${count} 条记录`,
+    selected: (count, limit) => limit > 0 ? `已选 ${count}/${limit} 条` : `已选 ${count} 条`,
+    selectRecord: label => `选择${label}`,
   },
 }
 

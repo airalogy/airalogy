@@ -171,6 +171,8 @@ const entityResolvers = createAimdEntityResolversFromConnectors(fields.connector
 
 `@airalogy/aimd-core/utils` 导出 `collectAimdRecordFieldRefs()`、`searchAimdRecordFields()`、`filterAimdRecord()`、`filterAimdRecords()` 等 protocol-aware record 辅助函数。这些函数使用解析后的字段元数据搜索全部字段或指定字段，也支持存放在 `record.var` 下的 `var_table` subvar，因此宿主应用可以构建 Record 搜索和筛选 UI，而不需要重新实现 AIMD 字段遍历逻辑。
 
+`createAimdRecordViewColumns()` 会为同一 Protocol version 下的多条 Record 生成稳定的列描述和紧凑默认列；`getAimdRecordViewCell()` 返回表格和对比视图共用的值、空值、表格行数、step/check 状态与稳定差异键。这些 API 只建模 AIMD 语义，不包含 Vue 或宿主应用的权限、分页和路由逻辑。
+
 ## 内置类型元数据
 
 `@airalogy/aimd-core/utils` 导出 `getAimdBuiltInTypeMetadata()` 和 `getAimdBuiltInTypeEnumValues()`。随包发布的元数据由 Python `airalogy.types` 注册表生成，因此 `BloodType` 这类官方命名枚举类型可以在浏览器工具中复用同一组取值，不需要在 npm 代码里重新维护 Python 类型定义。

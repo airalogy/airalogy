@@ -177,6 +177,44 @@ The component loads the canonical renderer styles itself. Use `resolveUrl` for a
 
 Readonly `AiralogyMarkdown` values are rendered through the AIMD Vue renderer, so headings, lists, nested AIMD preview tokens, and resolved Markdown image assets appear as document content instead of raw Markdown source.
 
+## Multi-Record Views
+
+The Vue entry point provides three readonly views backed by the field structure of one Protocol version:
+
+- `AimdRecordTable` renders Records as rows and Protocol fields as columns, with compact defaults, a column picker, and selection of up to four Records.
+- `AimdRecordCompare` transposes two to four selected Records into columns, highlights differing fields, and can hide equal fields.
+- `AimdRecordReport` renders one complete AIMD Record report through the canonical readonly renderer.
+
+```vue
+<script setup lang="ts">
+import { AimdRecordCompare, AimdRecordReport, AimdRecordTable } from "@airalogy/aimd-renderer/vue"
+</script>
+
+<template>
+  <AimdRecordTable
+    v-model:selected-record-keys="selectedKeys"
+    v-model:field-keys="visibleFieldKeys"
+    :aimd="protocolContent"
+    :records="records"
+    @open-record="openReport"
+  >
+    <template #actions="{ record }">
+      <button @click="openReport(record)">Open report</button>
+    </template>
+  </AimdRecordTable>
+
+  <AimdRecordCompare
+    :aimd="protocolContent"
+    :records="selectedRecords"
+    :field-keys="visibleFieldKeys"
+  />
+
+  <AimdRecordReport :aimd="protocolContent" :record="activeRecord" />
+</template>
+```
+
+All three views share `AimdRecordValue` and the `aimd-core` Record view model, so compact number, boolean, enum, Markdown, file, `var_table`, and step/check rendering is not reimplemented by each host. Hosts continue to own API pagination, Protocol-version grouping, permissions, routing, and action slots.
+
 Renderer styles are loaded automatically when calling async render APIs (`renderToHtml` / `renderToVue`) in browser environments. Use `@airalogy/aimd-renderer/styles` only if you want to preload or control the renderer stylesheet manually.
 
 ## Documentation

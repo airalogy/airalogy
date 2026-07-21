@@ -52,6 +52,19 @@ export {
 } from './readonly-record-renderer'
 
 export {
+  AimdRecordCompare,
+  AimdRecordReport,
+  AimdRecordTable,
+  AimdRecordValue,
+  getDefaultAimdRecordViewKey,
+  getDefaultAimdRecordViewLabel,
+  type AimdRecordMetadataColumn,
+  type AimdRecordViewKey,
+  type AimdRecordViewRecordKeyResolver,
+  type AimdRecordViewRecordLabelResolver,
+} from './record-views'
+
+export {
   renderToVue,
   createRenderer,
   defaultRenderer,

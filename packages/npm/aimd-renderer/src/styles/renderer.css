@@ -1550,3 +1550,337 @@
   color: #748489;
   font-style: italic;
 }
+
+/* Multi-Record table and comparison views. */
+.aimd-record-table-view,
+.aimd-record-compare {
+  width: 100%;
+  color: #253247;
+  font-size: 14px;
+}
+
+.aimd-record-table-view__toolbar,
+.aimd-record-compare__toolbar {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.aimd-record-table-view__summary {
+  color: #1f2937;
+  font-weight: 650;
+}
+
+.aimd-record-table-view__selection-summary {
+  color: #607079;
+  font-size: 13px;
+}
+
+.aimd-record-table-view__field-picker {
+  position: relative;
+  margin-left: auto;
+}
+
+.aimd-record-table-view__field-picker > summary {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border: 1px solid #cdd7dc;
+  border-radius: 5px;
+  background: #fff;
+  color: #32444c;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.aimd-record-table-view__field-picker > summary::-webkit-details-marker {
+  display: none;
+}
+
+.aimd-record-table-view__field-picker[open] > summary {
+  border-color: #247a64;
+  box-shadow: 0 0 0 2px rgba(36, 122, 100, 0.12);
+}
+
+.aimd-record-table-view__field-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(320px, 80vw);
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid #d5dee2;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(30, 41, 59, 0.14);
+}
+
+.aimd-record-table-view__field-option {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.aimd-record-table-view__field-option:hover {
+  background: #f1f6f5;
+}
+
+.aimd-record-table-view__field-option input,
+.aimd-record-table-view__select-column input,
+.aimd-record-compare__differences-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #247a64;
+}
+
+.aimd-record-table-view__scroller,
+.aimd-record-compare__scroller {
+  width: 100%;
+  overflow: auto;
+  border-top: 1px solid #d8e0e4;
+  border-bottom: 1px solid #d8e0e4;
+}
+
+.aimd-record-table-view__table,
+.aimd-record-compare__table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+}
+
+.aimd-record-table-view__table th,
+.aimd-record-table-view__table td,
+.aimd-record-compare__table th,
+.aimd-record-compare__table td {
+  min-width: 128px;
+  padding: 10px 12px;
+  border-right: 1px solid #edf0f2;
+  border-bottom: 1px solid #e5eaed;
+  background: #fff;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.aimd-record-table-view__table thead th,
+.aimd-record-compare__table thead th {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  background: #f6f8f9;
+  color: #42545d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.aimd-record-table-view__table tbody tr:hover td {
+  background: #f8fbfa;
+}
+
+.aimd-record-table-view__table tbody tr.aimd-record-table-view__row--selected td {
+  background: #eef8f4;
+}
+
+.aimd-record-table-view__select-column {
+  min-width: 44px !important;
+  width: 44px;
+  text-align: center !important;
+}
+
+.aimd-record-table-view__record-column {
+  min-width: 94px !important;
+  width: 94px;
+}
+
+.aimd-record-table-view__select-column,
+.aimd-record-table-view__record-column,
+.aimd-record-compare__field-column {
+  position: sticky;
+  z-index: 2;
+  left: 0;
+}
+
+.aimd-record-table-view__record-column {
+  left: 0;
+}
+
+.aimd-record-table-view--selectable .aimd-record-table-view__record-column {
+  left: 44px;
+}
+
+.aimd-record-table-view thead .aimd-record-table-view__select-column,
+.aimd-record-table-view thead .aimd-record-table-view__record-column,
+.aimd-record-compare thead .aimd-record-compare__field-column {
+  z-index: 4;
+  background: #f6f8f9;
+}
+
+.aimd-record-table-view__record-link,
+.aimd-record-compare__record-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1768c5;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.aimd-record-table-view__record-link:hover,
+.aimd-record-compare__record-link:hover {
+  color: #0f4f99;
+  text-decoration: underline;
+}
+
+.aimd-record-table-view__actions-column {
+  min-width: 128px;
+  white-space: nowrap;
+}
+
+.aimd-record-table-view__empty,
+.aimd-record-compare--empty {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  border-top: 1px solid #d8e0e4;
+  border-bottom: 1px solid #d8e0e4;
+  color: #6b7b83;
+}
+
+.aimd-record-value {
+  max-width: 320px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #27383f;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.aimd-record-value--empty {
+  color: #8a969c;
+}
+
+.aimd-record-value--number {
+  color: #1e3a5f;
+  font-variant-numeric: tabular-nums;
+}
+
+.aimd-record-value--enum {
+  padding: 2px 7px;
+  border: 1px solid #cfdad7;
+  border-radius: 4px;
+  background: #f4f8f7;
+  color: #31594e;
+}
+
+.aimd-record-value__status {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border: 1px solid #87949a;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.aimd-record-value[data-state="true"] .aimd-record-value__status {
+  border-color: #27815c;
+  background: #27815c;
+}
+
+.aimd-record-value[data-state="false"] .aimd-record-value__status {
+  border-color: #b67423;
+  background: #fff3da;
+}
+
+.aimd-record-value__file-badge {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: #e7edf0;
+  color: #43565f;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.aimd-record-value__file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aimd-record-compare__toolbar {
+  justify-content: flex-end;
+}
+
+.aimd-record-compare__differences-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #44565e;
+  cursor: pointer;
+}
+
+.aimd-record-compare__field-column {
+  min-width: 190px !important;
+  width: 190px;
+  background: #f8fafb !important;
+}
+
+.aimd-record-compare__row--different td {
+  background: #fff9e9;
+}
+
+.aimd-record-compare__row--different:hover td {
+  background: #fff5d8;
+}
+
+.aimd-record-compare__field-label,
+.aimd-record-compare__field-kind {
+  display: block;
+}
+
+.aimd-record-compare__field-kind {
+  margin-top: 2px;
+  color: #819097;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .aimd-record-table-view__toolbar,
+  .aimd-record-compare__toolbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  .aimd-record-table-view__field-picker {
+    margin-left: 0;
+  }
+
+  .aimd-record-table-view__field-menu {
+    right: auto;
+    left: 0;
+  }
+
+  .aimd-record-table-view__table th,
+  .aimd-record-table-view__table td,
+  .aimd-record-compare__table th,
+  .aimd-record-compare__table td {
+    padding: 9px 10px;
+  }
+}

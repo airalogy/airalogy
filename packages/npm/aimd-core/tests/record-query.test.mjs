@@ -3,9 +3,13 @@ import { test } from 'node:test'
 
 import {
   collectAimdRecordFieldRefs,
+  createAimdRecordViewColumns,
   filterAimdRecord,
   filterAimdRecords,
   getAimdRecordFieldValue,
+  getAimdRecordViewCell,
+  getAimdRecordViewCompareKey,
+  getDefaultAimdRecordViewFieldKeys,
   searchAimdRecordFields,
 } from '../dist/utils.js'
 
@@ -159,4 +163,45 @@ test('filterAimdRecords returns matching records with search matches', () => {
   })
   assert.deepEqual(numericResult.map(item => item.record.id), ['alice'])
   assert.deepEqual(numericResult[0]?.matches.map(match => match.field.key), ['var:age'])
+})
+
+test('createAimdRecordViewColumns builds compact defaults while retaining complex fields', () => {
+  const columns = createAimdRecordViewColumns(fields, { maxDefaultColumns: 3 })
+
+  assert.deepEqual(getDefaultAimdRecordViewFieldKeys(columns), [
+    'var:participant',
+    'var:age',
+    'check:ready',
+  ])
+  assert.equal(columns.find(column => column.key === 'var:age')?.valueKind, 'number')
+  assert.equal(columns.find(column => column.key === 'var_table:medications')?.valueKind, 'table')
+  assert.equal(columns.find(column => column.key === 'step:prep')?.valueKind, 'step')
+  assert.ok(columns.some(column => column.key === 'var_table:medications:name'))
+})
+
+test('getAimdRecordViewCell returns shared table and comparison metadata', () => {
+  const columns = createAimdRecordViewColumns(fields)
+  const medicationColumn = columns.find(column => column.key === 'var_table:medications')
+  const checkColumn = columns.find(column => column.key === 'check:ready')
+
+  assert.ok(medicationColumn)
+  assert.ok(checkColumn)
+
+  const medicationCell = getAimdRecordViewCell(aliceRecord, medicationColumn)
+  assert.equal(medicationCell.count, 2)
+  assert.equal(medicationCell.empty, false)
+
+  const checkCell = getAimdRecordViewCell(aliceRecord, checkColumn)
+  assert.equal(checkCell.checked, false)
+  assert.equal(checkCell.annotation, 'waiting for confirmation')
+  assert.equal(checkCell.empty, false)
+})
+
+test('getAimdRecordViewCompareKey compares structured values independent of key order', () => {
+  assert.equal(
+    getAimdRecordViewCompareKey({ checked: true, annotation: 'ready' }),
+    getAimdRecordViewCompareKey({ annotation: 'ready', checked: true }),
+  )
+  assert.notEqual(getAimdRecordViewCompareKey(0), getAimdRecordViewCompareKey(false))
+  assert.equal(getAimdRecordViewCompareKey(''), getAimdRecordViewCompareKey(null))
 })

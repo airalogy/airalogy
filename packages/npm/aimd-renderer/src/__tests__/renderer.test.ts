@@ -15,6 +15,9 @@ import { getFinalIndent, parseFieldTag } from '../index'
 import { createAimdRendererMessages } from '../locales'
 import {
   AimdMarkdownPreview,
+  AimdRecordCompare,
+  AimdRecordReport,
+  AimdRecordTable,
   createReadonlyRecordRenderContext,
   normalizeRecordRenderValue,
   renderReadonlyRecordToVue,
@@ -1757,5 +1760,167 @@ describe('parseFieldTag', () => {
   it('parses var_table tag', () => {
     const result = parseFieldTag('var_table|measurements|col1,col2')
     expect(result[0].type).toBe('var_table')
+  })
+})
+
+describe('multi-Record views', () => {
+  const aimd = [
+    '# Participant report',
+    '',
+    'Participant: {{var|participant: str, title = "Participant"}}',
+    '',
+    'Age: {{var|age: int, title = "Age"}}',
+    '',
+    'Active: {{var|active: bool, title = "Active"}}',
+    '',
+    'Notes: {{var|notes: AiralogyMarkdown, title = "Notes"}}',
+  ].join('\n')
+
+  const records = [
+    {
+      record_id: 'record-a',
+      metadata: { record_num: 105 },
+      data: {
+        var: {
+          participant: 'Alice',
+          age: 34,
+          active: true,
+          notes: '# Stable\n\nNo adverse events.',
+        },
+      },
+    },
+    {
+      record_id: 'record-b',
+      metadata: { record_num: 104 },
+      data: {
+        var: {
+          participant: 'Bob',
+          age: 34,
+          active: false,
+          notes: '# Review\n\nFollow-up required.',
+        },
+      },
+    },
+  ]
+
+  it('renders a compact table without mounting full Markdown previews per row', async () => {
+    const wrapper = mount(AimdRecordTable, {
+      props: {
+        aimd,
+        records,
+        fieldKeys: ['var:participant', 'var:age', 'var:active', 'var:notes'],
+        selectedRecordKeys: [],
+        locale: 'en-US',
+      },
+    })
+
+    expect(wrapper.findAll('tbody tr')).toHaveLength(2)
+    expect(wrapper.findAll('thead [data-field-key]')).toHaveLength(4)
+    expect(wrapper.find('.aimd-markdown-preview').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Alice')
+    expect(wrapper.text()).toContain('No adverse events.')
+    expect(wrapper.text()).not.toContain('# Stable')
+
+    await wrapper.findAll('tbody input[type="checkbox"]')[0]?.setValue(true)
+    expect(wrapper.emitted('update:selectedRecordKeys')?.[0]).toEqual([['record-a']])
+
+    await wrapper.find('.aimd-record-table-view__record-link').trigger('click')
+    expect(wrapper.emitted('open-record')?.[0]?.[0]).toEqual(records[0])
+    wrapper.unmount()
+  })
+
+  it('enforces the configured comparison selection limit', () => {
+    const extraRecords = [
+      ...records,
+      { record_id: 'record-c', data: { var: { participant: 'C', age: 30 } } },
+    ]
+    const wrapper = mount(AimdRecordTable, {
+      props: {
+        aimd,
+        records: extraRecords,
+        selectedRecordKeys: ['record-a', 'record-b'],
+        selectionLimit: 2,
+      },
+    })
+
+    const rowCheckboxes = wrapper.findAll('tbody input[type="checkbox"]')
+    expect(rowCheckboxes[0]?.attributes('disabled')).toBeUndefined()
+    expect(rowCheckboxes[1]?.attributes('disabled')).toBeUndefined()
+    expect(rowCheckboxes[2]?.attributes('disabled')).toBeDefined()
+    wrapper.unmount()
+  })
+
+  it('keeps at least one visible protocol field selected', async () => {
+    const wrapper = mount(AimdRecordTable, {
+      props: {
+        aimd,
+        records,
+        fieldKeys: ['var:participant'],
+      },
+    })
+
+    const selectedField = wrapper.find('.aimd-record-table-view__field-menu input:checked')
+    expect(selectedField.attributes('disabled')).toBeDefined()
+    await selectedField.setValue(false)
+    expect(wrapper.findAll('thead [data-field-key]')).toHaveLength(1)
+    expect(wrapper.emitted('update:fieldKeys')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('transposes selected records and marks different fields', () => {
+    const wrapper = mount(AimdRecordCompare, {
+      props: {
+        aimd,
+        records,
+        fieldKeys: ['var:age', 'var:active'],
+      },
+    })
+
+    const ageRow = wrapper.find('[data-field-key="var:age"]')
+    const activeRow = wrapper.find('[data-field-key="var:active"]')
+    expect(ageRow.attributes('data-different')).toBe('false')
+    expect(activeRow.attributes('data-different')).toBe('true')
+    expect(wrapper.findAll('thead .aimd-record-compare__record-link')).toHaveLength(2)
+    wrapper.unmount()
+  })
+
+  it('can show only differences and asks for at least two records', async () => {
+    const wrapper = mount(AimdRecordCompare, {
+      props: {
+        aimd,
+        records,
+        fieldKeys: ['var:age', 'var:active'],
+        showOnlyDifferences: true,
+      },
+    })
+
+    expect(wrapper.find('[data-field-key="var:age"]').exists()).toBe(false)
+    expect(wrapper.find('[data-field-key="var:active"]').exists()).toBe(true)
+    await wrapper.setProps({ records: [records[0]] })
+    expect(wrapper.text()).toContain('Select at least two records')
+    wrapper.unmount()
+  })
+
+  it('renders the complete report through the shared readonly preview', async () => {
+    const wrapper = mount(AimdRecordReport, {
+      props: {
+        aimd,
+        record: records[0],
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('Participant report')
+      expect(wrapper.text()).toContain('Alice')
+    })
+    expect(wrapper.find('.aimd-record-report').exists()).toBe(true)
+    expect(wrapper.find('.rendered-aimd-document').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('ships stable responsive collection styles', () => {
+    expect(rendererStyles).toContain('.aimd-record-table-view__scroller')
+    expect(rendererStyles).toContain('.aimd-record-compare__row--different')
+    expect(rendererStyles).toContain('@media (max-width: 640px)')
   })
 })

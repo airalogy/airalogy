@@ -495,6 +495,26 @@ import {
 | `createMermaidRenderer()` | 构造 Mermaid 图表 renderer。 |
 | `createStepCardRenderer(options?)` | 构造可复用的 Vue step-card renderer。 |
 
+### 多 Record Vue 视图
+
+```ts
+import {
+  AimdRecordTable,
+  AimdRecordCompare,
+  AimdRecordReport,
+  AimdRecordValue,
+} from "@airalogy/aimd-renderer/vue"
+```
+
+| 组件 | 说明 |
+|------|------|
+| `AimdRecordTable` | Protocol-aware Record 表格，支持紧凑字段列、列选择、受控 Record 选择、metadata 列、操作 slot 和 `open-record` 事件。 |
+| `AimdRecordCompare` | 2–4 条 Record 的转置对比，使用规范化值判定差异，可仅显示差异字段。 |
+| `AimdRecordReport` | 单条 Record 的完整只读 AIMD 报告，支持与 `AimdMarkdownPreview` 相同的资源、URL 和 Mermaid 集成。 |
+| `AimdRecordValue` | 表格与对比视图共用的紧凑字段 renderer。 |
+
+集合视图应接收同一 Protocol version 下的 Record。API 分页、版本分组、权限和路由仍由宿主负责。
+
 ### Unified Token Renderer
 
 ```ts

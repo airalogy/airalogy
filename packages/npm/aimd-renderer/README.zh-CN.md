@@ -177,6 +177,44 @@ import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
 
 只读 `AiralogyMarkdown` 值会通过 AIMD Vue renderer 渲染，因此标题、列表、嵌套 AIMD 预览 token，以及已解析的 Markdown 图片资源都会作为文档内容显示，而不是显示原始 Markdown 文本。
 
+## 多 Record 视图
+
+Vue 入口提供三种基于同一 Protocol version 字段结构的只读视图：
+
+- `AimdRecordTable`：Record 为行、Protocol 字段为列，内建紧凑默认列、列选择和最多 4 条记录选择。
+- `AimdRecordCompare`：字段为行、选中的 2–4 条 Record 为列，可高亮差异或仅显示差异。
+- `AimdRecordReport`：单条 Record 的完整 AIMD 报告，复用标准 readonly renderer。
+
+```vue
+<script setup lang="ts">
+import { AimdRecordCompare, AimdRecordReport, AimdRecordTable } from "@airalogy/aimd-renderer/vue"
+</script>
+
+<template>
+  <AimdRecordTable
+    v-model:selected-record-keys="selectedKeys"
+    v-model:field-keys="visibleFieldKeys"
+    :aimd="protocolContent"
+    :records="records"
+    @open-record="openReport"
+  >
+    <template #actions="{ record }">
+      <button @click="openReport(record)">查看报告</button>
+    </template>
+  </AimdRecordTable>
+
+  <AimdRecordCompare
+    :aimd="protocolContent"
+    :records="selectedRecords"
+    :field-keys="visibleFieldKeys"
+  />
+
+  <AimdRecordReport :aimd="protocolContent" :record="activeRecord" />
+</template>
+```
+
+三种视图共用 `AimdRecordValue` 和 `aimd-core` Record view model，因此数字、布尔、枚举、Markdown、文件、`var_table`、step/check 的紧凑显示不会在宿主应用中重复实现。宿主仍负责 API 分页、Protocol version 分组、权限、路由和操作 slot。
+
 在浏览器环境中调用异步渲染 API（`renderToHtml` / `renderToVue`）时，会自动加载 renderer 样式。只有在你希望手动预加载或控制 renderer stylesheet 时，才需要引入 `@airalogy/aimd-renderer/styles`。
 
 ## 文档

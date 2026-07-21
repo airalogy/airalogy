@@ -257,6 +257,18 @@ export {
 } from './utils/record-query'
 
 export {
+  createAimdRecordViewColumns,
+  getAimdRecordViewCell,
+  getAimdRecordViewCompareKey,
+  getAimdRecordViewValueKind,
+  getDefaultAimdRecordViewFieldKeys,
+  type AimdRecordViewCell,
+  type AimdRecordViewColumn,
+  type AimdRecordViewColumnOptions,
+  type AimdRecordViewValueKind,
+} from './utils/record-view'
+
+export {
   createAimdEntityResolversFromConnectors,
   loadAimdConnectorDescriptor,
   normalizeAimdEntityRefOption,

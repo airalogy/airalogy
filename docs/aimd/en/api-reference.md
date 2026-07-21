@@ -495,6 +495,26 @@ import {
 | `createMermaidRenderer()` | Build a Mermaid diagram renderer. |
 | `createStepCardRenderer(options?)` | Build a reusable Vue step-card renderer for AIMD step nodes. |
 
+### Multi-Record Vue Views
+
+```ts
+import {
+  AimdRecordTable,
+  AimdRecordCompare,
+  AimdRecordReport,
+  AimdRecordValue,
+} from "@airalogy/aimd-renderer/vue"
+```
+
+| Component | Description |
+|-----------|-------------|
+| `AimdRecordTable` | Protocol-aware Record rows with compact field columns, column selection, controlled Record selection, metadata columns, action slots, and `open-record` events. |
+| `AimdRecordCompare` | Transposed comparison for two to four Records with normalized difference detection and an optional differences-only mode. |
+| `AimdRecordReport` | Complete readonly AIMD report for one Record; accepts the same asset, URL, and Mermaid integrations as `AimdMarkdownPreview`. |
+| `AimdRecordValue` | Shared compact field renderer used by table and comparison views. |
+
+Collection views expect Records from one Protocol version. API pagination, version grouping, permissions, and routing remain host responsibilities.
+
 ### Unified Token Renderer
 
 ```ts

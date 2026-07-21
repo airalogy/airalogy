@@ -74,6 +74,19 @@ export {
 } from './vue/readonly-record-renderer'
 
 export {
+  AimdRecordCompare,
+  AimdRecordReport,
+  AimdRecordTable,
+  AimdRecordValue,
+  getDefaultAimdRecordViewKey,
+  getDefaultAimdRecordViewLabel,
+  type AimdRecordMetadataColumn,
+  type AimdRecordViewKey,
+  type AimdRecordViewRecordKeyResolver,
+  type AimdRecordViewRecordLabelResolver,
+} from './vue/record-views'
+
+export {
   type AimdComponentRenderer,
   type AimdRendererContext,
   type AssetResolver,
