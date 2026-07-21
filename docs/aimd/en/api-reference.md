@@ -509,7 +509,7 @@ import {
 | Component | Description |
 |-----------|-------------|
 | `AimdRecordTable` | Protocol-aware Record rows with compact field columns, column selection, controlled Record selection, metadata columns, action slots, and `open-record` events. |
-| `AimdRecordCompare` | Transposed comparison for two to four Records with normalized difference detection and an optional differences-only mode. |
+| `AimdRecordCompare` | Transposed comparison for two to four Records. It includes every Protocol field by default, supports an explicit `fieldKeys` subset, normalized difference detection, and an optional differences-only mode. |
 | `AimdRecordReport` | Complete readonly AIMD report for one Record; accepts the same asset, URL, and Mermaid integrations as `AimdMarkdownPreview`. |
 | `AimdRecordValue` | Shared compact field renderer used by table and comparison views. |
 

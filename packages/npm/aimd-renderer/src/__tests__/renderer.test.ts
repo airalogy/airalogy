@@ -1884,6 +1884,20 @@ describe('multi-Record views', () => {
     wrapper.unmount()
   })
 
+  it('compares every Protocol field by default', () => {
+    const wrapper = mount(AimdRecordCompare, {
+      props: {
+        aimd,
+        records,
+      },
+    })
+
+    expect(wrapper.findAll('tbody [data-field-key]')).toHaveLength(4)
+    expect(wrapper.find('[data-field-key="var:participant"]').exists()).toBe(true)
+    expect(wrapper.find('[data-field-key="var:notes"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   it('can show only differences and asks for at least two records', async () => {
     const wrapper = mount(AimdRecordCompare, {
       props: {

@@ -509,7 +509,7 @@ import {
 | 组件 | 说明 |
 |------|------|
 | `AimdRecordTable` | Protocol-aware Record 表格，支持紧凑字段列、列选择、受控 Record 选择、metadata 列、操作 slot 和 `open-record` 事件。 |
-| `AimdRecordCompare` | 2–4 条 Record 的转置对比，使用规范化值判定差异，可仅显示差异字段。 |
+| `AimdRecordCompare` | 2–4 条 Record 的转置对比，默认包含 Protocol 的全部字段，也可通过 `fieldKeys` 限定字段子集；使用规范化值判定差异，并可仅显示差异字段。 |
 | `AimdRecordReport` | 单条 Record 的完整只读 AIMD 报告，支持与 `AimdMarkdownPreview` 相同的资源、URL 和 Mermaid 集成。 |
 | `AimdRecordValue` | 表格与对比视图共用的紧凑字段 renderer。 |
 

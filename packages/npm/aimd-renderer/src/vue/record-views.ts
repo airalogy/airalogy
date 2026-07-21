@@ -468,7 +468,9 @@ export const AimdRecordCompare = defineComponent({
       defaultFieldKeys: props.fieldKeys,
       maxDefaultColumns: props.maxDefaultColumns,
     }))
-    const visibleColumns = computed(() => getVisibleColumns(columns.value, props.fieldKeys))
+    const visibleColumns = computed(() => props.fieldKeys?.length
+      ? getVisibleColumns(columns.value, props.fieldKeys)
+      : columns.value)
     const comparedRecords = computed(() => props.records.slice(0, Math.max(2, props.maxRecords)))
     const rendererMessages = computed(() => createAimdRendererMessages(props.locale, props.messages))
 

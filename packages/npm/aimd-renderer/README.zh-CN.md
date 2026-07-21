@@ -182,7 +182,7 @@ import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
 Vue 入口提供三种基于同一 Protocol version 字段结构的只读视图：
 
 - `AimdRecordTable`：Record 为行、Protocol 字段为列，内建紧凑默认列、列选择和最多 4 条记录选择。
-- `AimdRecordCompare`：字段为行、选中的 2–4 条 Record 为列，可高亮差异或仅显示差异。
+- `AimdRecordCompare`：字段为行、选中的 2–4 条 Record 为列，默认对比 Protocol 的全部字段，可高亮差异或仅显示差异。仅在需要限制对比范围时传入 `fieldKeys`。
 - `AimdRecordReport`：单条 Record 的完整 AIMD 报告，复用标准 readonly renderer。
 
 ```vue
@@ -206,7 +206,6 @@ import { AimdRecordCompare, AimdRecordReport, AimdRecordTable } from "@airalogy/
   <AimdRecordCompare
     :aimd="protocolContent"
     :records="selectedRecords"
-    :field-keys="visibleFieldKeys"
   />
 
   <AimdRecordReport :aimd="protocolContent" :record="activeRecord" />
