@@ -331,6 +331,12 @@ importers:
       '@milkdown/kit':
         specifier: ^7.18.0
         version: 7.18.0(@codemirror/language@6.12.1)(@codemirror/state@6.5.4)(@codemirror/view@6.39.13)(typescript@5.8.3)
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
       ajv:
         specifier: 'catalog:'
         version: 8.20.0
@@ -356,12 +362,6 @@ importers:
       '@types/node':
         specifier: ^24.3.0
         version: 24.10.12
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-vue':
         specifier: ^6.0.1
         version: 6.0.4(vite@7.3.1(@types/node@24.10.12)(jiti@1.21.7)(sass@1.97.3)(tsx@4.22.3)(yaml@2.8.2))(vue@3.5.27(typescript@5.8.3))

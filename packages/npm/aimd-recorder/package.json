@@ -67,6 +67,8 @@
     "@airalogy/aimd-editor": "workspace:^",
     "@airalogy/aimd-renderer": "workspace:^",
     "@milkdown/kit": "^7.18.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "ajv": "catalog:",
     "ajv-formats": "catalog:",
     "mermaid": "^11.15.0",
@@ -77,8 +79,6 @@
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vueuse/core": "^13.5.0",
     "naive-ui": "2.41.0",
