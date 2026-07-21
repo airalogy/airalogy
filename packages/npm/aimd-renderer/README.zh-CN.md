@@ -155,7 +155,7 @@ const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
 
 当宿主应用需要把已完成的 AIMD Protocol 展示为静态文档时，可以使用这个 helper。它既接受带 `data` 的 Record payload，也接受 `data` 对象本身，然后在只读字段上下文中渲染协议内容。
 
-Vue 宿主可以直接使用现成的 `AimdMarkdownPreview` 组件，而不是在本地维护 AIMD-aware Markdown preview：
+Vue 宿主可以直接使用现成的 `AimdMarkdownPreview` 组件，而不是在本地维护 AIMD-aware Markdown preview。它包含统一的正文、列表、表格、引用、代码与媒体样式：
 
 ```vue
 <script setup lang="ts">

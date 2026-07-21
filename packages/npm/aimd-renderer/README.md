@@ -155,7 +155,7 @@ const { nodes } = await renderReadonlyRecordToVue(protocolContent, {
 
 Use this when a host app needs to show a completed AIMD protocol as a static document. The helper accepts either a Record payload wrapper with `data` or the `data` object itself, then renders the protocol in a readonly field context.
 
-Vue hosts can use the ready-made `AimdMarkdownPreview` component instead of maintaining a local AIMD-aware Markdown preview:
+Vue hosts can use the ready-made `AimdMarkdownPreview` component instead of maintaining a local AIMD-aware Markdown preview. It includes canonical prose, list, table, quote, code, and media styles:
 
 ```vue
 <script setup lang="ts">

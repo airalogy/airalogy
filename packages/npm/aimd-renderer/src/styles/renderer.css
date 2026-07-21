@@ -41,6 +41,7 @@
 
 .aimd-renderer :where(p) {
   margin: 0.45em 0;
+  overflow-wrap: anywhere;
 }
 
 .aimd-renderer :where(ul, ol) {
@@ -73,6 +74,104 @@
 .aimd-renderer :where(img, video) {
   max-width: 100%;
   height: auto;
+}
+
+.aimd-renderer :where(a) {
+  color: #0969da;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.aimd-renderer :where(a:hover) {
+  text-decoration: underline;
+}
+
+.aimd-renderer :where(blockquote) {
+  margin: 0.8em 0;
+  padding: 0.15em 1em;
+  border-left: 4px solid #d0d7de;
+  color: #57606a;
+}
+
+.aimd-renderer :where(blockquote > :first-child) {
+  margin-top: 0;
+}
+
+.aimd-renderer :where(blockquote > :last-child) {
+  margin-bottom: 0;
+}
+
+.aimd-renderer :where(hr) {
+  height: 1px;
+  margin: 1.35em 0;
+  border: 0;
+  background: #d8dee8;
+}
+
+.aimd-renderer :where(table:not([class*="aimd-"])) {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: 0.8em 0;
+  overflow-x: auto;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.aimd-renderer :where(table:not([class*="aimd-"]) th, table:not([class*="aimd-"]) td) {
+  min-width: 88px;
+  padding: 7px 10px;
+  border: 1px solid #d8dee8;
+  text-align: left;
+  vertical-align: top;
+}
+
+.aimd-renderer :where(table:not([class*="aimd-"]) th) {
+  background: #f6f8fa;
+  color: #1f2f44;
+  font-weight: 700;
+}
+
+.aimd-renderer :where(table:not([class*="aimd-"]) tbody tr:nth-child(even)) {
+  background: #f8fafc;
+}
+
+.aimd-renderer :where(pre:not([class*="aimd-"])) {
+  max-width: 100%;
+  margin: 0.8em 0;
+  padding: 12px 14px;
+  overflow: auto;
+  border: 1px solid #d8dee8;
+  border-radius: 6px;
+  background: #f6f8fa;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+.aimd-renderer :where(code, kbd, samp) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.88em;
+}
+
+.aimd-renderer :where(code:not(pre code)) {
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  background: rgba(175, 184, 193, 0.2);
+}
+
+.aimd-renderer :where(pre:not([class*="aimd-"]) code) {
+  padding: 0;
+  background: transparent;
+  font-size: 0.92em;
+}
+
+.aimd-renderer :where(del) {
+  color: #667085;
+}
+
+.aimd-renderer :where(input[type="checkbox"]) {
+  margin: 0 0.45em 0.2em 0;
+  vertical-align: middle;
 }
 
 .aimd-renderer li::marker {

@@ -593,6 +593,12 @@ describe('renderToHtmlSync', () => {
     expect(rendererStyles).toMatch(/\.aimd-renderer :where\(ul\) \{[\s\S]*?list-style: disc outside;/)
     expect(rendererStyles).toMatch(/\.aimd-renderer :where\(ol\) \{[\s\S]*?list-style: decimal outside;/)
     expect(rendererStyles).toMatch(/\.aimd-renderer :where\(li\) \{[\s\S]*?line-height: 1\.48;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(a\) \{[\s\S]*?color: #0969da;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(blockquote\) \{[\s\S]*?border-left: 4px solid #d0d7de;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(table:not\(\[class\*="aimd-"\]\)\) \{[\s\S]*?overflow-x: auto;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(table:not\(\[class\*="aimd-"\]\) th, table:not\(\[class\*="aimd-"\]\) td\) \{[\s\S]*?border: 1px solid #d8dee8;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(pre:not\(\[class\*="aimd-"\]\)\) \{[\s\S]*?white-space: pre;/)
+    expect(rendererStyles).toMatch(/\.aimd-renderer :where\(code:not\(pre code\)\) \{[\s\S]*?background: rgba\(175, 184, 193, 0\.2\);/)
     expect(rendererStyles).toMatch(/\.aimd-renderer li::marker \{[\s\S]*?color: #64748b;/)
   })
 
