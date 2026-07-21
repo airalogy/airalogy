@@ -2,7 +2,7 @@
   "name": "@airalogy/protocol-demo",
   "private": true,
   "type": "module",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "scripts": {
     "dev": "pnpm --filter @airalogy/airalogy-engine build && node scripts/server.mjs --dev",
     "build": "vite build",
