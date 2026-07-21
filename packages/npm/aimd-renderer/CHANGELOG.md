@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.11.0
+
+### Minor Changes
+
+- 0ae5bc4: Add Collector syntax, typed Observation models, cross-language parser validation, and recorder controls for host-provided snapshot and polling data sources with authorization, cancellation, provenance, and explicit manual fallback.
+- fbed3e6: Add protocol-aware multi-Record table, comparison, and full-report views backed by shared column, cell, and difference models.
+
+### Patch Changes
+
+- Updated dependencies [0ae5bc4]
+- Updated dependencies [f2960ed]
+- Updated dependencies [7ddd040]
+- Updated dependencies [fbed3e6]
+  - @airalogy/aimd-core@2.14.0
+
 ## 2.10.0
 
 ### Minor Changes

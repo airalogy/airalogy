@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.14.0
+
+### Minor Changes
+
+- 0ae5bc4: Add Collector syntax, typed Observation models, cross-language parser validation, and recorder controls for host-provided snapshot and polling data sources with authorization, cancellation, provenance, and explicit manual fallback.
+- f2960ed: Add connector metadata blocks, the built-in `EntityRef` type, recorder entity-reference controls backed by host-provided resolvers, and Python/npm runtime helpers for executing `entity_source` connector descriptors.
+- fbed3e6: Add protocol-aware multi-Record table, comparison, and full-report views backed by shared column, cell, and difference models.
+
+### Patch Changes
+
+- 7ddd040: Render decimal-like Record values, including `big.js` values, without JSON string quotes.
+
 ## 2.13.0
 
 ### Minor Changes
