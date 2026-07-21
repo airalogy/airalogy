@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.11.1
+
+### Patch Changes
+
+- c1446ec: Add canonical prose, table, quote, code, and link styles to the shared AIMD Markdown renderer.
+- d98f332: Show every Protocol field in `AimdRecordCompare` by default while preserving explicit `fieldKeys` filtering.
+
 ## 2.11.0
 
 ### Minor Changes
