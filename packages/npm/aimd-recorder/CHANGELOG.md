@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.23.0
+
+### Minor Changes
+
+- 0ae5bc4: Add Collector syntax, typed Observation models, cross-language parser validation, and recorder controls for host-provided snapshot and polling data sources with authorization, cancellation, provenance, and explicit manual fallback.
+- f2960ed: Add connector metadata blocks, the built-in `EntityRef` type, recorder entity-reference controls backed by host-provided resolvers, and Python/npm runtime helpers for executing `entity_source` connector descriptors.
+
+### Patch Changes
+
+- bfc07f9: Rename the recorder search toggle to clarify that it searches the current record.
+- Updated dependencies [e761b99]
+- Updated dependencies [0ae5bc4]
+- Updated dependencies [f2960ed]
+- Updated dependencies [7ddd040]
+- Updated dependencies [fbed3e6]
+  - @airalogy/aimd-editor@1.11.0
+  - @airalogy/aimd-core@2.14.0
+  - @airalogy/aimd-renderer@2.11.0
+
 ## 1.22.0
 
 ### Minor Changes
