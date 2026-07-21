@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.24.2
+
+### Patch Changes
+
+- 1635455: Normalize host upload-list wrappers before validating scalar Pydantic file-id fields.
+
 ## 1.24.1
 
 ### Patch Changes
