@@ -372,7 +372,7 @@ export default defineComponent({
               row,
             })
           },
-          onBlur: () => emit("cell-blur", { tableName, column }),
+          onBlur: () => emit("cell-blur", { tableName, column, rowIndex }),
         }, [
           showEmptyEnumOption
             ? h("option", { value: "" }, emptyEnumLabel)
@@ -412,8 +412,37 @@ export default defineComponent({
             text,
           })
         },
-        onBlur: () => emit("cell-blur", { tableName, column }),
+        onBlur: () => emit("cell-blur", { tableName, column, rowIndex }),
       })
+    }
+
+    function renderValidatedCellControl(
+      tableName: string,
+      column: string,
+      rowIndex: number,
+      row: Record<string, string>,
+      className: string | string[],
+    ): VNode {
+      const fieldKey = `var_table:${tableName}:${rowIndex}:${column}`
+      const validationError = props.fieldState?.[fieldKey]?.validationError
+        ?? props.fieldState?.[`var_table:${tableName}:${column}`]?.validationError
+      const inputClass = Array.isArray(className) ? [...className] : [className]
+      if (validationError) inputClass.push("aimd-rec-table-cell-input--error")
+      return h("div", {
+        class: ["aimd-rec-table-cell-field", validationError ? "aimd-rec-table-cell-field--invalid" : undefined],
+        "data-aimd-validation-field": fieldKey,
+      }, [
+        renderCellControl(
+          tableName,
+          column,
+          rowIndex,
+          row,
+          inputClass,
+        ),
+        validationError
+          ? h("span", { class: "aimd-rec-validation-message", role: "alert" }, validationError)
+          : null,
+      ])
     }
 
     function renderMetadataLabel(id: string, definition: AimdVarDefinition | undefined, className: string, meta?: AimdFieldMeta): VNode {
@@ -480,21 +509,16 @@ export default defineComponent({
           titleColumn
             ? h("div", { class: "aimd-rec-card__field aimd-rec-card__field--title" }, [
                 renderMetadataLabel(titleColumn, getColumnDefinition(titleColumn), "aimd-rec-card__label", getColumnMeta(titleColumn)),
-                renderCellControl(tableName, titleColumn, rowIndex, row, "aimd-rec-card__input"),
+                renderValidatedCellControl(tableName, titleColumn, rowIndex, row, "aimd-rec-card__input"),
               ])
             : null,
           h("div", { class: "aimd-rec-card__body" }, detailColumns.map((column) => {
-            const colState = props.fieldState?.[`var_table:${tableName}:${column}`]
-            const inputClass = colState?.validationError
-              ? "aimd-rec-card__input aimd-rec-card__input--error"
-              : "aimd-rec-card__input"
-
             return h("div", {
               key: `${tableName}-${rowKey}-${column}`,
               class: "aimd-rec-card__field",
             }, [
               renderMetadataLabel(column, getColumnDefinition(column), "aimd-rec-card__label", getColumnMeta(column)),
-              renderCellControl(tableName, column, rowIndex, row, inputClass),
+              renderValidatedCellControl(tableName, column, rowIndex, row, "aimd-rec-card__input"),
             ])
           })),
         ])
@@ -648,19 +672,12 @@ export default defineComponent({
                       "data-column-kind": resolveColumnSizingKind(column, getColumnDisplayLabel(column)),
                     }, [
                       (() => {
-                        const colState = props.fieldState?.[`var_table:${tableName}:${column}`]
                         const sizingKind = resolveColumnSizingKind(column)
-                        const cellClass = colState?.validationError
-                          ? [
-                              "aimd-rec-table-cell-input",
-                              `aimd-rec-table-cell-input--${sizingKind}`,
-                              "aimd-rec-table-cell-input--error",
-                            ]
-                          : [
-                              "aimd-rec-table-cell-input",
-                              `aimd-rec-table-cell-input--${sizingKind}`,
-                            ]
-                        return renderCellControl(tableName, column, rowIndex, row, cellClass)
+                        const cellClass = [
+                          "aimd-rec-table-cell-input",
+                          `aimd-rec-table-cell-input--${sizingKind}`,
+                        ]
+                        return renderValidatedCellControl(tableName, column, rowIndex, row, cellClass)
                       })(),
                     ])),
                     h("td", { class: "aimd-rec-inline-table__action-cell" }, [

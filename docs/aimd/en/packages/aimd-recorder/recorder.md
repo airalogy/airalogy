@@ -62,6 +62,30 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - Numeric `var` inputs honor Pydantic-style constraints such as `gt`, `ge`, `lt`, `le`, and `multiple_of`; these constraints apply to `int`, `integer`, `float`, and `number` var types.
 - Client assigners use the same numeric constraints for dependency readiness and skip execution while a dependent numeric field violates its declared bounds.
 
+## Record Validation
+
+Use the Pydantic JSON Schema returned by protocol parsing as the shared contract, and call the component ref when the host needs a submit gate:
+
+```vue
+<AimdRecorder
+  ref="recorderRef"
+  v-model="record"
+  :content="content"
+  :validation-schema="parseResult.data?.json_schema"
+/>
+```
+
+```ts
+const result = await recorderRef.value?.validate()
+if (!result?.valid) return
+```
+
+The schema contract accepts both engine keys (`vars`, `steps`, `checks`) and legacy platform aliases (`research_variable`, `research_step`, `research_check`). It validates required, type, format, pattern, enum, numeric, array, object, and built-in-type constraints, including normalized structured values such as uploaded files. Schema-required recorder inputs reject empty strings and empty arrays even when the property already exists in the in-memory Record. Without a schema, Recorder falls back to AIMD declarations, infers fields without defaults as required, and applies `fieldMeta` overrides.
+
+Recorder validates only the changed or blurred field by default and preserves unrelated errors; configure this with `validationTriggers`. Table errors are tracked, rendered, and focused by exact row and column keys such as `var_table:samples:0:concentration`.
+
+`AimdRecorder` and `AimdRecorderEditor` expose `validate()`, `validateField(fieldKey)`, `clearValidation(fieldKey?)`, and `focusFirstInvalidField()`. The validation result contains `issues` plus a `fieldState` map. Run authoritative server-side Pydantic validation after the client submit gate, and pass server errors through the existing `fieldState` prop.
+
 ## Collector Providers
 
 Collector declarations are parsed from the Protocol, while the host controls real device and network access by injecting a provider map keyed by connector id:

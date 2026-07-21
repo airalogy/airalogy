@@ -67,6 +67,8 @@
     "@airalogy/aimd-editor": "workspace:^",
     "@airalogy/aimd-renderer": "workspace:^",
     "@milkdown/kit": "^7.18.0",
+    "ajv": "catalog:",
+    "ajv-formats": "catalog:",
     "mermaid": "^11.15.0",
     "monaco-editor": "^0.52.2",
     "react": "^19.2.4",

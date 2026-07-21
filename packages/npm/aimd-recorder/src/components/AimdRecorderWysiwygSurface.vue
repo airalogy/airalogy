@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, getCurrentInstance, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, getCurrentInstance, nextTick, reactive, ref, watch, watchEffect } from 'vue'
 import { parseAndExtract } from '@airalogy/aimd-renderer'
 import {
   AimdEditorToolbar,
@@ -14,6 +14,7 @@ import {
 import type { AimdVarTypePresetOption } from '@airalogy/aimd-editor/vue'
 import type { AimdQuizGradeResult, ExtractedAimdFields } from '@airalogy/aimd-core/types'
 import type { AimdComponentRenderer } from '@airalogy/aimd-renderer'
+import { createAimdRecorderMessages } from '../locales'
 import type { AimdRecorderMessagesInput } from '../locales'
 import type {
   AimdAssignerMap,
@@ -29,13 +30,20 @@ import type {
   AimdFieldMeta,
   AimdFieldState,
   AimdProtocolRecordData,
+  AimdRecordValidationSchema,
   AimdRecorderFieldAdapters,
+  AimdRecorderValidationResult,
+  AimdRecorderValidationTrigger,
   AimdScaleGradeDisplayMode,
   AimdStepDetailDisplay,
   AimdTypePlugin,
   FieldEventPayload,
   TableEventPayload,
 } from '../types'
+import {
+  matchesAimdValidationFieldSelector,
+  validateAimdRecord,
+} from '../record/validation'
 import {
   cloneRecordData,
   getRecordDataSignature,
@@ -72,6 +80,8 @@ const props = withDefaults(defineProps<{
   /** @deprecated Use `serverAssigners` instead. */
   assigners?: AimdAssignerMap
   fieldState?: Record<string, AimdFieldState>
+  validationSchema?: AimdRecordValidationSchema
+  validationTriggers?: AimdRecorderValidationTrigger[]
   wrapField?: (fieldKey: string, fieldType: string, defaultVNode: any) => any
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
@@ -105,6 +115,8 @@ const props = withDefaults(defineProps<{
   serverAssigners: undefined,
   assigners: undefined,
   fieldState: undefined,
+  validationSchema: undefined,
+  validationTriggers: () => ['change', 'blur'],
   wrapField: undefined,
   customRenderers: undefined,
   fieldAdapters: undefined,
@@ -134,6 +146,7 @@ const emit = defineEmits<{
   (e: 'assigner-cancel', payload: FieldEventPayload): void
   (e: 'table-add-row', payload: TableEventPayload): void
   (e: 'table-remove-row', payload: TableEventPayload): void
+  (e: 'validation', result: AimdRecorderValidationResult): void
   (e: 'edit-field', field: RecorderMilkdownFieldIdentity): void
   (e: 'delete-field', field: RecorderMilkdownFieldIdentity): void
 }>()
@@ -185,6 +198,113 @@ watch(content, (value) => {
 }, { immediate: true })
 
 const recordState = reactive(createEmptyProtocolRecordData())
+const surfaceRoot = ref<HTMLElement | null>(null)
+const internalValidationFieldState = ref<Record<string, AimdFieldState>>({})
+const validationEpoch = ref(0)
+const resolvedRecorderMessages = computed(() => createAimdRecorderMessages(props.locale, props.messages))
+const effectiveFieldState = computed<Record<string, AimdFieldState> | undefined>(() => {
+  const external = props.fieldState ?? {}
+  const internal = internalValidationFieldState.value
+  if (Object.keys(external).length === 0 && Object.keys(internal).length === 0) return undefined
+
+  const merged: Record<string, AimdFieldState> = { ...external }
+  for (const [fieldKey, state] of Object.entries(internal)) {
+    merged[fieldKey] = { ...merged[fieldKey], ...state }
+  }
+  return merged
+})
+
+function applyValidationResult(result: AimdRecorderValidationResult) {
+  const selectors = result.validatedFieldKeys
+  if (!selectors?.length) {
+    internalValidationFieldState.value = { ...result.fieldState }
+    return
+  }
+
+  const next = { ...internalValidationFieldState.value }
+  for (const fieldKey of Object.keys(next)) {
+    if (selectors.some(selector => matchesAimdValidationFieldSelector(fieldKey, selector))) {
+      delete next[fieldKey]
+    }
+  }
+  Object.assign(next, result.fieldState)
+  internalValidationFieldState.value = next
+}
+
+function handleValidation(result: AimdRecorderValidationResult) {
+  applyValidationResult(result)
+  emit('validation', result)
+}
+
+function clearValidation(fieldKey?: string) {
+  if (!fieldKey) {
+    internalValidationFieldState.value = {}
+  }
+  else {
+    const next = { ...internalValidationFieldState.value }
+    for (const existingKey of Object.keys(next)) {
+      if (matchesAimdValidationFieldSelector(existingKey, fieldKey)) delete next[existingKey]
+    }
+    internalValidationFieldState.value = next
+  }
+  validationEpoch.value += 1
+}
+
+function focusInvalidField(fieldKey: string): boolean {
+  const exactControl = Array.from(surfaceRoot.value?.querySelectorAll<HTMLElement>('[data-rec-focus-key]') ?? [])
+    .find(candidate => candidate.dataset.recFocusKey === fieldKey)
+  if (exactControl) {
+    exactControl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    exactControl.focus({ preventScroll: true })
+    return true
+  }
+  const field = Array.from(surfaceRoot.value?.querySelectorAll<HTMLElement>('[data-aimd-recorder-field]') ?? [])
+    .find(candidate => candidate.dataset.aimdRecorderField === fieldKey)
+  if (!field) return false
+  field.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  field.querySelector<HTMLElement>('input, textarea, select, button, [tabindex]')?.focus({ preventScroll: true })
+  return true
+}
+
+function focusFirstInvalidField(): boolean {
+  const fieldKey = Object.keys(internalValidationFieldState.value)[0]
+  return fieldKey ? focusInvalidField(fieldKey) : false
+}
+
+async function validate(options: { focus?: boolean } = {}): Promise<AimdRecorderValidationResult> {
+  const result = validateAimdRecord(parseAndExtract(content.value), recordState, {
+    fieldMeta: props.fieldMeta,
+    schema: props.validationSchema,
+    messages: resolvedRecorderMessages.value.validation,
+  })
+  validationEpoch.value += 1
+  handleValidation(result)
+  if (!result.valid && options.focus !== false) {
+    await nextTick()
+    focusFirstInvalidField()
+  }
+  return result
+}
+
+async function validateField(
+  fieldKey: string,
+  options: { focus?: boolean; trigger?: AimdRecorderValidationTrigger } = {},
+): Promise<AimdRecorderValidationResult> {
+  const result = validateAimdRecord(parseAndExtract(content.value), recordState, {
+    fieldMeta: props.fieldMeta,
+    schema: props.validationSchema,
+    fieldKeys: [fieldKey],
+    messages: resolvedRecorderMessages.value.validation,
+  })
+  validationEpoch.value += 1
+  handleValidation(result)
+  if (!result.valid && options.focus === true) {
+    await nextTick()
+    const invalidKey = Object.keys(result.fieldState)[0]
+    if (invalidKey) focusInvalidField(invalidKey)
+  }
+  return result
+}
 
 function extractProtocolContext(source: string): string {
   const registryBlocks = source.match(/```(?:connectors|collectors)(?:[^\n]*)\n[\s\S]*?```/g) ?? []
@@ -221,7 +341,10 @@ const surfaceState = reactive<RecorderMilkdownSurfaceState>({
   fieldMeta: props.fieldMeta,
   serverAssigners: props.serverAssigners,
   assigners: props.assigners,
-  fieldState: props.fieldState,
+  fieldState: effectiveFieldState.value,
+  validationSchema: props.validationSchema,
+  validationTriggers: props.validationTriggers,
+  validationEpoch: validationEpoch.value,
   wrapField: props.wrapField,
   customRenderers: props.customRenderers,
   fieldAdapters: props.fieldAdapters,
@@ -245,6 +368,7 @@ const surfaceState = reactive<RecorderMilkdownSurfaceState>({
   onAssignerCancel: (payload) => emit('assigner-cancel', payload),
   onTableAddRow: (payload) => emit('table-add-row', payload),
   onTableRemoveRow: (payload) => emit('table-remove-row', payload),
+  onValidation: handleValidation,
 })
 
 watchEffect(() => {
@@ -261,7 +385,10 @@ watchEffect(() => {
   surfaceState.fieldMeta = props.fieldMeta
   surfaceState.serverAssigners = props.serverAssigners
   surfaceState.assigners = props.assigners
-  surfaceState.fieldState = props.fieldState
+  surfaceState.fieldState = effectiveFieldState.value
+  surfaceState.validationSchema = props.validationSchema
+  surfaceState.validationTriggers = props.validationTriggers
+  surfaceState.validationEpoch = validationEpoch.value
   surfaceState.wrapField = props.wrapField
   surfaceState.customRenderers = props.customRenderers
   surfaceState.fieldAdapters = props.fieldAdapters
@@ -327,11 +454,15 @@ const wysiwygEditorRef = ref<InstanceType<typeof AimdWysiwygEditor> | null>(null
 
 defineExpose({
   getEditor: () => wysiwygEditorRef.value?.getEditor?.(),
+  validate,
+  validateField,
+  clearValidation,
+  focusFirstInvalidField,
 })
 </script>
 
 <template>
-  <div class="aimd-recorder-wysiwyg-surface" :style="surfaceCssVars">
+  <div ref="surfaceRoot" class="aimd-recorder-wysiwyg-surface" :style="surfaceCssVars">
     <AimdEditorToolbar
       :show-top-bar="false"
       :show-md-toolbar="true"

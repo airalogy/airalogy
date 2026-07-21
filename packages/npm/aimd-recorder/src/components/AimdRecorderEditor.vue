@@ -19,7 +19,10 @@ import type {
   AimdFieldMeta,
   AimdFieldState,
   AimdProtocolRecordData,
+  AimdRecordValidationSchema,
   AimdRecorderFieldAdapters,
+  AimdRecorderValidationResult,
+  AimdRecorderValidationTrigger,
   AimdScaleGradeDisplayMode,
   AimdStepDetailDisplay,
   AimdTypePlugin,
@@ -73,6 +76,8 @@ const props = withDefaults(defineProps<{
   /** @deprecated Use `serverAssigners` instead. */
   assigners?: AimdAssignerMap
   fieldState?: Record<string, AimdFieldState>
+  validationSchema?: AimdRecordValidationSchema
+  validationTriggers?: AimdRecorderValidationTrigger[]
   wrapField?: (fieldKey: string, fieldType: string, defaultVNode: any) => any
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
@@ -126,6 +131,8 @@ const props = withDefaults(defineProps<{
   serverAssigners: undefined,
   assigners: undefined,
   fieldState: undefined,
+  validationSchema: undefined,
+  validationTriggers: () => ['change', 'blur'],
   wrapField: undefined,
   customRenderers: undefined,
   fieldAdapters: undefined,
@@ -176,6 +183,7 @@ const emit = defineEmits<{
   (e: 'assigner-cancel', payload: FieldEventPayload): void
   (e: 'table-add-row', payload: TableEventPayload): void
   (e: 'table-remove-row', payload: TableEventPayload): void
+  (e: 'validation', result: AimdRecorderValidationResult): void
 }>()
 
 const EMPTY_FIELDS: ExtractedAimdFields = {
@@ -195,6 +203,7 @@ const EMPTY_FIELDS: ExtractedAimdFields = {
 
 const editorRef = ref<InstanceType<typeof AimdEditor> | null>(null)
 const recorderRef = ref<InstanceType<typeof AimdRecorder> | null>(null)
+const visualRecorderRef = ref<InstanceType<typeof AimdRecorderWysiwygSurface> | null>(null)
 const workbenchRef = ref<HTMLElement | null>(null)
 const workbenchMainRef = ref<HTMLElement | null>(null)
 const editorPanelHeadRef = ref<HTMLElement | null>(null)
@@ -1268,9 +1277,20 @@ function renderVisualEditWrapper(fieldKey: string, fieldType: string, defaultVNo
   return props.wrapField ? props.wrapField(fieldKey, fieldType, visualWrapped) : visualWrapped
 }
 
+function getActiveRecorder() {
+  return visualEditMode.value ? visualRecorderRef.value : recorderRef.value
+}
+
 defineExpose({
   getEditor: () => editorRef.value,
-  getRecorder: () => recorderRef.value,
+  getRecorder: getActiveRecorder,
+  validate: (options?: { focus?: boolean }) => getActiveRecorder()?.validate(options),
+  validateField: (
+    fieldKey: string,
+    options?: { focus?: boolean; trigger?: AimdRecorderValidationTrigger },
+  ) => getActiveRecorder()?.validateField(fieldKey, options),
+  clearValidation: (fieldKey?: string) => getActiveRecorder()?.clearValidation(fieldKey),
+  focusFirstInvalidField: () => getActiveRecorder()?.focusFirstInvalidField(),
   runClientAssigner: (id: string) => recorderRef.value?.runClientAssigner(id),
   runManualClientAssigners: () => recorderRef.value?.runManualClientAssigners(),
 })
@@ -1446,6 +1466,7 @@ defineExpose({
 
           <AimdRecorderWysiwygSurface
             v-if="visualEditMode"
+            ref="visualRecorderRef"
             :content="visualContentDraft"
             :model-value="recordSnapshot"
             :min-height="visualEditorMinHeight"
@@ -1463,6 +1484,8 @@ defineExpose({
             :server-assigners="serverAssigners"
             :assigners="assigners"
             :field-state="fieldState"
+            :validation-schema="validationSchema"
+            :validation-triggers="validationTriggers"
             :wrap-field="wrapField"
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
@@ -1489,6 +1512,7 @@ defineExpose({
             @assigner-cancel="emit('assigner-cancel', $event)"
             @table-add-row="emit('table-add-row', $event)"
             @table-remove-row="emit('table-remove-row', $event)"
+            @validation="emit('validation', $event)"
             @edit-field="handleVisualFieldEdit"
             @delete-field="handleVisualFieldDelete"
           />
@@ -1512,6 +1536,8 @@ defineExpose({
             :server-assigners="serverAssigners"
             :assigners="assigners"
             :field-state="fieldState"
+            :validation-schema="validationSchema"
+            :validation-triggers="validationTriggers"
             :wrap-field="renderVisualEditWrapper"
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
@@ -1535,6 +1561,7 @@ defineExpose({
             @assigner-cancel="emit('assigner-cancel', $event)"
             @table-add-row="emit('table-add-row', $event)"
             @table-remove-row="emit('table-remove-row', $event)"
+            @validation="emit('validation', $event)"
           />
         </div>
         <div

@@ -9,6 +9,20 @@ export type {
   AimdStepOrCheckRecordItem,
 } from '../types'
 export { createEmptyProtocolRecordData } from '../types'
+export type {
+  AimdRecorderValidationCode,
+  AimdRecorderValidationTrigger,
+  AimdRecordValidationSchema,
+  AimdRecorderValidationIssue,
+  AimdRecorderValidationResult,
+} from '../types'
+export {
+  getAimdVarTableCellFieldKey,
+  matchesAimdValidationFieldSelector,
+  validateAimdField,
+  validateAimdRecord,
+  type ValidateAimdRecordOptions,
+} from './validation'
 
 export {
   applyIncomingRecord,

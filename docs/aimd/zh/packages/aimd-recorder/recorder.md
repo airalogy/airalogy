@@ -62,6 +62,30 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 - 数值 `var` 输入会识别 `gt`、`ge`、`lt`、`le`、`multiple_of` 这类 Pydantic 风格约束；这些约束只对 `int`、`integer`、`float`、`number` 类型生效。
 - client assigner 会用同一组数值约束判断依赖是否就绪；依赖字段违反声明边界时会跳过执行。
 
+## Record 校验
+
+使用 Protocol 解析返回的 Pydantic JSON Schema 作为前后端共享契约，宿主需要在提交前拦截时，再通过组件 ref 调用：
+
+```vue
+<AimdRecorder
+  ref="recorderRef"
+  v-model="record"
+  :content="content"
+  :validation-schema="parseResult.data?.json_schema"
+/>
+```
+
+```ts
+const result = await recorderRef.value?.validate()
+if (!result?.valid) return
+```
+
+Schema 契约同时接受 engine 键（`vars`、`steps`、`checks`）和兼容用的 platform 别名（`research_variable`、`research_step`、`research_check`），覆盖必填、类型、格式、pattern、枚举、数值边界、数组、对象及内建类型约束，也会先归一化上传文件等结构化值。Schema 标记为 required 的 Recorder 输入即使已存在于内存 Record，空字符串和空数组仍会判为未填。没有 Schema 时，Recorder 回退到 AIMD 声明，自动把没有默认值的字段视为必填，并应用 `fieldMeta` 覆盖。
+
+Recorder 默认只在当前字段 `change` 或 `blur` 时重新校验，不会清除其他字段的错误；可通过 `validationTriggers` 调整。表格错误使用 `var_table:samples:0:concentration` 这样的精确行列 key 记录、展示和聚焦。
+
+`AimdRecorder` 和 `AimdRecorderEditor` 都暴露 `validate()`、`validateField(fieldKey)`、`clearValidation(fieldKey?)` 和 `focusFirstInvalidField()`。校验结果包含 `issues` 和 `fieldState`。前端提交拦截通过后，仍应执行服务端 Pydantic 权威校验；服务端错误可通过已有 `fieldState` 属性回填。
+
 ## Collector Provider
 
 Collector 声明来自 Protocol，真实设备和网络访问由宿主通过 connector id 注入 provider map 来控制：

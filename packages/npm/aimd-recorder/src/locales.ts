@@ -154,6 +154,16 @@ export interface AimdRecorderMessages {
     noMatches: string
     matchCount: (current: number, total: number) => string
   }
+  validation: {
+    required: (label: string) => string
+    pattern: (label: string) => string
+    enum: (label: string) => string
+    numeric: (label: string, detail: string) => string
+    type: (label: string, expected: string) => string
+    format: (label: string, format: string) => string
+    schema: (label: string, detail: string) => string
+    tableCell: (row: number, column: string) => string
+  }
   dna: {
     editMode: string
     interactiveMode: string
@@ -407,6 +417,16 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     noMatches: "No matches",
     matchCount: (current, total) => `${current} / ${total}`,
   },
+  validation: {
+    required: label => `${label} is required.`,
+    pattern: label => `${label} has an invalid format.`,
+    enum: label => `${label} must use one of the allowed values.`,
+    numeric: (label, detail) => `${label}: ${detail}`,
+    type: (label, expected) => `${label} must be ${expected}.`,
+    format: (label, format) => `${label} must use ${format} format.`,
+    schema: (label, detail) => `${label}: ${detail}`,
+    tableCell: (row, column) => `Row ${row}, ${column}`,
+  },
   dna: {
     editMode: "Edit mode",
     interactiveMode: "Interactive",
@@ -632,6 +652,16 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     collapse: "收起",
     noMatches: "无匹配",
     matchCount: (current, total) => `${current} / ${total}`,
+  },
+  validation: {
+    required: label => `${label}为必填项。`,
+    pattern: label => `${label}格式不正确。`,
+    enum: label => `${label}必须使用允许的选项。`,
+    numeric: (label, detail) => `${label}：${detail}`,
+    type: (label, expected) => `${label}必须是${expected}类型。`,
+    format: (label, format) => `${label}必须使用 ${format} 格式。`,
+    schema: (label, detail) => `${label}：${detail}`,
+    tableCell: (row, column) => `第 ${row} 行，${column}`,
   },
   dna: {
     editMode: "编辑模式",

@@ -29,7 +29,10 @@ import type {
   AimdFieldMeta,
   AimdFieldState,
   AimdProtocolRecordData,
+  AimdRecordValidationSchema,
   AimdRecorderFieldAdapters,
+  AimdRecorderValidationResult,
+  AimdRecorderValidationTrigger,
   AimdScaleGradeDisplayMode,
   AimdStepDetailDisplay,
   AimdTypePlugin,
@@ -63,6 +66,9 @@ export interface RecorderMilkdownSurfaceState {
   /** @deprecated Use `serverAssigners` instead. */
   assigners?: AimdAssignerMap
   fieldState?: Record<string, AimdFieldState>
+  validationSchema?: AimdRecordValidationSchema
+  validationTriggers: AimdRecorderValidationTrigger[]
+  validationEpoch: number
   wrapField?: (fieldKey: string, fieldType: string, defaultVNode: any) => any
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
@@ -88,6 +94,7 @@ export interface RecorderMilkdownSurfaceState {
   onAssignerCancel?: (payload: FieldEventPayload) => void
   onTableAddRow?: (payload: TableEventPayload) => void
   onTableRemoveRow?: (payload: TableEventPayload) => void
+  onValidation?: (result: AimdRecorderValidationResult) => void
 }
 
 interface RecorderMilkdownPluginOptions {

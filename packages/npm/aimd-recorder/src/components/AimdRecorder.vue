@@ -35,15 +35,23 @@ import type {
   AimdFieldState,
   AimdRecorderFieldAdapters,
   AimdRecorderFieldType,
+  AimdRecordValidationSchema,
   AimdScaleGradeDisplayMode,
   AimdTypePlugin,
   AimdProtocolRecordData,
+  AimdRecorderValidationResult,
+  AimdRecorderValidationTrigger,
   AimdStepDetailDisplay,
   AimdStepRecordItem,
   FieldEventPayload,
   TableEventPayload,
 } from "../types"
 import { createEmptyProtocolRecordData } from "../types"
+import {
+  getAimdVarTableCellFieldKey,
+  matchesAimdValidationFieldSelector,
+  validateAimdRecord,
+} from "../record/validation"
 import {
   applyIncomingRecord,
   applyPastedVarTableGrid,
@@ -156,6 +164,12 @@ const props = withDefaults(defineProps<{
    */
   fieldState?: Record<string, AimdFieldState>
 
+  /** Pydantic-compatible JSON Schema returned by protocol parsing. */
+  validationSchema?: AimdRecordValidationSchema
+
+  /** Field events that trigger local validation. Explicit validate() calls always run. */
+  validationTriggers?: AimdRecorderValidationTrigger[]
+
   /**
    * Optional wrapper applied to every rendered field VNode.
    * Receives (fieldKey, fieldType, defaultVNode) and should return a VNode.
@@ -234,6 +248,8 @@ const props = withDefaults(defineProps<{
   serverAssigners: undefined,
   assigners: undefined,
   fieldState: undefined,
+  validationSchema: undefined,
+  validationTriggers: () => ["change", "blur"],
   wrapField: undefined,
   customRenderers: undefined,
   fieldAdapters: undefined,
@@ -257,6 +273,8 @@ const emit = defineEmits<{
   (e: "fields-change", fields: ExtractedAimdFields): void
   /** Parse / render error */
   (e: "error", message: string): void
+  /** Local record validation completed. */
+  (e: "validation", result: AimdRecorderValidationResult): void
 
   // ── Granular field events ─────────────────────────────────────────────────
   /** A single field value changed */
@@ -285,10 +303,12 @@ const inlineNodes = ref<VNode[]>([])
 const renderError = ref("")
 const contentRoot = ref<HTMLElement | null>(null)
 const localRecord = reactive<AimdProtocolRecordData>(createEmptyProtocolRecordData())
+const internalValidationFieldState = ref<Record<string, AimdFieldState>>({})
 let buildRequestId = 0
 let inlineBuildRequestId = 0
 let syncingFromExternal = false
 let renderScheduled = false
+let inlineRebuildSettled: Promise<void> = Promise.resolve()
 let recordInitializedDuringRender = false
 let pendingFocusSnapshot: FocusSnapshot | null = null
 let pendingInlineBuildRequestId: number | null = null
@@ -326,7 +346,18 @@ function applyFieldAdapter<TFieldType extends "var" | "var_table" | "step" | "ch
   value: unknown,
   defaultVNode: VNode,
 ): VNode {
-  return resolveAimdRecorderFieldVNode(fieldType, fieldKey, node, value, defaultVNode, {
+  const validationError = effectiveFieldState.value[fieldKey]?.validationError
+  const fieldVNode = h(fieldType === "var" ? "span" : "div", {
+    "class": ["aimd-rec-field-host", validationError ? "aimd-rec-field-host--invalid" : undefined],
+    "data-aimd-recorder-field": fieldKey,
+  }, [
+    defaultVNode,
+    validationError
+      ? h("span", { class: "aimd-rec-validation-message", role: "alert" }, validationError)
+      : null,
+  ])
+
+  return resolveAimdRecorderFieldVNode(fieldType, fieldKey, node, value, fieldVNode, {
     fieldAdapters: props.fieldAdapters,
     wrapField: props.wrapField,
     readonly: props.readonly,
@@ -632,18 +663,22 @@ const effectiveFieldMeta = computed<Record<string, AimdFieldMeta>>(() => {
 const effectiveFieldState = computed<Record<string, AimdFieldState>>(() => {
   const keys = new Set([
     ...Object.keys(internalAssignerFieldState.value),
+    ...Object.keys(internalValidationFieldState.value),
     ...Object.keys(props.fieldState ?? {}),
   ])
   const next: Record<string, AimdFieldState> = {}
 
   for (const key of keys) {
     const internalState = internalAssignerFieldState.value[key]
+    const validationState = internalValidationFieldState.value[key]
     const externalState = props.fieldState?.[key]
     next[key] = {
       ...internalState,
+      ...validationState,
       ...externalState,
       loading: externalState?.loading ?? internalState?.loading,
       error: externalState?.error ?? internalState?.error,
+      validationError: externalState?.validationError ?? validationState?.validationError,
     }
   }
 
@@ -701,17 +736,123 @@ function scheduleInlineRebuild() {
     return
   }
   renderScheduled = true
-  Promise.resolve().then(() => {
+  inlineRebuildSettled = Promise.resolve().then(async () => {
     renderScheduled = false
     const focusSnapshot = pendingFocusSnapshot
     const inlineRequestId = pendingInlineBuildRequestId ?? inlineBuildRequestId
     pendingFocusSnapshot = null
     pendingInlineBuildRequestId = null
-    void rebuildInlineNodes(undefined, focusSnapshot, inlineRequestId)
+    await rebuildInlineNodes(undefined, focusSnapshot, inlineRequestId)
   })
 }
 
 const { preRenderer: codeBlockPreRenderer } = useCodeBlockRendering(scheduleInlineRebuild)
+
+function validationFieldStatesEqual(
+  left: Record<string, AimdFieldState>,
+  right: Record<string, AimdFieldState>,
+): boolean {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+  return leftKeys.length === rightKeys.length
+    && leftKeys.every(key => left[key]?.validationError === right[key]?.validationError)
+}
+
+function applyValidationResult(
+  result: AimdRecorderValidationResult,
+  fieldKeys = result.validatedFieldKeys,
+) {
+  const next = fieldKeys?.length ? { ...internalValidationFieldState.value } : {}
+  if (fieldKeys?.length) {
+    for (const existingKey of Object.keys(next)) {
+      if (fieldKeys.some(selector => matchesAimdValidationFieldSelector(existingKey, selector))) {
+        delete next[existingKey]
+      }
+    }
+  }
+  Object.assign(next, result.fieldState)
+  if (validationFieldStatesEqual(next, internalValidationFieldState.value)) return
+  internalValidationFieldState.value = next
+  scheduleInlineRebuild()
+}
+
+function clearValidation(fieldKey?: string) {
+  if (Object.keys(internalValidationFieldState.value).length === 0) return
+  if (!fieldKey) {
+    internalValidationFieldState.value = {}
+    scheduleInlineRebuild()
+    return
+  }
+
+  const next = { ...internalValidationFieldState.value }
+  for (const existingKey of Object.keys(next)) {
+    if (matchesAimdValidationFieldSelector(existingKey, fieldKey)) delete next[existingKey]
+  }
+  if (validationFieldStatesEqual(next, internalValidationFieldState.value)) return
+  internalValidationFieldState.value = next
+  scheduleInlineRebuild()
+}
+
+function focusInvalidField(fieldKey: string): boolean {
+  const exactControl = Array.from(contentRoot.value?.querySelectorAll<HTMLElement>("[data-rec-focus-key]") ?? [])
+    .find(candidate => candidate.dataset.recFocusKey === fieldKey)
+  if (exactControl) {
+    exactControl.scrollIntoView({ behavior: "smooth", block: "center" })
+    exactControl.focus({ preventScroll: true })
+    return true
+  }
+  const element = Array.from(contentRoot.value?.querySelectorAll<HTMLElement>("[data-aimd-recorder-field]") ?? [])
+    .find(candidate => candidate.dataset.aimdRecorderField === fieldKey)
+  if (!element) return false
+  element.scrollIntoView({ behavior: "smooth", block: "center" })
+  element.querySelector<HTMLElement>("input, textarea, select, button, [tabindex]")?.focus({ preventScroll: true })
+  return true
+}
+
+function focusFirstInvalidField(): boolean {
+  const fieldKey = Object.keys(internalValidationFieldState.value)[0]
+  return fieldKey ? focusInvalidField(fieldKey) : false
+}
+
+async function validate(options: { focus?: boolean } = {}): Promise<AimdRecorderValidationResult> {
+  const result = validateAimdRecord(extractedFields.value, localRecord, {
+    fieldMeta: effectiveFieldMeta.value,
+    schema: props.validationSchema,
+    messages: resolvedMessages.value.validation,
+  })
+  applyValidationResult(result)
+  emit("validation", result)
+  if (!result.valid && options.focus !== false) {
+    await inlineRebuildSettled
+    focusFirstInvalidField()
+  }
+  return result
+}
+
+async function validateField(
+  fieldKey: string,
+  options: { focus?: boolean; trigger?: AimdRecorderValidationTrigger } = {},
+): Promise<AimdRecorderValidationResult> {
+  const result = validateAimdRecord(extractedFields.value, localRecord, {
+    fieldMeta: effectiveFieldMeta.value,
+    schema: props.validationSchema,
+    fieldKeys: [fieldKey],
+    messages: resolvedMessages.value.validation,
+  })
+  applyValidationResult(result, [fieldKey])
+  emit("validation", result)
+  if (!result.valid && options.focus === true) {
+    await inlineRebuildSettled
+    const invalidKey = Object.keys(result.fieldState)[0]
+    if (invalidKey) focusInvalidField(invalidKey)
+  }
+  return result
+}
+
+function triggerFieldValidation(trigger: Exclude<AimdRecorderValidationTrigger, "submit">, fieldKey: string) {
+  if (!props.validationTriggers.includes(trigger)) return
+  void validateField(fieldKey, { trigger })
+}
 
 function markRecordChanged(options?: { rebuild?: boolean, runClientAssigners?: boolean }) {
   const assignerChanged = options?.runClientAssigners ? clientAssignerRunner.applyCurrentClientAssigners() : false
@@ -1075,10 +1216,12 @@ function renderInlineVar(node: AimdVarNode): VNode {
     localRecord.var[id] = value
     markRecordChanged({ rebuild: inputKind === "file", runClientAssigners: true })
     emit("field-change", { section: "var", fieldKey: id, value })
+    triggerFieldValidation("change", fieldKey)
   }
 
   function emitVarBlur() {
     emit("field-blur", { section: "var", fieldKey: id })
+    triggerFieldValidation("blur", fieldKey)
   }
 
   // 2. Initialise value
@@ -1266,11 +1409,15 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
     onCellInput: (payload: { tableName: string, column: string, rowIndex: number, value: string, row: Record<string, string> }) => {
       payload.row[payload.column] = payload.value
       markRecordChanged({ runClientAssigners: true })
+      const validationFieldKey = getAimdVarTableCellFieldKey(payload.tableName, payload.rowIndex, payload.column)
       emit("field-change", {
         section: "var_table",
         fieldKey: `${payload.tableName}:${payload.column}`,
         value: payload.value,
+        rowIndex: payload.rowIndex,
+        column: payload.column,
       })
+      triggerFieldValidation("change", validationFieldKey)
     },
     onCellPaste: (payload: { tableName: string, column: string, rowIndex: number, text: string }) => {
       const startColumnIndex = columns.indexOf(payload.column)
@@ -1299,21 +1446,33 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
         emit("table-add-row", { tableName: payload.tableName, columns })
       }
       for (const cell of result.changedCells) {
+        const validationFieldKey = getAimdVarTableCellFieldKey(payload.tableName, cell.rowIndex, cell.column)
         emit("field-change", {
           section: "var_table",
           fieldKey: `${payload.tableName}:${cell.column}`,
           value: cell.value,
+          rowIndex: cell.rowIndex,
+          column: cell.column,
         })
+        triggerFieldValidation("change", validationFieldKey)
       }
     },
-    onCellBlur: (payload: { tableName: string, column: string }) => {
-      emit("field-blur", { section: "var_table", fieldKey: `${payload.tableName}:${payload.column}` })
+    onCellBlur: (payload: { tableName: string, column: string, rowIndex: number }) => {
+      emit("field-blur", {
+        section: "var_table",
+        fieldKey: `${payload.tableName}:${payload.column}`,
+        rowIndex: payload.rowIndex,
+        column: payload.column,
+      })
+      triggerFieldValidation("blur", getAimdVarTableCellFieldKey(payload.tableName, payload.rowIndex, payload.column))
     },
     onAddRow: (payload: { tableName: string, columns: string[] }) => {
       tableDragDrop.addVarTableRow(payload.tableName, payload.columns)
+      triggerFieldValidation("change", `var_table:${payload.tableName}`)
     },
     onRemoveRow: (payload: { tableName: string, rowIndex: number, columns: string[] }) => {
       tableDragDrop.removeVarTableRow(payload.tableName, payload.rowIndex, payload.columns)
+      triggerFieldValidation("change", `var_table:${payload.tableName}`)
     },
     onDragStart: (payload: { tableName: string, rowIndex: number, event: DragEvent }) => {
       tableDragDrop.startVarTableRowDrag(payload.tableName, payload.rowIndex, payload.event)
@@ -1323,6 +1482,7 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
     },
     onDragDrop: (payload: { tableName: string, rowIndex: number, columns: string[], event: DragEvent }) => {
       tableDragDrop.handleVarTableRowDrop(payload.tableName, payload.rowIndex, payload.columns, payload.event)
+      triggerFieldValidation("change", `var_table:${payload.tableName}`)
     },
     onDragEnd: () => {
       tableDragDrop.endVarTableRowDrag()
@@ -1499,6 +1659,7 @@ function renderInlineStep(node: AimdStepNode, bodyNodes: VNodeChild[] = []): VNo
       timerNowMs.value = Date.now()
       markRecordChanged()
       emit("field-change", { section: "step", fieldKey: payload.id, value: payload.value })
+      triggerFieldValidation("change", fieldKey)
       if (wasRunning) {
         emit("field-change", { section: "step", fieldKey: `${payload.id}:timer`, value: getStepTimerPayload(state) })
       }
@@ -1534,6 +1695,7 @@ function renderInlineStep(node: AimdStepNode, bodyNodes: VNodeChild[] = []): VNo
     },
     onBlur: (payload: { id: string }) => {
       emit("field-blur", { section: "step", fieldKey: payload.id })
+      triggerFieldValidation("blur", fieldKey)
     },
   })
 
@@ -1569,6 +1731,7 @@ function renderInlineCheck(node: AimdCheckNode, bodyNodes: VNodeChild[] = []): V
       state.checked = payload.value
       markRecordChanged()
       emit("field-change", { section: "check", fieldKey: payload.id, value: payload.value })
+      triggerFieldValidation("change", fieldKey)
     },
     onAnnotationChange: (payload: { id: string, value: string }) => {
       state.annotation = payload.value
@@ -1577,6 +1740,7 @@ function renderInlineCheck(node: AimdCheckNode, bodyNodes: VNodeChild[] = []): V
     },
     onBlur: (payload: { id: string }) => {
       emit("field-blur", { section: "check", fieldKey: payload.id })
+      triggerFieldValidation("blur", fieldKey)
     },
   })
 
@@ -1626,6 +1790,7 @@ function renderInlineQuiz(node: AimdQuizNode): VNode {
       localRecord.quiz[quizId] = value
       markRecordChanged({ rebuild: true })
       emit("field-change", { section: "quiz", fieldKey: quizId, value })
+      triggerFieldValidation("change", fieldKey)
     },
   })
 
@@ -1701,6 +1866,7 @@ async function parseAndBuild() {
 
     extractedFields.value = extracted
     clientAssigners.value = extracted.client_assigner || []
+    internalValidationFieldState.value = {}
     emit("fields-change", extracted)
 
     const defaultsChanged = ensureDefaultsFromFields(localRecord, extracted)
@@ -1777,6 +1943,7 @@ watch(
     now: props.now,
     fieldMeta: props.fieldMeta,
     fieldState: props.fieldState,
+    validationSchema: props.validationSchema,
     serverAssigners: props.serverAssigners,
     assigners: props.assigners,
     runServerAssigner: props.runServerAssigner,
@@ -1852,6 +2019,10 @@ onBeforeUnmount(() => {
 })
 
 defineExpose({
+  validate,
+  validateField,
+  clearValidation,
+  focusFirstInvalidField,
   runClientAssigner: clientAssignerRunner.triggerClientAssigner,
   runManualClientAssigners: clientAssignerRunner.triggerManualClientAssigners,
   startCollector: collectorRuntime.start,

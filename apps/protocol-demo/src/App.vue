@@ -25,6 +25,7 @@ import {
   type AimdAssignerMap,
   type AimdAssignerRunnerRequest,
   type AimdProtocolRecordData,
+  type AimdRecordValidationSchema,
 } from '@airalogy/aimd-recorder'
 import {
   normalizeDemoLocale,
@@ -193,6 +194,7 @@ const sourceDrafts = ref<Record<string, string>>({})
 const sourceContent = ref('')
 const recordData = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 const recorderKey = ref(0)
+const recorderEditorRef = ref<InstanceType<typeof AimdRecorderEditor> | null>(null)
 const loading = ref(true)
 const loadError = ref('')
 const engineBusy = ref(false)
@@ -413,6 +415,13 @@ const protocolAssigners = computed<AimdAssignerMap>(() => {
   const assigners = (data as Record<string, unknown>).assigners
   if (!assigners || typeof assigners !== 'object' || Array.isArray(assigners)) return {}
   return assigners as AimdAssignerMap
+})
+
+const protocolValidationSchema = computed<AimdRecordValidationSchema | undefined>(() => {
+  const data = parseResult.value?.data
+  if (!data || typeof data !== 'object') return undefined
+  const schema = (data as Record<string, unknown>).json_schema
+  return isObjectRecord(schema) ? schema : undefined
 })
 
 const protocolAssignerGraph = computed<AimdAssignerGraphData | null>(() => {
@@ -1610,6 +1619,9 @@ function applyValidationErrors(result: unknown) {
 }
 
 async function runValidate() {
+  const localResult = await recorderEditorRef.value?.validate({ focus: true })
+  if (localResult && !localResult.valid) return
+
   const result = await runEngineAction<unknown>('validate', () => (
     postEngine('validate', {
       vars: recordData.value.var,
@@ -2144,11 +2156,13 @@ onMounted(() => {
             </div>
             <AimdRecorderEditor
               :key="recorderKey"
+              ref="recorderEditorRef"
               v-model="recordData"
               v-model:content="recordSourceContent"
               :locale="selectedLocale"
               :server-assigners="protocolAssigners"
               :field-state="fieldState"
+              :validation-schema="protocolValidationSchema"
               :show-record-data="true"
               :show-field-structure="false"
               :show-visual-edit-toggle="false"

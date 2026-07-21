@@ -610,3 +610,35 @@ td .field__wrapper--tagged {
 .chain__description ul li {
   margin-bottom: 12px !important;
 }
+.aimd-rec-field-host {
+  display: contents;
+}
+
+.aimd-rec-field-host--invalid {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 100%;
+}
+
+.aimd-rec-validation-message {
+  display: block;
+  margin-top: 0.25rem;
+  color: #d03050;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.aimd-rec-table-cell-field {
+  min-width: 0;
+}
+
+.aimd-rec-table-cell-field--invalid {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.aimd-rec-table-cell-field .aimd-rec-validation-message {
+  white-space: normal;
+}

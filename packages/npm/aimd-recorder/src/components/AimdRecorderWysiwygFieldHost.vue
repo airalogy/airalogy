@@ -22,6 +22,7 @@ const renderedContent = computed(() => (
     :class="`aimd-recorder-wysiwyg-field-host--${displayMode}`"
   >
     <AimdRecorder
+      :key="surfaceState.validationEpoch"
       :content="renderedContent"
       :model-value="surfaceState.record"
       :readonly="surfaceState.readonly"
@@ -38,6 +39,8 @@ const renderedContent = computed(() => (
       :server-assigners="surfaceState.serverAssigners"
       :assigners="surfaceState.assigners"
       :field-state="surfaceState.fieldState"
+      :validation-schema="surfaceState.validationSchema"
+      :validation-triggers="surfaceState.validationTriggers"
       :wrap-field="surfaceState.wrapField"
       :custom-renderers="surfaceState.customRenderers"
       :field-adapters="surfaceState.fieldAdapters"
@@ -62,6 +65,7 @@ const renderedContent = computed(() => (
       @assigner-cancel="surfaceState.onAssignerCancel?.($event)"
       @table-add-row="surfaceState.onTableAddRow?.($event)"
       @table-remove-row="surfaceState.onTableRemoveRow?.($event)"
+      @validation="surfaceState.onValidation?.($event)"
     />
   </div>
 </template>

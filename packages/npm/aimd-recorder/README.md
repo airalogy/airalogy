@@ -142,6 +142,25 @@ Client assigners also use these constraints for dependency readiness, so an assi
 Use `locale` to switch built-in recorder labels (`en-US` / `zh-CN`).
 `AimdProtocolRecorder` is still available as a deprecated compatibility alias, but new code should use `AimdRecorder`.
 
+## Record Validation
+
+Pass the Pydantic JSON Schema returned by protocol parsing to make the Python model the single validation contract:
+
+```vue
+<AimdRecorder
+  ref="recorderRef"
+  v-model="record"
+  :content="content"
+  :validation-schema="parseResult.data?.json_schema"
+/>
+```
+
+The schema contract supports the engine's `vars` / `steps` / `checks` keys and the legacy `research_variable` / `research_step` / `research_check` aliases. It covers required, type, format, pattern, enum, numeric, array, object, and built-in-type constraints. Schema-required recorder inputs reject empty strings and empty arrays even though the property already exists in the in-memory Record. Structured recorder values such as uploaded files are normalized before schema validation. When no schema is supplied, Recorder falls back to AIMD declarations, treats fields without a default as required, and honors `fieldMeta` overrides.
+
+Validation runs for the changed or blurred field by default, so correcting one field preserves unrelated errors. Configure this with `validationTriggers` (`change` and `blur`). `var_table` issues use exact keys such as `var_table:samples:0:concentration`, render beside the affected cell, and focus that cell.
+
+`AimdRecorder` and `AimdRecorderEditor` expose `validate()`, `validateField(fieldKey)`, `clearValidation(fieldKey?)`, and `focusFirstInvalidField()` through their component refs. `validate()` is the submit gate and returns `{ valid, issues, fieldState }`; run authoritative server-side Pydantic validation afterward. Hosts can merge server errors through the existing `fieldState` prop.
+
 ## Assigner Graph
 
 Use `AimdAssignerGraph` to render protocol `assigner_graph` data without depending on an app-specific store or UI framework.

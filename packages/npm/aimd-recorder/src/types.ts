@@ -282,6 +282,45 @@ export interface AimdFieldState {
   disabled?: boolean           // dynamic disable
 }
 
+export type AimdRecorderValidationCode =
+  | "required"
+  | "pattern"
+  | "enum"
+  | "numeric"
+  | "type"
+  | "format"
+  | "schema"
+
+export type AimdRecorderValidationTrigger = "change" | "blur" | "submit"
+
+/**
+ * Pydantic-compatible JSON Schema contract returned by Airalogy protocol
+ * parsing. Both raw engine keys (`vars`, `steps`, `checks`) and platform keys
+ * (`research_variable`, `research_step`, `research_check`) are accepted.
+ */
+export type AimdRecordValidationSchema = Record<string, unknown>
+
+export interface AimdRecorderValidationIssue {
+  fieldKey: string
+  section: AimdRecorderFieldType
+  code: AimdRecorderValidationCode
+  message: string
+  value?: unknown
+  rowIndex?: number
+  column?: string
+  keyword?: string
+  instancePath?: string
+  schemaPath?: string
+}
+
+export interface AimdRecorderValidationResult {
+  valid: boolean
+  issues: AimdRecorderValidationIssue[]
+  fieldState: Record<string, AimdFieldState>
+  /** Present for field-scoped validation; omitted when the whole record was validated. */
+  validatedFieldKeys?: string[]
+}
+
 export interface AimdAssignerDefinition {
   mode?: string
   dependent_fields?: unknown
@@ -348,6 +387,8 @@ export interface FieldEventPayload {
   section: 'var' | 'step' | 'check' | 'quiz' | 'var_table'
   fieldKey: string
   value?: unknown
+  rowIndex?: number
+  column?: string
 }
 
 /** Table event payload */

@@ -80,6 +80,11 @@ export type {
   AimdStepOrCheckRecordItem,
   AimdFieldMeta,
   AimdFieldState,
+  AimdRecorderValidationCode,
+  AimdRecorderValidationTrigger,
+  AimdRecordValidationSchema,
+  AimdRecorderValidationIssue,
+  AimdRecorderValidationResult,
   AimdDnaSequenceAnnotation,
   AimdDnaSequenceQualifier,
   AimdDnaSequenceSegment,
@@ -87,6 +92,13 @@ export type {
   FieldEventPayload,
   TableEventPayload,
 } from './types'
+export {
+  getAimdVarTableCellFieldKey,
+  matchesAimdValidationFieldSelector,
+  validateAimdField,
+  validateAimdRecord,
+  type ValidateAimdRecordOptions,
+} from './record/validation'
 export { createEmptyProtocolRecordData } from './types'
 export {
   BUILT_IN_AIMD_TYPE_PLUGINS,
