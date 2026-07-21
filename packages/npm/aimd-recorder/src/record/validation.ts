@@ -42,7 +42,7 @@ const SCHEMA_SECTION_ALIASES: Array<{ section: SchemaSection; keys: string[] }> 
 const schemaAjv = new Ajv2020({
   allErrors: true,
   allowUnionTypes: true,
-  coerceTypes: true,
+  coerceTypes: "array",
   strict: false,
 })
 addFormats(schemaAjv)
@@ -129,6 +129,7 @@ function normalizeValidationValue(value: unknown): unknown {
   }
 
   if (typeof value.airalogy_file_id === "string") return value.airalogy_file_id
+  if (typeof value.airalogyId === "string") return value.airalogyId
   if ((value.type === "file" || value.type === "image") && typeof value.id === "string") return value.id
   if (hasOwn(value, "value") && (hasOwn(value, "displayedValue") || hasOwn(value, "formattedValue") || hasOwn(value, "type"))) {
     return normalizeValidationValue(value.value)

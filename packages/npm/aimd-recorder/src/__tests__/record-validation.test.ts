@@ -249,6 +249,37 @@ describe("AimdRecorder validation", () => {
     expect(result.valid).toBe(true)
   })
 
+  it("normalizes host upload lists into scalar file ids for Pydantic schemas", () => {
+    const record = createEmptyProtocolRecordData()
+    record.var.attachment = [{
+      id: "temporary-upload-id",
+      airalogyId: "airalogy.id.file.report.pdf",
+      status: "finished",
+    }]
+
+    const result = validateAimdRecord({
+      ...EMPTY_FIELDS,
+      var: ["attachment"],
+      var_definitions: [{ id: "attachment", type: "FileIdPDF" }],
+    }, record, {
+      schema: {
+        research_variable: {
+          type: "object",
+          required: ["attachment"],
+          properties: {
+            attachment: {
+              type: "string",
+              pattern: "^airalogy\\.id\\.file\\.",
+            },
+          },
+        },
+      },
+      messages,
+    })
+
+    expect(result.valid).toBe(true)
+  })
+
   it("can validate and clear one exact table cell without collapsing to the table key", () => {
     const record = createEmptyProtocolRecordData()
     record.var.samples = [{ concentration: "", sample_id: "" }]
