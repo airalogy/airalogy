@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.24.0
+
+### Minor Changes
+
+- 1a94eef: Add Pydantic JSON Schema-backed Record validation, immediate field-level feedback, exact table-cell errors, and shared validation APIs to `AimdRecorder` and `AimdRecorderEditor`.
+
 ## 1.23.0
 
 ### Minor Changes
