@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.24.1
+
+### Patch Changes
+
+- e9624bd: Ship the React type declarations required by the published SeqViz-backed Vue component source.
+
 ## 1.24.0
 
 ### Minor Changes
