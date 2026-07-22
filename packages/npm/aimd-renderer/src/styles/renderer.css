@@ -1664,6 +1664,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  padding-inline: 12px;
   margin-bottom: 10px;
 }
 
@@ -2057,6 +2058,7 @@
     align-items: flex-start;
     flex-wrap: wrap;
     gap: 8px 12px;
+    padding-inline: 10px;
   }
 
   .aimd-record-table-view__field-picker {

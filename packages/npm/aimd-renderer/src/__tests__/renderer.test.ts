@@ -1996,6 +1996,8 @@ describe('multi-Record views', () => {
     expect(rendererStyles).toContain('.aimd-record-compare__row--different')
     expect(rendererStyles).toContain('.aimd-record-field-help__popover')
     expect(rendererStyles).toContain('position: fixed')
+    expect(rendererStyles).toMatch(/\.aimd-record-table-view__toolbar,\s*\.aimd-record-compare__toolbar\s*\{[^}]*padding-inline:\s*12px;/)
     expect(rendererStyles).toContain('@media (max-width: 640px)')
+    expect(rendererStyles).toMatch(/@media \(max-width: 640px\)[\s\S]*?\.aimd-record-table-view__toolbar,\s*\.aimd-record-compare__toolbar\s*\{[^}]*padding-inline:\s*10px;/)
   })
 })
