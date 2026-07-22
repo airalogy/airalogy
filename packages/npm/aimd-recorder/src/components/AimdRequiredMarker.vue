@@ -8,6 +8,7 @@ defineProps<{
   <span
     class="aimd-field__required-marker"
     role="img"
+    data-aimd-required-marker="true"
     :aria-label="label"
     :title="label"
   >*</span>

@@ -12,6 +12,7 @@ import AimdCollectorField from "./AimdCollectorField.vue"
 import AimdRecorder from "./AimdRecorder.vue"
 import AimdRecorderEditor from "./AimdRecorderEditor.vue"
 import AimdQuizRecorder from "./AimdQuizRecorder.vue"
+import AimdRequiredMarker from "./AimdRequiredMarker.vue"
 
 const AimdDnaSequenceField = defineAsyncComponent(() => import("./AimdDnaSequenceField.vue"))
 const AimdMarkdownField = defineAsyncComponent(() => import("./AimdMarkdownField.vue"))
@@ -23,6 +24,7 @@ export {
   AimdRecorder,
   AimdRecorderEditor,
   AimdQuizRecorder,
+  AimdRequiredMarker,
   AimdEntityRefField,
   AimdDnaSequenceField,
   AimdMarkdownField,
