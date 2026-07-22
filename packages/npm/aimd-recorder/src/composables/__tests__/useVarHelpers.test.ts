@@ -906,10 +906,9 @@ describe('measureVarLabelWidth', () => {
       </span>
     `
     const requiredWrapper = optionalWrapper.cloneNode(true) as HTMLElement
-    requiredWrapper.querySelector('.aimd-field__name')?.insertAdjacentHTML(
-      'beforeend',
-      '<span class="aimd-field__required-marker">*</span>',
-    )
+    const requiredTitle = requiredWrapper.querySelector('.aimd-field__title')
+    requiredTitle?.insertAdjacentHTML('afterend', '<span class="aimd-field__required-marker">*</span>')
+    requiredTitle?.parentElement?.classList.add('aimd-field__title-row')
     document.body.append(optionalWrapper, requiredWrapper)
 
     expect(measureVarLabelWidth(requiredWrapper)).toBeGreaterThan(measureVarLabelWidth(optionalWrapper))

@@ -24,4 +24,8 @@ describe("AimdRequiredMarker", () => {
   it("reserves space on both sides so host containers do not clip the indicator", () => {
     expect(recorderStyles).toMatch(/\.aimd-field__required-marker \{[\s\S]*?margin-inline-start: 0\.3rem;[\s\S]*?margin-inline-end: 0\.35rem;/)
   })
+
+  it("keeps the indicator in an inline title row when metadata uses a stacked label", () => {
+    expect(recorderStyles).toMatch(/\.aimd-field__title-row \{[\s\S]*?display: inline-flex;[\s\S]*?align-items: baseline;/)
+  })
 })

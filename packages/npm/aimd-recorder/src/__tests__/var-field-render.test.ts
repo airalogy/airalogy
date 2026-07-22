@@ -55,6 +55,44 @@ describe('AimdVarField render behavior', () => {
     expect(source).toMatch(/control\.setCustomValidity\(violation \?\? ""\)/)
   })
 
+  it('keeps required markers beside custom titles and above field keys', () => {
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'sample_name',
+      raw: '{{var|sample_name}}',
+      definition: {
+        id: 'sample_name',
+        type: 'str',
+        kwargs: {
+          title: 'Sample Name',
+        },
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '',
+        inputKind: 'text',
+        initialized: true,
+        required: true,
+      },
+    })
+
+    const name = wrapper.get('.aimd-field__name--with-metadata')
+    const titleRow = name.get('.aimd-field__title-row')
+    expect(titleRow.get('.aimd-field__title').text()).toBe('Sample Name')
+    expect(titleRow.get('.aimd-field__required-marker').text()).toBe('*')
+    expect(name.element.children[0]).toBe(titleRow.element)
+    expect(name.element.children[1]).toBe(name.get('.aimd-field__key').element)
+    wrapper.unmount()
+  })
+
   it.each([
     'int | None',
     'None | integer',

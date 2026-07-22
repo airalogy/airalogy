@@ -782,8 +782,10 @@ export default defineComponent({
             tabindex: hasHelp ? 0 : undefined,
             "aria-label": help.tooltip || undefined,
           }, [
-            h("span", { class: "aimd-field__title", title: displayTitle }, displayTitle),
-            props.required ? h(AimdRequiredMarker, { label: props.messages.common.required }) : null,
+            h("span", { class: "aimd-field__title-row" }, [
+              h("span", { class: "aimd-field__title", title: displayTitle }, displayTitle),
+              props.required ? h(AimdRequiredMarker, { label: props.messages.common.required }) : null,
+            ]),
             hasCustomTitle ? h("span", { class: "aimd-field__key", title: id }, id) : null,
             renderFieldMetadataPopover(help),
           ]),

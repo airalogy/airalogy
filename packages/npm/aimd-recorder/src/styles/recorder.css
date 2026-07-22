@@ -139,6 +139,13 @@
   transform: translateY(-0.08em);
 }
 
+.aimd-field__title-row {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .aimd-field--no-style.aimd-field__label .aimd-field__name--with-metadata {
   align-items: flex-start;
   justify-content: center;
