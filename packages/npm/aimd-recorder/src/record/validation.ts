@@ -14,7 +14,7 @@ import type {
   AimdRecorderValidationIssue,
   AimdRecorderValidationResult,
 } from "../types"
-import { getNumericConstraintViolation } from "../composables/useVarHelpers"
+import { getNumericConstraintViolation, isNullableVarType } from "../composables/useVarHelpers"
 
 export interface ValidateAimdRecordOptions {
   fieldMeta?: Record<string, AimdFieldMeta>
@@ -225,6 +225,53 @@ function findArraySchema(
   return undefined
 }
 
+function schemaAllowsNull(
+  root: Record<string, unknown>,
+  candidate: unknown,
+  visited = new Set<object>(),
+): boolean {
+  if (!isRecord(candidate) || visited.has(candidate)) return false
+  visited.add(candidate)
+
+  const schema = resolveLocalSchemaReference(root, candidate)
+  if (schema !== candidate && schemaAllowsNull(root, schema, visited)) return true
+  if (schema.nullable === true) return true
+  if (schema.type === "null") return true
+  if (Array.isArray(schema.type) && schema.type.includes("null")) return true
+
+  for (const branchKey of ["anyOf", "oneOf"] as const) {
+    const branches = schema[branchKey]
+    if (Array.isArray(branches) && branches.some(branch => schemaAllowsNull(root, branch, visited))) {
+      return true
+    }
+  }
+  return false
+}
+
+function getSchemaNullableFieldKeys(schemaSections: ResolvedSchemaSection[]): Set<string> {
+  const keys = new Set<string>()
+  for (const { section, schema } of schemaSections) {
+    const properties = isRecord(schema.properties) ? schema.properties : {}
+    for (const [id, propertySchema] of Object.entries(properties)) {
+      if (schemaAllowsNull(schema, propertySchema)) {
+        keys.add(`${section}:${id}`)
+        if (section === "var") keys.add(`var_table:${id}`)
+      }
+      if (section !== "var") continue
+
+      const arraySchema = findArraySchema(schema, propertySchema)
+      const itemSchema = isRecord(arraySchema?.items)
+        ? resolveLocalSchemaReference(schema, arraySchema.items)
+        : undefined
+      const itemProperties = itemSchema && isRecord(itemSchema.properties) ? itemSchema.properties : {}
+      for (const [column, columnSchema] of Object.entries(itemProperties)) {
+        if (schemaAllowsNull(schema, columnSchema)) keys.add(`var_table:${id}:${column}`)
+      }
+    }
+  }
+  return keys
+}
+
 function getSchemaRequiredFieldKeys(schemaSections: ResolvedSchemaSection[]): Set<string> {
   const keys = new Set<string>()
   for (const { section, schema } of schemaSections) {
@@ -264,31 +311,39 @@ export function getAimdRequiredFieldKeys(
   const schemaSections = resolveSchemaSections(options.schema)
   const schemaCoveredKeys = getSchemaCoveredFieldKeys(schemaSections)
   const schemaRequiredKeys = getSchemaRequiredFieldKeys(schemaSections)
+  const schemaNullableKeys = getSchemaNullableFieldKeys(schemaSections)
 
   const addWhenRequired = (
     fieldKey: string,
     kwargs: Record<string, unknown> | undefined,
     inferredRequired: boolean,
+    type?: string,
   ) => {
     const required = schemaCoveredKeys.has(fieldKey)
-      ? schemaRequiredKeys.has(fieldKey) || fieldMeta[fieldKey]?.required === true
-      : resolveRequired(fieldMeta[fieldKey], kwargs, inferredRequired)
+      ? fieldMeta[fieldKey]?.required === true
+        || (schemaRequiredKeys.has(fieldKey) && !schemaNullableKeys.has(fieldKey))
+      : resolveRequired(fieldMeta[fieldKey], kwargs, inferredRequired && !isNullableVarType(type))
     if (required) keys.add(fieldKey)
   }
 
   for (const field of fields.var_definitions ?? []) {
-    addWhenRequired(`var:${field.id}`, field.kwargs, !hasOwn(field, "default"))
+    addWhenRequired(`var:${field.id}`, field.kwargs, !hasOwn(field, "default"), field.type)
   }
 
   for (const table of fields.var_table ?? []) {
     const tableKey = `var_table:${table.id}`
-    addWhenRequired(tableKey, table.kwargs, !hasOwn(table, "default"))
+    addWhenRequired(tableKey, table.kwargs, !hasOwn(table, "default"), table.type_annotation)
     const schemaCovered = schemaCoveredKeys.has(tableKey)
     for (const column of table.subvars ?? []) {
       const columnKey = `${tableKey}:${column.id}`
       const required = schemaCovered
-        ? schemaRequiredKeys.has(columnKey) || fieldMeta[columnKey]?.required === true
-        : resolveRequired(fieldMeta[columnKey], column.kwargs, !hasOwn(column, "default"))
+        ? fieldMeta[columnKey]?.required === true
+          || (schemaRequiredKeys.has(columnKey) && !schemaNullableKeys.has(columnKey))
+        : resolveRequired(
+            fieldMeta[columnKey],
+            column.kwargs,
+            !hasOwn(column, "default") && !isNullableVarType(column.type),
+          )
       if (required) keys.add(columnKey)
     }
   }
@@ -587,6 +642,7 @@ function validateValue(
     inferredRequired?: boolean
     schemaCovered?: boolean
     schemaRequired?: boolean
+    schemaNullable?: boolean
   },
 ) {
   const {
@@ -603,15 +659,19 @@ function validateValue(
     inferredRequired = false,
     schemaCovered = false,
     schemaRequired = false,
+    schemaNullable = false,
   } = input
   const details = { rowIndex, column }
   const fallbackKwargs = schemaCovered ? undefined : kwargs
   const fallbackEnumValues = schemaCovered ? undefined : enumValues
+  const explicitlyRequired = meta?.required === true || (!schemaCovered && kwargs?.required === true)
+  const nullable = schemaCovered ? schemaNullable : isNullableVarType(type)
   const required = schemaCovered
     ? schemaRequired || meta?.required === true
-    : resolveRequired(meta, kwargs, inferredRequired)
+    : resolveRequired(meta, kwargs, inferredRequired && !nullable)
+  const allowedNullableEmpty = value === null && nullable && !explicitlyRequired
 
-  if (required && isEmptyValue(value)) {
+  if (required && isEmptyValue(value) && !allowedNullableEmpty) {
     addIssue(issues, fieldKey, section, "required", options.messages.required(label), value, details)
     return
   }
@@ -715,6 +775,7 @@ export function validateAimdRecord(
   const schemaSections = resolveSchemaSections(options.schema)
   const schemaCoveredKeys = getSchemaCoveredFieldKeys(schemaSections)
   const schemaRequiredKeys = getSchemaRequiredFieldKeys(schemaSections)
+  const schemaNullableKeys = getSchemaNullableFieldKeys(schemaSections)
 
   validateSchema(issues, fields, record, schemaSections, options.messages)
 
@@ -732,6 +793,7 @@ export function validateAimdRecord(
       inferredRequired: !hasOwn(field, "default"),
       schemaCovered: schemaCoveredKeys.has(fieldKey),
       schemaRequired: schemaRequiredKeys.has(fieldKey),
+      schemaNullable: schemaNullableKeys.has(fieldKey),
     })
   }
 
@@ -740,8 +802,13 @@ export function validateAimdRecord(
     const rows = Array.isArray(record.var[table.id]) ? record.var[table.id] as Record<string, unknown>[] : []
     const schemaCovered = schemaCoveredKeys.has(tableKey)
     const required = schemaCovered
-      ? schemaRequiredKeys.has(tableKey) || fieldMeta[tableKey]?.required === true
-      : resolveRequired(fieldMeta[tableKey], table.kwargs, !hasOwn(table, "default"))
+      ? fieldMeta[tableKey]?.required === true
+        || (schemaRequiredKeys.has(tableKey) && !schemaNullableKeys.has(tableKey))
+      : resolveRequired(
+          fieldMeta[tableKey],
+          table.kwargs,
+          !hasOwn(table, "default") && !isNullableVarType(table.type_annotation),
+        )
     if (required && rows.length === 0) {
       addIssue(issues, tableKey, "var_table", "required", options.messages.required(table.title || table.id), rows)
       continue
@@ -764,6 +831,7 @@ export function validateAimdRecord(
           inferredRequired: !hasOwn(column, "default"),
           schemaCovered,
           schemaRequired: schemaRequiredKeys.has(columnMetaKey),
+          schemaNullable: schemaNullableKeys.has(columnMetaKey),
         })
       }
     })

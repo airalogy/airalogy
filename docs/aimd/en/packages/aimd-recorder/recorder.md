@@ -80,7 +80,7 @@ const result = await recorderRef.value?.validate()
 if (!result?.valid) return
 ```
 
-The schema contract accepts both engine keys (`vars`, `steps`, `checks`) and legacy platform aliases (`research_variable`, `research_step`, `research_check`). It validates required, type, format, pattern, enum, numeric, array, object, and built-in-type constraints, including normalized structured values such as uploaded files. Schema-required recorder inputs reject empty strings and empty arrays even when the property already exists in the in-memory Record. Without a schema, Recorder falls back to AIMD declarations, infers fields without defaults as required, and applies `fieldMeta` overrides.
+The schema contract accepts both engine keys (`vars`, `steps`, `checks`) and legacy platform aliases (`research_variable`, `research_step`, `research_check`). It validates required, type, format, pattern, enum, numeric, array, object, and built-in-type constraints, including normalized structured values such as uploaded files. Schema-required non-nullable recorder inputs reject empty strings and empty arrays even when the property already exists in the in-memory Record; nullable properties accept `null` and do not show a required marker. Without a schema, Recorder falls back to AIMD declarations, infers fields without defaults as required unless their type includes `None` or uses `Optional[...]`, and applies explicit `required` overrides from AIMD or `fieldMeta`.
 
 Recorder validates only the changed or blurred field by default and preserves unrelated errors; configure this with `validationTriggers`. Table errors are tracked, rendered, and focused by exact row and column keys such as `var_table:samples:0:concentration`.
 

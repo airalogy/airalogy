@@ -112,6 +112,127 @@ describe("AimdRecorder validation", () => {
     expect(wrapper.text()).toContain("sample_id")
   })
 
+  it("accepts the unfilled option for nullable built-in enum fields", async () => {
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: "性别：{{var|sex: ChineseGender | None}}",
+        showSearch: false,
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find(".aimd-field__required-marker").exists()).toBe(false)
+    expect(wrapper.get<HTMLSelectElement>('select[data-rec-focus-key="var:sex"]').element.value).toBe("")
+
+    const recorder = wrapper.vm as unknown as {
+      validate: (options?: { focus?: boolean }) => Promise<{ valid: boolean }>
+    }
+    expect((await recorder.validate({ focus: false })).valid).toBe(true)
+    expect(wrapper.find(".aimd-rec-validation-message").exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it("treats nullable AIMD fields and table columns as optional unless explicitly required", () => {
+    const fields: ExtractedAimdFields = {
+      ...EMPTY_FIELDS,
+      var: ["sex", "count", "forced"],
+      var_definitions: [
+        { id: "sex", type: "ChineseGender | None" },
+        { id: "count", type: "Optional[int]" },
+        { id: "forced", type: "str | None", kwargs: { required: true } },
+      ],
+      var_table: [
+        {
+          id: "optional_rows",
+          scope: "var_table",
+          type_annotation: "list[OptionalRow] | None",
+          subvars: [{ id: "value", type: "str" }],
+        },
+        {
+          id: "samples",
+          scope: "var_table",
+          default: [],
+          subvars: [
+            { id: "note", type: "str | None" },
+            { id: "code", type: "str | None", kwargs: { required: true } },
+          ],
+        },
+      ],
+    }
+    const record = createEmptyProtocolRecordData()
+    record.var.sex = null
+    record.var.count = null
+    record.var.forced = null
+    record.var.optional_rows = null
+    record.var.samples = [{ note: null, code: null }]
+
+    expect([...getAimdRequiredFieldKeys(fields)]).toEqual([
+      "var:forced",
+      "var_table:optional_rows:value",
+      "var_table:samples:code",
+    ])
+
+    const result = validateAimdRecord(fields, record, { messages })
+    expect(result.issues.map(issue => [issue.fieldKey, issue.code])).toEqual([
+      ["var:forced", "required"],
+      ["var_table:samples:0:code", "required"],
+    ])
+  })
+
+  it("accepts null for schema-required nullable fields and table columns", () => {
+    const fields: ExtractedAimdFields = {
+      ...EMPTY_FIELDS,
+      var: ["sex"],
+      var_definitions: [{ id: "sex", type: "ChineseGender | None" }],
+      var_table: [{
+        id: "samples",
+        scope: "var_table",
+        type_annotation: "list[Sample] | None",
+        subvars: [{ id: "note", type: "str | None" }],
+      }],
+    }
+    const schema = {
+      vars: {
+        type: "object",
+        required: ["sex", "samples"],
+        properties: {
+          sex: {
+            anyOf: [
+              { enum: ["male", "female"] },
+              { type: "null" },
+            ],
+          },
+          samples: {
+            anyOf: [
+              {
+                type: "array",
+                items: {
+                  type: "object",
+                  required: ["note"],
+                  properties: { note: { type: ["string", "null"] } },
+                },
+              },
+              { type: "null" },
+            ],
+          },
+        },
+      },
+    }
+    const record = createEmptyProtocolRecordData()
+    record.var.sex = null
+    record.var.samples = null
+
+    expect([...getAimdRequiredFieldKeys(fields, { schema })]).toEqual([])
+    expect(validateAimdRecord(fields, record, { schema, messages })).toEqual({
+      valid: true,
+      issues: [],
+      fieldState: {},
+    })
+
+    record.var.samples = [{ note: null }]
+    expect(validateAimdRecord(fields, record, { schema, messages }).valid).toBe(true)
+  })
+
   it("validates inferred required, pattern, numeric, and every table cell constraint", () => {
     const record = createEmptyProtocolRecordData()
     record.var.code = "bad"

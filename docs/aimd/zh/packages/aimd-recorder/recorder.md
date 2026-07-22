@@ -80,7 +80,7 @@ const result = await recorderRef.value?.validate()
 if (!result?.valid) return
 ```
 
-Schema 契约同时接受 engine 键（`vars`、`steps`、`checks`）和兼容用的 platform 别名（`research_variable`、`research_step`、`research_check`），覆盖必填、类型、格式、pattern、枚举、数值边界、数组、对象及内建类型约束，也会先归一化上传文件等结构化值。Schema 标记为 required 的 Recorder 输入即使已存在于内存 Record，空字符串和空数组仍会判为未填。没有 Schema 时，Recorder 回退到 AIMD 声明，自动把没有默认值的字段视为必填，并应用 `fieldMeta` 覆盖。
+Schema 契约同时接受 engine 键（`vars`、`steps`、`checks`）和兼容用的 platform 别名（`research_variable`、`research_step`、`research_check`），覆盖必填、类型、格式、pattern、枚举、数值边界、数组、对象及内建类型约束，也会先归一化上传文件等结构化值。Schema 标记为 required 且不可为空的 Recorder 输入即使已存在于内存 Record，空字符串和空数组仍会判为未填；可为空的属性接受 `null`，也不显示必填标记。没有 Schema 时，Recorder 回退到 AIMD 声明：自动把没有默认值的字段视为必填，但类型包含 `None` 或使用 `Optional[...]` 的字段除外；AIMD 或 `fieldMeta` 中显式的 `required` 设置仍会生效。
 
 Recorder 默认只在当前字段 `change` 或 `blur` 时重新校验，不会清除其他字段的错误；可通过 `validationTriggers` 调整。表格错误使用 `var_table:samples:0:concentration` 这样的精确行列 key 记录、展示和聚焦。
 
