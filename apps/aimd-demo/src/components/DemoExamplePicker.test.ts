@@ -24,6 +24,7 @@ describe('DemoExamplePicker', () => {
     expect(source).toContain("variant: 'compact'")
     expect(source).toContain('demo-example-picker__current')
     expect(source).toContain('demo-example-picker__list-panel--popover')
+    expect(source).toMatch(/\.demo-example-picker__list-panel--popover\s*\{[^}]*z-index:\s*100;/s)
     expect(source).toContain('props.titleLabel ?? messages.value.examples.title')
     expect(source).toContain('props.resetLabel ?? messages.value.examples.resetCurrent')
   })

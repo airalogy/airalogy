@@ -202,7 +202,7 @@ function handleReset() {
 
 .demo-example-picker__list-panel--popover {
   position: absolute;
-  z-index: 30;
+  z-index: 100;
   top: calc(100% + 8px);
   right: 0;
   left: 0;
