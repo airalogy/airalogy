@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.24.3
+
+### Patch Changes
+
+- 525f73b: Serve the recorder's built ESM entrypoints so browser consumers do not load AJV's CommonJS sources directly.
+- 621798e: Display an accessible required marker on fields and table columns using the same rules as record validation.
+
 ## 1.24.2
 
 ### Patch Changes
