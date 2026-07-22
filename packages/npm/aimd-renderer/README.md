@@ -181,7 +181,7 @@ Readonly `AiralogyMarkdown` values are rendered through the AIMD Vue renderer, s
 
 The Vue entry point provides three readonly views backed by the field structure of one Protocol version:
 
-- `AimdRecordTable` renders Records as rows and Protocol fields as columns, with compact defaults, a column picker, and selection of up to four Records.
+- `AimdRecordTable` renders Records as rows and Protocol fields as columns, with compact defaults, a column picker, and selection of up to four Records. Host-provided metadata columns are shown by default and can be controlled through `v-model:metadata-column-keys` in the same picker.
 - `AimdRecordCompare` transposes two to four selected Records into columns, compares every Protocol field by default, highlights differing fields, and can hide equal fields. Pass `fieldKeys` only when comparison should be limited to an explicit subset.
 - `AimdRecordReport` renders one complete AIMD Record report through the canonical readonly renderer.
 
@@ -196,6 +196,7 @@ import { AimdRecordCompare, AimdRecordReport, AimdRecordTable } from "@airalogy/
   <AimdRecordTable
     v-model:selected-record-keys="selectedKeys"
     v-model:field-keys="visibleFieldKeys"
+    v-model:metadata-column-keys="visibleMetadataColumnKeys"
     :aimd="protocolContent"
     :records="records"
     @open-record="openReport"

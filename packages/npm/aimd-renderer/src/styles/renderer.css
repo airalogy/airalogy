@@ -1721,6 +1721,20 @@
   box-shadow: 0 12px 30px rgba(30, 41, 59, 0.14);
 }
 
+.aimd-record-table-view__field-group + .aimd-record-table-view__field-group {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #e4eaed;
+}
+
+.aimd-record-table-view__field-group-label {
+  padding: 5px 8px 3px;
+  color: #718087;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
 .aimd-record-table-view__field-option {
   min-height: 34px;
   display: flex;

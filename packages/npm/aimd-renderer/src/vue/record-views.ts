@@ -468,6 +468,10 @@ export const AimdRecordTable = defineComponent({
       type: Array as PropType<AimdRecordMetadataColumn[]>,
       default: () => [],
     },
+    metadataColumnKeys: {
+      type: Array as PropType<string[]>,
+      default: undefined,
+    },
     showFieldPicker: {
       type: Boolean,
       default: true,
@@ -476,6 +480,7 @@ export const AimdRecordTable = defineComponent({
   emits: {
     'update:selectedRecordKeys': (_keys: AimdRecordViewKey[]) => true,
     'update:fieldKeys': (_keys: string[]) => true,
+    'update:metadataColumnKeys': (_keys: string[]) => true,
     'open-record': (_record: unknown, _index: number) => true,
   },
   setup(props, { emit, expose, slots }) {
@@ -484,6 +489,7 @@ export const AimdRecordTable = defineComponent({
       maxDefaultColumns: props.maxDefaultColumns,
     }))
     const internalFieldKeys = ref<string[]>([])
+    const internalMetadataColumnKeys = ref<string[]>([])
     const rendererMessages = computed(() => createAimdRendererMessages(props.locale, props.messages))
 
     watch(columns, (nextColumns) => {
@@ -500,7 +506,21 @@ export const AimdRecordTable = defineComponent({
       }
     }, { deep: true })
 
+    watch(
+      [() => props.metadataColumns, () => props.metadataColumnKeys],
+      ([metadataColumns, metadataColumnKeys]) => {
+        const availableKeys = new Set(metadataColumns.map(column => column.key))
+        internalMetadataColumnKeys.value = metadataColumnKeys === undefined
+          ? metadataColumns.map(column => column.key)
+          : metadataColumnKeys.filter(key => availableKeys.has(key))
+      },
+      { immediate: true, deep: true },
+    )
+
     const visibleColumns = computed(() => getVisibleColumns(columns.value, internalFieldKeys.value))
+    const visibleMetadataColumns = computed(() => props.metadataColumns.filter(column => (
+      internalMetadataColumnKeys.value.includes(column.key)
+    )))
     const selectedKeySet = computed(() => new Set(props.selectedRecordKeys))
     const selectionLimitReached = computed(() => props.selectionLimit > 0 && props.selectedRecordKeys.length >= props.selectionLimit)
 
@@ -513,6 +533,16 @@ export const AimdRecordTable = defineComponent({
         : internalFieldKeys.value.filter(item => item !== key)
       internalFieldKeys.value = columns.value.map(column => column.key).filter(item => next.includes(item))
       emit('update:fieldKeys', [...internalFieldKeys.value])
+    }
+
+    function updateMetadataColumnSelection(key: string, checked: boolean) {
+      const next = checked
+        ? [...internalMetadataColumnKeys.value, key]
+        : internalMetadataColumnKeys.value.filter(item => item !== key)
+      internalMetadataColumnKeys.value = props.metadataColumns
+        .map(column => column.key)
+        .filter(item => next.includes(item))
+      emit('update:metadataColumnKeys', [...internalMetadataColumnKeys.value])
     }
 
     function updateRecordSelection(record: unknown, index: number, checked: boolean) {
@@ -546,7 +576,7 @@ export const AimdRecordTable = defineComponent({
       selectedKeySet.value.has(props.recordKey(record, index))
     )))
 
-    expose({ columns, visibleColumns })
+    expose({ columns, visibleColumns, visibleMetadataColumns })
 
     return () => h('div', {
       class: [
@@ -562,24 +592,47 @@ export const AimdRecordTable = defineComponent({
               props.selectionLimit,
             ))
           : null,
+        slots.toolbar?.(),
         props.showFieldPicker
           ? h('details', { class: 'aimd-record-table-view__field-picker' }, [
               h('summary', rendererMessages.value.recordView.columns),
-              h('div', { class: 'aimd-record-table-view__field-menu' }, columns.value.map(column => h('label', {
-                key: column.key,
-                class: 'aimd-record-table-view__field-option',
-              }, [
-                h('input', {
-                  type: 'checkbox',
-                  checked: internalFieldKeys.value.includes(column.key),
-                  disabled: internalFieldKeys.value.length <= 1 && internalFieldKeys.value.includes(column.key),
-                  onChange: (event: Event) => updateFieldSelection(column.key, (event.target as HTMLInputElement).checked),
-                }),
-                h('span', column.label),
-              ]))),
+              h('div', { class: 'aimd-record-table-view__field-menu' }, [
+                props.metadataColumns.length > 0
+                  ? h('div', { class: 'aimd-record-table-view__field-group' }, [
+                      h('div', { class: 'aimd-record-table-view__field-group-label' }, rendererMessages.value.recordView.metadataColumns),
+                      ...props.metadataColumns.map(column => h('label', {
+                        key: `metadata:${column.key}`,
+                        class: 'aimd-record-table-view__field-option',
+                      }, [
+                        h('input', {
+                          type: 'checkbox',
+                          'data-metadata-column-key': column.key,
+                          checked: internalMetadataColumnKeys.value.includes(column.key),
+                          onChange: (event: Event) => updateMetadataColumnSelection(column.key, (event.target as HTMLInputElement).checked),
+                        }),
+                        h('span', column.label),
+                      ])),
+                    ])
+                  : null,
+                h('div', { class: 'aimd-record-table-view__field-group' }, [
+                  h('div', { class: 'aimd-record-table-view__field-group-label' }, rendererMessages.value.recordView.protocolColumns),
+                  ...columns.value.map(column => h('label', {
+                    key: `field:${column.key}`,
+                    class: 'aimd-record-table-view__field-option',
+                  }, [
+                    h('input', {
+                      type: 'checkbox',
+                      'data-field-key': column.key,
+                      checked: internalFieldKeys.value.includes(column.key),
+                      disabled: internalFieldKeys.value.length <= 1 && internalFieldKeys.value.includes(column.key),
+                      onChange: (event: Event) => updateFieldSelection(column.key, (event.target as HTMLInputElement).checked),
+                    }),
+                    h('span', column.label),
+                  ])),
+                ]),
+              ]),
             ])
           : null,
-        slots.toolbar?.(),
       ]),
       props.records.length === 0
         ? h('div', { class: 'aimd-record-table-view__empty' }, slots.empty?.() ?? rendererMessages.value.recordView.noRecords)
@@ -595,7 +648,11 @@ export const AimdRecordTable = defineComponent({
                     })])
                   : null,
                 h('th', { class: 'aimd-record-table-view__record-column' }, rendererMessages.value.recordView.record),
-                ...props.metadataColumns.map(column => h('th', { key: column.key, class: column.class }, column.label)),
+                ...visibleMetadataColumns.value.map(column => h('th', {
+                  key: `metadata:${column.key}`,
+                  class: column.class,
+                  'data-metadata-column-key': column.key,
+                }, column.label)),
                 ...visibleColumns.value.map(column => h('th', {
                   key: column.key,
                   'data-field-key': column.key,
@@ -623,7 +680,11 @@ export const AimdRecordTable = defineComponent({
                     class: 'aimd-record-table-view__record-link',
                     onClick: () => emit('open-record', record, index),
                   }, props.recordLabel(record, index))]),
-                  ...props.metadataColumns.map(column => h('td', { key: column.key, class: column.class }, [column.getValue(record, index)])),
+                  ...visibleMetadataColumns.value.map(column => h('td', {
+                    key: `metadata:${column.key}`,
+                    class: column.class,
+                    'data-metadata-column-key': column.key,
+                  }, [column.getValue(record, index)])),
                   ...visibleColumns.value.map(column => h('td', { key: column.key, 'data-field-key': column.key }, [
                     h(AimdRecordValue, {
                       record,

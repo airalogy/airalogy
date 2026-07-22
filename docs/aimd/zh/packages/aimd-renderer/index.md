@@ -136,7 +136,7 @@ import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
 
 ## 多 Record 视图
 
-Vue 入口导出 `AimdRecordTable`、`AimdRecordCompare` 和 `AimdRecordReport`，分别提供可复用的 Record 表格、对比和完整报告视图。表格与对比视图共用 `aimd-core` 的 Record 列模型，宿主无需重复实现 AIMD 字段遍历和紧凑值渲染。
+Vue 入口导出 `AimdRecordTable`、`AimdRecordCompare` 和 `AimdRecordReport`，分别提供可复用的 Record 表格、对比和完整报告视图。表格与对比视图共用 `aimd-core` 的 Record 列模型，宿主无需重复实现 AIMD 字段遍历和紧凑值渲染。`AimdRecordTable` 默认显示宿主提供的 metadata 列，并将它们放入同一列选择器；宿主需要保留选择时可绑定 `v-model:metadata-column-keys`。
 
 表格和对比视图中的每个 Protocol 字段名都支持鼠标悬停或键盘聚焦后打开详情卡片。卡片会展示字段 title、规范 id、类型、description、examples 和枚举可选值（若已定义）。卡片在页面层渲染，因此不会被横向滚动表格裁切。
 
@@ -148,6 +148,7 @@ import { AimdRecordCompare, AimdRecordTable } from "@airalogy/aimd-renderer/vue"
 <template>
   <AimdRecordTable
     v-model:selected-record-keys="selectedKeys"
+    v-model:metadata-column-keys="visibleMetadataColumnKeys"
     :aimd="protocolContent"
     :records="records"
   />

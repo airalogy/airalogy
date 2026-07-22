@@ -136,7 +136,7 @@ Readonly `AiralogyMarkdown` values are rendered through the AIMD Vue renderer, s
 
 ## Multi-Record Views
 
-The Vue entry point exports `AimdRecordTable`, `AimdRecordCompare`, and `AimdRecordReport` for reusable Record table, comparison, and complete-report experiences. The table and comparison views share the `aimd-core` Record column model, so hosts do not need to recreate AIMD field traversal or compact value rendering.
+The Vue entry point exports `AimdRecordTable`, `AimdRecordCompare`, and `AimdRecordReport` for reusable Record table, comparison, and complete-report experiences. The table and comparison views share the `aimd-core` Record column model, so hosts do not need to recreate AIMD field traversal or compact value rendering. `AimdRecordTable` shows host-provided metadata columns by default and includes them in its column picker; bind `v-model:metadata-column-keys` when the host should retain that selection.
 
 Every Protocol field name in the table and comparison views exposes an accessible details card on pointer hover or keyboard focus. It shows the field title, canonical id, type, description, examples, and enumerated options whenever those values are defined. The card is rendered at viewport level so it remains visible inside horizontally scrolling tables.
 
@@ -148,6 +148,7 @@ import { AimdRecordCompare, AimdRecordTable } from "@airalogy/aimd-renderer/vue"
 <template>
   <AimdRecordTable
     v-model:selected-record-keys="selectedKeys"
+    v-model:metadata-column-keys="visibleMetadataColumnKeys"
     :aimd="protocolContent"
     :records="records"
   />

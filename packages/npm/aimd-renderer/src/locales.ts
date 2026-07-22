@@ -72,6 +72,8 @@ export interface AimdRendererMessages {
     record: string
     field: string
     columns: string
+    metadataColumns: string
+    protocolColumns: string
     actions: string
     fieldId: string
     type: string
@@ -182,6 +184,8 @@ const EN_US_MESSAGES: AimdRendererMessages = {
     record: "Record",
     field: "Field",
     columns: "Columns",
+    metadataColumns: "Record information",
+    protocolColumns: "Protocol fields",
     actions: "Actions",
     fieldId: "Field",
     type: "Type",
@@ -268,6 +272,8 @@ const ZH_CN_MESSAGES: AimdRendererMessages = {
     record: "记录",
     field: "字段",
     columns: "选择列",
+    metadataColumns: "记录信息",
+    protocolColumns: "协议字段",
     actions: "操作",
     fieldId: "字段",
     type: "类型",

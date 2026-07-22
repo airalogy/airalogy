@@ -1856,6 +1856,90 @@ describe('multi-Record views', () => {
     wrapper.unmount()
   })
 
+  it('keeps host selection actions beside the selection summary and before the field picker', () => {
+    const wrapper = mount(AimdRecordTable, {
+      props: {
+        aimd,
+        records,
+        selectedRecordKeys: ['record-a'],
+      },
+      slots: {
+        toolbar: () => h('button', { class: 'host-selection-action' }, 'Compare selected'),
+      },
+    })
+
+    const toolbarClasses = Array.from(wrapper.get('.aimd-record-table-view__toolbar').element.children)
+      .map(element => element.className)
+    expect(toolbarClasses).toEqual([
+      'aimd-record-table-view__summary',
+      'aimd-record-table-view__selection-summary',
+      'host-selection-action',
+      'aimd-record-table-view__field-picker',
+    ])
+    wrapper.unmount()
+  })
+
+  it('shows metadata columns by default and lets users hide all of them', async () => {
+    const metadataColumns = [
+      { key: 'submittedAt', label: 'Submitted at', getValue: () => '2026-07-22' },
+      { key: 'submittedBy', label: 'Submitted by', getValue: () => '@alice' },
+      { key: 'recordVersion', label: 'Record version', getValue: () => 'v1' },
+    ]
+    const wrapper = mount(AimdRecordTable, {
+      props: {
+        aimd,
+        records,
+        metadataColumns,
+        locale: 'en-US',
+      },
+    })
+
+    expect(wrapper.findAll('thead [data-metadata-column-key]')).toHaveLength(3)
+    expect(wrapper.findAll('.aimd-record-table-view__field-group-label').map(item => item.text())).toEqual([
+      'Record information',
+      'Protocol fields',
+    ])
+
+    const metadataOptions = wrapper.findAll('.aimd-record-table-view__field-menu input[data-metadata-column-key]')
+    expect(metadataOptions).toHaveLength(3)
+    expect(metadataOptions.every(option => (option.element as HTMLInputElement).checked)).toBe(true)
+
+    await metadataOptions[0]?.setValue(false)
+    await metadataOptions[1]?.setValue(false)
+    await metadataOptions[2]?.setValue(false)
+
+    expect(wrapper.findAll('thead [data-metadata-column-key]')).toHaveLength(0)
+    expect(wrapper.findAll('thead [data-field-key]').length).toBeGreaterThan(0)
+    expect(wrapper.emitted('update:metadataColumnKeys')).toEqual([
+      [['submittedBy', 'recordVersion']],
+      [['recordVersion']],
+      [[]],
+    ])
+    wrapper.unmount()
+  })
+
+  it('supports a controlled metadata column subset', async () => {
+    const metadataColumns = [
+      { key: 'submittedAt', label: 'Submitted at', getValue: () => '2026-07-22' },
+      { key: 'submittedBy', label: 'Submitted by', getValue: () => '@alice' },
+    ]
+    const wrapper = mount(AimdRecordTable, {
+      props: {
+        aimd,
+        records,
+        metadataColumns,
+        metadataColumnKeys: ['submittedBy'],
+      },
+    })
+
+    expect(wrapper.findAll('thead [data-metadata-column-key]')).toHaveLength(1)
+    expect(wrapper.get('thead [data-metadata-column-key]').attributes('data-metadata-column-key')).toBe('submittedBy')
+
+    await wrapper.setProps({ metadataColumnKeys: [] })
+    expect(wrapper.findAll('thead [data-metadata-column-key]')).toHaveLength(0)
+    wrapper.unmount()
+  })
+
   it('reveals complete field metadata from table headers on hover or keyboard focus', async () => {
     const wrapper = mount(AimdRecordTable, {
       props: {
