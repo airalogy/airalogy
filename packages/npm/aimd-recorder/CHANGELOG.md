@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.24.5
+
+### Patch Changes
+
+- 247d858: Render nullable integer annotations with the same native number input and stepper controls as non-nullable integers while preserving empty values as `null`, and prevent required markers from being clipped by compact field headers.
+
 ## 1.24.4
 
 ### Patch Changes
