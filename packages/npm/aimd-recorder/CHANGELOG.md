@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.24.4
+
+### Patch Changes
+
+- 5a1377b: Expose the shared required-field marker and strengthen its inline red asterisk treatment for host form integrations.
+
 ## 1.24.3
 
 ### Patch Changes
