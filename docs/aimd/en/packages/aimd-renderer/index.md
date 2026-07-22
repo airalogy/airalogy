@@ -134,6 +134,27 @@ The component loads the canonical renderer styles itself. Use `resolveUrl` for a
 
 Readonly `AiralogyMarkdown` values are rendered through the AIMD Vue renderer, so headings, lists, nested AIMD preview tokens, and resolved Markdown image assets appear as document content instead of raw Markdown source.
 
+## Multi-Record Views
+
+The Vue entry point exports `AimdRecordTable`, `AimdRecordCompare`, and `AimdRecordReport` for reusable Record table, comparison, and complete-report experiences. The table and comparison views share the `aimd-core` Record column model, so hosts do not need to recreate AIMD field traversal or compact value rendering.
+
+Every Protocol field name in the table and comparison views exposes an accessible details card on pointer hover or keyboard focus. It shows the field title, canonical id, type, description, examples, and enumerated options whenever those values are defined. The card is rendered at viewport level so it remains visible inside horizontally scrolling tables.
+
+```vue
+<script setup lang="ts">
+import { AimdRecordCompare, AimdRecordTable } from "@airalogy/aimd-renderer/vue"
+</script>
+
+<template>
+  <AimdRecordTable
+    v-model:selected-record-keys="selectedKeys"
+    :aimd="protocolContent"
+    :records="records"
+  />
+  <AimdRecordCompare :aimd="protocolContent" :records="selectedRecords" />
+</template>
+```
+
 ## Assigner Visibility
 
 All `assigner` code blocks are hidden from normal rendered output by default, but they still participate in parsing and extraction upstream.

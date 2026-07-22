@@ -7,17 +7,22 @@ import type { AimdMarkdownPreviewRenderOptions, AimdMarkdownPreviewUrlResolver }
 import type { ReadonlyRecordAssetResolver, ReadonlyRecordVueRendererOptions } from './readonly-record-renderer'
 import {
   createAimdRecordViewColumns,
+  formatAimdExampleValue,
   getAimdFileDisplayName,
   getAimdRecordViewCell,
   getDefaultAimdRecordViewFieldKeys,
   isAimdPlainRecord,
   toAimdBooleanValue,
 } from '@airalogy/aimd-core/utils'
-import { computed, defineComponent, h, ref, watch } from 'vue'
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, Teleport, useId, watch } from 'vue'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import { parseAndExtract } from '../common/processor'
-import { createAimdRendererMessages, type AimdRendererMessagesInput } from '../locales'
+import {
+  createAimdRendererMessages,
+  type AimdRendererMessages,
+  type AimdRendererMessagesInput,
+} from '../locales'
 import { AimdMarkdownPreview } from './markdown-preview'
 
 export type AimdRecordViewKey = string | number
@@ -208,6 +213,194 @@ export const AimdRecordValue = defineComponent({
         class: classes,
         title: truncated ? fullText : undefined,
       }, text)
+    }
+  },
+})
+
+function getRecordFieldDisplayId(field: AimdRecordViewColumn): string {
+  return field.tableId && field.columnId
+    ? `${field.tableId}.${field.columnId}`
+    : field.id
+}
+
+function formatRecordFieldValues(values: readonly unknown[] | undefined): string[] {
+  return (values ?? [])
+    .map(formatAimdExampleValue)
+    .map(value => value.trim())
+    .filter(Boolean)
+}
+
+const AimdRecordFieldHelp = defineComponent({
+  name: 'AimdRecordFieldHelp',
+  props: {
+    field: {
+      type: Object as PropType<AimdRecordViewColumn>,
+      required: true,
+    },
+    messages: {
+      type: Object as PropType<AimdRendererMessages>,
+      required: true,
+    },
+    showKind: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  setup(props) {
+    const tooltipId = useId()
+    const hostElement = ref<HTMLElement>()
+    const popoverElement = ref<HTMLElement>()
+    const open = ref(false)
+    const position = ref({ top: 0, left: 0 })
+    let hovered = false
+    let focused = false
+
+    function updatePosition() {
+      if (!open.value || !hostElement.value || typeof window === 'undefined') {
+        return
+      }
+
+      const margin = 8
+      const gap = 8
+      const hostRect = hostElement.value.getBoundingClientRect()
+      const popoverWidth = popoverElement.value?.offsetWidth || Math.min(360, window.innerWidth - (margin * 2))
+      const popoverHeight = popoverElement.value?.offsetHeight || 0
+      const maxLeft = Math.max(margin, window.innerWidth - popoverWidth - margin)
+      const left = Math.min(Math.max(hostRect.left, margin), maxLeft)
+      const spaceBelow = window.innerHeight - hostRect.bottom - margin
+      const preferredTop = popoverHeight > 0 && popoverHeight > spaceBelow
+        ? hostRect.top - popoverHeight - gap
+        : hostRect.bottom + gap
+      const maxTop = Math.max(margin, window.innerHeight - popoverHeight - margin)
+      const top = Math.min(Math.max(preferredTop, margin), maxTop)
+
+      position.value = { top, left }
+    }
+
+    function addPositionListeners() {
+      window.addEventListener('resize', updatePosition)
+      window.addEventListener('scroll', updatePosition, true)
+    }
+
+    function removePositionListeners() {
+      if (typeof window === 'undefined') {
+        return
+      }
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+
+    function syncOpenState() {
+      open.value = hovered || focused
+      if (open.value) {
+        void nextTick(updatePosition)
+      }
+    }
+
+    watch(open, (visible) => {
+      if (typeof window === 'undefined') {
+        return
+      }
+      removePositionListeners()
+      if (visible) {
+        addPositionListeners()
+      }
+    })
+
+    onBeforeUnmount(removePositionListeners)
+
+    return () => {
+      const fieldId = getRecordFieldDisplayId(props.field)
+      const type = props.field.type ?? props.field.valueKind
+      const examples = formatRecordFieldValues(props.field.examples)
+      const options = formatRecordFieldValues(props.field.enum)
+      const heading = props.field.title ?? props.field.label
+      const messages = props.messages.recordView
+
+      const popover = open.value && typeof document !== 'undefined'
+        ? h(Teleport, { to: 'body' }, [h('div', {
+            id: tooltipId,
+            ref: popoverElement,
+            class: 'aimd-record-field-help__popover',
+            role: 'tooltip',
+            style: {
+              left: `${position.value.left}px`,
+              top: `${position.value.top}px`,
+            },
+          }, [
+            h('strong', { class: 'aimd-record-field-help__heading' }, heading),
+            h('dl', { class: 'aimd-record-field-help__facts' }, [
+              h('div', { class: 'aimd-record-field-help__fact' }, [
+                h('dt', messages.fieldId),
+                h('dd', fieldId),
+              ]),
+              h('div', { class: 'aimd-record-field-help__fact' }, [
+                h('dt', messages.type),
+                h('dd', type),
+              ]),
+            ]),
+            props.field.description
+              ? h('div', { class: 'aimd-record-field-help__section' }, [
+                  h('span', { class: 'aimd-record-field-help__section-label' }, messages.description),
+                  h('span', props.field.description),
+                ])
+              : null,
+            examples.length > 0
+              ? h('div', { class: 'aimd-record-field-help__section' }, [
+                  h('span', { class: 'aimd-record-field-help__section-label' }, messages.examples),
+                  h('span', { class: 'aimd-field__metadata-examples' }, examples.map((example, index) => h('span', {
+                    key: `${index}-${example}`,
+                    class: 'aimd-field__metadata-example',
+                  }, example))),
+                ])
+              : null,
+            options.length > 0
+              ? h('div', { class: 'aimd-record-field-help__section' }, [
+                  h('span', { class: 'aimd-record-field-help__section-label' }, messages.options),
+                  h('span', { class: 'aimd-field__metadata-examples' }, options.map((option, index) => h('span', {
+                    key: `${index}-${option}`,
+                    class: 'aimd-field__metadata-example',
+                  }, option))),
+                ])
+              : null,
+          ])])
+        : null
+
+      return h('span', {
+        ref: hostElement,
+        class: [
+          'aimd-record-field-help',
+          props.showKind ? 'aimd-record-field-help--stacked' : null,
+        ],
+        tabindex: 0,
+        'aria-label': messages.fieldDetails(props.field.label),
+        'aria-describedby': open.value ? tooltipId : undefined,
+        onMouseenter: () => {
+          hovered = true
+          syncOpenState()
+        },
+        onMouseleave: () => {
+          hovered = false
+          syncOpenState()
+        },
+        onFocus: () => {
+          focused = true
+          syncOpenState()
+        },
+        onBlur: () => {
+          focused = false
+          syncOpenState()
+        },
+      }, [
+        h('span', { class: [
+          'aimd-record-field-help__label',
+          props.showKind ? 'aimd-record-compare__field-label' : null,
+        ] }, props.field.label),
+        props.showKind
+          ? h('span', { class: ['aimd-record-field-help__kind', 'aimd-record-compare__field-kind'] }, props.field.valueKind)
+          : null,
+        popover,
+      ])
     }
   },
 })
@@ -405,9 +598,11 @@ export const AimdRecordTable = defineComponent({
                 ...props.metadataColumns.map(column => h('th', { key: column.key, class: column.class }, column.label)),
                 ...visibleColumns.value.map(column => h('th', {
                   key: column.key,
-                  title: column.description,
                   'data-field-key': column.key,
-                }, column.label)),
+                }, [h(AimdRecordFieldHelp, {
+                  field: column,
+                  messages: rendererMessages.value,
+                })])),
                 slots.actions ? h('th', { class: 'aimd-record-table-view__actions-column' }, rendererMessages.value.recordView.actions) : null,
               ])]),
               h('tbody', props.records.map((record, index) => {
@@ -524,10 +719,12 @@ export const AimdRecordCompare = defineComponent({
               }, [
                 h('th', {
                   class: 'aimd-record-compare__field-column',
-                  title: column.description,
                 }, [
-                  h('span', { class: 'aimd-record-compare__field-label' }, column.label),
-                  h('span', { class: 'aimd-record-compare__field-kind' }, column.valueKind),
+                  h(AimdRecordFieldHelp, {
+                    field: column,
+                    messages: rendererMessages.value,
+                    showKind: true,
+                  }),
                 ]),
                 ...comparedRecords.value.map((record, index) => h('td', {
                   key: props.recordKey(record, index),

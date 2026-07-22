@@ -90,9 +90,14 @@ export interface DemoMessages {
       sourceTitle: string
       previewTitle: string
       recorderTitle: string
+      recordTableTitle: string
+      recordCompareTitle: string
       previewModeLabel: string
       renderMode: string
       recorderMode: string
+      singleRecordMode: string
+      recordTableMode: string
+      recordCompareMode: (count: number) => string
       emptyPreview: string
       emptyRecorder: string
       renderFailed: string
@@ -290,9 +295,14 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         sourceTitle: 'Editor',
         previewTitle: 'Live Preview',
         recorderTitle: 'Recorder Form',
+        recordTableTitle: 'Records Table',
+        recordCompareTitle: 'Record Comparison',
         previewModeLabel: 'Preview mode',
         renderMode: 'Preview',
         recorderMode: 'Fill',
+        singleRecordMode: 'Record',
+        recordTableMode: 'Table',
+        recordCompareMode: count => `Compare (${count})`,
         emptyPreview: 'Preview will appear here after you add AIMD content.',
         emptyRecorder: 'Fillable fields will appear here after you add AIMD variables, steps, checks, tables, or quizzes.',
         renderFailed: 'Preview failed',
@@ -315,7 +325,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         clearContent: 'Clear',
         contentCleared: 'Content cleared',
         importPackage: 'Import package',
-        importPackageHint: 'Import a .zip folder bundle, a single-protocol .aira, or a records .aira that embeds its protocol.\n\nRecommended ZIP structure:\nmy-protocol/\n├─ protocol.aimd\n└─ files/\n   ├─ workflow.png\n   └─ chart.svg\n\nThe outer folder is optional. The editor looks for protocol.aimd first, then index.aimd, then the first .aimd file. Figure src paths must match the files inside the package, for example src: files/workflow.png.',
+        importPackageHint: 'Import a .zip folder bundle, a single-protocol .aira, or a records .aira that embeds its protocol. Records archives open in a searchable table; select two to four rows to compare them.\n\nRecommended ZIP structure:\nmy-protocol/\n├─ protocol.aimd\n└─ files/\n   ├─ workflow.png\n   └─ chart.svg\n\nThe outer folder is optional. The editor looks for protocol.aimd first, then index.aimd, then the first .aimd file. Figure src paths must match the files inside the package, for example src: files/workflow.png.',
         importingPackage: 'Importing...',
         packageImported: 'Package imported',
         packageImportedRecords: 'Record imported',
@@ -488,9 +498,14 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         sourceTitle: '编辑器',
         previewTitle: '实时预览',
         recorderTitle: '填写表单',
+        recordTableTitle: 'Records 表格',
+        recordCompareTitle: 'Records 对比',
         previewModeLabel: '预览模式',
         renderMode: '预览',
         recorderMode: '填写',
+        singleRecordMode: '单条',
+        recordTableMode: '表格',
+        recordCompareMode: count => `对比 (${count})`,
         emptyPreview: '添加 AIMD 内容后，这里会显示实时预览。',
         emptyRecorder: '添加 AIMD 变量、步骤、检查点、表格或题目后，这里会显示可填写表单。',
         renderFailed: '预览失败',
@@ -513,7 +528,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         clearContent: '清空',
         contentCleared: '已清空',
         importPackage: '导入包',
-        importPackageHint: '导入 .zip 文件夹包、单 Protocol 的 .aira，或内嵌 Protocol 的 Records .aira。\n\n推荐 ZIP 结构：\nmy-protocol/\n├─ protocol.aimd\n└─ files/\n   ├─ workflow.png\n   └─ chart.svg\n\n外层文件夹可以省略。编辑器会优先读取 protocol.aimd，其次读取 index.aimd，再其次读取第一个 .aimd 文件。图片的 fig.src 要和包内文件路径一致，例如 src: files/workflow.png。',
+        importPackageHint: '导入 .zip 文件夹包、单 Protocol 的 .aira，或内嵌 Protocol 的 Records .aira。Records 归档会直接进入可筛选的表格；选中 2–4 条后可以对比。\n\n推荐 ZIP 结构：\nmy-protocol/\n├─ protocol.aimd\n└─ files/\n   ├─ workflow.png\n   └─ chart.svg\n\n外层文件夹可以省略。编辑器会优先读取 protocol.aimd，其次读取 index.aimd，再其次读取第一个 .aimd 文件。图片的 fig.src 要和包内文件路径一致，例如 src: files/workflow.png。',
         importingPackage: '正在导入...',
         packageImported: '已导入包',
         packageImportedRecords: '已导入 Record',

@@ -171,7 +171,7 @@ const entityResolvers = createAimdEntityResolversFromConnectors(fields.connector
 
 `@airalogy/aimd-core/utils` 导出 `collectAimdRecordFieldRefs()`、`searchAimdRecordFields()`、`filterAimdRecord()`、`filterAimdRecords()` 等 protocol-aware record 辅助函数。这些函数使用解析后的字段元数据搜索全部字段或指定字段，也支持存放在 `record.var` 下的 `var_table` subvar，因此宿主应用可以构建 Record 搜索和筛选 UI，而不需要重新实现 AIMD 字段遍历逻辑。
 
-`createAimdRecordViewColumns()` 会为同一 Protocol version 下的多条 Record 生成稳定的列描述和紧凑默认列；`getAimdRecordViewCell()` 返回表格和对比视图共用的值、空值、表格行数、step/check 状态与稳定差异键。这些 API 只建模 AIMD 语义，不包含 Vue 或宿主应用的权限、分页和路由逻辑。
+`createAimdRecordViewColumns()` 会为同一 Protocol version 下的多条 Record 生成稳定的列描述和紧凑默认列，并保留字段 title、description、examples、类型和枚举值，供共享集合视图使用；`getAimdRecordViewCell()` 返回表格和对比视图共用的值、空值、表格行数、step/check 状态与稳定差异键。这些 API 只建模 AIMD 语义，不包含 Vue 或宿主应用的权限、分页和路由逻辑。
 
 ## 内置类型元数据
 

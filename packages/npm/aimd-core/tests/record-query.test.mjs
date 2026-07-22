@@ -16,7 +16,13 @@ import {
 const fields = {
   var: ['participant', 'age'],
   var_definitions: [
-    { id: 'participant', type: 'str', title: 'Participant' },
+    {
+      id: 'participant',
+      type: 'str',
+      title: 'Participant',
+      description: 'Participant display name',
+      examples: ['Alice'],
+    },
     { id: 'age', type: 'int', title: 'Age' },
   ],
   var_table: [
@@ -24,8 +30,16 @@ const fields = {
       id: 'medications',
       scope: 'var_table',
       title: 'Medications',
+      description: 'Current medications',
+      examples: [[{ name: 'aspirin', dose: 50 }]],
       subvars: [
-        { id: 'name', type: 'str', title: 'Name' },
+        {
+          id: 'name',
+          type: 'str',
+          title: 'Name',
+          description: 'Medication name',
+          examples: ['aspirin'],
+        },
         { id: 'dose', type: 'int', title: 'Dose' },
       ],
     },
@@ -84,6 +98,10 @@ test('collectAimdRecordFieldRefs includes simple fields and var_table subvars', 
     'quiz:satisfaction',
   ])
   assert.equal(refs.find(ref => ref.key === 'var_table:medications:name')?.focusKey, 'var_table:medications:0:name')
+  assert.equal(refs.find(ref => ref.key === 'var:participant')?.description, 'Participant display name')
+  assert.deepEqual(refs.find(ref => ref.key === 'var:participant')?.examples, ['Alice'])
+  assert.deepEqual(refs.find(ref => ref.key === 'var_table:medications')?.examples, [[{ name: 'aspirin', dose: 50 }]])
+  assert.deepEqual(refs.find(ref => ref.key === 'var_table:medications:name')?.examples, ['aspirin'])
 })
 
 test('getAimdRecordFieldValue reads var_table columns from var storage', () => {

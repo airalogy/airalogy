@@ -185,6 +185,8 @@ The Vue entry point provides three readonly views backed by the field structure 
 - `AimdRecordCompare` transposes two to four selected Records into columns, compares every Protocol field by default, highlights differing fields, and can hide equal fields. Pass `fieldKeys` only when comparison should be limited to an explicit subset.
 - `AimdRecordReport` renders one complete AIMD Record report through the canonical readonly renderer.
 
+In both the table and comparison views, hover a field name or focus it with the keyboard to inspect its AIMD title, canonical field id, type, description, examples, and enumerated options. The details use a viewport-level popover, so horizontally scrolling collection views do not clip the content.
+
 ```vue
 <script setup lang="ts">
 import { AimdRecordCompare, AimdRecordReport, AimdRecordTable } from "@airalogy/aimd-renderer/vue"

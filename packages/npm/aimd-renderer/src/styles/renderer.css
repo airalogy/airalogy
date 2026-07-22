@@ -1842,6 +1842,111 @@
   text-decoration: underline;
 }
 
+.aimd-record-field-help {
+  max-width: 100%;
+  display: inline-flex;
+  align-items: baseline;
+  color: inherit;
+  cursor: help;
+  outline: none;
+}
+
+.aimd-record-field-help__label {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: rgba(66, 84, 93, 0.45);
+  text-underline-offset: 3px;
+}
+
+.aimd-record-field-help:focus-visible {
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px rgba(36, 122, 100, 0.2);
+}
+
+.aimd-record-field-help--stacked {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.aimd-record-field-help__kind {
+  margin-top: 2px;
+  color: #819097;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.aimd-record-field-help__popover {
+  position: fixed;
+  z-index: 1000;
+  width: max-content;
+  min-width: min(240px, calc(100vw - 16px));
+  max-width: min(360px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: 11px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.97);
+  color: #f8fafc;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.3);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+}
+
+.aimd-record-field-help__heading {
+  display: block;
+  margin-bottom: 7px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.aimd-record-field-help__facts {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+}
+
+.aimd-record-field-help__fact {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.aimd-record-field-help__fact dt,
+.aimd-record-field-help__section-label {
+  color: rgba(226, 232, 240, 0.7);
+  font-weight: 500;
+}
+
+.aimd-record-field-help__fact dd {
+  min-width: 0;
+  margin: 0;
+  color: #f8fafc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+}
+
+.aimd-record-field-help__section {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.aimd-record-field-help__section .aimd-field__metadata-examples {
+  padding-top: 0;
+}
+
 .aimd-record-table-view__actions-column {
   min-width: 128px;
   white-space: nowrap;
@@ -1944,19 +2049,6 @@
 
 .aimd-record-compare__row--different:hover td {
   background: #fff5d8;
-}
-
-.aimd-record-compare__field-label,
-.aimd-record-compare__field-kind {
-  display: block;
-}
-
-.aimd-record-compare__field-kind {
-  margin-top: 2px;
-  color: #819097;
-  font-size: 10px;
-  font-weight: 500;
-  text-transform: uppercase;
 }
 
 @media (max-width: 640px) {

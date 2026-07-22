@@ -134,6 +134,27 @@ import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
 
 只读 `AiralogyMarkdown` 值会通过 AIMD Vue renderer 渲染，因此标题、列表、嵌套 AIMD 预览 token，以及已解析的 Markdown 图片资源都会作为文档内容显示，而不是显示原始 Markdown 文本。
 
+## 多 Record 视图
+
+Vue 入口导出 `AimdRecordTable`、`AimdRecordCompare` 和 `AimdRecordReport`，分别提供可复用的 Record 表格、对比和完整报告视图。表格与对比视图共用 `aimd-core` 的 Record 列模型，宿主无需重复实现 AIMD 字段遍历和紧凑值渲染。
+
+表格和对比视图中的每个 Protocol 字段名都支持鼠标悬停或键盘聚焦后打开详情卡片。卡片会展示字段 title、规范 id、类型、description、examples 和枚举可选值（若已定义）。卡片在页面层渲染，因此不会被横向滚动表格裁切。
+
+```vue
+<script setup lang="ts">
+import { AimdRecordCompare, AimdRecordTable } from "@airalogy/aimd-renderer/vue"
+</script>
+
+<template>
+  <AimdRecordTable
+    v-model:selected-record-keys="selectedKeys"
+    :aimd="protocolContent"
+    :records="records"
+  />
+  <AimdRecordCompare :aimd="protocolContent" :records="selectedRecords" />
+</template>
+```
+
 ## Assigner 可见性
 
 所有 `assigner` 代码块默认都不会出现在普通渲染输出中，但仍会在上游解析 / 提取阶段参与处理。

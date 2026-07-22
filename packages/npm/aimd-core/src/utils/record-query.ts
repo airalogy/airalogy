@@ -45,6 +45,8 @@ export interface AimdRecordFieldRef {
   type?: string
   /** Description/help text from protocol metadata. */
   description?: string
+  /** Example values from protocol metadata. */
+  examples?: unknown[]
   /** Enum values, when known. */
   enum?: unknown[]
   /** Actual record section used to store this field. Var tables are stored under `var`. */
@@ -99,6 +101,7 @@ interface SimpleFieldMetadata {
   title?: string
   type?: string
   description?: string
+  examples?: unknown[]
   enum?: unknown[]
 }
 
@@ -201,6 +204,7 @@ function makeSimpleRef(scope: 'var' | 'step' | 'check' | 'quiz', id: string, fie
     title,
     type,
     description: normalizeString(metadata?.description),
+    examples: Array.isArray(metadata?.examples) ? [...metadata.examples] : undefined,
     enum: Array.isArray(metadata?.enum) ? [...metadata.enum] : undefined,
     storageScope: scope,
     storageKey: id,
@@ -266,6 +270,7 @@ export function collectAimdRecordFieldRefs(fields: ExtractedAimdFields | undefin
       title: tableTitle,
       type: normalizeString(table.type_annotation),
       description: normalizeString(table.description),
+      examples: Array.isArray(table.examples) ? [...table.examples] : undefined,
       storageScope: 'var',
       storageKey: table.id,
       focusKey: firstColumn ? `var_table:${table.id}:0:${firstColumn}` : tableKey,
@@ -284,6 +289,7 @@ export function collectAimdRecordFieldRefs(fields: ExtractedAimdFields | undefin
         title: normalizeString(subvar.title),
         type: normalizeString(subvar.type),
         description: normalizeString(subvar.description),
+        examples: Array.isArray(subvar.examples) ? [...subvar.examples] : undefined,
         enum: Array.isArray(subvar.enum) ? [...subvar.enum] : undefined,
         storageScope: 'var',
         storageKey: table.id,

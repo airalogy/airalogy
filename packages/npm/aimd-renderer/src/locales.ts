@@ -73,6 +73,12 @@ export interface AimdRendererMessages {
     field: string
     columns: string
     actions: string
+    fieldId: string
+    type: string
+    description: string
+    examples: string
+    options: string
+    fieldDetails: (label: string) => string
     selectAll: string
     yes: string
     no: string
@@ -177,6 +183,12 @@ const EN_US_MESSAGES: AimdRendererMessages = {
     field: "Field",
     columns: "Columns",
     actions: "Actions",
+    fieldId: "Field",
+    type: "Type",
+    description: "Description",
+    examples: "Examples",
+    options: "Options",
+    fieldDetails: label => `Show details for ${label}`,
     selectAll: "Select records on this page",
     yes: "Yes",
     no: "No",
@@ -257,6 +269,12 @@ const ZH_CN_MESSAGES: AimdRendererMessages = {
     field: "字段",
     columns: "选择列",
     actions: "操作",
+    fieldId: "字段",
+    type: "类型",
+    description: "说明",
+    examples: "示例",
+    options: "可选值",
+    fieldDetails: label => `查看${label}的字段详情`,
     selectAll: "选择当前页记录",
     yes: "是",
     no: "否",

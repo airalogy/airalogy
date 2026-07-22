@@ -1773,7 +1773,7 @@ describe('multi-Record views', () => {
   const aimd = [
     '# Participant report',
     '',
-    'Participant: {{var|participant: str, title = "Participant"}}',
+    'Participant: {{var|participant: str, title = "Participant name", description = "Name shown in the participant list", examples = ["Alice", "Bob"]}}',
     '',
     'Age: {{var|age: int, title = "Age"}}',
     '',
@@ -1856,6 +1856,36 @@ describe('multi-Record views', () => {
     wrapper.unmount()
   })
 
+  it('reveals complete field metadata from table headers on hover or keyboard focus', async () => {
+    const wrapper = mount(AimdRecordTable, {
+      props: {
+        aimd,
+        records,
+        fieldKeys: ['var:participant'],
+        locale: 'en-US',
+      },
+    })
+
+    const fieldHelp = wrapper.find('[data-field-key="var:participant"] .aimd-record-field-help')
+    expect(fieldHelp.attributes('tabindex')).toBe('0')
+    expect(fieldHelp.attributes('aria-label')).toBe('Show details for Participant name')
+
+    await fieldHelp.trigger('mouseenter')
+    const popover = document.body.querySelector<HTMLElement>('.aimd-record-field-help__popover')
+    expect(popover?.getAttribute('role')).toBe('tooltip')
+    expect(popover?.textContent).toContain('Participant name')
+    expect(popover?.textContent).toContain('participant')
+    expect(popover?.textContent).toContain('str')
+    expect(popover?.textContent).toContain('Name shown in the participant list')
+    expect(popover?.textContent).toContain('Alice')
+    expect(popover?.textContent).toContain('Bob')
+    expect(fieldHelp.attributes('aria-describedby')).toBe(popover?.id)
+
+    await fieldHelp.trigger('mouseleave')
+    expect(document.body.querySelector('.aimd-record-field-help__popover')).toBeNull()
+    wrapper.unmount()
+  })
+
   it('keeps at least one visible protocol field selected', async () => {
     const wrapper = mount(AimdRecordTable, {
       props: {
@@ -1888,6 +1918,29 @@ describe('multi-Record views', () => {
     expect(activeRow.attributes('data-different')).toBe('true')
     expect(wrapper.findAll('thead .aimd-record-compare__record-link')).toHaveLength(2)
     wrapper.unmount()
+  })
+
+  it('uses the same accessible field details in comparison rows', async () => {
+    const wrapper = mount(AimdRecordCompare, {
+      props: {
+        aimd,
+        records,
+        fieldKeys: ['var:age'],
+        locale: 'zh-CN',
+      },
+    })
+
+    const fieldHelp = wrapper.find('[data-field-key="var:age"] .aimd-record-field-help')
+    expect(fieldHelp.attributes('aria-label')).toBe('查看Age的字段详情')
+    await fieldHelp.trigger('focus')
+
+    const popover = document.body.querySelector<HTMLElement>('.aimd-record-field-help__popover')
+    expect(popover?.textContent).toContain('字段age')
+    expect(popover?.textContent).toContain('类型int')
+    expect(fieldHelp.attributes('aria-describedby')).toBe(popover?.id)
+
+    wrapper.unmount()
+    expect(document.body.querySelector('.aimd-record-field-help__popover')).toBeNull()
   })
 
   it('compares every Protocol field by default', () => {
@@ -1941,6 +1994,8 @@ describe('multi-Record views', () => {
   it('ships stable responsive collection styles', () => {
     expect(rendererStyles).toContain('.aimd-record-table-view__scroller')
     expect(rendererStyles).toContain('.aimd-record-compare__row--different')
+    expect(rendererStyles).toContain('.aimd-record-field-help__popover')
+    expect(rendererStyles).toContain('position: fixed')
     expect(rendererStyles).toContain('@media (max-width: 640px)')
   })
 })

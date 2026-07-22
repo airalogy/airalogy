@@ -114,6 +114,8 @@ legend: A local figure packaged with this lesson.
 
 下载时，Demo 会根据当前内容自动选择交换格式：如果没有 Protocol 本地文件，下载普通 `.aimd` 文本文件；如果已经上传了本地图片，下载 `kind: "protocol"` 的 `.aira` 归档，里面同时包含 `protocol.aimd` 和这些本地文件。Demo 会根据上传图片的本地文件名生成安全、可读的资源路径。例如 `Reaction Rate Curve.png` 会进入 `.aira` 里的 `files/reaction-rate-curve.png`，`图片.png` 会进入 `files/图片.png`，`实验结果：第1组.png` 会进入 `files/实验结果-第1组.png`；如果文件名无法转换成安全路径，则回退为 `files/uploaded-figure-1.png` 这样的自动编号。图片插入弹窗会先让用户选择“本地图片”或“网络图片”，再填写对应输入；`title` 和 `legend` 是两种模式共享的可选图元信息，留空时不会写入对应字段。`legend` 是图注，不是文件名备注。
 
+导入时，Demo 也支持内嵌 Protocol 的 `kind: "records"` `.aira` 归档。归档中的 Records 会按其引用的 Protocol 版本解析，并直接进入表格视图；可以按 Protocol 字段筛选、打开单条 Record，或选中 2–4 条切换到对比视图。表格和对比直接使用 `@airalogy/aimd-renderer` 的共享 Record 视图，单条显示继续使用 `@airalogy/aimd-recorder`，因此 Demo 与 Platform 共享同一套字段解析和值展示规则。
+
 ## 多 AIMD 文档站的推荐结构
 
 本节说明面向多页面文档站的推荐组织方式，不属于当前 `.aira` 打包格式的强制要求。AIMD 适合作为文档站的页面基座，但整个文档站不需要写成一个巨大的 AIMD 文件。推荐模型是“一个 AIMD 文件或页面目录对应一个页面”，文档站再用单独的站点索引描述路由、导航、语言和页面顺序。

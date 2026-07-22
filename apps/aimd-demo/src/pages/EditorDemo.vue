@@ -23,7 +23,13 @@ import {
   type AimdCollectorProviderMap,
   type AimdProtocolRecordData,
 } from '@airalogy/aimd-recorder'
-import { parseAndExtract, renderToVue } from '@airalogy/aimd-renderer'
+import {
+  AimdRecordCompare,
+  AimdRecordTable,
+  parseAndExtract,
+  renderToVue,
+  type AimdRecordViewKey,
+} from '@airalogy/aimd-renderer'
 import DemoExamplePicker from '../components/DemoExamplePicker.vue'
 import { useDemoLocale, useDemoMessages, type DemoLocale } from '../composables/demoI18n'
 import {
@@ -103,9 +109,14 @@ interface ImportedProtocolPackage {
 interface ImportedRecordOption {
   id: string
   label: string
+  protocolKey: string
   aimd: string
   fileSources: ImportedProtocolFileSource[]
   recordData: AimdProtocolRecordData
+}
+
+interface ImportedRecordViewOption extends ImportedRecordOption {
+  data: AimdProtocolRecordData
 }
 
 interface ImportedRecordsPackage {
@@ -123,7 +134,7 @@ interface ImportedAiraProtocolEntry {
 type ImportedPackage = ImportedProtocolPackage | ImportedRecordsPackage
 
 type FigureInsertSource = 'local' | 'remote'
-type PreviewMode = 'render' | 'recorder'
+type PreviewMode = 'render' | 'recorder' | 'records-table' | 'records-compare'
 
 const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
   'image/avif': 'avif',
@@ -178,6 +189,9 @@ const importedRecordFilterQuery = ref('')
 const importedRecordFilterFieldKey = ref('')
 const importedRecordFilterOperator = ref<AimdRecordFilterOperator>('contains')
 const importedRecordFilterExpanded = ref(false)
+const selectedImportedRecordKeys = ref<AimdRecordViewKey[]>([])
+const importedRecordFieldKeys = ref<string[]>([])
+const showOnlyImportedRecordDifferences = ref(false)
 const isPackagingArchive = ref(false)
 const isImportingPackage = ref(false)
 const showImageInsertPanel = ref(false)
@@ -202,6 +216,9 @@ let isRestoringDraft = false
 
 const protocolFileCount = computed(() => protocolFiles.value.length)
 const importedRecordCount = computed(() => importedRecordOptions.value.length)
+const selectedImportedRecord = computed(() => (
+  importedRecordOptions.value.find(record => record.id === selectedImportedRecordId.value) ?? null
+))
 const importedRecordFieldRefs = computed<AimdRecordFieldRef[]>(() => {
   const byKey = new Map<string, AimdRecordFieldRef>()
   const parsedByAimd = new Map<string, AimdRecordFieldRef[]>()
@@ -238,6 +255,27 @@ const filteredImportedRecordOptions = computed(() => {
     getRecordData: record => record.recordData,
   }).map(result => result.record)
 })
+const activeImportedRecordOptions = computed<ImportedRecordViewOption[]>(() => {
+  const protocolKey = selectedImportedRecord.value?.protocolKey
+  return importedRecordOptions.value
+    .filter(record => !protocolKey || record.protocolKey === protocolKey)
+    .map(record => ({
+      ...record,
+      data: record.recordData,
+    }))
+})
+const visibleImportedRecordOptions = computed<ImportedRecordViewOption[]>(() => {
+  const visibleKeys = new Set(filteredImportedRecordOptions.value.map(record => record.id))
+  return activeImportedRecordOptions.value.filter(record => visibleKeys.has(record.id))
+})
+const selectedImportedRecords = computed<ImportedRecordViewOption[]>(() => {
+  const byKey = new Map(activeImportedRecordOptions.value.map(record => [record.id, record]))
+  return selectedImportedRecordKeys.value
+    .map(key => byKey.get(String(key)))
+    .filter((record): record is ImportedRecordViewOption => Boolean(record))
+})
+const canCompareImportedRecords = computed(() => selectedImportedRecords.value.length >= 2)
+const hasImportedRecordCollection = computed(() => activeImportedRecordOptions.value.length > 1)
 const importedRecordFilterResultLabel = computed(() => (
   importedRecordCount.value > 1 && importedRecordFilterQuery.value.trim()
     ? messages.value.pages.editor.importedRecordFilterCount(filteredImportedRecordOptions.value.length, importedRecordCount.value)
@@ -284,7 +322,11 @@ const canClearContent = computed(() => !isContentBlank.value || protocolFileCoun
 const previewPanelTitle = computed(() => (
   previewMode.value === 'recorder'
     ? messages.value.pages.editor.recorderTitle
-    : messages.value.pages.editor.previewTitle
+    : previewMode.value === 'records-table'
+      ? messages.value.pages.editor.recordTableTitle
+      : previewMode.value === 'records-compare'
+        ? messages.value.pages.editor.recordCompareTitle
+        : messages.value.pages.editor.previewTitle
 ))
 
 function isEditorDraftStorageAvailable(): boolean {
@@ -401,12 +443,18 @@ function resetRecorderData() {
 }
 
 function clearImportedRecords() {
+  if (previewMode.value === 'records-table' || previewMode.value === 'records-compare') {
+    previewMode.value = 'render'
+  }
   importedRecordOptions.value = []
   selectedImportedRecordId.value = ''
   importedRecordFilterQuery.value = ''
   importedRecordFilterFieldKey.value = ''
   importedRecordFilterOperator.value = 'contains'
   importedRecordFilterExpanded.value = false
+  selectedImportedRecordKeys.value = []
+  importedRecordFieldKeys.value = []
+  showOnlyImportedRecordDifferences.value = false
 }
 
 async function saveEditorDraftNow(): Promise<void> {
@@ -928,6 +976,7 @@ async function readAiraRecordsPackage(archive: AiraArchive): Promise<ImportedRec
     importedRecords.push({
       id: record.path || `record-${index + 1}`,
       label: getImportedRecordLabel(record, payload, index),
+      protocolKey: protocolEntry.path,
       aimd: protocolPackage.aimd,
       fileSources: protocolPackage.fileSources,
       recordData: recordPayloadToRecorderData(payload),
@@ -963,7 +1012,9 @@ async function readZipFolderPackage(archive: ZipArchive): Promise<ImportedProtoc
   const imageEntries = entryNames
     .filter(path => path !== entrypoint && !isIgnoredZipEntry(path))
     .map(path => ({ path, relativePath: toProtocolRelativePath(path, root) }))
-    .filter((item): item is { path: string; relativePath: string } => Boolean(item.relativePath) && isImagePath(item.relativePath))
+    .filter((item): item is { path: string; relativePath: string } => (
+      typeof item.relativePath === 'string' && isImagePath(item.relativePath)
+    ))
     .sort((a, b) => a.relativePath.localeCompare(b.relativePath))
 
   const fileSources: ImportedProtocolFileSource[] = []
@@ -1025,6 +1076,8 @@ function applyImportedRecordsPackage(packageData: ImportedRecordsPackage) {
   const selectedRecord = packageData.records.find(record => record.id === packageData.selectedRecordId) ?? packageData.records[0]
   if (selectedRecord) {
     applyImportedRecordOption(selectedRecord)
+    const sameProtocolRecordCount = packageData.records.filter(record => record.protocolKey === selectedRecord.protocolKey).length
+    previewMode.value = sameProtocolRecordCount > 1 ? 'records-table' : 'recorder'
   }
 }
 
@@ -1047,6 +1100,24 @@ function handleImportedRecordSelected(event: Event) {
     return
   }
   selectedImportedRecordId.value = selectedId
+  applyImportedRecordOption(selectedRecord)
+}
+
+function getImportedRecordViewKey(record: unknown): AimdRecordViewKey {
+  return (record as ImportedRecordViewOption).id
+}
+
+function getImportedRecordViewLabel(record: unknown): string {
+  return (record as ImportedRecordViewOption).label
+}
+
+function openImportedRecord(record: unknown) {
+  const importedRecord = record as ImportedRecordViewOption
+  const selectedRecord = importedRecordOptions.value.find(option => option.id === importedRecord.id)
+  if (!selectedRecord) {
+    return
+  }
+  selectedImportedRecordId.value = selectedRecord.id
   applyImportedRecordOption(selectedRecord)
 }
 
@@ -1652,7 +1723,24 @@ onBeforeUnmount(() => {
               :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'recorder' }]"
               @click="previewMode = 'recorder'"
             >
-              {{ messages.pages.editor.recorderMode }}
+              {{ importedRecordCount > 0 ? messages.pages.editor.singleRecordMode : messages.pages.editor.recorderMode }}
+            </button>
+            <button
+              v-if="hasImportedRecordCollection"
+              type="button"
+              :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'records-table' }]"
+              @click="previewMode = 'records-table'"
+            >
+              {{ messages.pages.editor.recordTableMode }}
+            </button>
+            <button
+              v-if="hasImportedRecordCollection"
+              type="button"
+              :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'records-compare' }]"
+              :disabled="!canCompareImportedRecords"
+              @click="previewMode = 'records-compare'"
+            >
+              {{ messages.pages.editor.recordCompareMode(selectedImportedRecords.length) }}
             </button>
           </div>
         </div>
@@ -1665,7 +1753,7 @@ onBeforeUnmount(() => {
           </div>
           <component v-else :is="() => previewNodes" />
         </div>
-        <div v-else class="workspace-panel__body recorder-preview">
+        <div v-else-if="previewMode === 'recorder'" class="workspace-panel__body recorder-preview">
           <div v-if="recorderError" class="preview-error">
             {{ messages.pages.editor.recorderFailed }}: {{ recorderError }}
           </div>
@@ -1681,6 +1769,30 @@ onBeforeUnmount(() => {
             :collector-providers="collectorProviders"
             collector-actor-id="demo-user"
             @error="recorderError = $event"
+          />
+        </div>
+        <div v-else-if="previewMode === 'records-table'" class="workspace-panel__body record-collection-preview">
+          <AimdRecordTable
+            v-model:selected-record-keys="selectedImportedRecordKeys"
+            v-model:field-keys="importedRecordFieldKeys"
+            :aimd="content"
+            :records="visibleImportedRecordOptions"
+            :record-key="getImportedRecordViewKey"
+            :record-label="getImportedRecordViewLabel"
+            :locale="locale"
+            :selection-limit="4"
+            @open-record="openImportedRecord"
+          />
+        </div>
+        <div v-else class="workspace-panel__body record-collection-preview">
+          <AimdRecordCompare
+            v-model:show-only-differences="showOnlyImportedRecordDifferences"
+            :aimd="content"
+            :records="selectedImportedRecords"
+            :record-key="getImportedRecordViewKey"
+            :record-label="getImportedRecordViewLabel"
+            :locale="locale"
+            @open-record="openImportedRecord"
           />
         </div>
       </section>
@@ -1999,6 +2111,11 @@ onBeforeUnmount(() => {
   color: #1a73e8;
 }
 
+.preview-mode-tab:disabled {
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
 .preview-mode-tab--active {
   background: #fff;
   color: #1a73e8;
@@ -2220,6 +2337,16 @@ onBeforeUnmount(() => {
   --aimd-recorder-gutter-x: 14px;
   --aimd-recorder-gutter-bottom: 14px;
   min-height: 100%;
+}
+
+.record-collection-preview {
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.record-collection-preview :deep(.aimd-record-table-view),
+.record-collection-preview :deep(.aimd-record-compare) {
+  background: #fff;
 }
 
 .render-preview :deep(table:not(.aimd-field__table-preview)) {

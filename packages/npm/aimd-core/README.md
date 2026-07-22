@@ -171,7 +171,7 @@ The helper also exposes lower-level `searchAimdEntityConnector()` and `resolveAi
 
 `@airalogy/aimd-core/utils` exports protocol-aware record helpers such as `collectAimdRecordFieldRefs()`, `searchAimdRecordFields()`, `filterAimdRecord()`, and `filterAimdRecords()`. These helpers use parsed field metadata to search all record fields or a selected field, including `var_table` subvars stored under `record.var`, so host apps can build record search and filtering UI without reimplementing AIMD field traversal.
 
-`createAimdRecordViewColumns()` builds stable column descriptors and compact defaults for multiple Records from one Protocol version. `getAimdRecordViewCell()` returns the shared value, empty state, table row count, step/check status, and stable comparison key used by table and comparison views. These APIs model AIMD semantics only; Vue rendering and host concerns such as permissions, pagination, and routing stay outside core.
+`createAimdRecordViewColumns()` builds stable column descriptors and compact defaults for multiple Records from one Protocol version. Column descriptors retain field titles, descriptions, examples, types, and enum values for shared collection UIs. `getAimdRecordViewCell()` returns the shared value, empty state, table row count, step/check status, and stable comparison key used by table and comparison views. These APIs model AIMD semantics only; Vue rendering and host concerns such as permissions, pagination, and routing stay outside core.
 
 ## Built-in Type Metadata
 
