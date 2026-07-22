@@ -131,6 +131,7 @@
   justify-content: center;
   min-width: 0.75rem;
   margin-inline-start: 0.3rem;
+  margin-inline-end: 0.35rem;
   color: var(--aimd-required-color, #d03050);
   font-size: 1em;
   font-weight: 800;

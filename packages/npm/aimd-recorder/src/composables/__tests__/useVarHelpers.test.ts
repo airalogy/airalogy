@@ -7,6 +7,7 @@ import {
   getScalarListInputItems,
   getScalarListItemType,
   getEntityRefTypeConfig,
+  isIntegerVarType,
   isNullableVarType,
   isEntityRefVarType,
   isScalarListVarType,
@@ -275,6 +276,15 @@ describe('file-like var helpers', () => {
 // ---------------------------------------------------------------------------
 
 describe('numeric field constraints', () => {
+  it('recognizes nullable integer annotations as integer types', () => {
+    expect(isIntegerVarType('int')).toBe(true)
+    expect(isIntegerVarType('int | None')).toBe(true)
+    expect(isIntegerVarType('None | integer')).toBe(true)
+    expect(isIntegerVarType('Optional[int]')).toBe(true)
+    expect(isIntegerVarType('typing.Optional[integer]')).toBe(true)
+    expect(isIntegerVarType('float | None')).toBe(false)
+  })
+
   it('reads Pydantic-style numeric constraints only for numeric var types', () => {
     expect(getNumericFieldConstraints('float', { gt: 0, le: 100, multiple_of: 0.5 })).toEqual({
       gt: 0,
@@ -866,6 +876,43 @@ describe('measureVarLabelWidth', () => {
     document.body.appendChild(wrapper)
 
     expect(measureVarLabelWidth(wrapper)).toBeGreaterThan(220)
+  })
+
+  it('reserves label width for required markers', () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => ({
+      measureText: (text: string) => ({ width: text.length * 8 }),
+    } as unknown as CanvasRenderingContext2D))
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element: Element) => {
+      const classList = (element as HTMLElement).classList
+      return {
+        fontSize: '14px',
+        fontFamily: 'sans-serif',
+        fontWeight: '500',
+        fontStyle: 'normal',
+        paddingLeft: classList.contains('aimd-field__name') ? '16px' : '0px',
+        paddingRight: classList.contains('aimd-field__scope--var') ? '14px' : '0px',
+        borderLeftWidth: '0px',
+        borderRightWidth: '0px',
+        marginLeft: classList.contains('aimd-field__required-marker') ? '4px' : '0px',
+        marginRight: classList.contains('aimd-field__required-marker') ? '5px' : '0px',
+      } as CSSStyleDeclaration
+    })
+
+    const optionalWrapper = document.createElement('span')
+    optionalWrapper.innerHTML = `
+      <span class="aimd-field__label">
+        <span class="aimd-field__scope aimd-field__scope--var">var</span>
+        <span class="aimd-field__name"><span class="aimd-field__title">age</span></span>
+      </span>
+    `
+    const requiredWrapper = optionalWrapper.cloneNode(true) as HTMLElement
+    requiredWrapper.querySelector('.aimd-field__name')?.insertAdjacentHTML(
+      'beforeend',
+      '<span class="aimd-field__required-marker">*</span>',
+    )
+    document.body.append(optionalWrapper, requiredWrapper)
+
+    expect(measureVarLabelWidth(requiredWrapper)).toBeGreaterThan(measureVarLabelWidth(optionalWrapper))
   })
 })
 

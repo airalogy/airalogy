@@ -39,6 +39,7 @@ import {
   getEntityRefTypeConfig,
   getVarEnumSelectValue,
   getVarEnumValueFromSelectValue,
+  isIntegerVarType,
   isNullableVarType,
   normalizeScalarListInputItems,
   type NumericInputAttributes,
@@ -652,7 +653,7 @@ export default defineComponent({
       const type = node.definition?.type || "str"
       const normalizedType = normalizeVarTypeName(type)
       const inputKind = props.inputKind
-      const isIntegerInput = normalizedType === "int" || normalizedType === "integer"
+      const isIntegerInput = isIntegerVarType(type)
       const usesDecimalTextInput = inputKind === "number" && !isIntegerInput
       const meta = props.fieldMeta
       const disabled = props.disabled

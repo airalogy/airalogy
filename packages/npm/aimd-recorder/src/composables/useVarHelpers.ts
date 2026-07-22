@@ -330,6 +330,11 @@ export function isNumericVarType(type: string | undefined): boolean {
   return normalized === "float" || normalized === "int" || normalized === "integer" || normalized === "number"
 }
 
+export function isIntegerVarType(type: string | undefined): boolean {
+  const normalized = normalizeVarTypeName(unwrapOptionalTypeAnnotation(type))
+  return normalized === "int" || normalized === "integer"
+}
+
 function getScalarListItemTypeFromExpression(type: string | undefined): ScalarListItemType | undefined {
   const normalized = canonicalizeTypeExpression(type).replace(/^typing\./, "")
   if (normalized === "str" || normalized === "string" || normalized === "builtins.str") {
@@ -1137,8 +1142,11 @@ function getElementHorizontalSpace(element: HTMLElement): number {
 function measureFieldNameWidth(name: HTMLElement): number {
   const title = name.querySelector(".aimd-field__title") as HTMLElement | null
   const key = name.querySelector(".aimd-field__key") as HTMLElement | null
+  const requiredMarker = name.querySelector(".aimd-field__required-marker") as HTMLElement | null
+  const titleRowWidth = (title ? measureLabelTokenWidth(title) : 0)
+    + (requiredMarker ? measureLabelTokenWidth(requiredMarker) : 0)
   const visibleTokenWidth = Math.max(
-    title ? measureLabelTokenWidth(title) : 0,
+    titleRowWidth,
     key ? measureLabelTokenWidth(key) : 0,
   )
 

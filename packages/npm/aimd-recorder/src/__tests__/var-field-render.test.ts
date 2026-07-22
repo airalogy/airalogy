@@ -55,6 +55,54 @@ describe('AimdVarField render behavior', () => {
     expect(source).toMatch(/control\.setCustomValidity\(violation \?\? ""\)/)
   })
 
+  it.each([
+    'int | None',
+    'None | integer',
+    'Optional[int]',
+    'typing.Optional[integer]',
+  ])('renders nullable integer type %s with the native integer stepper', async (type) => {
+    const node: AimdVarNode = {
+      type: 'aimd',
+      fieldType: 'var',
+      scope: 'var',
+      id: 'nullable_count',
+      raw: '{{var|nullable_count}}',
+      definition: {
+        id: 'nullable_count',
+        type,
+      },
+    }
+
+    const wrapper = mount(AimdVarField, {
+      props: {
+        node,
+        disabled: false,
+        extraClasses: [],
+        messages: createAimdRecorderMessages('en-US'),
+        displayValue: '',
+        inputKind: 'number',
+        initialized: true,
+      },
+    })
+
+    const input = wrapper.find<HTMLInputElement>('input[data-rec-focus-key="var:nullable_count"]')
+    expect(input.attributes('type')).toBe('number')
+    expect(input.attributes('inputmode')).toBe('numeric')
+    expect(input.attributes('step')).toBe('1')
+
+    await input.setValue('2')
+    await input.setValue('')
+
+    const changes = wrapper.emitted('change') ?? []
+    expect(changes[changes.length - 1]?.[0]).toMatchObject({
+      id: 'nullable_count',
+      value: null,
+      type,
+      inputKind: 'number',
+    })
+    wrapper.unmount()
+  })
+
   it('renders code-like vars with the dedicated code editor field', () => {
     expect(source).toMatch(/const AimdCodeField = defineAsyncComponent\(\(\) => import\("\.\/AimdCodeField\.vue"\)\)/)
     expect(source).toMatch(/if \(inputKind === "code"\)/)
