@@ -433,6 +433,7 @@ export interface AimdTypePluginParseContext extends AimdTypePluginInitContext {
 export interface AimdTypePluginRenderContext extends AimdTypePluginValueContext {
   readonly: boolean
   disabled: boolean
+  required?: boolean
   locale: string
   messages: AimdRecorderMessages
   record: AimdProtocolRecordData

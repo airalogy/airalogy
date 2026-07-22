@@ -3,7 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils"
 import { describe, expect, it, vi } from "vitest"
 import AimdRecorder from "../components/AimdRecorder.vue"
 import { createAimdRecorderMessages } from "../locales"
-import { validateAimdField, validateAimdRecord } from "../record/validation"
+import { getAimdRequiredFieldKeys, validateAimdField, validateAimdRecord } from "../record/validation"
 import { createEmptyProtocolRecordData } from "../types"
 
 const EMPTY_FIELDS: ExtractedAimdFields = {
@@ -21,6 +21,97 @@ const EMPTY_FIELDS: ExtractedAimdFields = {
 const messages = createAimdRecorderMessages("en-US").validation
 
 describe("AimdRecorder validation", () => {
+  it("resolves required UI selectors from the same schema and AIMD rules used for validation", () => {
+    const fields: ExtractedAimdFields = {
+      ...EMPTY_FIELDS,
+      var: ["schema_name", "aimd_name", "optional_name"],
+      var_definitions: [
+        { id: "schema_name", type: "str", default: "" },
+        { id: "aimd_name", type: "str" },
+        { id: "optional_name", type: "str", default: "" },
+      ],
+      var_table: [{
+        id: "samples",
+        scope: "var_table",
+        subvars: [
+          { id: "sample_id", type: "str" },
+          { id: "note", type: "str", default: "" },
+        ],
+      }],
+    }
+
+    const required = getAimdRequiredFieldKeys(fields, {
+      schema: {
+        vars: {
+          type: "object",
+          required: ["schema_name", "samples"],
+          properties: {
+            schema_name: { type: "string" },
+            samples: {
+              type: "array",
+              items: {
+                type: "object",
+                required: ["sample_id"],
+                properties: {
+                  sample_id: { type: "string" },
+                  note: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    expect([...required]).toEqual([
+      "var:schema_name",
+      "var:aimd_name",
+      "var_table:samples",
+      "var_table:samples:sample_id",
+    ])
+  })
+
+  it("marks schema-required fields and table columns before validation errors are shown", async () => {
+    const wrapper = mount(AimdRecorder, {
+      props: {
+        content: [
+          'Required: {{var|required_name: str = "", title = "Required name"}}',
+          'Optional: {{var|optional_name: str | None = "", title = "Optional name"}}',
+          "{{var_table|samples, subvars=[sample_id: str, note: str | None]}}",
+        ].join("\n\n"),
+        validationSchema: {
+          vars: {
+            type: "object",
+            required: ["required_name", "samples"],
+            properties: {
+              required_name: { type: "string" },
+              optional_name: { type: ["string", "null"] },
+              samples: {
+                type: "array",
+                items: {
+                  type: "object",
+                  required: ["sample_id"],
+                  properties: {
+                    sample_id: { type: "string" },
+                    note: { type: ["string", "null"] },
+                  },
+                },
+              },
+            },
+          },
+        },
+        showSearch: false,
+      },
+    })
+    await flushPromises()
+
+    const markers = wrapper.findAll(".aimd-field__required-marker")
+    expect(markers).toHaveLength(3)
+    expect(markers.every(marker => marker.attributes("aria-label") === "Required")).toBe(true)
+    expect(wrapper.text()).toContain("Required name")
+    expect(wrapper.text()).toContain("sample_id")
+  })
+
   it("validates inferred required, pattern, numeric, and every table cell constraint", () => {
     const record = createEmptyProtocolRecordData()
     record.var.code = "bad"

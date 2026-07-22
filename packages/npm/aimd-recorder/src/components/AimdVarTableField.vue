@@ -14,6 +14,7 @@ import type { AimdRecorderMessages } from "../locales"
 import { getAimdRecorderEmptyValueLabel, getAimdRecorderScopeLabel } from "../locales"
 import { getVarTableColumns, getVarTableRowKey } from "../composables/useVarTableDragDrop"
 import { getVarEnumSelectValue, getVarEnumValueFromSelectValue, isNullableVarType } from "../composables/useVarHelpers"
+import AimdRequiredMarker from "./AimdRequiredMarker.vue"
 
 function renderTrashIcon(): VNode {
   return h("svg", {
@@ -146,6 +147,8 @@ export default defineComponent({
     extraClasses: { type: Array as PropType<string[]>, default: () => [] },
     settlingRowKey: { type: String as PropType<string | null>, default: null },
     messages: { type: Object as PropType<AimdRecorderMessages>, required: true },
+    required: { type: Boolean, default: false },
+    requiredColumns: { type: Array as PropType<string[]>, default: () => [] },
     fieldMeta: { type: Object as PropType<Record<string, AimdFieldMeta> | undefined>, default: undefined },
     fieldState: { type: Object as PropType<Record<string, AimdFieldState> | undefined>, default: undefined },
     assignerControl: { type: Object as PropType<VNode | undefined>, default: undefined },
@@ -445,7 +448,13 @@ export default defineComponent({
       ])
     }
 
-    function renderMetadataLabel(id: string, definition: AimdVarDefinition | undefined, className: string, meta?: AimdFieldMeta): VNode {
+    function renderMetadataLabel(
+      id: string,
+      definition: AimdVarDefinition | undefined,
+      className: string,
+      meta?: AimdFieldMeta,
+      required = false,
+    ): VNode {
       const metaTitle = normalizeMetaString(meta?.title)
       const definitionTitle = getAimdFieldTitle(definition)
       const displayTitle = metaTitle ?? getAimdFieldDisplayLabel(id, definition)
@@ -463,6 +472,7 @@ export default defineComponent({
         "aria-label": help.tooltip || undefined,
       }, [
         h("span", { class: "aimd-field__title" }, displayTitle),
+        required ? h(AimdRequiredMarker, { label: props.messages.common.required }) : null,
         hasCustomTitle ? h("span", { class: "aimd-field__key" }, id) : null,
         renderFieldMetadataPopover(help),
       ])
@@ -508,7 +518,7 @@ export default defineComponent({
           ]),
           titleColumn
             ? h("div", { class: "aimd-rec-card__field aimd-rec-card__field--title" }, [
-                renderMetadataLabel(titleColumn, getColumnDefinition(titleColumn), "aimd-rec-card__label", getColumnMeta(titleColumn)),
+                renderMetadataLabel(titleColumn, getColumnDefinition(titleColumn), "aimd-rec-card__label", getColumnMeta(titleColumn), props.requiredColumns.includes(titleColumn)),
                 renderValidatedCellControl(tableName, titleColumn, rowIndex, row, "aimd-rec-card__input"),
               ])
             : null,
@@ -517,7 +527,7 @@ export default defineComponent({
               key: `${tableName}-${rowKey}-${column}`,
               class: "aimd-rec-card__field",
             }, [
-              renderMetadataLabel(column, getColumnDefinition(column), "aimd-rec-card__label", getColumnMeta(column)),
+              renderMetadataLabel(column, getColumnDefinition(column), "aimd-rec-card__label", getColumnMeta(column), props.requiredColumns.includes(column)),
               renderValidatedCellControl(tableName, column, rowIndex, row, "aimd-rec-card__input"),
             ])
           })),
@@ -575,6 +585,7 @@ export default defineComponent({
             "aria-label": tableHelp.tooltip || undefined,
           }, [
             h("span", { class: "aimd-field__title" }, tableTitle),
+            props.required ? h(AimdRequiredMarker, { label: messages.common.required }) : null,
             hasCustomTableTitle ? h("span", { class: "aimd-field__key" }, tableName) : null,
             renderFieldMetadataPopover(tableHelp),
           ]),
@@ -627,7 +638,7 @@ export default defineComponent({
                       "data-column-kind": resolveColumnSizingKind(column, getColumnDisplayLabel(column)),
                       "data-column-id": column,
                     }, [
-                      renderMetadataLabel(column, getColumnDefinition(column), "aimd-rec-inline-table__column-label", getColumnMeta(column)),
+                      renderMetadataLabel(column, getColumnDefinition(column), "aimd-rec-inline-table__column-label", getColumnMeta(column), props.requiredColumns.includes(column)),
                     ])),
                     h("th", { class: "aimd-rec-inline-table__action-head" }, messages.table.actionColumn),
                   ]),

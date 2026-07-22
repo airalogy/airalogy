@@ -13,6 +13,7 @@ import {
   isStepTimerRunning,
   resolveStepTimerMode,
 } from "../composables/useStepTimers"
+import AimdRequiredMarker from "./AimdRequiredMarker.vue"
 
 const AimdMarkdownNoteField = defineAsyncComponent(() => import("./AimdMarkdownNoteField.vue"))
 
@@ -27,6 +28,7 @@ export const AimdStepField = defineComponent({
     detailDisplay: { type: String as PropType<AimdStepDetailDisplay>, default: "auto" },
     locale: { type: String, required: true },
     messages: { type: Object as PropType<AimdRecorderMessages>, required: true },
+    required: { type: Boolean, default: false },
   },
   emits: ["check-change", "annotation-change", "timer-start", "timer-pause", "timer-reset", "blur"],
   setup(props, { emit }) {
@@ -311,6 +313,7 @@ export const AimdStepField = defineComponent({
           h("span", { class: "aimd-field__scope" }, getAimdRecorderScopeLabel("step", props.messages)),
           h("span", { class: "aimd-rec-inline__step-num" }, stepNumber),
           h("span", { class: "aimd-field__name" }, id),
+          props.required ? h(AimdRequiredMarker, { label: props.messages.common.required }) : null,
         ]),
       )
 
@@ -430,6 +433,7 @@ export const AimdCheckField = defineComponent({
     extraClasses: { type: Array as PropType<string[]>, default: () => [] },
     locale: { type: String, default: "en-US" },
     messages: { type: Object as PropType<AimdRecorderMessages>, required: true },
+    required: { type: Boolean, default: false },
   },
   emits: ["check-change", "annotation-change", "blur"],
   setup(props, { emit }) {
@@ -576,7 +580,13 @@ export const AimdCheckField = defineComponent({
               }),
               h("span", { class: "aimd-field__scope" }, getAimdRecorderScopeLabel("check", props.messages)),
               !hasBody
-                ? h("span", { class: "aimd-field__name aimd-check-field__key" }, fallbackLabel)
+                ? h("span", { class: "aimd-field__name aimd-check-field__key" }, [
+                    fallbackLabel,
+                    props.required ? h(AimdRequiredMarker, { label: props.messages.common.required }) : null,
+                  ])
+                : null,
+              hasBody && props.required
+                ? h(AimdRequiredMarker, { label: props.messages.common.required })
                 : null,
             ]),
             headerActionChildren.length > 0

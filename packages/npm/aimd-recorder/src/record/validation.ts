@@ -25,6 +25,11 @@ export interface ValidateAimdRecordOptions {
   messages: AimdRecorderMessages["validation"]
 }
 
+export interface ResolveAimdRequiredFieldOptions {
+  fieldMeta?: Record<string, AimdFieldMeta>
+  schema?: AimdRecordValidationSchema
+}
+
 type SchemaSection = "var" | "step" | "check" | "quiz"
 
 interface ResolvedSchemaSection {
@@ -246,6 +251,62 @@ function getSchemaRequiredFieldKeys(schemaSections: ResolvedSchemaSection[]): Se
       }
     }
   }
+  return keys
+}
+
+/** Resolve the canonical field selectors that the recorder treats as required. */
+export function getAimdRequiredFieldKeys(
+  fields: ExtractedAimdFields,
+  options: ResolveAimdRequiredFieldOptions = {},
+): Set<string> {
+  const keys = new Set<string>()
+  const fieldMeta = options.fieldMeta ?? {}
+  const schemaSections = resolveSchemaSections(options.schema)
+  const schemaCoveredKeys = getSchemaCoveredFieldKeys(schemaSections)
+  const schemaRequiredKeys = getSchemaRequiredFieldKeys(schemaSections)
+
+  const addWhenRequired = (
+    fieldKey: string,
+    kwargs: Record<string, unknown> | undefined,
+    inferredRequired: boolean,
+  ) => {
+    const required = schemaCoveredKeys.has(fieldKey)
+      ? schemaRequiredKeys.has(fieldKey) || fieldMeta[fieldKey]?.required === true
+      : resolveRequired(fieldMeta[fieldKey], kwargs, inferredRequired)
+    if (required) keys.add(fieldKey)
+  }
+
+  for (const field of fields.var_definitions ?? []) {
+    addWhenRequired(`var:${field.id}`, field.kwargs, !hasOwn(field, "default"))
+  }
+
+  for (const table of fields.var_table ?? []) {
+    const tableKey = `var_table:${table.id}`
+    addWhenRequired(tableKey, table.kwargs, !hasOwn(table, "default"))
+    const schemaCovered = schemaCoveredKeys.has(tableKey)
+    for (const column of table.subvars ?? []) {
+      const columnKey = `${tableKey}:${column.id}`
+      const required = schemaCovered
+        ? schemaRequiredKeys.has(columnKey) || fieldMeta[columnKey]?.required === true
+        : resolveRequired(fieldMeta[columnKey], column.kwargs, !hasOwn(column, "default"))
+      if (required) keys.add(columnKey)
+    }
+  }
+
+  for (const id of fields.step ?? []) {
+    addWhenRequired(`step:${id}`, undefined, false)
+  }
+  for (const id of fields.check ?? []) {
+    addWhenRequired(`check:${id}`, undefined, false)
+  }
+  for (const quiz of fields.quiz ?? []) {
+    addWhenRequired(
+      `quiz:${quiz.id}`,
+      isRecord(quiz.extra) ? quiz.extra : undefined,
+      false,
+    )
+  }
+
   return keys
 }
 

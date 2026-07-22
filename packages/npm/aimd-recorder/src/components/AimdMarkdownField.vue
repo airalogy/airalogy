@@ -6,13 +6,15 @@ import type { AimdRecorderMessages } from '../locales'
 import { getAimdRecorderScopeLabel } from '../locales'
 import { createChainedElementRenderer, useCodeBlockRendering } from '../composables/useCodeBlockRendering'
 import { createMonacoAutoHeight, type MonacoAutoHeightEditor } from '../composables/useMonacoAutoHeight'
+import AimdRequiredMarker from './AimdRequiredMarker.vue'
 
 const props = withDefaults(defineProps<{
   modelValue?: unknown
   varId: string
   disabled?: boolean
   locale?: string
-  messages: Pick<AimdRecorderMessages, 'scope'>
+  messages: Pick<AimdRecorderMessages, 'scope'> & Partial<Pick<AimdRecorderMessages, 'common'>>
+  required?: boolean
   assignerControl?: VNode
   assignerStatus?: VNode
   assignerError?: string
@@ -23,6 +25,7 @@ const props = withDefaults(defineProps<{
   assignerControl: undefined,
   assignerStatus: undefined,
   assignerError: undefined,
+  required: false,
 })
 
 const emit = defineEmits<{
@@ -282,6 +285,7 @@ watch(
         {{ getAimdRecorderScopeLabel('var', messages) }}
       </span>
       <span class="aimd-field__id">{{ varId }}</span>
+      <AimdRequiredMarker v-if="required" :label="messages.common?.required || 'Required'" />
       <span class="aimd-markdown-field__header-actions">
         <span class="aimd-markdown-field__view-switch" :aria-label="previewToolbarLabel">
           <button

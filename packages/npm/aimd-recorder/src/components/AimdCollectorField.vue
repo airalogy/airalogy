@@ -14,6 +14,7 @@ import {
   getAimdCollectorManualValueType,
   parseAimdCollectorManualValue,
 } from "../composables/useCollectors"
+import AimdRequiredMarker from "./AimdRequiredMarker.vue"
 
 const props = defineProps<{
   node: AimdVarNode
@@ -25,6 +26,7 @@ const props = defineProps<{
   messages: AimdRecorderMessages
   fieldMeta?: AimdFieldMeta
   extraClasses?: string[]
+  required?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -138,6 +140,7 @@ function submitManual(): void {
       <span class="aimd-field__scope aimd-field__scope--var">{{ getAimdRecorderScopeLabel("var", messages) }}</span>
       <span class="aimd-rec-collector__identity">
         <span class="aimd-rec-collector__title">{{ title }}</span>
+        <AimdRequiredMarker v-if="required" :label="messages.common.required" />
         <span v-if="title !== node.id" class="aimd-rec-collector__key">{{ node.id }}</span>
       </span>
       <span class="aimd-rec-collector__source" :title="binding.connector.id">

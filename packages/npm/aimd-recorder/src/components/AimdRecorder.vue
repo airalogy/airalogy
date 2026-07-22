@@ -48,6 +48,7 @@ import type {
 } from "../types"
 import { createEmptyProtocolRecordData } from "../types"
 import {
+  getAimdRequiredFieldKeys,
   getAimdVarTableCellFieldKey,
   matchesAimdValidationFieldSelector,
   validateAimdRecord,
@@ -660,6 +661,10 @@ const effectiveFieldMeta = computed<Record<string, AimdFieldMeta>>(() => {
   }
   return next
 })
+const requiredFieldKeys = computed(() => getAimdRequiredFieldKeys(extractedFields.value, {
+  fieldMeta: effectiveFieldMeta.value,
+  schema: props.validationSchema,
+}))
 const effectiveFieldState = computed<Record<string, AimdFieldState>>(() => {
   const keys = new Set([
     ...Object.keys(internalAssignerFieldState.value),
@@ -1182,6 +1187,7 @@ const collectorRuntime = useCollectors({
 function renderInlineVar(node: AimdVarNode): VNode {
   const id = node.id
   const fieldKey = `var:${id}`
+  const required = requiredFieldKeys.value.has(fieldKey)
   const baseMeta = effectiveFieldMeta.value[fieldKey]
   const nodeEnumValues = getAimdFieldEnumValues(node.definition)
   const meta = nodeEnumValues.length > 0 && !baseMeta?.enumOptions
@@ -1245,6 +1251,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
       providerAvailable: collectorRuntime.hasProvider(id),
       messages: resolvedMessages.value,
       fieldMeta: meta,
+      required,
       extraClasses: [
         ...fieldRendering.fieldStateClasses(fieldKey),
         ...recordSearch.getFieldClasses(fieldKey),
@@ -1306,6 +1313,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
       value: localRecord.var[id],
       inputKind,
       fieldMeta: meta,
+      required,
       currentUserName: props.currentUserName,
       now: props.now,
       readonly: props.readonly,
@@ -1347,6 +1355,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
     extraClasses,
     messages: resolvedMessages.value,
     fieldMeta: meta,
+    required,
     displayValue,
     inputKind,
     typePlugin,
@@ -1398,6 +1407,8 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
     settlingRowKey: tableDragDrop.getSettlingVarTableRowKey(),
     messages: resolvedMessages.value,
     fieldMeta: effectiveFieldMeta.value,
+    required: requiredFieldKeys.value.has(fieldKey),
+    requiredColumns: columns.filter(column => requiredFieldKeys.value.has(`${fieldKey}:${column}`)),
     fieldState: effectiveFieldState.value,
     assignerControl: tableAssignerControl
       ? renderAssignerButton(tableAssignerControl, rows)
@@ -1653,6 +1664,7 @@ function renderInlineStep(node: AimdStepNode, bodyNodes: VNodeChild[] = []): VNo
     detailDisplay: props.stepDetailDisplay,
     locale: resolvedLocale.value,
     messages: resolvedMessages.value,
+    required: requiredFieldKeys.value.has(fieldKey),
     onCheckChange: (payload: { id: string, value: boolean }) => {
       const wasRunning = isStepTimerRunning(state)
       setStepChecked(state, payload.value, Date.now())
@@ -1727,6 +1739,7 @@ function renderInlineCheck(node: AimdCheckNode, bodyNodes: VNodeChild[] = []): V
     extraClasses,
     locale: resolvedLocale.value,
     messages: resolvedMessages.value,
+    required: requiredFieldKeys.value.has(fieldKey),
     onCheckChange: (payload: { id: string, value: boolean }) => {
       state.checked = payload.value
       markRecordChanged()
@@ -1784,6 +1797,7 @@ function renderInlineQuiz(node: AimdQuizNode): VNode {
     focusKeyPrefix: `quiz:${quizId}`,
     locale: resolvedLocale.value,
     messages: props.messages,
+    required: requiredFieldKeys.value.has(fieldKey),
     choiceOptionExplanationMode: props.choiceOptionExplanationMode,
     scaleGradeDisplayMode: props.scaleGradeDisplayMode,
     "onUpdate:modelValue": (value: unknown) => {

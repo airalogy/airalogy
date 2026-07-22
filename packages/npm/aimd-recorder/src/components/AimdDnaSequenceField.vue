@@ -41,6 +41,7 @@ import DnaSequenceToolbar from "./DnaSequenceToolbar.vue"
 import DnaSequenceViewer from "./DnaSequenceViewer.vue"
 import DnaSequenceEditor from "./DnaSequenceEditor.vue"
 import DnaAnnotationEditor from "./DnaAnnotationEditor.vue"
+import AimdRequiredMarker from "./AimdRequiredMarker.vue"
 
 // ---- Props & Emits (public API — unchanged) ----
 
@@ -49,11 +50,13 @@ const props = withDefaults(defineProps<{
   varId: string
   disabled?: boolean
   placeholder?: string
-  messages: Pick<AimdRecorderMessages, "scope" | "dna">
+  messages: Pick<AimdRecorderMessages, "scope" | "dna"> & Partial<Pick<AimdRecorderMessages, "common">>
+  required?: boolean
 }>(), {
   modelValue: undefined,
   disabled: false,
   placeholder: undefined,
+  required: false,
 })
 
 const emit = defineEmits<{
@@ -447,6 +450,7 @@ watch(() => value.value.sequence, seq => {
     <span class="aimd-field aimd-field--no-style aimd-field__label">
       <span class="aimd-field__scope aimd-field__scope--var">{{ props.messages.scope.var }}</span>
       <span class="aimd-field__id">{{ props.varId }}</span>
+      <AimdRequiredMarker v-if="props.required" :label="props.messages.common?.required || 'Required'" />
     </span>
 
     <span class="aimd-dna-field">

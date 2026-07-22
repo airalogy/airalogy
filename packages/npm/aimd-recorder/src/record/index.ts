@@ -17,10 +17,12 @@ export type {
   AimdRecorderValidationResult,
 } from '../types'
 export {
+  getAimdRequiredFieldKeys,
   getAimdVarTableCellFieldKey,
   matchesAimdValidationFieldSelector,
   validateAimdField,
   validateAimdRecord,
+  type ResolveAimdRequiredFieldOptions,
   type ValidateAimdRecordOptions,
 } from './validation'
 

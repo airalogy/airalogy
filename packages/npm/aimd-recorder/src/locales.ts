@@ -238,6 +238,7 @@ export interface AimdRecorderMessages {
   common: {
     emptyValue?: string
     emptyContent: string
+    required: string
   }
 }
 
@@ -501,6 +502,7 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
   common: {
     emptyValue: "Not set",
     emptyContent: "No renderable protocol content.",
+    required: "Required",
   },
 }
 
@@ -737,6 +739,7 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
   common: {
     emptyValue: "未填写",
     emptyContent: "没有可渲染的协议内容。",
+    required: "必填",
   },
 }
 

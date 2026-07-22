@@ -17,6 +17,7 @@ import {
   getAimdRecorderScopeLabel,
 } from "../locales"
 import AimdQuizOptionFollowups from "./AimdQuizOptionFollowups.vue"
+import AimdRequiredMarker from "./AimdRequiredMarker.vue"
 
 interface StemTextSegment {
   type: "text"
@@ -44,6 +45,7 @@ const props = withDefaults(defineProps<{
   messages?: AimdRecorderMessagesInput
   choiceOptionExplanationMode?: AimdChoiceOptionExplanationMode
   scaleGradeDisplayMode?: AimdScaleGradeDisplayMode
+  required?: boolean
 }>(), {
   grade: null,
   submitted: false,
@@ -54,6 +56,7 @@ const props = withDefaults(defineProps<{
   messages: undefined,
   choiceOptionExplanationMode: "hidden",
   scaleGradeDisplayMode: "hidden",
+  required: false,
 })
 
 const emit = defineEmits<{
@@ -553,6 +556,7 @@ function shouldShowChoiceOptionExplanation(optionKey: string, explanation?: stri
     <div class="aimd-quiz__meta">
       <span class="aimd-field__scope">{{ getAimdRecorderScopeLabel('quiz', resolvedMessages) }}</span>
       <span class="aimd-field__name">{{ quiz.id }}</span>
+      <AimdRequiredMarker v-if="required" :label="resolvedMessages.common.required" />
       <span class="aimd-field__type">({{ quizTypeLabel }})</span>
       <span v-if="typeof quiz.score === 'number'" class="aimd-quiz__score">{{ resolvedMessages.quiz.score(quiz.score) }}</span>
     </div>

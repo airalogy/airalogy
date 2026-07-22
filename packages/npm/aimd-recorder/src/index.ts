@@ -93,10 +93,12 @@ export type {
   TableEventPayload,
 } from './types'
 export {
+  getAimdRequiredFieldKeys,
   getAimdVarTableCellFieldKey,
   matchesAimdValidationFieldSelector,
   validateAimdField,
   validateAimdRecord,
+  type ResolveAimdRequiredFieldOptions,
   type ValidateAimdRecordOptions,
 } from './record/validation'
 export { createEmptyProtocolRecordData } from './types'

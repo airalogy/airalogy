@@ -124,6 +124,17 @@
   align-items: center;
 }
 
+.aimd-field__required-marker {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-inline-start: 0.25rem;
+  color: #d03050;
+  font-size: 0.875em;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .aimd-field--no-style.aimd-field__label .aimd-field__name--with-metadata {
   align-items: flex-start;
   justify-content: center;

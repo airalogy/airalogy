@@ -45,6 +45,7 @@ import {
   type ScalarListInputItem,
   type ScalarListItemType,
 } from "../composables/useVarHelpers"
+import AimdRequiredMarker from "./AimdRequiredMarker.vue"
 
 const AimdCodeField = defineAsyncComponent(() => import("./AimdCodeField.vue"))
 const AimdEntityRefField = defineAsyncComponent(() => import("./AimdEntityRefField.vue"))
@@ -488,6 +489,7 @@ export default defineComponent({
     extraClasses: { type: Array as PropType<string[]>, default: () => [] },
     messages: { type: Object as PropType<AimdRecorderMessages>, required: true },
     fieldMeta: { type: Object as PropType<AimdFieldMeta | undefined>, default: undefined },
+    required: { type: Boolean, default: false },
     displayValue: { type: [String, Number] as PropType<string | number>, default: "" },
     inputKind: { type: String as PropType<AimdVarInputKind>, required: true },
     typePlugin: { type: Object as PropType<AimdTypePlugin | undefined>, default: undefined },
@@ -780,6 +782,7 @@ export default defineComponent({
             "aria-label": help.tooltip || undefined,
           }, [
             h("span", { class: "aimd-field__title", title: displayTitle }, displayTitle),
+            props.required ? h(AimdRequiredMarker, { label: props.messages.common.required }) : null,
             hasCustomTitle ? h("span", { class: "aimd-field__key", title: id }, id) : null,
             renderFieldMetadataPopover(help),
           ]),
