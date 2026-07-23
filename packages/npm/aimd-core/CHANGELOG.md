@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.15.0
+
+### Minor Changes
+
+- 4472ba2: Preserve AIMD field examples in the shared Record column model and expose accessible field-detail popovers in table and comparison views with titles, ids, types, descriptions, examples, and enum options.
+- 9abafbd: Add the shared resource and Protocol-version contract: `resource_definition` Protocol metadata, exact `ResourceRef` values and field metadata validation, host-injected resource resolvers, Schema compatibility reports, deterministic migration manifests, and resource-aware Recorder controls.
+
 ## 2.14.0
 
 ### Minor Changes

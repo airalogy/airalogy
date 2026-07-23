@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.12.0
+
+### Minor Changes
+
+- 4472ba2: Preserve AIMD field examples in the shared Record column model and expose accessible field-detail popovers in table and comparison views with titles, ids, types, descriptions, examples, and enum options.
+
+### Patch Changes
+
+- 7ec43fc: Align multi-record toolbar content with table cell padding on desktop and narrow screens.
+- 62ea19c: Keep host-provided record selection actions beside the selection summary while preserving the field picker at the far edge of the toolbar.
+- 62ea19c: Include host-provided Record metadata columns in the shared table column picker and expose a controlled `metadataColumnKeys` model while keeping every metadata column visible by default.
+- Updated dependencies [4472ba2]
+- Updated dependencies [9abafbd]
+  - @airalogy/aimd-core@2.15.0
+
 ## 2.11.1
 
 ### Patch Changes

@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.25.0
+
+### Minor Changes
+
+- 9abafbd: Add the shared resource and Protocol-version contract: `resource_definition` Protocol metadata, exact `ResourceRef` values and field metadata validation, host-injected resource resolvers, Schema compatibility reports, deterministic migration manifests, and resource-aware Recorder controls.
+
+### Patch Changes
+
+- 1ba2c73: Allow nullable AIMD and schema-backed fields to remain unfilled unless an explicit non-empty required override is configured.
+- 0358c7c: Keep required markers inline with custom field titles while rendering the underlying AIMD field key on its own metadata row.
+- Updated dependencies [4472ba2]
+- Updated dependencies [7ec43fc]
+- Updated dependencies [62ea19c]
+- Updated dependencies [62ea19c]
+- Updated dependencies [9abafbd]
+  - @airalogy/aimd-core@2.15.0
+  - @airalogy/aimd-renderer@2.12.0
+
 ## 1.24.5
 
 ### Patch Changes

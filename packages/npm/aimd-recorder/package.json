@@ -1,7 +1,7 @@
 {
   "name": "@airalogy/aimd-recorder",
   "type": "module",
-  "version": "1.24.5",
+  "version": "1.25.0",
   "description": "AIMD (Airalogy Markdown) recorder Vue components and UI",
   "license": "Apache-2.0",
   "repository": {
