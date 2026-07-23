@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   assignVariable,
+  migrateSchema,
   parseWorkflowContent,
   parseProtocol,
   runWorkflow,
@@ -41,6 +42,18 @@ const ASSIGN_DEBUG_LINES = [
   "This is debug log",
   "Converting 60 seconds to duration: 0:01:00",
 ];
+
+describe("migrateSchema", () => {
+  it("rejects a missing Protocol directory before starting a sandbox", async () => {
+    await expect(
+      migrateSchema(
+        "/tmp/nonexistent_protocol_migration_12345",
+        {},
+        { version: "airalogy.migration.v1", from: "1.0.0", to: "2.0.0" },
+      ),
+    ).rejects.toThrow("protocol_path must be a directory");
+  });
+});
 
 let envProtocolPath: string;
 let fileBridgeProtocolPath: string;

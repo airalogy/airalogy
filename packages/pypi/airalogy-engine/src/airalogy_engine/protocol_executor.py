@@ -1,5 +1,6 @@
 import importlib
 import importlib.util
+import hashlib
 import json
 import logging
 import os
@@ -12,6 +13,11 @@ from typing import get_args, get_origin
 
 from airalogy.assigner import DefaultAssigner
 from airalogy.ingest import import_records as import_airalogy_records
+from airalogy.migrations import (
+    apply_declarative_migration,
+    migration_rule_hash,
+    validate_migration_manifest,
+)
 from airalogy.markdown import extract_assigner_blocks, generate_model, parse_aimd
 from airalogy.markdown.errors import AimdParseError
 from airalogy.markdown.model_sync import merge_var_models
@@ -416,6 +422,63 @@ def import_records(protocol_name: str, params: dict) -> dict:
     }
 
 
+def migrate_schema(protocol_name: str, params: dict) -> dict:
+    """Apply a verified manifest and optional pure transform in the sandbox."""
+
+    protocol_path = os.path.abspath(_validate_protocol_name(protocol_name))
+    manifest = params.get("manifest")
+    record_data = params.get("data")
+    if not isinstance(manifest, dict):
+        raise ValueError("manifest must be an object")
+    if not isinstance(record_data, dict):
+        raise ValueError("data must be an object")
+    issues = validate_migration_manifest(manifest)
+    if issues:
+        rendered = "; ".join(f"{issue.path}: {issue.message}" for issue in issues)
+        raise ValueError(f"invalid migration manifest: {rendered}")
+
+    declarative = apply_declarative_migration(record_data, manifest)
+    result_data = declarative.data
+    transform = manifest.get("transform")
+    code_hash = None
+    if isinstance(transform, dict):
+        source_name, function_name = transform["entrypoint"].rsplit(":", 1)
+        source_path = os.path.abspath(os.path.join(protocol_path, source_name))
+        if not source_path.startswith(f"{protocol_path}{os.sep}"):
+            raise ValueError("migration transform must stay inside the Protocol package")
+        if not os.path.isfile(source_path):
+            raise ValueError("migration transform source was not found")
+        with open(source_path, "rb") as source_file:
+            code_hash = hashlib.sha256(source_file.read()).hexdigest()
+        if code_hash != transform["code_hash"].lower():
+            raise ValueError("migration transform code_hash does not match source")
+
+        module_name = f"_airalogy_migration_{code_hash}"
+        spec = importlib.util.spec_from_file_location(module_name, source_path)
+        if spec is None or spec.loader is None:
+            raise ValueError("migration transform could not be loaded")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        function = getattr(module, function_name, None)
+        if not callable(function):
+            raise ValueError("migration transform entrypoint is not callable")
+        transformed = function(json.loads(json.dumps(result_data)))
+        if not isinstance(transformed, dict):
+            raise ValueError("migration transform must return an object")
+        result_data = transformed
+
+    return {
+        "data": result_data,
+        "status": "needs_review" if declarative.issues else "completed",
+        "issues": [
+            {"path": issue.path, "message": issue.message}
+            for issue in declarative.issues
+        ],
+        "rule_hash": migration_rule_hash(manifest),
+        "code_hash": code_hash,
+    }
+
+
 def main(action: str, protocol_name: str, input_params: str):
     logger.info(
         f"action: {action}, protocol_name: {protocol_name}, input_params: {input_params}"
@@ -433,6 +496,8 @@ def main(action: str, protocol_name: str, input_params: str):
                 result = validate_variables(protocol_name, params)
             elif action == "import_records":
                 result = import_records(protocol_name, params)
+            elif action == "migrate_schema":
+                result = migrate_schema(protocol_name, params)
             else:
                 raise ValueError(f"Unknown action: {action}")
 

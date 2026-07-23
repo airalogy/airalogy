@@ -77,6 +77,25 @@ engine = AiralogyEngine(rootfs_path="./airalogy-engine-image")
 result = await engine.parse_protocol("./protocol")
 ```
 
+Protocol schema migrations use the same sandbox. `migrate_schema(data,
+manifest)` applies declarative rules and an optional package-local transform
+whose SHA-256 is declared in the manifest. This action receives no injected
+environment variables or host secrets and cannot access the network:
+
+```python
+result = await engine.migrate_schema(
+    {"var": {"old_name": "pUC19"}},
+    {
+        "version": "airalogy.migration.v1",
+        "from": "1.0.0",
+        "to": "2.0.0",
+        "operations": [
+            {"op": "rename", "from": "var.old_name", "to": "var.name"},
+        ],
+    },
+)
+```
+
 ## Node.js
 
 Install from npm:

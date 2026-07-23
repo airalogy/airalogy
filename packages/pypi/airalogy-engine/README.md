@@ -91,6 +91,21 @@ async def main():
     result = await engine.import_records(input_filename="records.json")
     print(result["data"]["records"])
 
+    # 5. Apply a verified Protocol migration in the sandbox. No host secrets
+    # or environment variables are injected into this action.
+    result = await engine.migrate_schema(
+        data={"var": {"old_name": "pUC19"}},
+        manifest={
+            "version": "airalogy.migration.v1",
+            "from": "1.0.0",
+            "to": "2.0.0",
+            "operations": [
+                {"op": "rename", "from": "var.old_name", "to": "var.name"},
+            ],
+        },
+    )
+    print(result["data"]["data"])
+
     await engine.close()
 
 asyncio.run(main())
@@ -145,6 +160,7 @@ For local tests or trusted scripts, pass `assigner_runtime="local"` to execute w
 | `engine.assign_variable(var_name, dependent_data, env_vars=None, timeout=None, debug=False, log_file="protocol_debug.log")` | Assign a variable using assigner functions |
 | `engine.validate_variables(variables, env_vars=None, timeout=None, debug=False, log_file="protocol_debug.log")` | Validate variable values against the protocol model |
 | `engine.import_records(input_filename, input_format="auto", allow_extra_var_fields=False, require_complete_quiz=False, include_template_defaults=True, validate_model_sync=True, env_vars=None, timeout=None, debug=False, log_file="protocol_debug.log")` | Import a protocol-local JSON/JSONL/CSV/TSV file into Airalogy record JSON objects |
+| `engine.migrate_schema(data, manifest, timeout=None, debug=False, log_file="protocol_debug.log")` | Apply declarative migration rules and an optional hash-verified pure transform inside the sandbox, without network access or injected secrets |
 | `workflow_engine.run(records, transition_ids=None, transition_outputs=None, node_iterations=None, max_passes=1, env_vars=None, timeout=None, debug=False, log_file="workflow_debug.log")` | Execute workflow transitions in declaration order and return Record drafts, transition outputs, skipped transitions, attempts, and node iteration counters |
 | `workflow_engine.run_transition(transition_id, records, transition_outputs=None, node_iterations=None, env_vars=None, timeout=None, debug=False, log_file="workflow_debug.log")` | Execute one workflow transition and return updated Record drafts |
 | `engine.box_status()` | Return the current BoxLite `BoxStateInfo`, or `None` when the engine has no current box |

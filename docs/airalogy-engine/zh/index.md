@@ -77,6 +77,24 @@ engine = AiralogyEngine(rootfs_path="./airalogy-engine-image")
 result = await engine.parse_protocol("./protocol")
 ```
 
+Protocol Schema 迁移也使用同一沙箱。`migrate_schema(data, manifest)` 会执行
+声明式规则，以及可选的包内纯函数转换；转换源码的 SHA-256 必须与 manifest
+一致。该动作不会注入环境变量或宿主密钥，也不能访问网络：
+
+```python
+result = await engine.migrate_schema(
+    {"var": {"old_name": "pUC19"}},
+    {
+        "version": "airalogy.migration.v1",
+        "from": "1.0.0",
+        "to": "2.0.0",
+        "operations": [
+            {"op": "rename", "from": "var.old_name", "to": "var.name"},
+        ],
+    },
+)
+```
+
 ## Node.js
 
 从 npm 安装：

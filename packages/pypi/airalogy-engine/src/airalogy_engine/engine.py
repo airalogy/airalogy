@@ -530,3 +530,22 @@ class AiralogyEngine:
             debug=debug,
             log_file=log_file,
         )
+
+    async def migrate_schema(
+        self,
+        data: dict,
+        manifest: dict,
+        timeout: int | None = None,
+        debug: bool = False,
+        log_file: str = "protocol_debug.log",
+    ) -> dict:
+        """Run a version migration without network or injected secrets."""
+
+        return await self._execute_in_sandbox(
+            "migrate_schema",
+            {"data": data, "manifest": manifest},
+            env_vars={},
+            timeout=timeout,
+            debug=debug,
+            log_file=log_file,
+        )

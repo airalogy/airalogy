@@ -2056,6 +2056,25 @@ export async function validateVariables(
   return executeInSandbox("validate_variables", protocolPath, vars, resolved.envVars, resolved.options);
 }
 
+/**
+ * Apply a Protocol schema migration in the sandbox. This API intentionally
+ * accepts no environment map so transforms cannot receive host secrets.
+ */
+export async function migrateSchema(
+  protocolPath: string,
+  data: Record<string, unknown>,
+  manifest: Record<string, unknown>,
+  options: SandboxOptions = {},
+): Promise<ProtocolResult> {
+  return executeInSandbox(
+    "migrate_schema",
+    protocolPath,
+    { data, manifest },
+    undefined,
+    options,
+  );
+}
+
 export function runWorkflow(
   workflowPath: string,
   records: Record<string, unknown>,
