@@ -44,6 +44,8 @@ export {
 export {
   normalizeVarTypeName,
   getVarInputKind,
+  getResourceRefTypeConfig,
+  isResourceRefVarType,
   getScalarListItemType,
   isScalarListVarType,
   isStructuredVarType,
@@ -70,6 +72,7 @@ export {
   applyVarStackWidth,
   type ScalarListInputItem,
   type ScalarListItemType,
+  type ResourceRefTypeConfig,
 } from './useVarHelpers'
 export type { AimdVarEnumOption, FileInputConfig, FileInputDisplayKind, VarInputKind } from './useVarHelpers'
 
