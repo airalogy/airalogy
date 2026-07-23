@@ -1,7 +1,7 @@
 [project]
 name = "airalogy-engine"
 # Release versions are managed by Changesets through package.json and synced into this file.
-version = "0.0.7"
+version = "0.0.8"
 description = "Airalogy protocol execute sandbox"
 readme = "README.md"
 authors = [{ name = "Airalogy Team" }]

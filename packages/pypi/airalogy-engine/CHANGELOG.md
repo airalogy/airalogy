@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.8
+
+### Patch Changes
+
+- a6ca7a6: Execute Protocol schema migration manifests and verified pure transforms inside
+  the Airalogy Engine sandbox without network access or injected secrets.
+
 ## 0.0.7
 
 ### Patch Changes

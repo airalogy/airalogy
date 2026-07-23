@@ -1,5 +1,12 @@
 # @airalogy/airalogy-engine
 
+## 0.0.4
+
+### Patch Changes
+
+- a6ca7a6: Execute Protocol schema migration manifests and verified pure transforms inside
+  the Airalogy Engine sandbox without network access or injected secrets.
+
 ## 0.0.3
 
 ### Patch Changes

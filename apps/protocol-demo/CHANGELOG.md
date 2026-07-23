@@ -1,5 +1,12 @@
 # @airalogy/protocol-demo
 
+## 0.0.17
+
+### Patch Changes
+
+- Updated dependencies [a6ca7a6]
+  - @airalogy/airalogy-engine@0.0.4
+
 ## 0.0.16
 
 ### Patch Changes
