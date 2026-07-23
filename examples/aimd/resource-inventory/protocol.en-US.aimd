@@ -1,0 +1,19 @@
+# Resource-aware experiment
+
+This example shows how a Protocol selects inventory inputs and equipment, then prepares a derived output resource. The Recorder only stages these references; the host commits the Record and inventory events in one transaction.
+
+## Inputs
+
+Source plasmid: {{var|source_plasmid: ResourceRef["plasmid"], resource_role="input", quantity_field="plasmid_amount", container_required=True, title="Source plasmid", description="Select a plasmid resource, lot, and physical container."}}
+
+Amount used: {{var|plasmid_amount: Decimal, ge=0, title="Plasmid amount", description="Exact amount consumed from the selected container.", examples=["0.125"]}} mg
+
+Reagent: {{var|buffer: ResourceRef["reagent"] | None, resource_role="input", container_required=True, title="Buffer", description="Optional reagent input."}}
+
+Equipment: {{var|centrifuge: ResourceRef["equipment"], resource_role="equipment", booking_required=True, title="Centrifuge", description="Select an available equipment slot."}}
+
+## Output
+
+Derived sample: {{var|output_sample: ResourceRef["sample"], resource_role="output", title="Derived sample", description="The host prepares a stable client id and creates this resource only when the Record commits."}}
+
+Notes: {{var|notes: str | None, title="Notes", description="Optional execution notes."}}

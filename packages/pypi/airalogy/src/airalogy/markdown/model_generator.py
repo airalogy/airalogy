@@ -29,7 +29,11 @@ STANDARD_LIBRARY_TYPES: Dict[str, Tuple[str, str]] = {
 }
 
 FIELD_JSON_SCHEMA_EXTRA_KWARGS = {
+    "booking_required",
+    "container_required",
     "entity",
+    "quantity_field",
+    "resource_role",
     "source",
 }
 

@@ -21,6 +21,7 @@ protocol/
 [airalogy_protocol]
 id          = "alice_s_protocol"          # Unique within its Project
 version     = "0.0.1"                     # Semantic version: x.y.z
+kind        = "experiment"                # experiment or resource_definition
 name        = "Alice's Protocol"          # Human-friendly title
 description = "An example protocol for demonstration purposes."
 
@@ -44,6 +45,7 @@ license = "Apache-2.0"  # Optional license identifier
 | - | - | - |
 | `id` | ✓ | ID for the protocol. When uploaded to an Airalogy Protocol Repository, this ID becomes the repository ID. It must be unique within its parent Project. |
 | `version` | ✓ | Must follow `x.y.z`. If omitted, Airalogy starts at `0.0.1`. |
+| `kind` | – | Protocol product mode. Defaults to `experiment`; use `resource_definition` for a versioned Lab resource schema. |
 | `name` | ✓ | Display name. If omitted, Airalogy derives it from the first-level heading in `protocol.aimd`. |
 | `description` | – | Short summary of the protocol. |
 | `authors` | – | List of author objects (`name`, optional `email`, optional `airalogy_user_id`). |
@@ -54,6 +56,18 @@ license = "Apache-2.0"  # Optional license identifier
 
 > **Why no `lab_id` / `project_id`?**
 > Those identifiers belong to higher-level Airalogy objects (Lab and Project) and are therefore not stored inside the protocol’s own metadata file.
+
+See [Resources, Inventory, and Protocol Versions](./resources) for `resource_definition` restrictions, ResourceRef fields, compatibility reports, and migration manifests.
+
+## Resource definitions
+
+`kind = "resource_definition"` declares a versioned schema for a host-managed resource type. It may use Markdown, `var`, `var_table`, files, `EntityRef`, and deterministic validation. It must not include experimental steps, quiz, workflow, collector, or assigner runtimes. Archive packaging validates this restriction.
+
+## Schema compatibility and migrations
+
+Python hosts can call `airalogy.schema_compatibility.compare_json_schemas()`; npm hosts use `compareAimdJsonSchemas()`. Both return `compatible`, `conditional`, `breaking`, or `unknown`, field-level differences, and a recommended SemVer bump.
+
+Cross-version packages may include an `airalogy.migration.v1` manifest with deterministic `rename`, `copy`, `remove`, and `set_default` operations. A custom `transform.entrypoint` must include its SHA-256 `code_hash`. Parsers never execute custom code: the host verifies the hash, runs the function in a sandbox without network or secrets, and persists the rule/code hash with the migration result.
 
 ## Reference
 

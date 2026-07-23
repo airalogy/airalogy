@@ -7,9 +7,11 @@ import {
   getScalarListInputItems,
   getScalarListItemType,
   getEntityRefTypeConfig,
+  getResourceRefTypeConfig,
   isIntegerVarType,
   isNullableVarType,
   isEntityRefVarType,
+  isResourceRefVarType,
   isScalarListVarType,
   isStructuredVarType,
   normalizeScalarListInputItems,
@@ -146,6 +148,12 @@ describe('getVarInputKind', () => {
     expect(getVarInputKind('list[EntityRef["plasmid"]]')).toBe('entity-ref')
   })
 
+  it('returns "resource-ref" for ResourceRef types before structured fallbacks', () => {
+    expect(getVarInputKind('ResourceRef')).toBe('resource-ref')
+    expect(getVarInputKind('ResourceRef["plasmid"] | None')).toBe('resource-ref')
+    expect(getVarInputKind('list[ResourceRef["sample"]]')).toBe('resource-ref')
+  })
+
   it('returns "textarea" for structured non-scalar list and object types', () => {
     expect(getVarInputKind('list')).toBe('textarea')
     expect(getVarInputKind('list[bool]')).toBe('textarea')
@@ -199,6 +207,48 @@ describe('EntityRef helpers', () => {
       multiple: true,
       entity: 'plasmid',
       source: undefined,
+    })
+  })
+})
+
+describe('ResourceRef helpers', () => {
+  it('detects ResourceRef annotations and normalizes inventory metadata', () => {
+    expect(isResourceRefVarType('ResourceRef["plasmid"] | None')).toBe(true)
+    expect(isResourceRefVarType('EntityRef["plasmid"]')).toBe(false)
+    expect(getResourceRefTypeConfig(
+      'ResourceRef["plasmid"]',
+      {
+        resource_role: 'input',
+        quantity_field: 'amount',
+        container_required: true,
+      },
+    )).toEqual({
+      multiple: false,
+      entity: 'plasmid',
+      source: undefined,
+      role: 'input',
+      quantityField: 'amount',
+      containerRequired: true,
+      bookingRequired: false,
+    })
+  })
+
+  it('supports equipment and list ResourceRef metadata', () => {
+    expect(getResourceRefTypeConfig(
+      'list[ResourceRef["equipment"]] | None',
+      {
+        resource_role: 'equipment',
+        booking_required: true,
+        source: 'lab-equipment',
+      },
+    )).toEqual({
+      multiple: true,
+      entity: 'equipment',
+      source: 'lab-equipment',
+      role: 'equipment',
+      quantityField: undefined,
+      containerRequired: false,
+      bookingRequired: true,
     })
   })
 })

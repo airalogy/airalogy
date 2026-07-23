@@ -14,7 +14,11 @@ import type {
   AimdRecorderValidationIssue,
   AimdRecorderValidationResult,
 } from "../types"
-import { getNumericConstraintViolation, isNullableVarType } from "../composables/useVarHelpers"
+import {
+  getNumericConstraintViolation,
+  getResourceRefTypeConfig,
+  isNullableVarType,
+} from "../composables/useVarHelpers"
 
 export interface ValidateAimdRecordOptions {
   fieldMeta?: Record<string, AimdFieldMeta>
@@ -712,6 +716,60 @@ function validateValue(
   }
 }
 
+function validateResourceRefValue(
+  issues: AimdRecorderValidationIssue[],
+  options: ValidateAimdRecordOptions,
+  input: {
+    fieldKey: string
+    label: string
+    value: unknown
+    type?: string
+    kwargs?: Record<string, unknown>
+    meta?: AimdFieldMeta
+  },
+): void {
+  const config = getResourceRefTypeConfig(input.type, input.kwargs, input.meta)
+  if (!config || isEmptyValue(input.value)) return
+  const values = config.multiple
+    ? Array.isArray(input.value) ? input.value : [input.value]
+    : [input.value]
+  for (const value of values) {
+    if (!isRecord(value) || typeof value.id !== "string" || !value.id.trim()) {
+      addIssue(
+        issues,
+        input.fieldKey,
+        "var",
+        "resource",
+        options.messages.resource(input.label, options.messages.resourceInvalid),
+        input.value,
+      )
+      return
+    }
+    if (config.containerRequired && (typeof value.container_id !== "string" || !value.container_id.trim())) {
+      addIssue(
+        issues,
+        input.fieldKey,
+        "var",
+        "resource",
+        options.messages.resource(input.label, options.messages.resourceContainerRequired),
+        input.value,
+      )
+      return
+    }
+    if (config.bookingRequired && (typeof value.booking_id !== "string" || !value.booking_id.trim())) {
+      addIssue(
+        issues,
+        input.fieldKey,
+        "var",
+        "resource",
+        options.messages.resource(input.label, options.messages.resourceBookingRequired),
+        input.value,
+      )
+      return
+    }
+  }
+}
+
 function matchesFieldSelector(fieldKey: string, selector: string): boolean {
   if (fieldKey === selector) return true
   const selectorParts = selector.split(":")
@@ -794,6 +852,14 @@ export function validateAimdRecord(
       schemaCovered: schemaCoveredKeys.has(fieldKey),
       schemaRequired: schemaRequiredKeys.has(fieldKey),
       schemaNullable: schemaNullableKeys.has(fieldKey),
+    })
+    validateResourceRefValue(issues, options, {
+      fieldKey,
+      label: field.title || field.id,
+      value: record.var[field.id],
+      type: field.type,
+      kwargs: field.kwargs,
+      meta: fieldMeta[fieldKey],
     })
   }
 

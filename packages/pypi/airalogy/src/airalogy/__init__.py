@@ -8,7 +8,16 @@ except PackageNotFoundError:
 
 from airalogy.airalogy import Airalogy
 
-from . import archive, connectors, convert, ingest, markdown
+from . import (
+    archive,
+    connectors,
+    convert,
+    ingest,
+    markdown,
+    migrations,
+    protocol_contract,
+    schema_compatibility,
+)
 
 __all__ = [
     "Airalogy",
@@ -17,4 +26,7 @@ __all__ = [
     "convert",
     "ingest",
     "markdown",
+    "migrations",
+    "protocol_contract",
+    "schema_compatibility",
 ]

@@ -1,0 +1,199 @@
+{
+  "resource_ref": {
+    "valid": {
+      "entity": "plasmid",
+      "id": "res_01JZX6Q46F2WZB61NTHQVAQ3DE",
+      "source": "airalogy-platform",
+      "label": "pUC19",
+      "version": 3,
+      "lot_id": "lot_001",
+      "container_id": "container_001",
+      "quantity": "0.125",
+      "unit": "mg",
+      "reservation_id": "reservation_001",
+      "snapshot": {
+        "code": "PLASMID-0001"
+      }
+    }
+  },
+  "compatibility": [
+    {
+      "name": "display-only change",
+      "before": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "required": ["name"]
+      },
+      "after": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Resource name"
+          }
+        },
+        "required": ["name"]
+      },
+      "level": "compatible",
+      "recommended_bump": "patch"
+    },
+    {
+      "name": "optional field",
+      "before": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["name"]
+      },
+      "after": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["name"]
+      },
+      "level": "compatible",
+      "recommended_bump": "minor"
+    },
+    {
+      "name": "required field",
+      "before": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["name"]
+      },
+      "after": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "sequence"]
+      },
+      "level": "breaking",
+      "recommended_bump": "major"
+    },
+    {
+      "name": "nested required field",
+      "before": {
+        "type": "object",
+        "properties": {
+          "vars": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": ["name"]
+          }
+        },
+        "required": ["vars"]
+      },
+      "after": {
+        "type": "object",
+        "properties": {
+          "vars": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "sequence": {
+                "type": "string"
+              }
+            },
+            "required": ["name", "sequence"]
+          }
+        },
+        "required": ["vars"]
+      },
+      "level": "breaking",
+      "recommended_bump": "major"
+    },
+    {
+      "name": "new validation constraint",
+      "before": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "after": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "level": "conditional",
+      "recommended_bump": "major"
+    }
+  ],
+  "migration": {
+    "manifest": {
+      "version": "airalogy.migration.v1",
+      "from": "1.0.0",
+      "to": "2.0.0",
+      "operations": [
+        {
+          "op": "rename",
+          "from": "var.old_name",
+          "to": "var.name"
+        },
+        {
+          "op": "copy",
+          "from": "var.name",
+          "to": "var.display_name"
+        },
+        {
+          "op": "set_default",
+          "field": "var.status",
+          "value": "active"
+        },
+        {
+          "op": "remove",
+          "field": "var.legacy"
+        }
+      ]
+    },
+    "input": {
+      "var": {
+        "old_name": "pUC19",
+        "legacy": true
+      }
+    },
+    "output": {
+      "var": {
+        "name": "pUC19",
+        "display_name": "pUC19",
+        "status": "active"
+      }
+    }
+  }
+}

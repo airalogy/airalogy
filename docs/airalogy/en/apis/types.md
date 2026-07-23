@@ -172,6 +172,21 @@ Parent plasmids: {{var|parent_plasmids: list[EntityRef] | None, entity="plasmid"
 
 The related connector can be declared with a fenced [`connectors` block](/en/syntax/connectors). Host apps and recorder UIs may use that metadata to provide live search/select controls, while Python/Pydantic still validates the saved reference structure. Backend tools can use `airalogy.connectors.EntitySourceConnector` or `create_entity_source_connectors_from_aimd()` to execute supported `entity_source` descriptors with secrets supplied from `.env` or a deployment secret manager.
 
+## `ResourceRef`
+
+`ResourceRef[T]` is the stable Record-side reference for a resource managed by a host inventory engine. It extends `EntityRef` with optional `lot_id`, `container_id`, exact decimal `quantity`, UCUM-compatible `unit`, `reservation_id`, and `booking_id`. The display `snapshot` remains non-authoritative.
+
+```md
+Source: {{var|source: ResourceRef["plasmid"], resource_role="input", quantity_field="amount", container_required=True}}
+Amount: {{var|amount: Decimal, ge=0}}
+Equipment: {{var|centrifuge: ResourceRef["equipment"], resource_role="equipment", booking_required=True}}
+Output: {{var|sample: ResourceRef["sample"], resource_role="output"}}
+```
+
+Every `ResourceRef` field declares `resource_role=input|output|reference|equipment`. `quantity_field` must reference a numeric variable; `container_required` and `booking_required` are booleans, and bookings apply only to equipment. Parsers reject invalid references before a Protocol is published.
+
+The Recorder accepts host-injected `resourceResolvers` for resource search, availability, lots, containers, equipment slots, and output preparation. These APIs only prepare Record values. Inventory reservations, consumption, output creation, and Record persistence must be committed by the host in one transaction.
+
 ## `FileId*` Types
 
 When a field uses any `FileId*` type, the UI shows an upload button. The uploaded file is stored in Airalogy’s file system and assigned a unique string ID.

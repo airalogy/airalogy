@@ -1,0 +1,19 @@
+# 资源与库存联动实验
+
+本例展示 Protocol 如何选择库存输入与设备，并准备实验产出的新资源。Recorder 只暂存资源引用；宿主在提交时才把 Record 与库存事件放进同一个事务。
+
+## 实验输入
+
+来源质粒：{{var|source_plasmid: ResourceRef["plasmid"], resource_role="input", quantity_field="plasmid_amount", container_required=True, title="来源质粒", description="选择质粒资源、批次及实际容器。"}}
+
+使用量：{{var|plasmid_amount: Decimal, ge=0, title="质粒使用量", description="从所选容器中消耗的精确数量。", examples=["0.125"]}} mg
+
+试剂：{{var|buffer: ResourceRef["reagent"] | None, resource_role="input", container_required=True, title="缓冲液", description="可选的试剂输入。"}}
+
+设备：{{var|centrifuge: ResourceRef["equipment"], resource_role="equipment", booking_required=True, title="离心机", description="选择一个可用的设备预约时段。"}}
+
+## 实验产出
+
+产出样本：{{var|output_sample: ResourceRef["sample"], resource_role="output", title="产出样本", description="宿主先准备稳定的客户端 ID，仅在 Record 事务成功时创建资源。"}}
+
+备注：{{var|notes: str | None, title="备注", description="可选的实验执行备注。"}}

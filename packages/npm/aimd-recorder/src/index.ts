@@ -17,8 +17,9 @@ export {
   AimdRecorderEditor,
   AimdQuizRecorder,
   AimdRequiredMarker,
+  AimdResourceForm,
 } from './components'
-export { AimdDnaSequenceField, AimdEntityRefField, AimdMarkdownField } from './components'
+export { AimdDnaSequenceField, AimdEntityRefField, AimdMarkdownField, AimdResourceRefField } from './components'
 /**
  * @deprecated Use `AimdRecorder` instead.
  */
@@ -65,6 +66,16 @@ export type {
   AimdEntityRefOption,
   AimdEntityRefValue,
   AimdEntitySearchHandler,
+  AimdEquipmentSlotOption,
+  AimdPreparedResourceOutput,
+  AimdResourceAvailability,
+  AimdResourceContainerOption,
+  AimdResourceLotOption,
+  AimdResourceRefOption,
+  AimdResourceRefValue,
+  AimdResourceResolveContext,
+  AimdResourceResolver,
+  AimdResourceResolverMap,
   AimdResolvedFileInfo,
   AimdSelectedFileValue,
   AimdTypePlugin,

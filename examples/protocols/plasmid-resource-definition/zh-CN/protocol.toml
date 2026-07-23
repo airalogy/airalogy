@@ -1,0 +1,15 @@
+[airalogy_protocol]
+id = "plasmid_resource_definition_zh"
+version = "1.0.0"
+kind = "resource_definition"
+name = "质粒资源定义"
+description = "用于实验室资源库登记质粒的可版本化资源字段 Schema。"
+authors = [
+    { name = "Airalogy Team" },
+]
+maintainers = [
+    { name = "Airalogy Team" },
+]
+disciplines = ["分子生物学"]
+keywords = ["资源", "质粒", "库存", "Schema"]
+license = "Apache-2.0"

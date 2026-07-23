@@ -118,6 +118,21 @@ export interface AimdRecorderMessages {
     noMatches: string
     searchFailed: string
   }
+  resourceRef: {
+    availability: string
+    available: string
+    lot: string
+    container: string
+    quantity: string
+    unit: string
+    booking: string
+    selectLot: string
+    selectContainer: string
+    selectBooking: string
+    availabilityFailed: string
+    prepareOutputFailed: string
+    quantityFrom: (field: string) => string
+  }
   collector: {
     snapshot: string
     start: string
@@ -161,6 +176,10 @@ export interface AimdRecorderMessages {
     numeric: (label: string, detail: string) => string
     type: (label: string, expected: string) => string
     format: (label: string, format: string) => string
+    resource: (label: string, detail: string) => string
+    resourceInvalid: string
+    resourceContainerRequired: string
+    resourceBookingRequired: string
     schema: (label: string, detail: string) => string
     tableCell: (row: number, column: string) => string
   }
@@ -373,6 +392,21 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     noMatches: "No matching entities",
     searchFailed: "Entity search failed.",
   },
+  resourceRef: {
+    availability: "Availability",
+    available: "Available",
+    lot: "Lot",
+    container: "Container",
+    quantity: "Quantity",
+    unit: "Unit",
+    booking: "Booking",
+    selectLot: "Select a lot",
+    selectContainer: "Select a container",
+    selectBooking: "Select a time slot",
+    availabilityFailed: "Resource availability could not be loaded.",
+    prepareOutputFailed: "The output resource could not be prepared.",
+    quantityFrom: field => `Quantity is read from ${field}.`,
+  },
   collector: {
     snapshot: "Read now",
     start: "Start collecting",
@@ -425,6 +459,10 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     numeric: (label, detail) => `${label}: ${detail}`,
     type: (label, expected) => `${label} must be ${expected}.`,
     format: (label, format) => `${label} must use ${format} format.`,
+    resource: (label, detail) => `${label}: ${detail}`,
+    resourceInvalid: "Select a valid resource.",
+    resourceContainerRequired: "A container must be selected.",
+    resourceBookingRequired: "An equipment booking must be selected.",
     schema: (label, detail) => `${label}: ${detail}`,
     tableCell: (row, column) => `Row ${row}, ${column}`,
   },
@@ -610,6 +648,21 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     noMatches: "没有匹配的实体",
     searchFailed: "实体搜索失败。",
   },
+  resourceRef: {
+    availability: "可用情况",
+    available: "可用量",
+    lot: "批次",
+    container: "容器",
+    quantity: "数量",
+    unit: "单位",
+    booking: "设备预约",
+    selectLot: "选择批次",
+    selectContainer: "选择容器",
+    selectBooking: "选择可用时段",
+    availabilityFailed: "无法读取资源可用情况。",
+    prepareOutputFailed: "无法准备产出资源。",
+    quantityFrom: field => `数量读取自 ${field}。`,
+  },
   collector: {
     snapshot: "立即采集",
     start: "开始采集",
@@ -662,6 +715,10 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     numeric: (label, detail) => `${label}：${detail}`,
     type: (label, expected) => `${label}必须是${expected}类型。`,
     format: (label, format) => `${label}必须使用 ${format} 格式。`,
+    resource: (label, detail) => `${label}：${detail}`,
+    resourceInvalid: "请选择有效资源。",
+    resourceContainerRequired: "必须选择容器。",
+    resourceBookingRequired: "必须选择设备预约时段。",
     schema: (label, detail) => `${label}：${detail}`,
     tableCell: (row, column) => `第 ${row} 行，${column}`,
   },

@@ -1,0 +1,39 @@
+# Plasmid resource definition
+
+This Protocol defines versioned, discipline-specific fields for plasmid resources. Platform owns stable resource identity, status, revisions, lots, containers, locations, balances, and audit events.
+
+## Identity and construct
+
+Construct name: {{var|construct_name: str, title="Construct name", description="The scientific name used to identify this plasmid construct.", examples=["pUC19"]}}
+
+Aliases: {{var|aliases: list[str] | None, title="Aliases", description="Other names used in publications, notebooks, or external registries.", examples=["pMB1-derived vector"]}}
+
+Backbone: {{var|backbone: str | None, title="Backbone", description="Parent vector or backbone family.", examples=["pUC19"]}}
+
+Circular sequence: {{var|sequence: DNASequence | None, title="Sequence", description="The annotated circular DNA sequence when available."}}
+
+Sequence file: {{var|sequence_file: FileIdDNA | None, title="Sequence file", description="An optional packaged or uploaded GenBank/FASTA sequence file."}}
+
+## Biological properties
+
+Antibiotic resistance: {{var|resistance_markers: list[str] | None, title="Resistance markers", description="Selectable antibiotic resistance markers.", examples=["Ampicillin"]}}
+
+Host species: {{var|host_species: str | None, title="Host species", description="Recommended propagation host.", examples=["Escherichia coli"]}}
+
+Copy number: {{var|copy_number: Literal["low", "medium", "high"] | None, title="Copy number", description="Approximate plasmid copy-number class."}}
+
+External source: {{var|external_source: EntityRef["registry"] | None, entity="registry", title="External registry", description="Optional reference to an external plasmid registry entry."}}
+
+## Features
+
+{{var|features: list[PlasmidFeature],
+    title="Annotated features",
+    description="Named regions on the plasmid sequence.",
+    subvars=[
+        var(name: str, title="Feature name"),
+        var(kind: str, title="Feature type"),
+        var(start: int, ge=0, title="Start"),
+        var(end: int, ge=0, title="End"),
+        var(note: str | None, title="Note")
+    ]
+}}

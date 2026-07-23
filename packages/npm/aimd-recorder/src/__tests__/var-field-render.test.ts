@@ -379,7 +379,7 @@ describe('AimdVarField render behavior', () => {
   it('places code assigner actions in the field header instead of a side prefix', () => {
     expect(source).toContain('["file", "code", "scalar-list", "entity-ref"].includes(inputKind)')
     expect(source).toMatch(/if \(inputKind === "code"\) \{[\s\S]*?"aimd-rec-inline--var-stacked--code",[\s\S]*?\{ controlRow: false \}/)
-    expect(recorderSource).toContain('["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "entity-ref", "checkbox", "boolean-select", "file", "code"].includes(inputKind)')
+    expect(recorderSource).toContain('["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "entity-ref", "resource-ref", "checkbox", "boolean-select", "file", "code"].includes(inputKind)')
   })
 
   it('renders nullable boolean vars as tri-state select fields', async () => {

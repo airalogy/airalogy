@@ -9,6 +9,18 @@ import type {
   AimdVarTableNode,
 } from "@airalogy/aimd-core/types"
 import type { AimdRecorderMessages } from "./locales"
+import type {
+  AimdEquipmentSlotOption as CoreAimdEquipmentSlotOption,
+  AimdPreparedResourceOutput as CoreAimdPreparedResourceOutput,
+  AimdResourceAvailability as CoreAimdResourceAvailability,
+  AimdResourceContainerOption as CoreAimdResourceContainerOption,
+  AimdResourceLotOption as CoreAimdResourceLotOption,
+  AimdResourceRefOption as CoreAimdResourceRefOption,
+  AimdResourceRefValue as CoreAimdResourceRefValue,
+  AimdResourceResolveContext as CoreAimdResourceResolveContext,
+  AimdResourceResolver as CoreAimdResourceResolver,
+  AimdResourceResolverMap as CoreAimdResourceResolverMap,
+} from "@airalogy/aimd-core"
 
 export interface AimdStepOrCheckRecordItem {
   checked: boolean
@@ -158,6 +170,17 @@ export interface AimdEntityResolver {
 export type AimdEntityResolverEntry = AimdEntityResolver | AimdEntitySearchHandler
 export type AimdEntityResolverMap = Record<string, AimdEntityResolverEntry>
 
+export type AimdResourceRefValue = CoreAimdResourceRefValue
+export type AimdResourceRefOption = CoreAimdResourceRefOption
+export type AimdResourceLotOption = CoreAimdResourceLotOption
+export type AimdResourceContainerOption = CoreAimdResourceContainerOption
+export type AimdEquipmentSlotOption = CoreAimdEquipmentSlotOption
+export type AimdResourceAvailability = CoreAimdResourceAvailability
+export type AimdPreparedResourceOutput = CoreAimdPreparedResourceOutput
+export type AimdResourceResolveContext = CoreAimdResourceResolveContext
+export type AimdResourceResolver = CoreAimdResourceResolver
+export type AimdResourceResolverMap = CoreAimdResourceResolverMap
+
 export type AimdCollectorRuntimeStatus =
   | "idle"
   | "waiting_for_permission"
@@ -235,7 +258,7 @@ export type AimdCollectorPermissionHandler = (
   request: AimdCollectorPermissionRequest,
 ) => AimdCollectorPermissionDecision | Promise<AimdCollectorPermissionDecision>
 
-export type AimdVarInputKind = "text" | "number" | "checkbox" | "boolean-select" | "textarea" | "scalar-list" | "entity-ref" | "date" | "datetime" | "time" | "dna" | "code" | "file"
+export type AimdVarInputKind = "text" | "number" | "checkbox" | "boolean-select" | "textarea" | "scalar-list" | "entity-ref" | "resource-ref" | "date" | "datetime" | "time" | "dna" | "code" | "file"
 export type AimdStepDetailDisplay = "auto" | "always"
 export type AimdChoiceOptionExplanationMode = "hidden" | "selected" | "submitted" | "graded"
 export type AimdScaleGradeDisplayMode = "hidden" | "completed" | "submitted" | "graded"
@@ -271,6 +294,10 @@ export interface AimdFieldMeta {
   accept?: string              // native file input accept string for file-like vars
   entity?: string              // entity namespace for EntityRef fields
   source?: string              // connector id/source for EntityRef fields
+  resource_role?: "input" | "output" | "reference" | "equipment"
+  quantity_field?: string
+  container_required?: boolean
+  booking_required?: boolean
   assigner?: { mode: AimdAssignerMode }
 }
 
@@ -289,6 +316,7 @@ export type AimdRecorderValidationCode =
   | "numeric"
   | "type"
   | "format"
+  | "resource"
   | "schema"
 
 export type AimdRecorderValidationTrigger = "change" | "blur" | "submit"
@@ -448,6 +476,7 @@ export interface AimdTypePluginRenderContext extends AimdTypePluginValueContext 
   resolveFile?: (src: string) => string | null
   resolveFileInfo?: AimdFileInfoResolver
   entityResolvers?: AimdEntityResolverMap
+  resourceResolvers?: AimdResourceResolverMap
   emitChange: (value: unknown) => void
   emitBlur: () => void
 }

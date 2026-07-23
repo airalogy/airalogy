@@ -38,6 +38,7 @@ import {
   resolveDemoExampleAsset,
   useDemoExampleContent,
 } from '../composables/sampleContent'
+import { demoResourceResolvers } from '../composables/demoResourceResolvers'
 import '@airalogy/aimd-renderer/styles'
 import '@airalogy/aimd-recorder/styles'
 
@@ -1767,6 +1768,7 @@ onBeforeUnmount(() => {
             :locale="locale"
             :resolve-file="resolveRecorderFile"
             :collector-providers="collectorProviders"
+            :resource-resolvers="demoResourceResolvers"
             collector-actor-id="demo-user"
             @error="recorderError = $event"
           />

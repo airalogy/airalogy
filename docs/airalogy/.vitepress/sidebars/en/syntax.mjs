@@ -8,6 +8,7 @@ export default [
       { text: 'Assigner', link: '/en/syntax/assigner' },
       { text: 'Client Runtime Assigner', link: '/en/syntax/assigner-client-runtime' },
       { text: 'Protocol TOML', link: '/en/syntax/protocol_toml' },
+      { text: 'Resources and Versions', link: '/en/syntax/resources' },
       { text: 'Variable Table', link: '/en/syntax/var_table' },
       { text: 'Review Marks', link: '/en/syntax/review-marks' },
       { text: 'Multimedia', link: '/en/syntax/multimedia' },

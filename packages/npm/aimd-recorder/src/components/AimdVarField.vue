@@ -11,6 +11,7 @@ import {
 import type {
   AimdFieldMeta,
   AimdEntityResolverMap,
+  AimdResourceResolverMap,
   AimdFileInfoResolver,
   AimdFileResolveContext,
   AimdFileUploadHandler,
@@ -37,6 +38,7 @@ import {
   getScalarListInputItems,
   getScalarListItemType,
   getEntityRefTypeConfig,
+  getResourceRefTypeConfig,
   getVarEnumSelectValue,
   getVarEnumValueFromSelectValue,
   isIntegerVarType,
@@ -50,6 +52,7 @@ import AimdRequiredMarker from "./AimdRequiredMarker.vue"
 
 const AimdCodeField = defineAsyncComponent(() => import("./AimdCodeField.vue"))
 const AimdEntityRefField = defineAsyncComponent(() => import("./AimdEntityRefField.vue"))
+const AimdResourceRefField = defineAsyncComponent(() => import("./AimdResourceRefField.vue"))
 
 function normalizeMetaString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined
@@ -502,6 +505,7 @@ export default defineComponent({
     resolveFile: { type: Function as PropType<((src: string) => string | null) | undefined>, default: undefined },
     resolveFileInfo: { type: Function as PropType<AimdFileInfoResolver | undefined>, default: undefined },
     entityResolvers: { type: Object as PropType<AimdEntityResolverMap | undefined>, default: undefined },
+    resourceResolvers: { type: Object as PropType<AimdResourceResolverMap | undefined>, default: undefined },
     record: {
       type: Object as PropType<AimdProtocolRecordData>,
       default: () => ({ var: {}, step: {}, check: {}, quiz: {} }),
@@ -965,6 +969,37 @@ export default defineComponent({
             onBlur: onVarBlur,
           }),
           "aimd-rec-inline--var-stacked--entity-ref",
+          { controlRow: false },
+        )
+      }
+
+      if (inputKind === "resource-ref") {
+        const resourceConfig = getResourceRefTypeConfig(type, node.definition?.kwargs, meta)
+          ?? {
+            multiple: false,
+            role: "reference" as const,
+            containerRequired: false,
+            bookingRequired: false,
+          }
+        return renderStackedVar(
+          h(AimdResourceRefField, {
+            node,
+            value: props.value,
+            disabled,
+            messages: props.messages,
+            fieldMeta: meta,
+            type,
+            resourceConfig,
+            resourceResolvers: props.resourceResolvers,
+            record: props.record,
+            onVnodeMounted: (vnode: any) => syncCompositeControlLayout(vnode.el as HTMLElement),
+            onVnodeUpdated: (vnode: any) => syncCompositeControlLayout(vnode.el as HTMLElement),
+            onChange: (payload: { value: unknown }) => {
+              emit("change", { id, value: payload.value, type, inputKind })
+            },
+            onBlur: onVarBlur,
+          }),
+          "aimd-rec-inline--var-stacked--resource-ref",
           { controlRow: false },
         )
       }

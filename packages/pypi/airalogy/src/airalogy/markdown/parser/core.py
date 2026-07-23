@@ -35,6 +35,7 @@ from .refs import parse_refs_content
 from .step import StepParserMixin
 from .var import VarParserMixin
 from .workflow import WorkflowParserMixin
+from ...protocol_contract import validate_protocol_contract
 
 
 class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParserMixin):
@@ -339,6 +340,14 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParse
                     f"Variable {var.name} must use list[Observation[T]] or ObservationSeriesRef[T] for {collector['mode']} Collector {collector_id}"
                 )
 
+    def _validate_resource_references(self, vars_list: List[VarNode]) -> None:
+        issues = validate_protocol_contract(
+            {"kind": "experiment"},
+            {"templates": {"var": vars_list}},
+        )
+        if issues:
+            raise InvalidSyntaxError(issues[0].message)
+
     def _normalize_media_string(
         self, data: Dict[str, Any], key: str
     ) -> Optional[str]:
@@ -495,6 +504,7 @@ class AimdParser(VarParserMixin, QuizParserMixin, StepParserMixin, WorkflowParse
             self._validate_uniqueness(unique_name_items, steps, checks)
 
         self._validate_collector_references(vars_list, steps, connectors, collectors)
+        self._validate_resource_references(vars_list)
 
         templates = {
             "var": vars_list,

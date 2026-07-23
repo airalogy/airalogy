@@ -10,6 +10,7 @@ import '@airalogy/aimd-recorder/styles'
 import DemoExamplePicker from '../components/DemoExamplePicker.vue'
 import { useDemoLocale, useDemoMessages } from '../composables/demoI18n'
 import { DEFAULT_DEMO_EXAMPLE_ID, useDemoExampleContent } from '../composables/sampleContent'
+import { demoResourceResolvers } from '../composables/demoResourceResolvers'
 
 const { locale } = useDemoLocale()
 const messages = useDemoMessages()
@@ -84,6 +85,7 @@ watch(locale, () => {
       :recorder-title="messages.pages.recorder.inlineFormTitle"
       :record-data-title="messages.common.collectedData"
       :collector-providers="collectorProviders"
+      :resource-resolvers="demoResourceResolvers"
       :collector-record-key="recorderEditorKey"
       collector-actor-id="demo-user"
     />

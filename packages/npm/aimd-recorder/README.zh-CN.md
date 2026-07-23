@@ -97,6 +97,18 @@ const entityResolvers = {
 
 选择结果会保存为 `{ entity, source, id, label? }` 这样的对象；`list[EntityRef]` 会保存为这些对象组成的数组。`id` 是稳定关联键，`label` 是可选显示缓存，缺失时 recorder 会回退显示 `id`。recorder 不会自己去拉取 AIMD `connectors` descriptor，因此即使使用 `aimd-core` connector helper，网络访问和认证仍由宿主应用控制。
 
+`ResourceRef[T]` 使用独立的宿主 `resourceResolvers` 契约。除了 search/resolve，resolver 还可用 `getAvailability()` 提供批次、容器、余额与设备时段，并用 `prepareOutput()` 准备带客户端稳定 ID 的产出资源载荷。控件本身不会修改库存：
+
+```vue
+<AimdRecorder
+  v-model="record"
+  :content="'输入：{{var|source: ResourceRef[\"plasmid\"], resource_role=\"input\", container_required=True}}'"
+  :resource-resolvers="resourceResolvers"
+/>
+```
+
+选择值可以包含 `lot_id`、`container_id`、`quantity`、`unit`、`reservation_id` 和 `booking_id`。必选容器/预约 metadata 会参与正常的 change、blur 与 submit 校验。宿主仍需重新校验资源引用，并原子化保存 Record 与库存事件。
+
 Collector provider 使用同样的宿主绑定边界。Protocol 声明 `kind: data_source` connector、`collectors` 代码块和 `Observation[T]` 字段，宿主按 connector id 注入 provider：
 
 ```ts

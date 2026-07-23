@@ -460,7 +460,10 @@ def _load_var_model(protocol_dir: Path, aimd_content: str) -> type[BaseModel]:
 
 
 def _load_protocol_metadata(protocol_dir: Path) -> dict[str, Any]:
-    metadata: dict[str, Any] = {"protocol_id": protocol_dir.name}
+    metadata: dict[str, Any] = {
+        "protocol_id": protocol_dir.name,
+        "kind": "experiment",
+    }
     protocol_toml = protocol_dir / "protocol.toml"
     if not protocol_toml.is_file():
         return metadata
@@ -474,10 +477,13 @@ def _load_protocol_metadata(protocol_dir: Path) -> dict[str, Any]:
 
     protocol_id = protocol_data.get("id")
     protocol_version = protocol_data.get("version")
+    protocol_kind = protocol_data.get("kind")
     if isinstance(protocol_id, str) and protocol_id.strip():
         metadata["protocol_id"] = protocol_id.strip()
     if isinstance(protocol_version, str) and protocol_version.strip():
         metadata["protocol_version"] = protocol_version.strip()
+    if protocol_kind in {"experiment", "resource_definition"}:
+        metadata["kind"] = protocol_kind
     return metadata
 
 

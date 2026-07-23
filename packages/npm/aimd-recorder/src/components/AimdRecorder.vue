@@ -29,6 +29,7 @@ import type {
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
   AimdEntityResolverMap,
+  AimdResourceResolverMap,
   AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
@@ -196,6 +197,12 @@ const props = withDefaults(defineProps<{
    */
   entityResolvers?: AimdEntityResolverMap
 
+  /**
+   * ResourceRef resolvers keyed by source or resource namespace. These are
+   * read-only while editing; the host commits stock and output changes.
+   */
+  resourceResolvers?: AimdResourceResolverMap
+
   /** Data-source providers keyed by connector id for Collector-backed vars. */
   collectorProviders?: AimdCollectorProviderMap
   /** Optional host authorization hook invoked before a Collector starts. */
@@ -255,6 +262,7 @@ const props = withDefaults(defineProps<{
   customRenderers: undefined,
   fieldAdapters: undefined,
   entityResolvers: undefined,
+  resourceResolvers: undefined,
   collectorProviders: undefined,
   requestCollectorPermission: undefined,
   collectorActorId: undefined,
@@ -1298,7 +1306,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
     ...recordSearch.getFieldClasses(fieldKey),
   ]
   const canUseInternalAssignerControl = Boolean(meta?.enumOptions?.length)
-    || ["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "entity-ref", "checkbox", "boolean-select", "file", "code"].includes(inputKind)
+    || ["number", "date", "datetime", "time", "text", "textarea", "scalar-list", "entity-ref", "resource-ref", "checkbox", "boolean-select", "file", "code"].includes(inputKind)
   const fieldAssignerControl = resolveAssignerControl("var", fieldKey)
   const internalAssignerControl = canUseInternalAssignerControl ? fieldAssignerControl : null
 
@@ -1336,6 +1344,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
       resolveFile: props.resolveFile,
       resolveFileInfo: props.resolveFileInfo,
       entityResolvers: props.entityResolvers,
+      resourceResolvers: props.resourceResolvers,
       emitChange: emitVarChange,
       emitBlur: emitVarBlur,
     })
@@ -1371,6 +1380,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
     resolveFile: props.resolveFile,
     resolveFileInfo: props.resolveFileInfo,
     entityResolvers: props.entityResolvers,
+    resourceResolvers: props.resourceResolvers,
     record: localRecord,
     onChange: (payload: { id: string, value: unknown, type: string, inputKind: string }) => {
       emitVarChange(payload.value)

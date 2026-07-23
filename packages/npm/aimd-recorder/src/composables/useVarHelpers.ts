@@ -76,6 +76,13 @@ export interface EntityRefTypeConfig {
   source?: string
 }
 
+export interface ResourceRefTypeConfig extends EntityRefTypeConfig {
+  role: "input" | "output" | "reference" | "equipment"
+  quantityField?: string
+  containerRequired: boolean
+  bookingRequired: boolean
+}
+
 export function getFileInputConfig(
   type: string | undefined,
   kwargs?: Record<string, unknown>,
@@ -197,6 +204,10 @@ function resolveOverrideInputKind(inputType: string | undefined, codeLanguage: s
 
   if (normalized === 'entityref' || normalized === 'entityreference' || normalized === 'entity-ref') {
     return 'entity-ref'
+  }
+
+  if (normalized === 'resourceref' || normalized === 'resource-ref') {
+    return 'resource-ref'
   }
 
   if (normalized === 'dna') {
@@ -374,9 +385,71 @@ function getEntityFromEntityRefExpression(type: string | undefined): string | un
   return match ? stripTypeArgumentQuotes(match[1]) : undefined
 }
 
+function getEntityFromResourceRefExpression(type: string | undefined): string | undefined {
+  const normalized = canonicalizeTypeExpression(type).replace(/^typing\./, "")
+  const match = normalized.match(/^(?:airalogy\.types\.)?resourceref(?:\[(.*)\])?$/)
+  return match ? stripTypeArgumentQuotes(match[1]) : undefined
+}
+
 function isEntityRefExpression(type: string | undefined): boolean {
   const normalized = canonicalizeTypeExpression(type).replace(/^typing\./, "")
   return /^(?:airalogy\.types\.)?entityref(?:\[.*\])?$/.test(normalized)
+}
+
+function isResourceRefExpression(type: string | undefined): boolean {
+  const normalized = canonicalizeTypeExpression(type).replace(/^typing\./, "")
+  return /^(?:airalogy\.types\.)?resourceref(?:\[.*\])?$/.test(normalized)
+}
+
+export function getResourceRefTypeConfig(
+  type: string | undefined,
+  kwargs?: Record<string, unknown>,
+  fieldMeta?: AimdFieldMeta,
+): ResourceRefTypeConfig | undefined {
+  const unwrapped = unwrapOptionalTypeAnnotation(type)
+  const compact = canonicalizeTypeExpression(unwrapped).replace(/^typing\./, "")
+  let multiple = false
+  let expressionEntity = getEntityFromResourceRefExpression(unwrapped)
+  let resourceRef = isResourceRefExpression(unwrapped)
+  const listMatch = compact.match(/^(?:list|array)\[(.*)\]$/)
+  if (listMatch) {
+    multiple = true
+    expressionEntity = getEntityFromResourceRefExpression(listMatch[1])
+    resourceRef = isResourceRefExpression(listMatch[1])
+  }
+  else if (compact.endsWith("[]")) {
+    multiple = true
+    const itemType = compact.slice(0, -2)
+    expressionEntity = getEntityFromResourceRefExpression(itemType)
+    resourceRef = isResourceRefExpression(itemType)
+  }
+  if (!resourceRef) return undefined
+
+  const roleValue = fieldMeta?.resource_role ?? kwargs?.resource_role
+  const role = ["input", "output", "reference", "equipment"].includes(String(roleValue))
+    ? roleValue as ResourceRefTypeConfig["role"]
+    : "reference"
+  return {
+    multiple,
+    entity: normalizeEntityRefMetadataString(fieldMeta?.entity)
+      ?? normalizeEntityRefMetadataString(kwargs?.entity)
+      ?? expressionEntity,
+    source: normalizeEntityRefMetadataString(fieldMeta?.source)
+      ?? normalizeEntityRefMetadataString(kwargs?.source),
+    role,
+    quantityField: normalizeEntityRefMetadataString(fieldMeta?.quantity_field)
+      ?? normalizeEntityRefMetadataString(kwargs?.quantity_field),
+    containerRequired: fieldMeta?.container_required === true || kwargs?.container_required === true,
+    bookingRequired: fieldMeta?.booking_required === true || kwargs?.booking_required === true,
+  }
+}
+
+export function isResourceRefVarType(
+  type: string | undefined,
+  kwargs?: Record<string, unknown>,
+  fieldMeta?: AimdFieldMeta,
+): boolean {
+  return getResourceRefTypeConfig(type, kwargs, fieldMeta) !== undefined
 }
 
 export function getEntityRefTypeConfig(
@@ -467,6 +540,10 @@ export function getVarInputKind(type: string | undefined, options: VarInputKindO
   const typePlugin = options.typePlugin ?? resolveAimdTypePlugin(type, options.typePlugins)
   if (typePlugin?.inputKind) {
     return typePlugin.inputKind
+  }
+
+  if (isResourceRefVarType(type, options.kwargs, options.fieldMeta)) {
+    return "resource-ref"
   }
 
   if (isEntityRefVarType(type, options.kwargs, options.fieldMeta)) {
@@ -909,7 +986,7 @@ export function getVarInputDisplayValue(
     ))
   }
 
-  if (kind === "entity-ref") {
+  if (kind === "entity-ref" || kind === "resource-ref") {
     return getEntityRefDisplayValue(normalized)
   }
 
@@ -1022,7 +1099,8 @@ function getVarControlMinWidth(inputKind: VarInputKind): number {
     case "file":
     case "scalar-list":
     case "entity-ref":
-      return inputKind === "scalar-list" || inputKind === "entity-ref" ? 220 : 160
+    case "resource-ref":
+      return inputKind === "scalar-list" || inputKind === "entity-ref" || inputKind === "resource-ref" ? 220 : 160
     default:
       return 0
   }
@@ -1040,6 +1118,7 @@ function getVarControlExtraWidth(inputKind: VarInputKind): number {
       return 24
     case "scalar-list":
     case "entity-ref":
+    case "resource-ref":
       return 16
     default:
       return 4
@@ -1238,7 +1317,7 @@ export function applyVarStackWidth(target: HTMLElement, inputKind: VarInputKind)
     return
   }
 
-  if (inputKind === "scalar-list" || inputKind === "entity-ref") {
+  if (inputKind === "scalar-list" || inputKind === "entity-ref" || inputKind === "resource-ref") {
     wrapper.style.width = "100%"
     wrapper.style.maxWidth = "100%"
     return

@@ -250,6 +250,33 @@ options:
         record = var_model(parent_plasmid={"entity": "plasmid", "id": "pUC19"})
         assert record.parent_plasmid.id == "pUC19"
 
+    def test_generate_model_validates_resource_ref_with_exact_quantity(self):
+        code = generate_model(
+            '{{var|source: ResourceRef["plasmid"], resource_role="input", '
+            'container_required=True}}'
+        )
+
+        assert "from airalogy.types import ResourceRef" in code
+        assert 'source: ResourceRef["plasmid"]' in code
+
+        namespace = {}
+        exec(code, namespace)
+        var_model = namespace["VarModel"]
+        schema = var_model.model_json_schema()
+        assert schema["properties"]["source"]["resource_role"] == "input"
+        assert schema["properties"]["source"]["container_required"] is True
+
+        record = var_model(
+            source={
+                "entity": "plasmid",
+                "id": "resource-1",
+                "quantity": "0.125",
+                "unit": "mg",
+                "container_id": "container-1",
+            }
+        )
+        assert str(record.source.quantity) == "0.125"
+
     def test_generate_simple_var_table(self):
         """Test generating model from simple var table."""
         content = "{{var|students, subvars=[name, age]}}"

@@ -126,6 +126,50 @@ export {
   type AimdEntitySearchHandler,
 } from './entity-connectors'
 
+export type {
+  AimdEquipmentSlotOption,
+  AimdPreparedResourceOutput,
+  AimdResourceAvailability,
+  AimdResourceContainerOption,
+  AimdResourceLotOption,
+  AimdResourceRefOption,
+  AimdResourceRefValue,
+  AimdResourceResolveContext,
+  AimdResourceResolver,
+  AimdResourceResolverMap,
+} from './resource-resolvers'
+
+export {
+  compareAimdJsonSchemas,
+  type AimdSchemaChange,
+  type AimdSchemaCompatibility,
+  type AimdSchemaCompatibilityReport,
+  type AimdSemverBump,
+} from './schema-compatibility'
+
+export {
+  applyAimdDeclarativeMigration,
+  hashAimdMigrationManifest,
+  validateAimdMigrationManifest,
+  type AimdMigrationIssue,
+  type AimdMigrationManifest,
+  type AimdMigrationOperation,
+  type AimdMigrationResult,
+} from './schema-migration'
+
+export {
+  AIMD_RESOURCE_DEFINITION_FORBIDDEN_FIELDS,
+  normalizeAimdProtocolKind,
+  validateAimdProtocolContract,
+  validateAimdProtocolKind,
+  validateAimdResourceFields,
+  type AimdProtocolMetadata,
+  type AimdProtocolKind,
+  type AimdResourceFieldContract,
+  type AimdResourceRole,
+  type AimdResourceValidationIssue,
+} from './protocol-contract'
+
 // Domain constants
 export {
   getRecordDataKey,

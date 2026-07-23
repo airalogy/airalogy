@@ -24,6 +24,7 @@ import type {
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
   AimdEntityResolverMap,
+  AimdResourceResolverMap,
   AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
@@ -73,6 +74,7 @@ export interface RecorderMilkdownSurfaceState {
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   entityResolvers?: AimdEntityResolverMap
+  resourceResolvers?: AimdResourceResolverMap
   collectorProviders?: AimdCollectorProviderMap
   requestCollectorPermission?: AimdCollectorPermissionHandler
   collectorActorId?: string

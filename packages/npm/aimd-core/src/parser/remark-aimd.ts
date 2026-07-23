@@ -53,6 +53,11 @@ import { parseConnectorsContent } from "./connectors-parser"
 import { parseCollectorsContent } from "./collectors-parser"
 import { parseQuizContent } from "./quiz-parser"
 import { parseWorkflowContent } from "./workflow-parser"
+import {
+  validateAimdProtocolContract,
+  validateAimdResourceFields,
+  type AimdProtocolMetadata,
+} from "../utils/protocol-contract"
 import { SKIP, visit } from "unist-util-visit"
 
 function validateCollectorReferences(fields: ExtractedAimdFields): void {
@@ -359,6 +364,8 @@ export interface RemarkAimdOptions {
   typed?: Record<string, Record<string, any>>
   /** Protocol-level Collector metadata used to validate an isolated fragment. */
   collectorContext?: AimdCollectorValidationContext
+  /** Protocol metadata used for kind-specific publishing validation. */
+  protocolMetadata?: AimdProtocolMetadata
 }
 
 /**
@@ -741,6 +748,12 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
           }
         : fields
       validateCollectorReferences(collectorValidationFields)
+      const resourceIssues = options.protocolMetadata
+        ? validateAimdProtocolContract(options.protocolMetadata, fields)
+        : validateAimdResourceFields(fields)
+      if (resourceIssues.length > 0) {
+        throw new Error(resourceIssues.map(issue => issue.message).join("; "))
+      }
       file.data.aimdFields = fields
     }
 

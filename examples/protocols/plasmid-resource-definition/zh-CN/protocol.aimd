@@ -1,0 +1,39 @@
+# 质粒资源定义
+
+这个 Protocol 定义质粒资源可版本化的学科字段。Platform 负责稳定资源身份、状态、修订、批次、容器、位置、余额和审计事件。
+
+## 身份与构建信息
+
+构建名称：{{var|construct_name: str, title="构建名称", description="用于识别该质粒构建的科学名称。", examples=["pUC19"]}}
+
+别名：{{var|aliases: list[str] | None, title="别名", description="论文、实验记录或外部登记库中使用的其他名称。", examples=["pMB1 衍生载体"]}}
+
+骨架：{{var|backbone: str | None, title="载体骨架", description="亲本载体或骨架家族。", examples=["pUC19"]}}
+
+环状序列：{{var|sequence: DNASequence | None, title="序列", description="可用时保存带注释的环状 DNA 序列。"}}
+
+序列文件：{{var|sequence_file: FileIdDNA | None, title="序列文件", description="可选的 GenBank/FASTA 序列文件。"}}
+
+## 生物学属性
+
+抗性标记：{{var|resistance_markers: list[str] | None, title="抗性标记", description="可筛选的抗生素抗性标记。", examples=["氨苄青霉素"]}}
+
+宿主物种：{{var|host_species: str | None, title="宿主物种", description="推荐的扩增宿主。", examples=["大肠杆菌"]}}
+
+拷贝数：{{var|copy_number: Literal["低", "中", "高"] | None, title="拷贝数", description="质粒的大致拷贝数等级。"}}
+
+外部来源：{{var|external_source: EntityRef["registry"] | None, entity="registry", title="外部登记库", description="可选的外部质粒登记条目引用。"}}
+
+## 功能元件
+
+{{var|features: list[PlasmidFeature],
+    title="功能元件",
+    description="质粒序列上的已注释区域。",
+    subvars=[
+        var(name: str, title="元件名称"),
+        var(kind: str, title="元件类型"),
+        var(start: int, ge=0, title="起点"),
+        var(end: int, ge=0, title="终点"),
+        var(note: str | None, title="备注")
+    ]
+}}

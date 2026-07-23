@@ -35,6 +35,38 @@
       ]
     },
     {
+      "id": "resource-inventory",
+      "kind": "example",
+      "category": "resource-management",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ],
+      "title": {
+        "en-US": "Resource and inventory workflow",
+        "zh-CN": "资源与库存联动"
+      },
+      "description": {
+        "en-US": "ResourceRef inputs, exact consumption, container selection, equipment booking, and transactional output preparation.",
+        "zh-CN": "展示 ResourceRef 输入、精确用量、容器选择、设备预约与事务化产出准备。"
+      },
+      "protocol_dir": {
+        "en-US": "resource-inventory",
+        "zh-CN": "resource-inventory"
+      },
+      "entry": {
+        "en-US": "resource-inventory/protocol.en-US.aimd",
+        "zh-CN": "resource-inventory/protocol.zh-CN.aimd"
+      },
+      "engine_required": false,
+      "tags": [
+        "resource",
+        "inventory",
+        "equipment",
+        "ResourceRef"
+      ]
+    },
+    {
       "id": "collector-sensors",
       "kind": "example",
       "category": "data-acquisition",

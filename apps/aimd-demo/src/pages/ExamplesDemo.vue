@@ -26,6 +26,7 @@ import {
   type DemoExample,
   useDemoExampleContent,
 } from '../composables/sampleContent'
+import { demoResourceResolvers } from '../composables/demoResourceResolvers'
 
 const EMPTY_FIELDS: ExtractedAimdFields = {
   var: [],
@@ -307,6 +308,7 @@ watch([fields, recordData], updateQuizGrades, { deep: true, immediate: true })
         :fill-parent="true"
         :fit-viewport="false"
         :resolve-file="resolveSelectedExampleAsset"
+        :resource-resolvers="demoResourceResolvers"
         @fields-change="handleFieldsChange"
       />
     </div>

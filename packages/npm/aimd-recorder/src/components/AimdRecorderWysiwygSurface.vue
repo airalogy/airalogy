@@ -25,6 +25,7 @@ import type {
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
   AimdEntityResolverMap,
+  AimdResourceResolverMap,
   AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
@@ -86,6 +87,7 @@ const props = withDefaults(defineProps<{
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   entityResolvers?: AimdEntityResolverMap
+  resourceResolvers?: AimdResourceResolverMap
   collectorProviders?: AimdCollectorProviderMap
   requestCollectorPermission?: AimdCollectorPermissionHandler
   collectorActorId?: string
@@ -121,6 +123,7 @@ const props = withDefaults(defineProps<{
   customRenderers: undefined,
   fieldAdapters: undefined,
   entityResolvers: undefined,
+  resourceResolvers: undefined,
   collectorProviders: undefined,
   requestCollectorPermission: undefined,
   collectorActorId: undefined,
@@ -349,6 +352,7 @@ const surfaceState = reactive<RecorderMilkdownSurfaceState>({
   customRenderers: props.customRenderers,
   fieldAdapters: props.fieldAdapters,
   entityResolvers: props.entityResolvers,
+  resourceResolvers: props.resourceResolvers,
   collectorProviders: props.collectorProviders,
   requestCollectorPermission: props.requestCollectorPermission,
   collectorActorId: props.collectorActorId,
@@ -393,6 +397,7 @@ watchEffect(() => {
   surfaceState.customRenderers = props.customRenderers
   surfaceState.fieldAdapters = props.fieldAdapters
   surfaceState.entityResolvers = props.entityResolvers
+  surfaceState.resourceResolvers = props.resourceResolvers
   surfaceState.collectorProviders = props.collectorProviders
   surfaceState.requestCollectorPermission = props.requestCollectorPermission
   surfaceState.collectorActorId = props.collectorActorId

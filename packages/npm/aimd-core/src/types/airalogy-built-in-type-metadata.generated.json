@@ -40,6 +40,15 @@
       "title": "EntityRef",
       "description": "Reference to a named entity in a connector-backed source.\n\n`entity` is the entity namespace, such as plasmid or strain. `id` is the\nstable identifier inside that namespace/source. Extra fields are allowed so\nhosts can retain display snapshots or source-specific reference metadata."
     },
+    "ResourceRef": {
+      "type_name": "ResourceRef",
+      "import_from": "airalogy.types",
+      "storage_kind": "reference",
+      "ui_kind": "resource-ref",
+      "type": "object",
+      "title": "ResourceRef",
+      "description": "Stable reference to a Platform-managed resource.\n\nQuantities are represented by :class:`~decimal.Decimal` in Python and are\nserialized as strings so a Record never loses precision while crossing a\nJSON or JavaScript boundary."
+    },
     "Observation": {
       "type_name": "Observation",
       "import_from": "airalogy.types",

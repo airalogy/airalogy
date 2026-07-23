@@ -38,16 +38,26 @@ def test_builtin_type_registry_contains_official_types():
     assert entity_ref_descriptor.storage_kind == "reference"
     assert entity_ref_descriptor.ui_kind == "entity-ref"
 
+    resource_ref_descriptor = registry.get("ResourceRef")
+    assert resource_ref_descriptor is not None
+    assert resource_ref_descriptor.import_from == "airalogy.types"
+    assert resource_ref_descriptor.storage_kind == "reference"
+    assert resource_ref_descriptor.ui_kind == "resource-ref"
+
 
 def test_export_airalogy_type_metadata_includes_builtin_enums():
     metadata = export_airalogy_type_metadata(load_plugins=False)
     blood_type = metadata["types"]["BloodType"]
     entity_ref = metadata["types"]["EntityRef"]
+    resource_ref = metadata["types"]["ResourceRef"]
 
     assert metadata["version"] == 1
     assert entity_ref["import_from"] == "airalogy.types"
     assert entity_ref["storage_kind"] == "reference"
     assert entity_ref["ui_kind"] == "entity-ref"
+    assert resource_ref["import_from"] == "airalogy.types"
+    assert resource_ref["storage_kind"] == "reference"
+    assert resource_ref["ui_kind"] == "resource-ref"
 
     assert blood_type["import_from"] == "airalogy.types"
     assert blood_type["storage_kind"] == "scalar"

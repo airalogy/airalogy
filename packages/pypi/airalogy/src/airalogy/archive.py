@@ -9,7 +9,9 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
-from .markdown import validate_aimd
+from .markdown import AimdParser, validate_aimd
+from .migrations import validate_migration_manifest
+from .protocol_contract import normalize_protocol_kind, validate_protocol_kind
 from .record.schema import validate_record, validate_record_structure
 
 ARCHIVE_FORMAT = "airalogy.archive"
@@ -100,13 +102,77 @@ def _validate_protocol_definition(protocol_dir: Path) -> None:
         raise ArchiveError(f"Failed to read '{protocol_file}': {exc}") from exc
 
     is_valid, errors = validate_aimd(content, protocol_dir=protocol_dir)
-    if is_valid:
-        return
+    if not is_valid:
+        error_messages = "; ".join(str(error) for error in errors)
+        raise ArchiveError(
+            f"Protocol '{protocol_dir}' failed validation: {error_messages}"
+        )
 
-    error_messages = "; ".join(str(error) for error in errors)
-    raise ArchiveError(
-        f"Protocol '{protocol_dir}' failed validation: {error_messages}"
-    )
+    metadata = _load_protocol_metadata(protocol_dir)
+    templates = AimdParser(content).parse()["templates"]
+    kind_issues = validate_protocol_kind(metadata, templates)
+    if kind_issues:
+        raise ArchiveError(
+            f"Protocol '{protocol_dir}' failed kind validation: {'; '.join(kind_issues)}"
+        )
+    _validate_protocol_migrations(protocol_dir)
+
+
+def _validate_protocol_migrations(protocol_dir: Path) -> None:
+    migrations_dir = protocol_dir / "migrations"
+    if not migrations_dir.exists():
+        return
+    if not migrations_dir.is_dir():
+        raise ArchiveError(
+            f"Protocol '{protocol_dir}' migration path must be a directory."
+        )
+
+    version_edges: set[tuple[str, str]] = set()
+    for manifest_path in sorted(migrations_dir.rglob("*.json")):
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ArchiveError(
+                f"Failed to read migration manifest '{manifest_path}': {exc}"
+            ) from exc
+        if not isinstance(manifest, dict):
+            raise ArchiveError(
+                f"Migration manifest '{manifest_path}' must contain a JSON object."
+            )
+        issues = validate_migration_manifest(manifest)
+        if issues:
+            rendered = "; ".join(
+                f"{issue.path or '$'}: {issue.message}" for issue in issues
+            )
+            raise ArchiveError(
+                f"Migration manifest '{manifest_path}' failed validation: {rendered}"
+            )
+
+        edge = (manifest["from"], manifest["to"])
+        if edge in version_edges:
+            raise ArchiveError(
+                f"Protocol '{protocol_dir}' declares migration "
+                f"{edge[0]} -> {edge[1]} more than once."
+            )
+        version_edges.add(edge)
+
+        transform = manifest.get("transform")
+        if not isinstance(transform, dict):
+            continue
+        relative_source = transform["entrypoint"].rsplit(":", 1)[0]
+        source_path = (protocol_dir / relative_source).resolve()
+        protocol_root = protocol_dir.resolve()
+        if not source_path.is_relative_to(protocol_root) or not source_path.is_file():
+            raise ArchiveError(
+                f"Migration transform '{relative_source}' does not exist inside "
+                f"Protocol '{protocol_dir}'."
+            )
+        actual_hash = _sha256_bytes(_read_file_bytes(source_path))
+        if actual_hash != transform["code_hash"].lower():
+            raise ArchiveError(
+                f"Migration transform '{relative_source}' SHA-256 does not match "
+                f"the code_hash in '{manifest_path}'."
+            )
 
 
 def _infer_protocol_name_from_aimd(protocol_dir: Path) -> str | None:
@@ -130,6 +196,7 @@ def _load_protocol_metadata(protocol_dir: Path) -> dict[str, Any]:
         "protocol_id": protocol_dir.name,
         "protocol_version": None,
         "protocol_name": _infer_protocol_name_from_aimd(protocol_dir) or protocol_dir.name,
+        "kind": "experiment",
         "entrypoint": "protocol.aimd",
     }
     if not protocol_toml.is_file():
@@ -146,6 +213,10 @@ def _load_protocol_metadata(protocol_dir: Path) -> dict[str, Any]:
         protocol_id = protocol_data.get("id")
         protocol_version = protocol_data.get("version")
         protocol_name = protocol_data.get("name")
+        try:
+            metadata["kind"] = normalize_protocol_kind(protocol_data.get("kind"))
+        except ValueError as exc:
+            raise ArchiveError(f"Failed to read '{protocol_toml}': {exc}") from exc
         if isinstance(protocol_id, str) and protocol_id.strip():
             metadata["protocol_id"] = protocol_id.strip()
         if isinstance(protocol_version, str) and protocol_version.strip():

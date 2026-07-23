@@ -14,6 +14,7 @@ import type {
   AimdServerAssignerMap,
   AimdServerAssignerRunner,
   AimdEntityResolverMap,
+  AimdResourceResolverMap,
   AimdFileInfoResolver,
   AimdFileUploadHandler,
   AimdFieldMeta,
@@ -82,6 +83,7 @@ const props = withDefaults(defineProps<{
   customRenderers?: Partial<Record<string, AimdComponentRenderer>>
   fieldAdapters?: AimdRecorderFieldAdapters
   entityResolvers?: AimdEntityResolverMap
+  resourceResolvers?: AimdResourceResolverMap
   collectorProviders?: AimdCollectorProviderMap
   requestCollectorPermission?: AimdCollectorPermissionHandler
   collectorActorId?: string
@@ -137,6 +139,7 @@ const props = withDefaults(defineProps<{
   customRenderers: undefined,
   fieldAdapters: undefined,
   entityResolvers: undefined,
+  resourceResolvers: undefined,
   collectorProviders: undefined,
   requestCollectorPermission: undefined,
   collectorActorId: undefined,
@@ -1490,6 +1493,7 @@ defineExpose({
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
             :entity-resolvers="entityResolvers"
+            :resource-resolvers="resourceResolvers"
             :collector-providers="collectorProviders"
             :request-collector-permission="requestCollectorPermission"
             :collector-actor-id="collectorActorId"
@@ -1542,6 +1546,7 @@ defineExpose({
             :custom-renderers="customRenderers"
             :field-adapters="fieldAdapters"
             :entity-resolvers="entityResolvers"
+            :resource-resolvers="resourceResolvers"
             :collector-providers="collectorProviders"
             :request-collector-permission="requestCollectorPermission"
             :collector-actor-id="collectorActorId"

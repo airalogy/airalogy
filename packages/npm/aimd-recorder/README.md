@@ -97,6 +97,18 @@ const entityResolvers = {
 
 The selected value is stored as an object like `{ entity, source, id, label? }`; `list[EntityRef]` stores an array of those objects. `id` is the stable key, while `label` is an optional display cache and the recorder falls back to `id` when it is absent. The recorder does not fetch AIMD `connectors` descriptors by itself, so hosts remain in control of network access and authentication even when they use the `aimd-core` connector helper.
 
+`ResourceRef[T]` uses a separate `resourceResolvers` host contract. In addition to search/resolve, a resolver can expose `getAvailability()` for lots, containers, balances, and equipment slots, plus `prepareOutput()` for a client-generated output resource payload. The component never changes inventory itself:
+
+```vue
+<AimdRecorder
+  v-model="record"
+  :content="'Input: {{var|source: ResourceRef[\"plasmid\"], resource_role=\"input\", container_required=True}}'"
+  :resource-resolvers="resourceResolvers"
+/>
+```
+
+Selected values may contain `lot_id`, `container_id`, `quantity`, `unit`, `reservation_id`, and `booking_id`. Required container/booking metadata participates in normal change, blur, and submit validation. The host must validate the reference again and atomically save the Record plus inventory events.
+
 Collector providers follow the same host-binding boundary. The Protocol declares a `kind: data_source` connector, a `collectors` block, and an `Observation[T]` field; the host injects a provider by connector id:
 
 ```ts

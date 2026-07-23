@@ -173,6 +173,21 @@ class VarModel(BaseModel):
 
 对应的数据源可以通过 fenced [`connectors` 代码块](/zh/syntax/connectors) 声明。宿主应用和 recorder UI 可以用这些 metadata 提供实时搜索和选择控件，而 Python/Pydantic 仍然负责校验保存下来的引用结构。后端工具可以使用 `airalogy.connectors.EntitySourceConnector` 或 `create_entity_source_connectors_from_aimd()` 执行受支持的 `entity_source` descriptor，并从 `.env` 或部署 secret manager 注入 secret。
 
+## ResourceRef
+
+`ResourceRef[T]` 是 Record 中用于引用宿主库存引擎所管理资源的稳定类型。它在 `EntityRef` 的基础上增加可选的 `lot_id`、`container_id`、精确十进制 `quantity`、UCUM 兼容 `unit`、`reservation_id` 与 `booking_id`；显示用 `snapshot` 仍不是权威数据。
+
+```md
+来源：{{var|source: ResourceRef["plasmid"], resource_role="input", quantity_field="amount", container_required=True}}
+用量：{{var|amount: Decimal, ge=0}}
+设备：{{var|centrifuge: ResourceRef["equipment"], resource_role="equipment", booking_required=True}}
+产出：{{var|sample: ResourceRef["sample"], resource_role="output"}}
+```
+
+每个 `ResourceRef` 字段都要声明 `resource_role=input|output|reference|equipment`。`quantity_field` 必须指向数值变量；`container_required` 与 `booking_required` 必须是布尔值，并且预约只适用于设备。Protocol 发布前，Python 与 npm parser 会拒绝无效的字段引用。
+
+Recorder 接受宿主注入的 `resourceResolvers`，用于搜索资源、读取可用量与批次容器、查询设备时段及准备产出。它们只准备 Record 值；库存预约、消耗、产出创建与 Record 保存必须由宿主放在同一个事务中提交。
+
 ## FileId
 
 在Airalogy中，允许用户自定义数据字段为`FileId`相关类型，这些数据字段的记录界面的插槽会自动显示文件上传按钮，用户可以通过点击按钮上传文件。上传的文件会被自动保存到Airalogy的文件系统中，并且会被赋予一个唯一的文件ID (type: `str`)。用户可以通过该文件ID来访问该文件。

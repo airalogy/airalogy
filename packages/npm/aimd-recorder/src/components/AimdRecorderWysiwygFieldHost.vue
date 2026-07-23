@@ -45,6 +45,7 @@ const renderedContent = computed(() => (
       :custom-renderers="surfaceState.customRenderers"
       :field-adapters="surfaceState.fieldAdapters"
       :entity-resolvers="surfaceState.entityResolvers"
+      :resource-resolvers="surfaceState.resourceResolvers"
       :collector-providers="surfaceState.collectorProviders"
       :request-collector-permission="surfaceState.requestCollectorPermission"
       :collector-actor-id="surfaceState.collectorActorId"

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import zipfile
 from pathlib import Path
@@ -424,6 +425,77 @@ def test_validate_archive_detects_blob_hash_mismatch(tmp_path: Path):
     ok, issues = validate_archive(archive_path)
     assert not ok
     assert any("Blob file" in issue and "sha256 mismatch" in issue for issue in issues)
+
+
+def test_pack_protocol_archive_validates_migration_manifests(tmp_path: Path):
+    protocol_dir = tmp_path / "protocol_demo"
+    _write_protocol(
+        protocol_dir,
+        protocol_id="protocol_demo",
+        version="2.0.0",
+        name="Protocol Demo",
+    )
+    migration_dir = protocol_dir / "migrations"
+    migration_dir.mkdir()
+    transform = migration_dir / "normalize.py"
+    transform.write_text("def migrate(data):\n    return data\n")
+    (migration_dir / "1.0.0__2.0.0.json").write_text(
+        json.dumps(
+            {
+                "version": "airalogy.migration.v1",
+                "from": "1.0.0",
+                "to": "2.0.0",
+                "operations": [
+                    {
+                        "op": "rename",
+                        "from": "var.old_name",
+                        "to": "var.name",
+                    }
+                ],
+                "transform": {
+                    "entrypoint": "migrations/normalize.py:migrate",
+                    "code_hash": hashlib.sha256(transform.read_bytes()).hexdigest(),
+                },
+            }
+        )
+    )
+
+    archive_path = pack_protocol_archive(
+        protocol_dir,
+        tmp_path / "protocol.aira",
+    )
+    assert archive_path.is_file()
+
+
+def test_pack_protocol_archive_rejects_migration_hash_mismatch(tmp_path: Path):
+    protocol_dir = tmp_path / "protocol_demo"
+    _write_protocol(
+        protocol_dir,
+        protocol_id="protocol_demo",
+        version="2.0.0",
+        name="Protocol Demo",
+    )
+    migration_dir = protocol_dir / "migrations"
+    migration_dir.mkdir()
+    (migration_dir / "normalize.py").write_text(
+        "def migrate(data):\n    return data\n"
+    )
+    (migration_dir / "1.0.0__2.0.0.json").write_text(
+        json.dumps(
+            {
+                "version": "airalogy.migration.v1",
+                "from": "1.0.0",
+                "to": "2.0.0",
+                "transform": {
+                    "entrypoint": "migrations/normalize.py:migrate",
+                    "code_hash": "0" * 64,
+                },
+            }
+        )
+    )
+
+    with pytest.raises(ArchiveError, match="SHA-256 does not match"):
+        pack_protocol_archive(protocol_dir, tmp_path / "protocol.aira")
 
 
 def test_validate_archive_detects_record_hash_mismatch(tmp_path: Path):

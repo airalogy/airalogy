@@ -1,0 +1,15 @@
+[airalogy_protocol]
+id = "plasmid_resource_definition_en"
+version = "1.0.0"
+kind = "resource_definition"
+name = "Plasmid Resource Definition"
+description = "A versioned resource schema for plasmids registered in a Lab resource library."
+authors = [
+    { name = "Airalogy Team" },
+]
+maintainers = [
+    { name = "Airalogy Team" },
+]
+disciplines = ["Molecular Biology"]
+keywords = ["resource", "plasmid", "inventory", "schema"]
+license = "Apache-2.0"

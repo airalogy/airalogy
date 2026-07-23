@@ -378,6 +378,41 @@
         "personal",
         "notes"
       ]
+    },
+    {
+      "id": "plasmid-resource-definition",
+      "category": "resource-management",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ],
+      "title": {
+        "en-US": "Plasmid Resource Definition",
+        "zh-CN": "质粒资源定义"
+      },
+      "description": {
+        "en-US": "A resource_definition Protocol that provides versioned, searchable discipline fields for plasmids while Platform owns inventory transactions.",
+        "zh-CN": "以 resource_definition Protocol 为质粒提供可版本化、可查询的学科字段，库存事务由 Platform 统一负责。"
+      },
+      "protocol_dir": {
+        "en-US": "plasmid-resource-definition/en-US",
+        "zh-CN": "plasmid-resource-definition/zh-CN"
+      },
+      "entry": {
+        "en-US": "plasmid-resource-definition/en-US/protocol.aimd",
+        "zh-CN": "plasmid-resource-definition/zh-CN/protocol.aimd"
+      },
+      "toml": {
+        "en-US": "plasmid-resource-definition/en-US/protocol.toml",
+        "zh-CN": "plasmid-resource-definition/zh-CN/protocol.toml"
+      },
+      "engine_required": false,
+      "tags": [
+        "resource",
+        "plasmid",
+        "inventory",
+        "schema"
+      ]
     }
   ]
 }
