@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.7
+
+### Patch Changes
+
+- Publish the engine package with its Airalogy 0.16 compatibility constraint so downstream applications can upgrade without bypassing dependency resolution.
+
 ## 0.0.6
 
 ### Patch Changes
