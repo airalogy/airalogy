@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.25.1
+
+### Patch Changes
+
+- e003091: Export ResourceRef type detection and configuration helpers from the public composables API so host applications can reuse the recorder's canonical field dispatch.
+
 ## 1.25.0
 
 ### Minor Changes
