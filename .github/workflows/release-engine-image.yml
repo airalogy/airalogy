@@ -73,10 +73,17 @@ jobs:
           IMAGE: ghcr.io/airalogy/airalogy-engine@${{ steps.build.outputs.digest }}
           EXPECTED_VERSION: ${{ steps.release.outputs.version }}
         run: |
-          for platform in linux/amd64 linux/arm64; do
+          manifest=$(docker buildx imagetools inspect "$IMAGE" --raw)
+          for architecture in amd64 arm64; do
+            platform="linux/$architecture"
+            platform_digest=$(jq -r \
+              --arg architecture "$architecture" \
+              '.manifests[] | select(.platform.os == "linux" and .platform.architecture == $architecture) | .digest' \
+              <<< "$manifest")
+            test -n "$platform_digest"
             docker run --rm --platform "$platform" \
               --env EXPECTED_VERSION \
-              "$IMAGE" \
+              "ghcr.io/airalogy/airalogy-engine@$platform_digest" \
               python -c 'import importlib.metadata as m; import os; import numpy; import pandas; assert m.version("airalogy") == os.environ["EXPECTED_VERSION"]'
           done
 
