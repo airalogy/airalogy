@@ -26,7 +26,7 @@ Engine 会在 BoxLite sandbox 中运行协议代码。可以使用远程 Docker 
 
 ```typescript
 const result = await parseProtocol(protocolPath, undefined, {
-  image: "numbcoder/airalogy-engine:0.1",
+  image: "ghcr.io/airalogy/airalogy-engine:0.16.0",
 });
 ```
 
@@ -54,7 +54,7 @@ const result = await parseProtocol(protocolPath, undefined, {
 });
 ```
 
-> 如果没有提供 `image` 或 `rootfsPath`，engine 会回退到默认远程镜像 `numbcoder/airalogy-engine:0.1`。
+> 如果没有提供 `image` 或 `rootfsPath`，engine 会回退到官方的版本化多架构镜像 `ghcr.io/airalogy/airalogy-engine:0.16.0`。
 
 ## 使用
 
@@ -149,7 +149,7 @@ interface ProtocolResult {
 
 | 参数 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `image` | `string` | `"numbcoder/airalogy-engine:0.1"` | 远程 Docker 镜像名 |
+| `image` | `string` | `"ghcr.io/airalogy/airalogy-engine:0.16.0"` | 远程 Docker 镜像名 |
 | `rootfsPath` | `string` | - | 本地 OCI rootfs 目录路径，会覆盖 `image` |
 | `timeout` | `number` | `300` | 执行超时时间，单位秒 |
 | `memoryMib` | `number` | `512` | 内存限制，单位 MiB |
@@ -185,5 +185,5 @@ pnpm test
 SANDBOX_MODE=rootfs ROOTFS_PATH=../../runtime/airalogy-engine-image/airalogy-engine-image pnpm test
 
 # 使用自定义远程镜像
-SANDBOX_IMAGE=numbcoder/airalogy-engine:0.1 pnpm test
+SANDBOX_IMAGE=ghcr.io/airalogy/airalogy-engine:0.16.0 pnpm test
 ```

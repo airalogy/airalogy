@@ -20,7 +20,7 @@ const defaultRootfsPath = path.join(
   monorepoRoot,
   'packages/runtime/airalogy-engine-image/airalogy-engine-image',
 )
-const defaultImage = 'numbcoder/airalogy-engine:0.1'
+const defaultImage = 'ghcr.io/airalogy/airalogy-engine:0.16.0'
 const port = Number(process.env.PORT ?? process.env.PROTOCOL_DEMO_PORT ?? 5190)
 const isDev = process.argv.includes('--dev') || !process.argv.includes('--prod')
 const jsonLimitBytes = 1_000_000

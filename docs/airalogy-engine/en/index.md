@@ -38,6 +38,8 @@ apps/protocol-demo/              # Local engine-backed demo
 
 ## Sandbox Image
 
+The official sandbox image is published as `ghcr.io/airalogy/airalogy-engine:0.16.0` for both `linux/amd64` and `linux/arm64`. Production deployments should pin the multi-architecture manifest digest from the matching GitHub Release rather than relying on `latest`.
+
 Build the shared sandbox image from the runtime package:
 
 ```bash

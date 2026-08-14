@@ -26,7 +26,7 @@ The engine runs protocol code in a BoxLite sandbox. You can use either a **remot
 
 ```typescript
 const result = await parseProtocol(protocolPath, undefined, {
-  image: "numbcoder/airalogy-engine:0.1",
+  image: "ghcr.io/airalogy/airalogy-engine:0.16.0",
 });
 ```
 
@@ -54,7 +54,7 @@ const result = await parseProtocol(protocolPath, undefined, {
 });
 ```
 
-> If neither `image` nor `rootfsPath` is provided, the engine falls back to the default remote image `numbcoder/airalogy-engine:0.1`.
+> If neither `image` nor `rootfsPath` is provided, the engine falls back to the versioned official multi-architecture image `ghcr.io/airalogy/airalogy-engine:0.16.0`.
 
 ## Usage
 
@@ -153,7 +153,7 @@ All functions accept a `SandboxOptions` object:
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `image` | `string` | `"numbcoder/airalogy-engine:0.1"` | Remote Docker image name |
+| `image` | `string` | `"ghcr.io/airalogy/airalogy-engine:0.16.0"` | Remote Docker image name |
 | `rootfsPath` | `string` | — | Path to a local OCI rootfs directory (overrides `image`) |
 | `timeout` | `number` | `300` | Execution timeout in seconds. The sandboxed process will be killed once it times out|
 | `memoryMib` | `number` | `512` | Memory limit in MiB |
@@ -198,5 +198,5 @@ pnpm test
 SANDBOX_MODE=rootfs ROOTFS_PATH=../../runtime/airalogy-engine-image/airalogy-engine-image pnpm test
 
 # Custom remote image
-SANDBOX_IMAGE=numbcoder/airalogy-engine:0.1 pnpm test
+SANDBOX_IMAGE=ghcr.io/airalogy/airalogy-engine:0.16.0 pnpm test
 ```
