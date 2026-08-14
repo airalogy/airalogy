@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.9
+
+### Patch Changes
+
+- bfc2add: Use the versioned official multi-architecture Airalogy Engine image from GHCR by default instead of legacy architecture-specific Docker Hub tags.
+
 ## 0.0.8
 
 ### Patch Changes

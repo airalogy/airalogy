@@ -1,5 +1,12 @@
 # @airalogy/protocol-demo
 
+## 0.0.19
+
+### Patch Changes
+
+- Updated dependencies [bfc2add]
+  - @airalogy/airalogy-engine@0.0.5
+
 ## 0.0.18
 
 ### Patch Changes
