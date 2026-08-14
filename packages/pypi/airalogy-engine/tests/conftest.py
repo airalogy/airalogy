@@ -12,7 +12,7 @@ _DEFAULT_ROOTFS_PATH = str(
     _MONOREPO_ROOT / "packages/runtime/airalogy-engine-image/airalogy-engine-image"
 )
 _EXAMPLE_PROTOCOL = str(_MONOREPO_ROOT / "examples/airalogy-engine")
-_DEFAULT_IMAGE = "numbcoder/airalogy-engine:latest"
+_DEFAULT_IMAGE = "ghcr.io/airalogy/airalogy-engine:0.16.0"
 
 
 def pytest_addoption(parser):

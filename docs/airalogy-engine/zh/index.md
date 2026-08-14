@@ -38,6 +38,8 @@ apps/protocol-demo/              # 基于本地 engine 的 demo
 
 ## Sandbox 镜像
 
+官方 sandbox 镜像以 `ghcr.io/airalogy/airalogy-engine:0.16.0` 发布，同时支持 `linux/amd64` 和 `linux/arm64`。生产部署应固定使用对应 GitHub Release 中的多架构 manifest digest，不应仅依赖 `latest`。
+
 从 runtime 包构建共享 sandbox 镜像：
 
 ```bash

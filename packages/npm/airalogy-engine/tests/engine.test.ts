@@ -29,7 +29,7 @@ const RUN_SANDBOX_TESTS =
   (SANDBOX_TEST_MODE !== "0" && fs.existsSync(path.join(DEFAULT_ROOTFS_PATH, "oci-layout")));
 const itSandbox = RUN_SANDBOX_TESTS ? it : it.skip;
 const describeSandbox = RUN_SANDBOX_TESTS ? describe : describe.skip;
-const DEFAULT_IMAGE = "numbcoder/airalogy-engine:0.1";
+const DEFAULT_IMAGE = "ghcr.io/airalogy/airalogy-engine:0.16.0";
 const ENDPOINT = "https://api.example.test";
 const VALID_VARIABLES = {
   seconds: "60",

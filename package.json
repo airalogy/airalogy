@@ -17,6 +17,7 @@
     "changeset:status": "changeset status --verbose",
     "changeset:version": "changeset version && pnpm sync:python-versions && pnpm lock:python",
     "check:python-versions": "node scripts/release/sync-python-versions.mjs --check",
+    "check:engine-image-release": "node scripts/airalogy-engine/check-image-release.mjs",
     "dev": "pnpm --filter './packages/npm/*' -r --parallel --if-present dev",
     "dev:demo": "pnpm --filter @airalogy/aimd-demo dev",
     "dev:aira-reader": "pnpm --filter @airalogy/aira-reader dev",

@@ -22,7 +22,7 @@ from airalogy_engine import AiralogyEngine
 
 engine = AiralogyEngine(
     protocol_path="/path/to/your/protocol",
-    image="numbcoder/airalogy-engine:latest",
+    image="ghcr.io/airalogy/airalogy-engine:0.16.0",
 )
 result = await engine.parse_protocol()
 ```
@@ -51,7 +51,7 @@ engine = AiralogyEngine(
 result = await engine.parse_protocol()
 ```
 
-> If neither `image` nor `rootfs_path` is provided, the engine falls back to the default remote image `numbcoder/airalogy-engine:latest`.
+> If neither `image` nor `rootfs_path` is provided, the engine falls back to the versioned official multi-architecture image `ghcr.io/airalogy/airalogy-engine:0.16.0`.
 
 ## Usage
 
@@ -172,7 +172,7 @@ All engine methods are `async` and return a `dict` with `success`, `message`, an
 **Engine parameters**:
 - `protocol_path`: Protocol package directory. It must contain `protocol.aimd` and is mounted writable at `/home/airalogy/protocols/protocol` inside the sandbox.
 - `boxlite_home`: BoxLite runtime home directory. Use a distinct value for each OS process when running multiple workers.
-- `image`: Remote Docker image name (e.g., `"numbcoder/airalogy-engine:0.1"`).
+- `image`: Remote Docker image name (e.g., `"ghcr.io/airalogy/airalogy-engine:0.16.0"`).
 - `rootfs_path`: Path to a local OCI rootfs directory (overrides `image`).
 - `timeout`: Execution timeout in seconds (default: 300). The sandboxed process will be killed once it times out.
 - `memory_mib`: Memory limit in MiB (default: 512).
@@ -214,5 +214,5 @@ uv run pytest tests/ -v
 uv run pytest tests/ -v --sandbox-mode=rootfs --rootfs-path=../../runtime/airalogy-engine-image/airalogy-engine-image
 
 # Remote image mode
-uv run pytest tests/ -v --sandbox-mode=image --sandbox-image=numbcoder/airalogy-engine:latest
+uv run pytest tests/ -v --sandbox-mode=image --sandbox-image=ghcr.io/airalogy/airalogy-engine:0.16.0
 ```
