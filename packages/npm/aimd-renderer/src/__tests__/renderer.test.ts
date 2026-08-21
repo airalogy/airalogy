@@ -577,6 +577,27 @@ describe('renderToHtmlSync', () => {
     expect(html).toContain('data-aimd-ref-kind="step"')
   })
 
+  it('previews anonymous draft figures without assigning an ID or figure number', () => {
+    const { html, fields } = renderToHtmlSync([
+      '```fig',
+      'src: files/draft-chart.png',
+      'title: Draft Chart',
+      'legend: Visible while the figure ID is still missing.',
+      '```',
+    ].join('\n'), {
+      allowDraftFigures: true,
+    })
+
+    expect(html).toContain('<figure class="aimd-figure"')
+    expect(html).toContain('src="files/draft-chart.png"')
+    expect(html).toContain('Draft Chart')
+    expect(html).toContain('Visible while the figure ID is still missing.')
+    expect(html).not.toContain('id="fig-')
+    expect(html).not.toContain('data-aimd-fig-id')
+    expect(html).not.toContain('Figure 1')
+    expect(fields.fig).toEqual([])
+  })
+
   it('styles rendered figures as attached image-caption blocks', () => {
     expect(rendererStyles).toMatch(/\.aimd-figure \{[\s\S]*?width: fit-content;/)
     expect(rendererStyles).toMatch(/\.aimd-figure \{[\s\S]*?overflow: hidden;/)

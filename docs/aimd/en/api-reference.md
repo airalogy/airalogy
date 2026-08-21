@@ -461,12 +461,15 @@ import {
 ```ts
 interface AimdRendererOptions extends ProcessorOptions {
   assignerVisibility?: "hidden" | "collapsed" | "expanded"
+  allowDraftFigures?: boolean
   aimdElementRenderers?: Partial<Record<AimdFieldType, AimdHtmlNodeRenderer>>
   groupStepBodies?: boolean
   locale?: AimdRendererLocale
   messages?: AimdRendererMessagesInput
 }
 ```
+
+`allowDraftFigures` defaults to `false`. Authoring previews can enable it to display complete figures that have `src` but no `id`; those anonymous drafts receive no figure number, reference target, or temporary ID and are excluded from `fields.fig`.
 
 `createCustomElementAimdRenderer(tagName, mapProperties?, options?)` builds an HTML-node renderer that maps AIMD elements into host custom elements while preserving default AIMD metadata.
 

@@ -137,8 +137,10 @@ answer: true
 import {
   parseConnectorsContent,
   parseCollectorsContent,
+  parseFigContent,
   parseVarDefinition,
   validateClientAssignerFunctionSource,
+  validateFigDefinitions,
   validateVarDefinition,
   validateVarDefaultType,
   validateVarKwargs,
@@ -150,6 +152,8 @@ import {
 如果工具需要在完整 remark pipeline 之外单独校验 fenced `connectors` 代码块的 YAML body，可以使用 `parseConnectorsContent()`。该 parser 只读取 metadata，不会拉取 descriptor、不调用 endpoint，也不会读取环境 secret。
 
 使用 `parseCollectorsContent()` 可以单独校验和归一化 fenced `collectors` YAML body。完整 `remarkAimd` 解析还会额外校验 Collector 与 connector、生命周期 step 以及 Collector 与 var 的引用关系。
+
+使用 `parseFigContent()` 解析单个正式 fenced `fig` body，它要求 `id` 和 `src` 都为非空。`parseDraftFigContent()` 是显式的编辑预览 parser：它要求 `src`，允许缺少 `id`，但绝不自动生成 ID。使用 `validateFigDefinitions()` 可在发布或其他正式输出前拒绝必填字段缺失和重复图片 ID。面向草稿的编辑器可以保持宽松，只在显式正式保存时执行该校验。
 
 ## Entity Connector 工具
 

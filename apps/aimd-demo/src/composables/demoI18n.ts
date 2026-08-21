@@ -154,6 +154,7 @@ export interface DemoMessages {
       uploadSkipped: string
       downloadCompleteAimd: string
       downloadCompleteAira: string
+      figureIdsGenerated: (count: number) => string
       downloadFailed: string
     }
     renderer: {
@@ -359,6 +360,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         uploadSkipped: 'No image file was selected.',
         downloadCompleteAimd: 'Downloaded .aimd',
         downloadCompleteAira: 'Downloaded .aira',
+        figureIdsGenerated: count => `Generated and wrote IDs for ${count} ${count === 1 ? 'figure' : 'figures'}.`,
         downloadFailed: 'Download failed',
       },
       renderer: {
@@ -562,6 +564,7 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         uploadSkipped: '未选择图片文件。',
         downloadCompleteAimd: '已下载 .aimd',
         downloadCompleteAira: '已下载 .aira',
+        figureIdsGenerated: count => `已为 ${count} 张图片生成并写入 ID。`,
         downloadFailed: '下载失败',
       },
       renderer: {

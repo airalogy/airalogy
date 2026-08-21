@@ -1,4 +1,4 @@
-import type { AimdClientAssignerField, AimdMediaField, AimdReferenceField } from "../types/aimd"
+import type { AimdClientAssignerField, AimdFigField, AimdMediaField, AimdReferenceField } from "../types/aimd"
 import type { AimdStepNode, AimdStepTimerMode, AimdVarDefinition } from "../types/nodes"
 import { getAimdBuiltInTypeEnumValues } from "../utils/field-metadata"
 export { validateClientAssigners } from "./assigner-graph"
@@ -1188,6 +1188,63 @@ export function parseFigContent(content: string): {
     title: result.title,
     legend: result.legend,
   }
+}
+
+/**
+ * Parse a complete figure block for draft preview without inventing an ID.
+ * Formal parsing must continue to use parseFigContent().
+ */
+export function parseDraftFigContent(content: string): {
+  id?: string
+  src: string
+  title?: string
+  legend?: string
+} {
+  const result = parseBlockScalarFields(content)
+
+  if (!result.src) {
+    throw new Error("draft fig block must have a \"src\" field")
+  }
+
+  return {
+    id: result.id || undefined,
+    src: result.src,
+    title: result.title,
+    legend: result.legend,
+  }
+}
+
+/**
+ * Validate figure definitions before publishing or other formal output.
+ * Draft-oriented renderers may remain permissive while authors are editing.
+ */
+export function validateFigDefinitions(
+  figures: Array<Partial<Pick<AimdFigField, "id" | "src">>>,
+): string[] {
+  const errors: string[] = []
+  const seenIds = new Set<string>()
+
+  for (const [index, figure] of figures.entries()) {
+    const id = figure.id?.trim() ?? ""
+    const src = figure.src?.trim() ?? ""
+    const label = id ? `fig "${id}"` : `fig block ${index + 1}`
+
+    if (!id) {
+      errors.push(`${label}: missing required "id" field`)
+    }
+    else if (seenIds.has(id)) {
+      errors.push(`fig "${id}": duplicate id`)
+    }
+    else {
+      seenIds.add(id)
+    }
+
+    if (!src) {
+      errors.push(`${label}: missing required "src" field`)
+    }
+  }
+
+  return errors
 }
 
 export const AIMD_STANDARD_MEDIA_KINDS = ["video", "audio", "file"] as const

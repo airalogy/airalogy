@@ -35,6 +35,11 @@ export {
   type ProtectedAimdInlineTemplates,
 } from './parser'
 export { DOM_ATTR_NAME, type DomAttrName } from './parser/constants'
+export {
+  parseDraftFigContent,
+  parseFigContent,
+  validateFigDefinitions,
+} from './parser/field-parsers'
 
 // Type exports
 export type {

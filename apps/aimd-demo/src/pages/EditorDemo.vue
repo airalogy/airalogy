@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type VNode } from 'vue'
 import {
-  createProtocolAiraArchive,
   openAiraArchive,
   openZipArchive,
   type AiraArchive,
@@ -10,7 +9,12 @@ import {
   type AiraRecordManifest,
   type ZipArchive,
 } from '@airalogy/aira-core'
-import { AimdEditor, type AimdEditorImageRequest } from '@airalogy/aimd-editor'
+import {
+  AimdEditor,
+  collectAimdFigureIds,
+  createAimdFigureId,
+  type AimdEditorImageRequest,
+} from '@airalogy/aimd-editor'
 import {
   collectAimdRecordFieldRefs,
   filterAimdRecords,
@@ -39,6 +43,7 @@ import {
   useDemoExampleContent,
 } from '../composables/sampleContent'
 import { demoResourceResolvers } from '../composables/demoResourceResolvers'
+import { createEditorProtocolDownload } from '../composables/editorProtocolDownload'
 import '@airalogy/aimd-renderer/styles'
 import '@airalogy/aimd-recorder/styles'
 
@@ -184,6 +189,7 @@ const protocolFilesExpanded = ref(false)
 const activeTemplateExampleId = ref<string | null>(null)
 const activeTemplateLocale = ref<DemoLocale>(locale.value)
 const archiveStatus = ref('')
+const generatedFigureIdCount = ref(0)
 const importedRecordOptions = ref<ImportedRecordOption[]>([])
 const selectedImportedRecordId = ref('')
 const importedRecordFilterQuery = ref('')
@@ -212,6 +218,7 @@ const figurePopoverPosition = ref({ top: 120, left: 24 })
 let uploadedFigureSerial = 1
 let previewRenderSerial = 0
 let draftSaveTimer: ReturnType<typeof setTimeout> | null = null
+let generatedFigureIdNoticeTimer: ReturnType<typeof setTimeout> | null = null
 let isDraftReady = false
 let isRestoringDraft = false
 
@@ -293,11 +300,17 @@ const importedRecordFilterToggleLabel = computed(() => {
 const isImportedRecordFilterActive = computed(() => importedRecordFilterQuery.value.trim().length > 0)
 const showImportedRecordFilterPanel = computed(() => importedRecordCount.value > 1 && importedRecordFilterExpanded.value)
 const protocolFileTotalSize = computed(() => protocolFiles.value.reduce((total, file) => total + file.file.size, 0))
-const archiveStatusLabel = computed(() => archiveStatus.value || messages.value.pages.editor.ready)
+const generatedFigureIdNotice = computed(() => (
+  generatedFigureIdCount.value > 0
+    ? messages.value.pages.editor.figureIdsGenerated(generatedFigureIdCount.value)
+    : ''
+))
+const archiveStatusLabel = computed(() => generatedFigureIdNotice.value || archiveStatus.value || messages.value.pages.editor.ready)
 const archiveStatusDisplayLabel = computed(() => (
-  importedRecordCount.value > 1
+  generatedFigureIdNotice.value
+  || (importedRecordCount.value > 1
     ? messages.value.pages.editor.packageImportedRecordCount(importedRecordCount.value)
-    : archiveStatusLabel.value
+    : archiveStatusLabel.value)
 ))
 const figurePopoverStyle = computed(() => ({
   top: `${figurePopoverPosition.value.top}px`,
@@ -584,6 +597,7 @@ async function renderPreview() {
     const result = await renderToVue(content.value, {
       locale: locale.value,
       assignerVisibility: 'collapsed',
+      allowDraftFigures: true,
       resolveAssetUrl: resolvePreviewAssetUrl,
     })
     if (renderSerial === previewRenderSerial) {
@@ -821,41 +835,24 @@ function getImportedRecordLabel(record: AiraRecordManifest, payload: AiralogyRec
   return version === undefined || version === null ? id : `${id} v${version}`
 }
 
-function makeFigureId(baseName: string, index: number): string {
-  const id = baseName
-    .replace(/[^A-Za-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .toLowerCase()
-  return id || `uploaded_figure_${index}`
-}
-
-function isFigureIdUsed(id: string): boolean {
-  return protocolFiles.value.some(item => item.id === id) || insertedFigureIds.value.includes(id)
-}
-
-function makeUniqueFigureId(baseName: string, index: number): string {
-  const idBaseName = makeFigureId(baseName, index)
-  let id = idBaseName
-  let suffix = 2
-  while (isFigureIdUsed(id)) {
-    id = `${idBaseName}_${suffix}`
-    suffix += 1
-  }
-  return id
+function getUsedFigureIds(): string[] {
+  return [
+    ...collectAimdFigureIds(content.value),
+    ...protocolFiles.value.map(item => item.id),
+    ...insertedFigureIds.value,
+  ]
 }
 
 function getUniqueFigureIdentity(file: File, index: number): Pick<ProtocolFigureFile, 'id' | 'index' | 'path'> {
   const extension = getImageExtension(file)
   const baseName = makeResourceBaseName(getFileStem(file.name), `uploaded-figure-${index}`)
-  const idBaseName = makeFigureId(baseName, index)
   let path = `files/${baseName}.${extension}`
-  let id = idBaseName
   let suffix = 2
-  while (protocolFiles.value.some(item => item.path === path) || isFigureIdUsed(id)) {
+  while (protocolFiles.value.some(item => item.path === path)) {
     path = `files/${baseName}-${suffix}.${extension}`
-    id = `${idBaseName}_${suffix}`
     suffix += 1
   }
+  const id = createAimdFigureId(path, getUsedFigureIds())
   return { id, index, path }
 }
 
@@ -877,9 +874,8 @@ function createImportedProtocolFile(path: string, bytes: Uint8Array, index: numb
     type: inferImageMimeType(path),
     lastModified: Date.now(),
   })
-  const baseName = makeResourceBaseName(getFileStem(fileName), `imported-figure-${index}`)
   return {
-    id: makeUniqueFigureId(baseName, index),
+    id: createAimdFigureId(path, getUsedFigureIds()),
     index,
     title: fileName,
     path,
@@ -1321,16 +1317,6 @@ function insertLocalFigure() {
   archiveStatus.value = messages.value.pages.editor.figureInserted
 }
 
-function getRemoteFigureBaseName(url: URL, index: number): string {
-  const lastPathSegment = url.pathname.split('/').filter(Boolean).pop() || url.hostname || ''
-  let decodedSegment = lastPathSegment
-  try {
-    decodedSegment = decodeURIComponent(lastPathSegment)
-  }
-  catch {}
-  return makeResourceBaseName(getFileStem(decodedSegment), `remote-figure-${index}`)
-}
-
 function insertRemoteFigure() {
   figureInsertError.value = ''
   const src = remoteFigureUrl.value.trim()
@@ -1347,10 +1333,8 @@ function insertRemoteFigure() {
     return
   }
 
-  const index = uploadedFigureSerial
   uploadedFigureSerial += 1
-  const baseName = getRemoteFigureBaseName(parsedUrl, index)
-  const id = makeUniqueFigureId(baseName, index)
+  const id = createAimdFigureId(src, getUsedFigureIds())
   insertedFigureIds.value.push(id)
   const metadata = getFigureMetadata()
   insertFigureBlock({
@@ -1385,21 +1369,36 @@ function downloadBlob(parts: BlobPart[], filename: string, type: string) {
   URL.revokeObjectURL(href)
 }
 
+function clearGeneratedFigureIdNotice() {
+  generatedFigureIdCount.value = 0
+  if (generatedFigureIdNoticeTimer) {
+    clearTimeout(generatedFigureIdNoticeTimer)
+    generatedFigureIdNoticeTimer = null
+  }
+}
+
+function showGeneratedFigureIdNotice(count: number) {
+  clearGeneratedFigureIdNotice()
+  if (count <= 0) return
+
+  generatedFigureIdCount.value = count
+  generatedFigureIdNoticeTimer = setTimeout(() => {
+    generatedFigureIdCount.value = 0
+    generatedFigureIdNoticeTimer = null
+  }, 10000)
+}
+
 async function downloadProtocolFile() {
   if (isPackagingArchive.value) return
+  clearGeneratedFigureIdNotice()
   isPackagingArchive.value = true
   archiveStatus.value = messages.value.pages.editor.packagingDownload
   try {
     const protocolName = getProtocolName()
     const filenameStem = slugify(protocolName, 'aimd-protocol')
-    if (protocolFileCount.value === 0) {
-      downloadBlob([content.value], `${filenameStem}.aimd`, 'text/plain;charset=utf-8')
-      archiveStatus.value = messages.value.pages.editor.downloadCompleteAimd
-      return
-    }
-
-    const archiveBytes = await createProtocolAiraArchive({
+    const download = await createEditorProtocolDownload({
       aimd: content.value,
+      filenameStem,
       protocol: {
         protocol_id: slugify(protocolName, selectedExampleId.value || 'aimd-protocol'),
         protocol_name: protocolName,
@@ -1409,8 +1408,15 @@ async function downloadProtocolFile() {
         data: file.file,
       })),
     })
-    downloadBlob([archiveBytes], `${filenameStem}.aira`, 'application/vnd.airalogy.archive+zip')
-    archiveStatus.value = messages.value.pages.editor.downloadCompleteAira
+    if (download.changed) {
+      content.value = download.aimd
+      await nextTick()
+    }
+    downloadBlob([download.data], download.filename, download.mimeType)
+    archiveStatus.value = download.kind === 'aimd'
+      ? messages.value.pages.editor.downloadCompleteAimd
+      : messages.value.pages.editor.downloadCompleteAira
+    showGeneratedFigureIdNotice(download.generatedFigureIds.length)
   }
   catch (error: any) {
     archiveStatus.value = `${messages.value.pages.editor.downloadFailed}: ${error?.message || String(error)}`
@@ -1456,6 +1462,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleDocumentKeydown)
   window.removeEventListener('pagehide', handleEditorPageHide)
   handleEditorPageHide()
+  clearGeneratedFigureIdNotice()
   revokeSelectedLocalFigurePreview()
   revokeProtocolFilePreviews()
 })
@@ -1581,7 +1588,7 @@ onBeforeUnmount(() => {
               accept=".zip,.aira,application/zip,application/vnd.airalogy.archive+zip"
               @change="handlePackageFileSelected"
             >
-            <span class="workspace-panel__status" :title="archiveStatusLabel">{{ archiveStatusDisplayLabel }}</span>
+            <span class="workspace-panel__status" role="status" aria-live="polite" :title="archiveStatusLabel">{{ archiveStatusDisplayLabel }}</span>
             <select
               v-if="importedRecordCount > 1"
               v-model="selectedImportedRecordId"

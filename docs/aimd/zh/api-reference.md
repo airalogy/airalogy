@@ -461,12 +461,15 @@ import {
 ```ts
 interface AimdRendererOptions extends ProcessorOptions {
   assignerVisibility?: "hidden" | "collapsed" | "expanded"
+  allowDraftFigures?: boolean
   aimdElementRenderers?: Partial<Record<AimdFieldType, AimdHtmlNodeRenderer>>
   groupStepBodies?: boolean
   locale?: AimdRendererLocale
   messages?: AimdRendererMessagesInput
 }
 ```
+
+`allowDraftFigures` 默认为 `false`。编辑预览可以启用它，以显示已有 `src` 但暂无 `id` 的完整图片块；这些匿名草稿不会获得图号、引用目标或临时 ID，也不会进入 `fields.fig`。
 
 `createCustomElementAimdRenderer(tagName, mapProperties?, options?)` 可用于构造 HTML 节点 renderer，把 AIMD 元素映射成宿主自定义元素，同时保留默认 AIMD 元数据。
 

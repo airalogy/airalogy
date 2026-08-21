@@ -137,8 +137,10 @@ answer: true
 import {
   parseConnectorsContent,
   parseCollectorsContent,
+  parseFigContent,
   parseVarDefinition,
   validateClientAssignerFunctionSource,
+  validateFigDefinitions,
   validateVarDefinition,
   validateVarDefaultType,
   validateVarKwargs,
@@ -150,6 +152,8 @@ Use `validateClientAssignerFunctionSource()` when host tooling needs to prefligh
 Use `parseConnectorsContent()` when tooling needs to validate the YAML body of a fenced `connectors` block before running a full remark pipeline. The parser reads metadata only; it does not fetch descriptors, call endpoints, or read environment secrets.
 
 Use `parseCollectorsContent()` to validate and normalize one fenced `collectors` YAML body. A full `remarkAimd` parse additionally validates Collector-to-connector, lifecycle-step, and Collector-to-var references.
+
+Use `parseFigContent()` to parse one formal fenced `fig` body; it requires non-empty `id` and `src` fields. `parseDraftFigContent()` is the explicit authoring-preview parser: it requires `src`, allows a missing `id`, and never invents one. Use `validateFigDefinitions()` to reject missing required fields and duplicate figure IDs before publishing or other formal output. Draft-oriented editors can remain permissive and apply this validation only during explicit formal-save actions.
 
 ## Entity Connector Utilities
 

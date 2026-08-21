@@ -81,6 +81,10 @@ const { html } = await renderToHtml(content, {
 
 `assignerVisibility` 默认值是 `"hidden"`。
 
+## 草稿图片预览
+
+在编辑预览中设置 `allowDraftFigures: true`，可以显示已闭合、已有 `src` 但暂无 `id` 的 `fig` 块。这种匿名草稿图片不会进入提取的图片 metadata，也不会获得图号、引用目标或临时 ID。正式解析和发布输出应保持默认值 `false`。
+
 ## 本地化
 
 ```ts

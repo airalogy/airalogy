@@ -23,6 +23,19 @@ monaco.languages.setLanguageConfiguration("aimd", conf)
 monaco.languages.registerCompletionItemProvider("aimd", completionItemProvider)
 ```
 
+## 图片编辑与正式输出
+
+可复用的 authoring 入口会保持草稿编辑宽松，同时使显式保存和导出操作保持严格。`prepareAimdForFormalOutput()` 会为已闭合且已有 `src` 的 `fig` 块生成缺失的 ID，保留已有 ID，拒绝重复 ID 或缺失图片源，并返回必须在下载 `.aimd` 或打包 `.aira` 前写回编辑器的 AIMD 源文本。当 `generated` 非空时，宿主应给出非阻塞提示，明确说明 ID 已生成并写入源文本。
+
+```ts
+import { prepareAimdForFormalOutput } from "@airalogy/aimd-editor/authoring"
+
+const prepared = prepareAimdForFormalOutput(source)
+source = prepared.content
+```
+
+不要在自动草稿保存中调用这个规范化函数。`AimdSourceEditor` 会单独诊断已闭合且缺失 ID 的图片，并提供生成 ID 的快速修复，不会改写未完成的输入。
+
 ## Vue 编辑器 i18n
 
 ```vue
@@ -37,7 +50,7 @@ import { AimdEditor } from "@airalogy/aimd-editor"
 
 也可以通过 `messages` 覆盖内建文案。
 
-Vue 源码编辑器会显示 parser 级语义 warning，包括 AIMD var 默认值与类型不匹配，以及数值约束 kwargs 被用在非数值类型上。
+Vue 源码编辑器会显示 parser 级语义 warning，包括 AIMD var 默认值与类型不匹配，以及数值约束 kwargs 被用在非数值类型上。它还会报告图片 ID 缺失、ID 重复和图片源缺失问题。
 
 如果要做更底层的嵌入式集成，`AimdWysiwygEditor` 现在支持注入自定义 Milkdown plugin 链，`AimdFieldDialog` 也支持通过 `allowedTypes` 限定可插入的 AIMD 字段类型。
 

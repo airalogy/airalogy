@@ -22,6 +22,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - Built-in AIMD prose typography when host applications place rendered output inside an `.aimd-renderer` container, including clearer heading hierarchy, list markers, and more compact body line height.
 - Default Vue pin controls for `video` / `audio` media, including single-item pinning, collapsed pinned descriptions, and small / medium / large pinned-size controls; HTML output exposes matching `data-*` hooks for host-controlled behavior.
 - `assignerVisibility` to show or hide assigner blocks in authoring/debug views.
+- `allowDraftFigures` for authoring previews that need to display complete figures before their IDs are persisted, without creating temporary IDs or reference targets.
 - Fenced `workflow` blocks render as structured Workflow UI with nodes, transitions, workflow-level assigners, assignment mappings, and optional run-state overlays supplied by the host.
 - Built-in quiz preview controls.
 - Built-in locale support via `locale`.

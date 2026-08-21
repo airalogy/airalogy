@@ -22,6 +22,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - 宿主把渲染输出放进 `.aimd-renderer` 容器后，可以使用 renderer 内置的 AIMD 正文排版，包括清晰的标题层级、列表 marker 和更紧凑的正文行距。
 - Vue renderer 会为 `video` / `audio` media 提供默认固定按钮、单媒体互斥固定、固定后说明折叠和小 / 中 / 大固定尺寸控制；HTML 输出包含相同的 `data-*` 钩子，便于宿主接管。
 - `assignerVisibility`：用于作者视图或调试视图下切换 assigner 的可见性。
+- `allowDraftFigures`：在图片 ID 尚未写入源文本时显示完整草稿图片，但不生成临时 ID 或引用目标。
 - fenced `workflow` 代码块会渲染为结构化 Workflow UI，展示节点、transition、workflow 级 assigner、赋值映射，并可叠加宿主传入的运行状态。
 - 内建 quiz 预览控制。
 - 支持通过 `locale` 切换渲染标签语言。

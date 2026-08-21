@@ -23,6 +23,19 @@ monaco.languages.setLanguageConfiguration("aimd", conf)
 monaco.languages.registerCompletionItemProvider("aimd", completionItemProvider)
 ```
 
+## Figure Authoring And Formal Output
+
+The reusable authoring entry keeps draft editing permissive while making explicit save and export operations strict. `prepareAimdForFormalOutput()` generates missing IDs for closed `fig` blocks that already have `src`, preserves existing IDs, rejects duplicate IDs or missing sources, and returns the AIMD source that must be written back before downloading `.aimd` or packaging `.aira`. When `generated` is non-empty, hosts should show a non-blocking notice that IDs were generated and written into the source.
+
+```ts
+import { prepareAimdForFormalOutput } from "@airalogy/aimd-editor/authoring"
+
+const prepared = prepareAimdForFormalOutput(source)
+source = prepared.content
+```
+
+Do not call this normalizer from automatic draft saving. `AimdSourceEditor` separately diagnoses closed figures with missing IDs and offers a generate-ID quick fix without rewriting incomplete input.
+
 ## Vue Editor i18n
 
 ```vue
@@ -37,7 +50,7 @@ import { AimdEditor } from "@airalogy/aimd-editor"
 
 Use `messages` to override built-in copy per locale.
 
-The Vue source editor surfaces parser-level semantic warnings for AIMD var definitions, including default/type mismatches and numeric constraint kwargs used on non-numeric types.
+The Vue source editor surfaces parser-level semantic warnings for AIMD var definitions, including default/type mismatches and numeric constraint kwargs used on non-numeric types. It also reports missing or duplicate figure IDs and missing figure sources.
 
 For advanced embedding, the low-level `AimdWysiwygEditor` now accepts a custom Milkdown plugin chain, and `AimdFieldDialog` can be limited to a focused subset of AIMD field kinds with `allowedTypes`.
 

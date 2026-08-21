@@ -979,9 +979,13 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
     return h("figure", {
       "class": "aimd-figure",
       "data-aimd-type": "fig",
-      "data-aimd-fig-id": figId,
       "data-aimd-fig-src": figSrc,
-      "id": `fig-${figId}`,
+      ...(figId
+        ? {
+            "data-aimd-fig-id": figId,
+            "id": `fig-${figId}`,
+          }
+        : {}),
     }, children)
   },
 

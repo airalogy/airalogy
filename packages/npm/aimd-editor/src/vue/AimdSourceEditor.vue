@@ -30,6 +30,7 @@ const editorContainer = ref<HTMLElement | null>(null)
 
 let monacoEditorInstance: any = null
 let monacoModule: any = null
+let aimdCodeActionProviderDisposable: any = null
 let isSyncing = false
 const loading = ref(true)
 
@@ -217,7 +218,7 @@ function updateAimdDiagnostics() {
   const model = monacoEditorInstance.getModel()
   if (!model) return
 
-  const markers = collectAimdDiagnostics(model.getValue()).map((diagnostic) => {
+  const markers = collectAimdDiagnostics(model.getValue(), props.resolvedMessages.diagnostics).map((diagnostic) => {
     const start = model.getPositionAt(diagnostic.startOffset)
     const end = model.getPositionAt(diagnostic.endOffset)
     return {
@@ -225,6 +226,7 @@ function updateAimdDiagnostics() {
         ? monacoModule.MarkerSeverity.Error
         : monacoModule.MarkerSeverity.Warning,
       message: diagnostic.message,
+      code: diagnostic.code,
       source: 'AIMD',
       startLineNumber: start.lineNumber,
       startColumn: start.column,
@@ -234,6 +236,65 @@ function updateAimdDiagnostics() {
   })
 
   monacoModule.editor.setModelMarkers(model, AIMD_DIAGNOSTIC_OWNER, markers)
+}
+
+function rangesOverlap(startOffset: number, endOffset: number, rangeStart: number, rangeEnd: number): boolean {
+  return startOffset <= rangeEnd && endOffset >= rangeStart
+}
+
+function registerAimdCodeActions(monaco: any) {
+  aimdCodeActionProviderDisposable?.dispose()
+  aimdCodeActionProviderDisposable = monaco.languages.registerCodeActionProvider('aimd', {
+    provideCodeActions(model: any, range: any, context: any) {
+      if (props.readonly || model !== monacoEditorInstance?.getModel()) {
+        return { actions: [], dispose() {} }
+      }
+
+      const rangeStart = model.getOffsetAt({
+        lineNumber: range.startLineNumber,
+        column: range.startColumn,
+      })
+      const rangeEnd = model.getOffsetAt({
+        lineNumber: range.endLineNumber,
+        column: range.endColumn,
+      })
+      const actions = collectAimdDiagnostics(model.getValue(), props.resolvedMessages.diagnostics)
+        .filter(diagnostic => diagnostic.quickFix && rangesOverlap(
+          diagnostic.startOffset,
+          diagnostic.endOffset,
+          rangeStart,
+          rangeEnd,
+        ))
+        .map((diagnostic) => {
+          const edit = diagnostic.quickFix!.edit
+          const editStart = model.getPositionAt(edit.startOffset)
+          const editEnd = model.getPositionAt(edit.endOffset)
+          return {
+            title: diagnostic.quickFix!.title,
+            kind: 'quickfix',
+            isPreferred: true,
+            diagnostics: context.markers.filter((marker: any) => marker.code === diagnostic.code),
+            edit: {
+              edits: [{
+                resource: model.uri,
+                textEdit: {
+                  range: {
+                    startLineNumber: editStart.lineNumber,
+                    startColumn: editStart.column,
+                    endLineNumber: editEnd.lineNumber,
+                    endColumn: editEnd.column,
+                  },
+                  text: edit.text,
+                },
+                versionId: model.getVersionId(),
+              }],
+            },
+          }
+        })
+
+      return { actions, dispose() {} }
+    },
+  })
 }
 
 function clearAimdDiagnostics() {
@@ -267,6 +328,7 @@ function createEditor(monaco: any) {
     readOnly: props.readonly,
     ...safeMonacoOptions,
   })
+  registerAimdCodeActions(monaco)
   monacoEditorInstance.onDidChangeModelContent(() => {
     updateAimdDiagnostics()
     if (!isSyncing) {
@@ -292,6 +354,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearAimdDiagnostics()
+  aimdCodeActionProviderDisposable?.dispose()
   monacoEditorInstance?.dispose()
 })
 

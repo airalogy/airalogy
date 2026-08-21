@@ -8,14 +8,14 @@ In AIMD, you can insert images by using a `fig` code block. For example:
 
 ````aimd
 ```fig
-id: fig_1  # The figure’s unique ID in the document (short ID)
-src: files/images/example.png # Path to the image file
-title: Example Figure # Optional but recommended
-legend: This is an example figure legend. # Optional but recommended
+id: fig_1
+src: files/images/example.png
+title: Example Figure
+legend: This is an example figure legend.
 ```
 ````
 
-The example above uses a local file `files/images/example.png` as the image source. You can also use an online URL as the source, for example:
+`id` and `src` are required. The `id` must be unique within the document and acts as the figure's stable identity for references, numbering, navigation, deduplication, editor positioning, and later structured processing. `title` and `legend` are optional but recommended. The example above uses a local file `files/images/example.png` as the image source. You can also use an online URL as the source, for example:
 
 ````aimd
 ```fig
@@ -42,6 +42,7 @@ The `fig` code block body is a key-value mapping compatible with YAML. If `legen
 ````aimd
 ```fig
 id: fig_2
+src: files/images/multi-line-example.png
 title: Multi-line Figure Example   
 legend: |
   This is a figure legend that spans multiple lines.
@@ -49,6 +50,14 @@ legend: |
   Third line.
 ```
 ````
+
+## Figure IDs During Authoring
+
+Official editors generate a readable `id` when a figure is inserted, usually from its `src` filename. For example, `src: images/lab-team.jpeg` produces `id: lab_team`. Generated IDs contain letters, numbers, and underscores, avoid document-level conflicts, are written into the AIMD source, and remain editable.
+
+Draft editing remains permissive. An unfinished `fig` block is not rewritten by automatic draft saving. Once a closed `fig` block has `src` but no non-empty `id`, the source editor reports a diagnostic and offers a generate-ID quick fix. The official editor can still show that image in draft preview, but it does not assign a figure number, reference target, or temporary ID until the ID is persisted in the source.
+
+Before an official editor downloads `.aimd`, packages `.aira`, or performs another explicit formal-save action, it normalizes all closed `fig` blocks. Missing IDs are generated and written back to the editor source before output is created. Existing non-empty IDs are never rewritten automatically; duplicate IDs or missing `src` fields must be corrected before formal output. Renderers do not invent temporary figure IDs.
 
 ### Referencing Figures
 

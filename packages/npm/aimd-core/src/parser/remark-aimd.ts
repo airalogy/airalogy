@@ -28,6 +28,7 @@ import {
   isVarTable,
   parseClientAssignerContent,
   parseCheckContent,
+  parseDraftFigContent,
   parseFenceMeta,
   parseFigContent,
   parseMediaContent,
@@ -366,6 +367,8 @@ export interface RemarkAimdOptions {
   collectorContext?: AimdCollectorValidationContext
   /** Protocol metadata used for kind-specific publishing validation. */
   protocolMetadata?: AimdProtocolMetadata
+  /** Render complete figures with a source but no ID while editing a draft. */
+  allowDraftFigures?: boolean
 }
 
 /**
@@ -473,12 +476,14 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
 
       if (lang === "fig") {
         try {
-          const figData = parseFigContent(node.value)
+          const figData = options.allowDraftFigures
+            ? parseDraftFigContent(node.value)
+            : parseFigContent(node.value)
 
           const figNode: AimdFigNode = {
             type: "aimd",
             fieldType: "fig",
-            id: figData.id,
+            id: figData.id ?? "",
             scope: "fig",
             raw: node.value,
             src: figData.src,
@@ -488,7 +493,7 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
 
           parent.children[index] = figNode as any
 
-          if (extractFields && fields.fig) {
+          if (extractFields && fields.fig && figData.id) {
             const existingFig = fields.fig.find(f => f.id === figData.id)
             if (!existingFig) {
               fields.fig.push({

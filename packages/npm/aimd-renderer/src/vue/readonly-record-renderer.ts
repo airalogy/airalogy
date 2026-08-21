@@ -644,9 +644,13 @@ function createFigRenderer(resolveRecordAsset?: ReadonlyRecordAssetResolver): Ai
     return h('figure', {
       class: 'aimd-figure',
       'data-aimd-type': 'fig',
-      'data-aimd-fig-id': figId,
       'data-aimd-fig-src': figSrc,
-      id: `fig-${figId}`,
+      ...(figId
+        ? {
+            'data-aimd-fig-id': figId,
+            id: `fig-${figId}`,
+          }
+        : {}),
     }, [
       h('img', {
         class: 'aimd-figure__image',

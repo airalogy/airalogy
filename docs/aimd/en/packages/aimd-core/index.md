@@ -141,9 +141,12 @@ If your editor, linter, or import pipeline needs parser-level validation before 
 
 ```ts
 import {
+  parseDraftFigContent,
+  parseFigContent,
   parseMediaContent,
   parseVarDefinition,
   validateClientAssignerFunctionSource,
+  validateFigDefinitions,
   validateMediaDefinition,
   validateVarDefinition,
   validateVarDefaultType,
@@ -152,6 +155,9 @@ import {
 ```
 
 - `validateClientAssignerFunctionSource(functionSource, id)` rejects unsafe or unsupported frontend `client_assigner` code such as `eval`, `window`, `fetch`, Unicode-escape bypasses, and other non-deterministic constructs.
+- `parseDraftFigContent(content)` parses an authoring-preview figure with `src` but no `id` without inventing a temporary ID.
+- `parseFigContent(content)` parses a formal fenced `fig` body and requires non-empty `id` and `src` fields.
+- `validateFigDefinitions(figures)` reports missing required fields and duplicate figure IDs before publishing or other formal output.
 - `parseMediaContent(content)` parses key-value content from a fenced `media` block and preserves the raw `kind`.
 - `validateMediaDefinition(media)` reports non-`video`/`audio`/`file` `kind` values as standard errors; static images should use `fig`.
 - `validateVarDefaultType(def)` returns warning strings when an AIMD var default does not match its declared type.

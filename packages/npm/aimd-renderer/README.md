@@ -81,6 +81,10 @@ const { html } = await renderToHtml(content, {
 
 `assignerVisibility` defaults to `"hidden"`.
 
+## Draft Figure Preview
+
+Set `allowDraftFigures: true` in an authoring preview to render a closed `fig` block that has `src` but no `id`. The anonymous draft figure is not added to extracted figure metadata and receives no figure number, reference target, or temporary ID. Keep the default `false` for formal parsing and published output.
+
 ## Localization
 
 ```ts

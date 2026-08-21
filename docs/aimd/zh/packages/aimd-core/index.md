@@ -141,9 +141,12 @@ processor.runSync(tree, file)
 
 ```ts
 import {
+  parseDraftFigContent,
+  parseFigContent,
   parseMediaContent,
   parseVarDefinition,
   validateClientAssignerFunctionSource,
+  validateFigDefinitions,
   validateMediaDefinition,
   validateVarDefinition,
   validateVarDefaultType,
@@ -152,6 +155,9 @@ import {
 ```
 
 - `validateClientAssignerFunctionSource(functionSource, id)` 会拒绝不安全或不受支持的前端 `client_assigner` 代码，例如 `eval`、`window`、`fetch`、Unicode 转义绕过，以及其他非确定性结构。
+- `parseDraftFigContent(content)` 用于解析已有 `src` 但暂无 `id` 的编辑预览图片，不会自动生成临时 ID。
+- `parseFigContent(content)` 会解析正式 fenced `fig` body，并要求 `id` 和 `src` 都为非空。
+- `validateFigDefinitions(figures)` 会在发布或其他正式输出前报告必填字段缺失和重复图片 ID。
 - `parseMediaContent(content)` 会解析 fenced `media` 块中的 key-value 内容，并保留原始 `kind`。
 - `validateMediaDefinition(media)` 会把非 `video`、`audio`、`file` 的 `kind` 报为标准错误；静态图片应使用 `fig`。
 - `validateVarDefaultType(def)` 会在 AIMD var 的默认值与声明类型不匹配时返回 warning 文本。

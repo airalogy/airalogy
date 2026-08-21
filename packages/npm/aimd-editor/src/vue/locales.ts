@@ -207,6 +207,12 @@ export interface AimdEditorMessages {
     quizBlockLabel: string
     quizBlock: string
   }
+  diagnostics: {
+    figureMissingId: string
+    figureMissingSrc: string
+    figureDuplicateId: (id: string) => string
+    generateFigureId: string
+  }
 }
 
 export type AimdEditorMessagesInput = DeepPartial<AimdEditorMessages>
@@ -422,6 +428,12 @@ const EN_US_MESSAGES: AimdEditorMessages = {
     quizBlockLabel: 'quiz block',
     quizBlock: 'Insert AIMD quiz code block',
   },
+  diagnostics: {
+    figureMissingId: 'This figure is missing the required ID. Generate or enter a unique ID.',
+    figureMissingSrc: 'This figure is missing the required src field.',
+    figureDuplicateId: id => `Figure ID "${id}" is already used in this document.`,
+    generateFigureId: 'Generate figure ID',
+  },
 }
 
 const ZH_CN_MESSAGES: AimdEditorMessages = {
@@ -618,6 +630,12 @@ const ZH_CN_MESSAGES: AimdEditorMessages = {
     insertAimdField: keyword => `插入 AIMD ${keyword} 字段`,
     quizBlockLabel: '题目代码块',
     quizBlock: '插入 AIMD 题目代码块',
+  },
+  diagnostics: {
+    figureMissingId: '该图片缺少必填的 ID，请生成或填写一个唯一 ID。',
+    figureMissingSrc: '该图片缺少必填的 src 字段。',
+    figureDuplicateId: id => `图片 ID“${id}”在当前文档中已存在。`,
+    generateFigureId: '生成图片 ID',
   },
 }
 

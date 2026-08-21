@@ -110,9 +110,11 @@ legend: A local figure packaged with this lesson.
 
 ## Demo 中的行为
 
+下载过程生成缺失的图片 ID 时，状态区会提示已生成并写入编辑器源文本的 ID 数量。
+
 在线编辑器默认从空白 AIMD 文档开始；如果需要参考语法或结构，可以先选择一个案例模板并加载为基础再修改。Demo 中的图片按钮提供两种插入方式。插入网络图片时，Demo 会生成一个 `fig` 块，并把 `src` 写成 `https://...` 这样的 URL；这种图片不进入 `.aira` 的 `files/`，渲染时仍依赖网络可访问性。上传本地图片时，Demo 会生成一个带 `src: files/...` 的 `fig` 块，把图片作为 Protocol 本地文件保存。
 
-下载时，Demo 会根据当前内容自动选择交换格式：如果没有 Protocol 本地文件，下载普通 `.aimd` 文本文件；如果已经上传了本地图片，下载 `kind: "protocol"` 的 `.aira` 归档，里面同时包含 `protocol.aimd` 和这些本地文件。Demo 会根据上传图片的本地文件名生成安全、可读的资源路径。例如 `Reaction Rate Curve.png` 会进入 `.aira` 里的 `files/reaction-rate-curve.png`，`图片.png` 会进入 `files/图片.png`，`实验结果：第1组.png` 会进入 `files/实验结果-第1组.png`；如果文件名无法转换成安全路径，则回退为 `files/uploaded-figure-1.png` 这样的自动编号。图片插入弹窗会先让用户选择“本地图片”或“网络图片”，再填写对应输入；`title` 和 `legend` 是两种模式共享的可选图元信息，留空时不会写入对应字段。`legend` 是图注，不是文件名备注。
+下载时，Demo 会先规范化所有已闭合的 `fig` 块。已有 `src` 但缺失 ID 的图片会根据源文件名获得文档内唯一 ID，规范化后的文本会先写回编辑器；已有 ID 保持不变，重复 ID 或缺失图片源会阻止正式输出。未完成的草稿块不会被自动草稿保存改写。然后 Demo 会根据当前内容自动选择交换格式：如果没有 Protocol 本地文件，下载普通 `.aimd` 文本文件；如果已经上传了本地图片，下载 `kind: "protocol"` 的 `.aira` 归档，里面同时包含 `protocol.aimd` 和这些本地文件。Demo 会根据上传图片的本地文件名生成安全、可读的资源路径。例如 `Reaction Rate Curve.png` 会进入 `.aira` 里的 `files/reaction-rate-curve.png`，`图片.png` 会进入 `files/图片.png`，`实验结果：第1组.png` 会进入 `files/实验结果-第1组.png`；如果文件名无法转换成安全路径，则回退为 `files/uploaded-figure-1.png` 这样的自动编号。图片插入弹窗会先让用户选择“本地图片”或“网络图片”，再填写对应输入；`title` 和 `legend` 是两种模式共享的可选图元信息，留空时不会写入对应字段。`legend` 是图注，不是文件名备注。
 
 导入时，Demo 也支持内嵌 Protocol 的 `kind: "records"` `.aira` 归档。归档中的 Records 会按其引用的 Protocol 版本解析，并直接进入表格视图；可以按 Protocol 字段筛选、打开单条 Record，或选中 2–4 条切换到对比视图。表格和对比直接使用 `@airalogy/aimd-renderer` 的共享 Record 视图，单条显示继续使用 `@airalogy/aimd-recorder`，因此 Demo 与 Platform 共享同一套字段解析和值展示规则。
 

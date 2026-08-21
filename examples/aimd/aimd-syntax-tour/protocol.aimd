@@ -101,6 +101,8 @@ assigner(
 
 The protocol workflow is summarized in {{ref_fig|workflow_diagram}} and can cite inline references such as {{cite|yang2025airalogyaiempowereduniversaldata}}.
 
+The explicit `id` below is the figure's stable source identity and remains editable after insertion.
+
 ```fig
 id: workflow_diagram
 src: files/workflow-diagram.svg

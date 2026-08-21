@@ -31,6 +31,10 @@
       "types": "./src/monaco.ts",
       "import": "./src/monaco.ts"
     },
+    "./authoring": {
+      "types": "./src/authoring/index.ts",
+      "import": "./src/authoring/index.ts"
+    },
     "./vue": {
       "types": "./src/vue/index.ts",
       "import": "./src/vue/index.ts"

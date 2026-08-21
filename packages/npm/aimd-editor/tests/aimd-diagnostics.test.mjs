@@ -10,6 +10,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const nodeRequire = createRequire(import.meta.url)
 const helperPath = resolve(__dirname, '../src/vue/aimdDiagnostics.ts')
+const authoringPath = resolve(__dirname, '../src/authoring/fig.ts')
 const sourceEditorPath = resolve(__dirname, '../src/vue/AimdSourceEditor.vue')
 
 function loadTsModuleExports(path, requireOverrides = {}) {
@@ -34,8 +35,17 @@ function loadTsModuleExports(path, requireOverrides = {}) {
   return module.exports
 }
 
+const authoringExports = loadTsModuleExports(authoringPath, {
+  '@airalogy/aimd-core/parser': {
+    validateFigDefinitions() {
+      return []
+    },
+  },
+})
+
 test('collectAimdDiagnostics reports var semantic warnings with source offsets', () => {
   const { collectAimdDiagnostics } = loadTsModuleExports(helperPath, {
+    '../authoring': authoringExports,
     '@airalogy/aimd-core/parser': {
       parseVarDefinition(content) {
         const id = content.split(/[,:]/)[0].trim()
@@ -84,6 +94,7 @@ test('collectAimdDiagnostics reports var semantic warnings with source offsets',
 
 test('collectAimdDiagnostics reports unsupported media kind errors with source offsets', () => {
   const { collectAimdDiagnostics } = loadTsModuleExports(helperPath, {
+    '../authoring': authoringExports,
     '@airalogy/aimd-core/parser': {
       parseVarDefinition() {
         return { id: 'unused' }
@@ -123,10 +134,108 @@ test('collectAimdDiagnostics reports unsupported media kind errors with source o
   assert.match(diagnostics[0].message, /static images must use a fig block/)
 })
 
+test('collectAimdDiagnostics reports closed figures without ids and offers a quick fix', () => {
+  const { collectAimdDiagnostics } = loadTsModuleExports(helperPath, {
+    '../authoring': authoringExports,
+    '@airalogy/aimd-core/parser': {
+      parseVarDefinition() {
+        return { id: 'unused' }
+      },
+      validateVarDefinition() {
+        return []
+      },
+      parseMediaContent() {
+        throw new Error('unused')
+      },
+      validateMediaDefinition() {
+        return []
+      },
+    },
+  })
+
+  const completeFigure = [
+    '```fig',
+    'src: images/lab-team.jpeg',
+    'title: Lab team',
+    '```',
+  ].join('\n')
+  const incompleteFigure = ['```fig', 'src: images/draft.png'].join('\n')
+  const diagnostics = collectAimdDiagnostics(`${completeFigure}\n\n${incompleteFigure}`)
+
+  assert.equal(diagnostics.length, 1)
+  assert.equal(diagnostics[0].code, 'fig-missing-id')
+  assert.equal(diagnostics[0].severity, 'error')
+  assert.match(diagnostics[0].message, /missing the required ID/)
+  assert.equal(diagnostics[0].quickFix.title, 'Generate figure ID')
+  assert.equal(diagnostics[0].quickFix.edit.text, 'id: lab_team\n')
+})
+
+test('collectAimdDiagnostics reports duplicate figure ids', () => {
+  const { collectAimdDiagnostics } = loadTsModuleExports(helperPath, {
+    '../authoring': authoringExports,
+    '@airalogy/aimd-core/parser': {
+      parseVarDefinition() {
+        return { id: 'unused' }
+      },
+      validateVarDefinition() {
+        return []
+      },
+      parseMediaContent() {
+        throw new Error('unused')
+      },
+      validateMediaDefinition() {
+        return []
+      },
+    },
+  })
+  const content = [
+    '```fig',
+    'id: chart',
+    'src: images/chart.png',
+    '```',
+    '',
+    '```fig',
+    'id: chart',
+    'src: images/chart-copy.png',
+    '```',
+  ].join('\n')
+
+  const diagnostics = collectAimdDiagnostics(content)
+  assert.equal(diagnostics.length, 1)
+  assert.equal(diagnostics[0].code, 'fig-duplicate-id')
+  assert.match(diagnostics[0].message, /already used/)
+})
+
+test('collectAimdDiagnostics reports both required fields on a closed empty figure', () => {
+  const { collectAimdDiagnostics } = loadTsModuleExports(helperPath, {
+    '../authoring': authoringExports,
+    '@airalogy/aimd-core/parser': {
+      parseVarDefinition() {
+        return { id: 'unused' }
+      },
+      validateVarDefinition() {
+        return []
+      },
+      parseMediaContent() {
+        throw new Error('unused')
+      },
+      validateMediaDefinition() {
+        return []
+      },
+    },
+  })
+
+  const diagnostics = collectAimdDiagnostics(['```fig', '```'].join('\n'))
+  assert.deepEqual(diagnostics.map(item => item.code), ['fig-missing-id', 'fig-missing-src'])
+  assert.equal(diagnostics[0].quickFix, undefined)
+})
+
 test('AimdSourceEditor publishes AIMD diagnostics as Monaco markers', () => {
   const source = readFileSync(sourceEditorPath, 'utf8')
 
   assert.match(source, /collectAimdDiagnostics/)
   assert.match(source, /setModelMarkers\(model, AIMD_DIAGNOSTIC_OWNER, markers\)/)
   assert.match(source, /setModelMarkers\(model, AIMD_DIAGNOSTIC_OWNER, \[\]\)/)
+  assert.match(source, /registerCodeActionProvider\('aimd'/)
+  assert.match(source, /kind: 'quickfix'/)
 })

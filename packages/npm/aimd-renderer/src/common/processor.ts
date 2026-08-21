@@ -74,6 +74,8 @@ export interface AimdRendererOptions extends ProcessorOptions, AimdRendererI18nO
   blockVarTypes?: string[]
   /** Protocol-level Collector metadata used when rendering an isolated field fragment. */
   collectorContext?: AimdCollectorValidationContext
+  /** Preview complete draft figures that have a source but do not yet have an ID. */
+  allowDraftFigures?: boolean
 }
 
 export interface CustomElementAimdRendererOptions {
@@ -1695,8 +1697,11 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
   // Add fig id
   if (node.fieldType === "fig") {
     const figNode = node as any
-    properties.id = `fig-${figNode.id || id}`
-    properties["data-aimd-fig-id"] = figNode.id
+    const figId = figNode.id || id
+    if (figId) {
+      properties.id = `fig-${figId}`
+      properties["data-aimd-fig-id"] = figId
+    }
     properties["data-aimd-fig-src"] = figNode.src
   }
 
@@ -1782,6 +1787,7 @@ function createBaseProcessor(options: AimdRendererOptions = {}) {
   // to properly parse multiline AIMD syntax like var_table with subvars
   processor.use(remarkAimd, {
     collectorContext: options.collectorContext,
+    allowDraftFigures: options.allowDraftFigures,
   })
   processor.use(remarkStripAssignerCodeBlocks)
   processor.use(remarkCriticMarkup)

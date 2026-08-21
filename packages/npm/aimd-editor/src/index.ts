@@ -7,4 +7,5 @@
  */
 
 export * from './monaco'
+export * from './authoring/index'
 export * from './vue/index'

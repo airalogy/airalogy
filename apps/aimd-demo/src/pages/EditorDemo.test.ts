@@ -27,7 +27,9 @@ describe('EditorDemo archive export', () => {
   })
 
   it('packages uploaded images as protocol-local figure files', () => {
-    expect(source).toContain('createProtocolAiraArchive')
+    expect(source).toContain('createEditorProtocolDownload')
+    expect(source).toContain('createAimdFigureId')
+    expect(source).toContain('collectAimdFigureIds')
     expect(source).toContain('```fig')
     expect(source).toContain('src: ${toAimdScalar(figure.src)}')
     expect(source).toContain('insertProtocolFigureBlock(figureFile, metadata)')
@@ -51,9 +53,12 @@ describe('EditorDemo archive export', () => {
   })
 
   it('downloads plain AIMD until protocol-local files require an archive', () => {
-    expect(source).toContain('protocolFileCount.value === 0')
-    expect(source).toContain('`${filenameStem}.aimd`')
-    expect(source).toContain('`${filenameStem}.aira`')
+    expect(source).toContain('createEditorProtocolDownload')
+    expect(source).toContain('content.value = download.aimd')
+    expect(source).toContain('showGeneratedFigureIdNotice(download.generatedFigureIds.length)')
+    expect(source).toContain('messages.value.pages.editor.figureIdsGenerated(generatedFigureIdCount.value)')
+    expect(source).toContain('aria-live="polite"')
+    expect(source).toContain('downloadBlob([download.data], download.filename, download.mimeType)')
     expect(source).toContain('workspace-panel__actions')
     expect(source).toContain('workspace-panel__download')
     expect(source).not.toContain('archive-toolbar')
@@ -204,6 +209,7 @@ describe('EditorDemo archive export', () => {
 
   it('uses the renderer typography container for live preview prose', () => {
     expect(source).toContain('class="workspace-panel__body render-preview aimd-renderer"')
+    expect(source).toContain('allowDraftFigures: true')
     expect(source).not.toMatch(/\.render-preview :deep\(h1\)/)
     expect(source).not.toMatch(/\.render-preview :deep\(ul\) \{[\s\S]*?list-style: disc outside;/)
   })

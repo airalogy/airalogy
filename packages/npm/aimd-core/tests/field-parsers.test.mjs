@@ -7,7 +7,10 @@ import { unified } from 'unified'
 import {
   protectAimdInlineTemplates,
   parseConnectorsContent,
+  parseDraftFigContent,
+  parseFigContent,
   remarkAimd,
+  validateFigDefinitions,
   validateMediaDefinition,
   validateVarDefinition,
   validateVarDefaultType,
@@ -18,11 +21,11 @@ import {
   getAimdBuiltInTypeMetadata,
 } from '../dist/utils.js'
 
-function parseAimd(content) {
+function parseAimd(content, options = {}) {
   const processor = unified()
     .use(remarkParse)
     .use(remarkGfm)
-    .use(remarkAimd)
+    .use(remarkAimd, options)
 
   const { content: protectedContent, templates } = protectAimdInlineTemplates(content)
   const file = { data: { aimdInlineTemplates: templates } }
@@ -591,6 +594,52 @@ legend: This chart shows data.
 `)
   assert.equal(fields.fig[0].title, 'My Chart')
   assert.equal(fields.fig[0].legend, 'This chart shows data.')
+})
+
+test('parseFigContent: formal figure definitions require id and src', () => {
+  assert.throws(() => parseFigContent('src: images/chart.png'), /must have "id" and "src"/)
+  assert.throws(() => parseFigContent('id: chart'), /must have "id" and "src"/)
+})
+
+test('parseDraftFigContent: draft figures allow a missing id but still require src', () => {
+  assert.deepEqual(parseDraftFigContent([
+    'src: images/chart.png',
+    'title: My Chart',
+  ].join('\n')), {
+    id: undefined,
+    src: 'images/chart.png',
+    title: 'My Chart',
+    legend: undefined,
+  })
+  assert.throws(() => parseDraftFigContent('title: My Chart'), /must have a "src" field/)
+})
+
+test('fig: draft preview parses an anonymous figure without registering it', () => {
+  const { tree, fields } = parseAimd([
+    '```fig',
+    'src: images/chart.png',
+    'title: My Chart',
+    '```',
+  ].join('\n'), { allowDraftFigures: true })
+  const node = findAimdNode(tree)
+
+  assert.equal(node?.fieldType, 'fig')
+  assert.equal(node?.id, '')
+  assert.equal(node?.src, 'images/chart.png')
+  assert.deepEqual(fields.fig, [])
+})
+
+test('validateFigDefinitions: formal figure ids must be unique', () => {
+  assert.deepEqual(validateFigDefinitions([
+    { id: 'chart', src: 'images/chart.png' },
+    { id: 'chart', src: 'images/chart-copy.png' },
+    { id: '', src: 'images/missing-id.png' },
+    { id: 'missing_src', src: '' },
+  ]), [
+    'fig "chart": duplicate id',
+    'fig block 3: missing required "id" field',
+    'fig "missing_src": missing required "src" field',
+  ])
 })
 
 // ── media parsing ────────────────────────────────────────────────────────────
