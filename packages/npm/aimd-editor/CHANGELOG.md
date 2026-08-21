@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.12.0
+
+### Minor Changes
+
+- 96cc10d: Add reusable figure validation, draft preview, and authoring APIs that diagnose, generate, persist, and formally validate stable AIMD `fig` IDs before `.aimd` or `.aira` output.
+
+### Patch Changes
+
+- Updated dependencies [96cc10d]
+  - @airalogy/aimd-core@2.16.0
+  - @airalogy/aimd-renderer@2.13.0
+
 ## 1.11.0
 
 ### Minor Changes
