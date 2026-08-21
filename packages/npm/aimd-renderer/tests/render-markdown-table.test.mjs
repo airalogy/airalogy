@@ -169,7 +169,7 @@ test('parseAndExtract exposes canonical ids for extracted field objects', () => 
 })
 
 test('renderToHtml renders ref_step using localized step sequence', async () => {
-  const { html } = await renderToHtml(STEP_REFERENCE_SAMPLE)
+  const { html } = await renderToHtml(STEP_REFERENCE_SAMPLE, { locale: 'en-US' })
 
   assert.match(html, /data-aimd-step-sequence="1\.1"/)
   assert.match(html, /class="aimd-field aimd-field--step aimd-field--readonly"/)
@@ -180,6 +180,7 @@ test('renderToHtml renders ref_step using localized step sequence', async () => 
 
 test('renderToVue renders ref_step using localized step sequence in edit mode', async () => {
   const { nodes } = await renderToVue(STEP_REFERENCE_SAMPLE, {
+    locale: 'en-US',
     context: {
       mode: 'edit',
     },
@@ -197,6 +198,7 @@ test('renderToVue renders ref_step using localized step sequence in edit mode', 
 
 test('renderToVue renders ref_var using readonly record values in edit mode when available', async () => {
   const { nodes } = await renderToVue(REF_VAR_RECORD_SAMPLE, {
+    locale: 'en-US',
     context: {
       mode: 'edit',
       value: {
@@ -224,7 +226,7 @@ test('renderToVue renders ref_var using readonly record values in edit mode when
 })
 
 test('renderToHtml distinguishes single and multiple choice labels by locale', async () => {
-  const { html: enHtml } = await renderToHtml(CHOICE_MODE_SAMPLE)
+  const { html: enHtml } = await renderToHtml(CHOICE_MODE_SAMPLE, { locale: 'en-US' })
   const { html: zhHtml } = await renderToHtml(CHOICE_MODE_SAMPLE, { locale: 'zh-CN' })
 
   assert.match(enHtml, /\(Single choice\)/)
@@ -237,7 +239,7 @@ test('renderToHtml distinguishes single and multiple choice labels by locale', a
 })
 
 test('renderToHtml renders true/false quiz labels and default options', async () => {
-  const { html, fields } = await renderToHtml(TRUE_FALSE_SAMPLE)
+  const { html, fields } = await renderToHtml(TRUE_FALSE_SAMPLE, { locale: 'en-US' })
 
   assert.equal(fields.quiz[0]?.type, 'true_false')
   assert.equal(fields.quiz[0]?.answer, true)
@@ -279,6 +281,7 @@ test('renderToHtml hides assigner blocks by default while preserving client assi
 test('renderToHtml can expand assigner blocks as language-specific code fences', async () => {
   const { html } = await renderToHtml(ASSIGNER_VISIBILITY_SAMPLE, {
     assignerVisibility: 'expanded',
+    locale: 'en-US',
   })
 
   assert.match(html, /aimd-assigner-preview--expanded/)
@@ -294,6 +297,7 @@ test('renderToHtml can expand assigner blocks as language-specific code fences',
 test('renderToHtml can collapse assigner blocks behind localized details summaries', async () => {
   const { html: enHtml } = await renderToHtml(ASSIGNER_VISIBILITY_SAMPLE, {
     assignerVisibility: 'collapsed',
+    locale: 'en-US',
   })
   const { html: zhHtml } = await renderToHtml(ASSIGNER_VISIBILITY_SAMPLE, {
     assignerVisibility: 'collapsed',
