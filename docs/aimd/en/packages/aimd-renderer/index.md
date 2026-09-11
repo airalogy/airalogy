@@ -141,6 +141,12 @@ The Vue entry point exports `AimdRecordTable`, `AimdRecordCompare`, and `AimdRec
 
 Every Protocol field name in the table and comparison views exposes an accessible details card on pointer hover or keyboard focus. It shows the field title, canonical id, type, description, examples, and enumerated options whenever those values are defined. The card is rendered at viewport level so it remains visible inside horizontally scrolling tables.
 
+The table's **Columns** menu provides **Show all columns** and **Restore default columns**. All selects every field in the current AIMD column catalogue, including steps, checks and table fields, plus every supplied metadata column; it does not infer columns only from populated Record values. Wide tables retain horizontal scrolling and complex cells keep their existing detail views. Individual checkboxes remain available, and at least one protocol field stays selected when fields exist. Empty protocols and empty Record lists are supported.
+
+By default, reset selects the compact field policy (`maxDefaultColumns`, default 6) and all metadata. Set `defaultFieldKeys` to canonical keys such as `['var:sample_id']`, independently of the current `fieldKeys` selection. Unknown or duplicate keys are ignored; if no supplied default field remains valid, the compact policy applies. Set `defaultMetadataColumnKeys` to a subset, or `[]` to default to no metadata; omitting it shows all metadata. These defaults also apply initially when no current selection is supplied. Reset never adopts the latest `v-model` echo as its new default.
+
+Bulk actions emit the existing `update:fieldKeys` and `update:metadataColumnKeys` events for changed selections only. They do not change Record selection/data, write local storage, fetch more Records or alter export/authorization. The host owns persistence and scope isolation. Set `showFieldPicker` to `false` to hide the picker and its bulk actions. Button labels follow `locale` and support `messages.recordView.showAllColumns` / `restoreDefaultColumns` overrides.
+
 ```vue
 <script setup lang="ts">
 import { AimdRecordCompare, AimdRecordTable } from "@airalogy/aimd-renderer/vue"
@@ -149,6 +155,7 @@ import { AimdRecordCompare, AimdRecordTable } from "@airalogy/aimd-renderer/vue"
 <template>
   <AimdRecordTable
     v-model:selected-record-keys="selectedKeys"
+    v-model:field-keys="visibleFieldKeys"
     v-model:metadata-column-keys="visibleMetadataColumnKeys"
     :aimd="protocolContent"
     :records="records"

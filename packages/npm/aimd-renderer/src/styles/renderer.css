@@ -1727,6 +1727,46 @@
   border-top: 1px solid #e4eaed;
 }
 
+.aimd-record-table-view__field-actions {
+  position: sticky;
+  top: -6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 0;
+  border-bottom: 1px solid #e4eaed;
+  background: #fff;
+  z-index: 1;
+}
+
+.aimd-record-table-view__field-actions > button {
+  flex: 1 1 120px;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid #cdd7dc;
+  border-radius: 4px;
+  background: #fff;
+  color: #32444c;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.aimd-record-table-view__field-actions > button:hover:not(:disabled) {
+  background: #f1f6f5;
+}
+
+.aimd-record-table-view__field-actions > button:focus-visible {
+  outline: 2px solid #247a64;
+  outline-offset: 2px;
+}
+
+.aimd-record-table-view__field-actions > button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .aimd-record-table-view__field-group-label {
   padding: 5px 8px 3px;
   color: #718087;
@@ -2077,11 +2117,15 @@
 
   .aimd-record-table-view__field-picker {
     margin-left: 0;
+    flex-basis: 100%;
+    min-width: 0;
   }
 
   .aimd-record-table-view__field-menu {
     right: auto;
     left: 0;
+    width: min(320px, 100%);
+    box-sizing: border-box;
   }
 
   .aimd-record-table-view__table th,

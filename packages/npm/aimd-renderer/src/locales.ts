@@ -72,6 +72,8 @@ export interface AimdRendererMessages {
     record: string
     field: string
     columns: string
+    showAllColumns: string
+    restoreDefaultColumns: string
     metadataColumns: string
     protocolColumns: string
     actions: string
@@ -184,6 +186,8 @@ const EN_US_MESSAGES: AimdRendererMessages = {
     record: "Record",
     field: "Field",
     columns: "Columns",
+    showAllColumns: "Show all columns",
+    restoreDefaultColumns: "Restore default columns",
     metadataColumns: "Record information",
     protocolColumns: "Protocol fields",
     actions: "Actions",
@@ -272,6 +276,8 @@ const ZH_CN_MESSAGES: AimdRendererMessages = {
     record: "记录",
     field: "字段",
     columns: "选择列",
+    showAllColumns: "显示全部列",
+    restoreDefaultColumns: "恢复默认列",
     metadataColumns: "记录信息",
     protocolColumns: "协议字段",
     actions: "操作",

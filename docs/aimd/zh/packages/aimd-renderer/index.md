@@ -139,6 +139,12 @@ import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
 
 Vue 入口导出 `AimdRecordTable`、`AimdRecordCompare` 和 `AimdRecordReport`，分别提供可复用的 Record 表格、对比和完整报告视图。表格与对比视图共用 `aimd-core` 的 Record 列模型，宿主无需重复实现 AIMD 字段遍历和紧凑值渲染。`AimdRecordTable` 默认显示宿主提供的 metadata 列，并将它们放入同一列选择器；宿主需要保留选择时可绑定 `v-model:metadata-column-keys`。
 
+表格的“选择列”菜单内置“显示全部列”和“恢复默认列”。全选覆盖当前 AIMD 列模型的全部字段（包括步骤、检查及表格字段）和宿主提供的全部 metadata，不仅根据已有 Record 中填过的值推断列。宽表继续横向滚动，复杂值仍使用原有详情展示。全选后仍可逐列勾选；存在协议字段时至少保留一列。也支持空协议及空 Record 列表。
+
+默认恢复到精简字段策略（`maxDefaultColumns` 默认 6）及全部 metadata。可通过 `defaultFieldKeys` 指定 `['var:sample_id']` 等规范键，与当前 `fieldKeys` 独立。忽略重复或未知键；指定的默认字段均失效时回退到精简策略。`defaultMetadataColumnKeys` 可指定子集，`[]` 表示默认不显示 metadata，省略则全部显示。没有提供当前选择时，初始视图也使用这些默认配置。恢复操作不会把最近一次 `v-model` 回传当成新的默认值。
+
+批量操作仅对发生变化的选择发出已有的 `update:fieldKeys`、`update:metadataColumnKeys` 事件，不改变 Record 选择或数据，不写入浏览器存储、不读取更多 Records，也不改变导出或权限；持久化与范围隔离由宿主负责。`showFieldPicker=false` 会同时隐藏列选择器及批量操作。按钮随 `locale` 切换语言，也支持通过 `messages.recordView.showAllColumns` / `restoreDefaultColumns` 覆盖文案。
+
 表格和对比视图中的每个 Protocol 字段名都支持鼠标悬停或键盘聚焦后打开详情卡片。卡片会展示字段 title、规范 id、类型、description、examples 和枚举可选值（若已定义）。卡片在页面层渲染，因此不会被横向滚动表格裁切。
 
 ```vue
@@ -149,6 +155,7 @@ import { AimdRecordCompare, AimdRecordTable } from "@airalogy/aimd-renderer/vue"
 <template>
   <AimdRecordTable
     v-model:selected-record-keys="selectedKeys"
+    v-model:field-keys="visibleFieldKeys"
     v-model:metadata-column-keys="visibleMetadataColumnKeys"
     :aimd="protocolContent"
     :records="records"
