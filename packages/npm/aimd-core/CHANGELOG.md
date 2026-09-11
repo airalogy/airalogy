@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.16.0
+
+### Minor Changes
+
+- 96cc10d: Add reusable figure validation, draft preview, and authoring APIs that diagnose, generate, persist, and formally validate stable AIMD `fig` IDs before `.aimd` or `.aira` output.
+
 ## 2.15.0
 
 ### Minor Changes
