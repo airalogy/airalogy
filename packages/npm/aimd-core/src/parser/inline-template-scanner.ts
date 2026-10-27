@@ -1,6 +1,12 @@
 import type { AimdFieldType } from "../types/nodes"
 
 const AIMD_INLINE_TEMPLATE_START_PATTERN = /\{\{\s*(var_table|var|step|check|ref_step|ref_var|ref_fig|ref_media|cite)\s*\|/g
+const AIMD_ESCAPED_INLINE_TEMPLATE_START_PATTERN = /\{\{\s*(var(?:\\?_table)?|step|check|ref\\?_(?:step|var|fig|media)|cite)\s*\|/g
+
+export interface AimdInlineTemplateScanOptions {
+  /** Only for repairing visual-editor drafts, not formal AIMD parsing. */
+  allowMarkdownEscapedTypes?: boolean
+}
 
 export interface AimdInlineTemplateMatch {
   type: AimdFieldType
@@ -46,20 +52,23 @@ function findTemplateEnd(value: string, contentStart: number): number {
   return -1
 }
 
-export function findAimdInlineTemplates(value: string): AimdInlineTemplateMatch[] {
+export function findAimdInlineTemplates(value: string, options: AimdInlineTemplateScanOptions = {}): AimdInlineTemplateMatch[] {
   const matches: AimdInlineTemplateMatch[] = []
+  const startPattern = options.allowMarkdownEscapedTypes
+    ? AIMD_ESCAPED_INLINE_TEMPLATE_START_PATTERN
+    : AIMD_INLINE_TEMPLATE_START_PATTERN
   let searchIndex = 0
 
   while (searchIndex < value.length) {
-    AIMD_INLINE_TEMPLATE_START_PATTERN.lastIndex = searchIndex
-    const match = AIMD_INLINE_TEMPLATE_START_PATTERN.exec(value)
+    startPattern.lastIndex = searchIndex
+    const match = startPattern.exec(value)
 
     if (!match) {
       break
     }
 
     const start = match.index
-    const contentStart = AIMD_INLINE_TEMPLATE_START_PATTERN.lastIndex
+    const contentStart = startPattern.lastIndex
     const end = findTemplateEnd(value, contentStart)
 
     if (end === -1) {
@@ -71,7 +80,7 @@ export function findAimdInlineTemplates(value: string): AimdInlineTemplateMatch[
     const raw = value.slice(start, end)
 
     matches.push({
-      type: match[1] as AimdFieldType,
+      type: match[1].replace(/\\_/g, "_") as AimdFieldType,
       content: rawContent.trim(),
       raw,
       start,

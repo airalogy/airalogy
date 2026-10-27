@@ -180,3 +180,7 @@ import {
 - [解析节点](/zh/packages/aimd-core/parsed-nodes)
 - [字段提取结果](/zh/packages/aimd-core/extracted-fields)
 - [迁移说明](/zh/packages/aimd-core/compatibility)
+
+## 共享行内模板扫描器
+
+`@airalogy/aimd-core/parser` 导出的 `findAimdInlineTemplates(content)` 为完整模板返回 `{ type, content, raw, start, end }`。`start` 包含起点、`end` 不包含终点，使用 JavaScript 字符串偏移。引号内的 `{{...}}`、`}}` 和转义引号不会提前结束外层模板。编辑工具可显式传入 `{ allowMarkdownEscapedTypes: true }`，恢复旧草稿中 `var\_table`、`ref\_var` 等类型拼写；默认仍为严格模式。扫描器不会排除 Markdown 代码示例，也不校验字段参数；应在合适的文本节点上使用，文档语义应交给完整 parser。

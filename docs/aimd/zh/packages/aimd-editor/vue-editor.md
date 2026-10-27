@@ -61,3 +61,7 @@ const messages = {
 
 - [内嵌编辑面](/zh/packages/aimd-editor/embedded)
 - [类型插件](/zh/packages/type-plugins)
+
+## 引号内的模板参数
+
+字段参数的引号内是字面文本。例如 `{{check|reading, checked_message="保留字面文本 {{ref_var|wait_s}}"}}` 是一个完整检查点，不是检查点加一个嵌套引用。可视化编辑、模式切换、保存后重新打开均保留完整定义；参数字符串之外的 `{{ref_var|wait_s}}` 仍是普通正文引用。

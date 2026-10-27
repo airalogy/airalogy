@@ -374,3 +374,7 @@ const quiz = {
 - EN: <https://airalogy.github.io/airalogy/aimd/en/packages/aimd-recorder>
 - 中文: <https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-recorder>
 - 文档源码：`docs/aimd/en/packages/aimd-recorder.md`、`docs/aimd/zh/packages/aimd-recorder.md`
+
+## 检查点的字面提示
+
+可视化表单和字段编辑工具会完整保留 `checked_message` 引号内类似 AIMD 的字面文本。勾选后显示该消息，不会计算其中的嵌套引用；参数字符串之外的引用保持正常正文行为。

@@ -390,3 +390,7 @@ If `@airalogy/aimd-recorder` is useful in your work, please cite the Airalogy pa
       url={https://arxiv.org/abs/2506.18586},
 }
 ```
+
+## Quoted Checkpoint Messages
+
+The visual form and field editing tools preserve quoted AIMD-looking text in `checked_message` as literal text. Checking the field displays that message without evaluating nested references; references outside the parameter string retain normal document behavior.

@@ -61,3 +61,7 @@ const messages = {
 
 - [Embedded Surfaces](/en/packages/aimd-editor/embedded)
 - [Type Plugins](/en/packages/type-plugins)
+
+## Quoted Template Parameters
+
+Quoted field parameters are literal text. For example, `{{check|reading, checked_message="Keep {{ref_var|wait_s}} literal"}}` is one checkpoint, not a checkpoint followed by a nested reference. Visual editing, mode switching, saving, and reopening preserve the complete definition. A `{{ref_var|wait_s}}` outside the parameter string remains a normal document reference.

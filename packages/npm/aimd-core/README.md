@@ -203,3 +203,7 @@ If `@airalogy/aimd-core` is useful in your work, please cite the Airalogy paper:
       url={https://arxiv.org/abs/2506.18586},
 }
 ```
+
+## Inline Template Scanning
+
+`findAimdInlineTemplates()` from `@airalogy/aimd-core/parser` returns complete inline templates with source offsets, respecting quoted strings and escaped quotes. Reuse it in authoring tools instead of stopping at the first `}}`. It scans text rather than Markdown structure; use the full parser for code-block exclusion and field validation.

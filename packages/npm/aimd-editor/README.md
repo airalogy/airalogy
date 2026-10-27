@@ -75,3 +75,7 @@ If `@airalogy/aimd-editor` is useful in your work, please cite the Airalogy pape
       url={https://arxiv.org/abs/2506.18586},
 }
 ```
+
+## Quoted Template Parameters
+
+Quoted AIMD-looking text, such as `checked_message="Keep {{ref_var|wait_s}} literal"`, stays inside its parent field in visual mode and survives saving and reopening. Only references in ordinary document text become separate reference nodes.

@@ -246,3 +246,7 @@ Homework / reveal-after-submit example:
 ```
 
 `submitted` is controlled by the host app. `AimdRecorder` does not infer submission state on its own and does not include a built-in submit button.
+
+## Quoted Checkpoint Messages
+
+The visual form and field editing tools preserve the whole checkpoint when `checked_message` contains literal AIMD-looking text. For example, `checked_message="Keep {{ref_var|wait_s}} literal"` displays exactly that text after checking, without resolving the nested reference. References in ordinary Markdown outside the parameter string are unaffected. Editing, moving, or removing the checkpoint operates on its complete definition.

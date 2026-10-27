@@ -59,3 +59,7 @@ Vue 源码编辑器会显示 parser 级语义 warning，包括 AIMD var 默认�
 - EN: <https://airalogy.github.io/airalogy/aimd/en/packages/aimd-editor>
 - 中文: <https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-editor>
 - 文档源码：`docs/aimd/en/packages/aimd-editor.md`、`docs/aimd/zh/packages/aimd-editor.md`
+
+## 引号内的模板参数
+
+引号内类似 AIMD 的文字，例如 `checked_message="保留字面文本 {{ref_var|wait_s}}"`，在可视化模式和保存后重新打开时仍属于外层字段，不会被截断。只有普通正文中的引用会成为独立引用节点。

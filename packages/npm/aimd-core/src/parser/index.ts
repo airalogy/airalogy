@@ -4,6 +4,11 @@
 
 export { default as remarkAimd } from './remark-aimd'
 export { default as rehypeAimd } from './rehype-aimd'
+export {
+  findAimdInlineTemplates,
+  type AimdInlineTemplateMatch,
+  type AimdInlineTemplateScanOptions,
+} from './inline-template-scanner'
 export { validateClientAssignerFunctionSource } from './client-assigner-syntax'
 export {
   parseConnectorsContent,

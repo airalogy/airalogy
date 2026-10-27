@@ -11,6 +11,16 @@ import {
 } from '../workbenchFieldEditing'
 
 describe('workbenchFieldEditing', () => {
+  it('edits the complete checkpoint without treating quoted templates as nested fields', () => {
+    const raw = '{{check|reading, title="Review {{var|not_a_field}}", checked_message="Keep {{ref_var|wait_s}} literal."}}'
+    const content = `Before ${raw} After {{ref_var|wait_s}}.`
+    const fields = scanWorkbenchFields(content)
+    expect(fields).toHaveLength(1)
+    expect(fields[0]).toMatchObject({ id: 'reading', raw, start: 7, end: 7 + raw.length })
+    expect(updateWorkbenchFieldId(content, fields[0], 'review')).toBe(content.replace('check|reading', 'check|review'))
+    expect(deleteWorkbenchField(content, fields[0])).toBe('Before  After {{ref_var|wait_s}}.')
+  })
+
   it('scans recorder-editable field descriptors from inline AIMD tags and quiz blocks', () => {
     const content = [
       'Sample: {{var|sample_name: str = "abc", title = "Sample"}}',

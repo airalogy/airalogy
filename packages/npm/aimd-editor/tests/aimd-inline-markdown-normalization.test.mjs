@@ -21,8 +21,14 @@ function loadTsModuleExports(path) {
 
   const module = { exports: {} }
   const exports = module.exports
-  const fn = new Function('exports', 'module', outputText)
-  fn(exports, module)
+  const localRequire = (id) => {
+    if (id === '@airalogy/aimd-core/parser') {
+      return loadTsModuleExports(resolve(__dirname, '../../aimd-core/src/parser/inline-template-scanner.ts'))
+    }
+    throw new Error(`Unexpected import: ${id}`)
+  }
+  const fn = new Function('exports', 'module', 'require', outputText)
+  fn(exports, module, localRequire)
   return module.exports
 }
 

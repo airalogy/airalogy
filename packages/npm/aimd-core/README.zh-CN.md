@@ -187,3 +187,7 @@ const entityResolvers = createAimdEntityResolversFromConnectors(fields.connector
 - 中文: <https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-core>
 - 解析结果结构与 `name` -> `id` 迁移说明见包文档。
 - 文档源码：`docs/aimd/en/packages/aimd-core/`、`docs/aimd/zh/packages/aimd-core/`
+
+## 行内模板扫描
+
+`@airalogy/aimd-core/parser` 导出的 `findAimdInlineTemplates()` 返回完整行内模板及其源码位置，正确处理引号和转义引号。编辑工具应复用它，不要遇到第一个 `}}` 就结束匹配。该函数只扫描文本，不解析 Markdown 结构；排除代码块及校验字段应使用完整 parser。

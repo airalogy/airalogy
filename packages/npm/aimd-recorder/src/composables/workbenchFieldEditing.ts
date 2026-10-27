@@ -1,3 +1,5 @@
+import { findAimdInlineTemplates } from '@airalogy/aimd-core/parser'
+
 export type AimdWorkbenchFieldType = 'var' | 'var_table' | 'step' | 'check' | 'quiz'
 export type AimdWorkbenchFieldSourceKind = 'inline' | 'block'
 
@@ -16,7 +18,6 @@ export interface AimdWorkbenchFieldDescriptor {
   quizType?: string
 }
 
-const INLINE_FIELD_PATTERN = /\{\{(var_table|var|step|check)\s*\|\s*([^}]+)\}\}/g
 const QUIZ_BLOCK_PATTERN = /```quiz[^\n]*\n[\s\S]*?\n```/g
 
 function trimYamlScalar(value: string): string {
@@ -427,12 +428,9 @@ function formatBlockInsertion(content: string, offset: number, syntax: string): 
 export function scanWorkbenchFields(content: string): AimdWorkbenchFieldDescriptor[] {
   const fields: AimdWorkbenchFieldDescriptor[] = []
 
-  for (const match of content.matchAll(INLINE_FIELD_PATTERN)) {
-    const raw = match[0]
-    const outerType = match[1]
-    const inner = match[2]
-    const start = match.index ?? 0
-    const end = start + raw.length
+  for (const match of findAimdInlineTemplates(content)) {
+    const { raw, type: outerType, content: inner, start, end } = match
+    if (!['var', 'var_table', 'step', 'check'].includes(outerType)) continue
     const segment = maybeExpandToStandaloneSegment(content, start, end, 'inline')
 
     if (outerType === 'var' && !looksLikeVarTable(inner)) {

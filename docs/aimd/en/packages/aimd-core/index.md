@@ -180,3 +180,7 @@ import {
 - [Parsed Nodes](/en/packages/aimd-core/parsed-nodes)
 - [Extracted Fields](/en/packages/aimd-core/extracted-fields)
 - [Migration](/en/packages/aimd-core/compatibility)
+
+## Shared Inline Template Scanner
+
+`findAimdInlineTemplates(content)` from `@airalogy/aimd-core/parser` returns `{ type, content, raw, start, end }` for each complete template. `start` is inclusive and `end` exclusive, using JavaScript string offsets. Quoted `{{...}}` and `}}` remain part of the outer template, including escaped quotes. Authoring tools may opt into `{ allowMarkdownEscapedTypes: true }` to recover legacy `var\_table` or `ref\_var` type spellings; the default remains strict. This scanner does not exclude Markdown code examples or validate field parameters; use it on appropriate text nodes, or use the full parser for document semantics.

@@ -12,6 +12,8 @@ import type { NodeSchema, MarkdownNode } from '@milkdown/kit/transformer'
 import type { Node as ProsemirrorNode } from '@milkdown/kit/prose/model'
 import type { EditorView, NodeView } from '@milkdown/kit/prose/view'
 import { restoreAimdInlineTemplates } from '@airalogy/aimd-core'
+import { findAimdInlineTemplates } from '@airalogy/aimd-core/parser'
+import { normalizeAimdInlineTemplateMarkdownEscapes } from './aimdInlineMarkdownNormalization'
 import { hardbreakAttr, hardbreakSchema } from '@milkdown/kit/preset/commonmark'
 import { $node, $view, $remark, $inputRule } from '@milkdown/kit/utils'
 import { InputRule } from '@milkdown/kit/prose/inputrules'
@@ -45,9 +47,15 @@ function getColor(fieldType: string): string {
 
 // ─── 1. Remark plugin: parse {{type|content}} into custom MDAST nodes ───
 
-function remarkAimdInline() {
-  const AIMD_RE = /\{\{(\w+)\|([^}]*)\}\}/g
-
+function remarkAimdInline(this: { data(): { toMarkdownExtensions?: unknown[] } }) {
+  const data = this.data()
+  const extensions = (data.toMarkdownExtensions ??= [])
+  extensions.push({
+    handlers: {
+      // AIMD is structured source, not Markdown prose to escape or re-indent.
+      aimdField: (node: any) => String(node.value),
+    },
+  })
   function transformer(tree: any) {
     visitNode(tree)
   }
@@ -61,30 +69,28 @@ function remarkAimdInline() {
     }
 
     if (node.type === 'text' && typeof node.value === 'string') {
-      const value: string = node.value
-      AIMD_RE.lastIndex = 0
-      if (!AIMD_RE.test(value)) return
+      const value = normalizeAimdInlineTemplateMarkdownEscapes(node.value)
+      const matches = findAimdInlineTemplates(value)
+      if (matches.length === 0) return
 
       // Split text around AIMD fields
-      AIMD_RE.lastIndex = 0
       const children: any[] = []
       let lastIndex = 0
-      let match: RegExpExecArray | null
 
-      while ((match = AIMD_RE.exec(value)) !== null) {
-        if (match.index > lastIndex) {
-          children.push({ type: 'text', value: value.slice(lastIndex, match.index) })
+      for (const match of matches) {
+        if (match.start > lastIndex) {
+          children.push({ type: 'text', value: value.slice(lastIndex, match.start) })
         }
         children.push({
           type: 'aimdField',
           data: {
             hName: 'aimd-field',
-            hProperties: { fieldType: match[1], fieldContent: match[2] },
+            hProperties: { fieldType: match.type, fieldContent: match.content },
           },
-          fieldType: match[1],
-          fieldContent: match[2],
+          fieldType: match.type,
+          fieldContent: match.content,
         })
-        lastIndex = match.index + match[0].length
+        lastIndex = match.end
       }
 
       if (lastIndex < value.length) {
@@ -154,7 +160,7 @@ export const aimdFieldNode = $node('aimd_field', () => ({
   toMarkdown: {
     match: (node: ProsemirrorNode) => node.type.name === 'aimd_field',
     runner: (state, node) => {
-      state.addNode('text', undefined, `{{${node.attrs.fieldType}|${node.attrs.fieldContent}}}`)
+      state.addNode('aimdField', undefined, `{{${node.attrs.fieldType}|${node.attrs.fieldContent}}}`)
     },
   },
 } as NodeSchema))

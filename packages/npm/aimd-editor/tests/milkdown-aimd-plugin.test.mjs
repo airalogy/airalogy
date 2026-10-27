@@ -43,12 +43,13 @@ function getPluginListBlock(content) {
   return match[0]
 }
 
-test('aimd_field markdown serializer writes raw AIMD syntax as text so it round-trips through markdown instead of leaking html wrappers', () => {
+test('aimd_field markdown serializer uses a dedicated handler without Markdown text escaping', () => {
   const toMarkdownBlock = getToMarkdownBlock(source)
   assert.match(
     toMarkdownBlock,
-    /state\.addNode\('text',\s*undefined,\s*`\{\{\$\{node\.attrs\.fieldType\}\|\$\{node\.attrs\.fieldContent\}\}\}`\)/,
+    /state\.addNode\('aimdField',\s*undefined,\s*`\{\{\$\{node\.attrs\.fieldType\}\|\$\{node\.attrs\.fieldContent\}\}\}`\)/,
   )
+  assert.match(source, /toMarkdownExtensions/)
 })
 
 test('aimd_field markdown serializer no longer routes AIMD syntax through html nodes', () => {

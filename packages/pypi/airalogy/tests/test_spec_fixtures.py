@@ -21,6 +21,15 @@ def field_name(field):
     return field["name"] if isinstance(field, dict) else field.name
 
 
+def test_quoted_template_fixture_keeps_nested_references_literal():
+    content = (PROTOCOL_FIXTURES_ROOT / "quoted-template-text/protocol/protocol.aimd").read_text(encoding="utf-8")
+    templates = parse_aimd(content)["templates"]
+    assert [field_name(field) for field in templates["step"]] == ["verify_reading"]
+    assert [field_name(field) for field in templates["check"]] == ["reading_stable"]
+    assert not templates.get("ref_var")
+    assert "{{ref_var|stable_wait_s}}" in templates["check"][0]["checked_message"]
+
+
 def test_basic_protocol_fixture_fields_match_python_parser():
     content = BASIC_FIXTURE.joinpath("protocol.aimd").read_text(encoding="utf-8")
     expected = json.loads(
