@@ -1,0 +1,395 @@
+# AIMD 语法导览
+
+## 变量定义
+
+样品备注：{{var|field_1: str | None, title = "样品备注"}}
+
+样品名称：{{var|sample_name: str, title = "样品名称", description = "在本协议中使用的可读名称", examples = ["S-001", "对照 A"]}}
+
+样品标签：{{var|sample_tags: list[str], title = "样品标签", description = "逐项填写样品标签，可拖动调整顺序"}}
+申请分析项目：{{var|requested_analyses: list[Literal["Microscopy", "Sequencing", "Spectroscopy"]] | None, title="申请分析项目", description="可多选；Microscopy 为显微观察，Sequencing 为测序，Spectroscopy 为光谱分析"}}
+重复次数：{{var|replicate_counts: list[int], title = "重复次数", description = "逐项填写整数，可拖动调整顺序"}}
+
+操作人员：{{var|operator: UserName, title = "操作人员", description = "负责执行和审核本协议的人员", examples = ["陈老师"]}}
+
+记录时间：{{var|current_time: CurrentTime, title = "记录时间", description = "创建协议记录时采集的时间", examples = ["2026-05-27 09:30"]}}
+
+稳定等待时间：{{var|stable_wait_s: int = 10, title = "稳定等待时间（秒）", description = "同时用于演示带引号字符串的边界", examples = [10, 30]}}
+
+实验摘要：{{var|summary: AiralogyMarkdown, title = "实验摘要", description = "用 Markdown 记录背景、观察结果和审核意见", examples = ["混合前样品外观澄清。"]}}
+
+含图片引用的 AIMD 内容：{{var|aimd_content: AiralogyMarkdown = "![Site photo](airalogy.id.file.site-photo.png)", title = "含图片引用的 AIMD 内容", description = "粘贴包含 airalogy.id.file.* 图片引用的 Airalogy Markdown"}}
+
+提取的图片 ID：{{var|image_ids: list[str], title = "提取的图片 ID", description = "手动运行浏览器侧赋值器，从上方 AIMD 内容中提取图片 ID"}}
+
+质粒序列：{{var|plasmid_sequence: DNASequence, title = "质粒序列", description = "包含拓扑和特征注释的序列记录", examples = ["ATGCGTACGTAGCTAG"]}}
+
+样品血型：{{var|blood_type: BloodType | None, title = "血型", description = "常见 ABO 血型，可包含 Rh 阳性或阴性信息；例如 A+ 表示 A 型且 Rh 阳性", examples = ["A+", "O-", "Rh+"]}}
+
+Python 分析片段：{{var|python_code: PyStr, title = "Python 分析代码"}}
+
+JavaScript 格式转换：{{var|javascript_code: JsStr, title = "JavaScript 格式转换代码"}}
+
+JSON 配置：{{var|json_config: JsonStr, title = "结构化 JSON 配置"}}
+
+YAML 工作流：{{var|yaml_workflow: YamlStr, title = "YAML 工作流定义"}}
+
+通用代码：{{var|generic_code: CodeStr, title = "不限语言的代码"}}
+
+温度设置：{{var|temperature: float = 25.0, title = "温度（°C）", description = "本次操作使用的环境温度", examples = [25.0, 37.0]}}
+
+浓度设置：{{var|concentration: float = 1.0, title = "浓度（M）", description = "试剂的最终摩尔浓度", examples = [0.5, 1.0, 2.0]}}
+
+是否启用：{{var|is_active: bool = true}}
+
+## 审阅标记
+
+AIMD 支持 CriticMarkup 风格的审阅标记：{++新增文字++}、{--删除文字--}、{~~原来的表述~>修改后的表述~~}、{>>审阅意见<<}和{==高亮文字==}。
+
+## 变量表
+
+{{var|samples, title = "样品测量", description = "每行记录一个制备好的样品", examples = ["S-001 行"], subvars=[
+  var(sample_id: str, title = "样品 ID", description = "试管或孔板孔位标识", examples = ["S-001"]),
+  var(concentration: float, title = "浓度（M）", description = "测得的试剂摩尔浓度", examples = [1.0]),
+  var(volume: float, title = "体积（mL）", description = "最终样品体积", examples = [2.5])
+]}}
+
+## Markdown 表格中的输入框
+
+| 材料 | 用量 |
+| --- | --- |
+| 水 | {{var|water_volume_ml: float}} mL |
+| 柠檬汁 | {{var|lemon_juice_ml: float}} mL |
+| 液体总量 | {{var|total_liquid_ml: float}} mL |
+| 糖 | {{var|sugar_weight_g: float}} g |
+| 冰块 | {{var|ice_cube_count: int}} |
+
+```assigner runtime=client
+assigner(
+  {
+    mode: "auto",
+    dependent_fields: ["water_volume_ml", "lemon_juice_ml"],
+    assigned_fields: ["total_liquid_ml"],
+  },
+  function calculate_total_liquid_ml({ water_volume_ml, lemon_juice_ml }) {
+    return {
+      total_liquid_ml: Math.round((water_volume_ml + lemon_juice_ml) * 100) / 100,
+    };
+  }
+);
+```
+
+## 浏览器侧列表赋值器
+
+这个手动赋值器完全在浏览器中运行。点击“提取的图片 ID”旁的赋值按钮，即可从上方 AIMD 内容中提取 Airalogy 文件图片 ID。
+
+```assigner runtime=client
+assigner(
+  {
+    mode: "manual",
+    dependent_fields: ["aimd_content"],
+    assigned_fields: ["image_ids"],
+  },
+  function extract_airalogy_image_ids(fields) {
+    const text = String(fields.aimd_content || "");
+    const image_ids = text.match(/airalogy\.id\.file\.[^\s)]+/g) || [];
+    return {
+      image_ids: image_ids,
+    };
+  }
+);
+```
+
+## 图片与文献引用
+
+协议工作流程见 {{ref_fig|workflow_diagram}}，正文中也可以引用文献，例如 {{cite|yang2025airalogyaiempowereduniversaldata}}。
+
+下方显式填写的 `id` 是图片在源文件中的稳定标识，插入后仍可修改。
+
+```fig
+id: workflow_diagram
+src: files/workflow-diagram.svg
+title: 工作流程图
+legend: 使用本地 SVG 图片演示 fig 元数据和 ref_fig 引用。
+```
+
+## 平台视频
+
+平台视频通过 `kind: video` 和 `provider` 声明来源。示例见 {{ref_media|youtube_demo}} 和 {{ref_media|bilibili_demo}}。
+
+```media
+id: youtube_demo
+kind: video
+provider: youtube
+src: https://www.youtube.com/embed/VIDEO_ID
+title: YouTube 视频
+legend: 请将 VIDEO_ID 替换为视频的 YouTube 嵌入 ID。
+```
+
+```media
+id: bilibili_demo
+kind: video
+provider: bilibili
+src: https://player.bilibili.com/player.html?bvid=BV_ID
+title: 哔哩哔哩视频
+legend: 请将 BV_ID 替换为视频的 BVID。
+```
+
+```refs
+@misc{yang2025airalogyaiempowereduniversaldata,
+      title={Airalogy: AI-empowered universal data digitization for research automation},
+      author={Zijie Yang and Qiji Zhou and Fang Guo and Sijie Zhang and Yexun Xi and Jinglei Nie and Yudian Zhu and Liping Huang and Chou Wu and Yonghe Xia and Xiaoyu Ma and Yingming Pu and Panzhong Lu and Junshu Pan and Mingtao Chen and Tiannan Guo and Yanmei Dou and Hongyu Chen and Anping Zeng and Jiaxing Huang and Tian Xu and Yue Zhang},
+      year={2025},
+      eprint={2506.18586},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2506.18586},
+}
+```
+
+## 实验步骤
+
+{{step|sample_preparation, title="准备样品"}} 准备样品并核对样品名称 {{ref_var|sample_name}}。此步骤未启用勾选，因此不会显示复选框。
+
+记录准备时的温度：{{var|prep_temperature_c: float}} °C
+
+记录简短的准备说明：{{var|prep_observation: str}}
+
+{{step|pre_chill_tube, 2, title="预冷收集管"}} 加入试剂前，将收集管置于冰上。这里演示样品准备步骤下的二级子步骤。
+
+{{step|verify_tube_label, 2, check=True, title="核对试管标签"}} 确认试管标签与 {{ref_var|sample_name}} 一致。这里演示启用勾选的二级子步骤。
+
+{{step|quick_spin_sample, 3, duration='15s', timer='countdown', title="短暂离心"}} 继续操作前短暂离心样品。这里演示带倒计时的三级嵌套步骤。
+
+{{step|buffer_setup, check=True, title="准备缓冲液"}} 为样品准备稀释缓冲液。此步骤启用勾选，Recorder 会显示复选框。
+
+{{step|mix_reaction, check=True, duration='2m', title="混匀反应体系"}} 充分混匀反应体系。此步骤带有预计时长，并使用默认的正向计时模式。
+
+{{step|wash_window, duration='30s', timer='countdown', title="清洗"}} 在 30 秒内完成清洗。此步骤演示倒计时模式。
+
+{{step|transfer_window, check=True, duration='90s', timer='both', title="转移样品"}} 在超时前完成样品转移。此步骤演示倒计时与已用时间同时显示。
+
+{{step|data_analysis}} 分析数据并核对温度 {{ref_var|temperature}}。此步骤保留不填写 title 的写法，正文仍是操作说明。
+
+## 质量检查
+
+{{check|quality_control, title="质量检查"}} 提交前核对数据完整性、试剂批次和样品标识。
+
+{{check|quoted_message_boundary, checked_message="这里的 AIMD 样式文本保持为普通文字：{{ref_var|stable_wait_s}}。"}} 在普通 AIMD 正文中，同一个引用会显示为数据：等待 {{ref_var|stable_wait_s}} 秒后再确认稳定。
+
+{{check|safety_verification}}
+
+## 题目
+
+```quiz
+id: quiz_single_1
+type: choice
+mode: single
+stem: 样品最初应存放在什么温度下？
+score: 2
+options:
+  - key: A
+    text: -20°C
+    explanation: 对初始存放阶段而言温度过低，可能增加后续处理的难度。
+  - key: B
+    text: 4°C
+    explanation: 正确。初始短期存放通常使用 4°C，以在不冻结样品的情况下保持稳定。
+  - key: C
+    text: 室温
+    explanation: 室温可能增加样品在下一步操作前降解的风险。
+grading:
+  strategy: option_points
+  option_points:
+    A: 0
+    B: 2
+    C: 1
+```
+
+```quiz
+id: quiz_true_false_1
+type: true_false
+stem: 样品在转移步骤前始终保持在 4°C。
+score: 1
+options:
+  - key: true
+    text: "是"
+    explanation: 正确。记录表明转移前样品保持在 4°C。
+  - key: false
+    text: "否"
+    explanation: 只有样品在转移前升温时才应选择此项。
+answer: true
+```
+
+```quiz
+id: quiz_followup_1
+type: choice
+mode: single
+stem: 本次样品采用了哪种转移方式？
+score: 1
+options:
+  - key: A
+    text: 冰盒转移
+    explanation: 补充处理细节，让记录同时保留选项和结构化背景信息。
+    followups:
+      - key: duration_min
+        type: int
+        title: 转移时长
+        unit: min
+      - key: max_temperature_c
+        type: float
+        title: 观察到的最高温度
+        unit: °C
+      - key: seal_verified
+        type: bool
+        title: 转移前已确认密封
+        required: false
+  - key: B
+    text: 预冷容器转移
+    explanation: 记录容器温度和转移时长以便复核。
+    followups:
+      - key: container_temperature_c
+        type: float
+        title: 容器温度
+        unit: °C
+      - key: duration_min
+        type: int
+        title: 转移时长
+        unit: min
+  - key: C
+    text: 室温转移
+    explanation: 记录样品离开冷链的时长。
+    followups:
+      - key: duration_min
+        type: int
+        title: 室温暴露时长
+        unit: min
+answer: A
+```
+
+```quiz
+id: quiz_multiple_1
+type: choice
+mode: multiple
+stem: 实验记录必须包含哪些信息？
+score: 3
+options:
+  - key: A
+    text: 样品 ID
+    explanation: 正确。样品标识用于追溯。
+  - key: B
+    text: 操作时间
+    explanation: 正确。操作时间是实验记录的核心信息。
+  - key: C
+    text: 操作人员
+    explanation: 正确。操作人员信息用于明确责任和审核。
+  - key: D
+    text: 天气情况
+    explanation: 本例通常不需要记录天气，因此不必选择。
+answer: [A, B, C]
+```
+
+```quiz
+id: quiz_blank_1
+type: blank
+stem: 反应体系中 NaCl 的目标浓度为 [[b1]]。
+score: 2
+blanks:
+  - key: b1
+    answer: 0.9%
+grading:
+  strategy: normalized_match
+  blanks:
+    - key: b1
+      accepted_answers: ["0.9%", "0.9 %", "0.009"]
+      normalize: ["trim", "remove_spaces"]
+```
+
+```quiz
+id: quiz_open_1
+type: open
+stem: 解释此步骤为什么需要控制温度，并给出至少两个原因。
+score: 5
+rubric: 同时提及反应速率和样品稳定性。
+grading:
+  strategy: keyword_rubric
+  rubric_items:
+    - id: rate
+      points: 2
+      desc: 提及反应速率。
+      keywords: ["反应速率", "速率", "reaction rate", "rate"]
+    - id: stability
+      points: 3
+      desc: 提及样品稳定性。
+      keywords: ["样品稳定性", "稳定性", "sample stability", "stability"]
+```
+
+```quiz
+id: quiz_scale_1
+type: scale
+title: GAD-2 风格量表示例
+description: 此矩阵示例演示共享选项、自动计分和延迟显示分数，仅用于展示语法，不用于诊断。
+stem: 过去两周，以下问题困扰您的频率如何？
+display: matrix
+items:
+  - key: s1
+    stem: 感到紧张、焦虑或坐立不安
+  - key: s2
+    stem: 无法停止或控制担忧
+options:
+  - key: not_at_all
+    text: 完全没有
+    points: 0
+  - key: several_days
+    text: 有几天
+    points: 1
+  - key: more_than_half_the_days
+    text: 超过一半天数
+    points: 2
+  - key: nearly_every_day
+    text: 几乎每天
+    points: 3
+grading:
+  strategy: sum
+  bands:
+    - min: 0
+      max: 1
+      label: 低分段
+      interpretation: 演示低分段的显示。
+    - min: 2
+      max: 3
+      label: 中分段
+      interpretation: 演示中分段的显示。
+    - min: 4
+      max: 6
+      label: 高分段
+      interpretation: 演示高分段的显示，不作为临床结论。
+```
+
+## 交叉引用
+
+引用步骤：{{ref_step|sample_preparation}}
+
+引用带勾选的步骤：{{ref_step|buffer_setup}}
+
+引用嵌套步骤：{{ref_step|quick_spin_sample}}
+
+引用计时步骤：{{ref_step|transfer_window}}
+
+## Markdown 功能
+
+**粗体** *斜体* ~~删除线~~
+
+- 列表项 1
+- 列表项 2
+
+| 列 A | 列 B | 列 C |
+|------|------|------|
+| 1    | 2    | 3    |
+
+> 引用内容
+
+行内公式 $E = mc^2$
+
+$$
+\sum_{i=1}^{n} x_i = x_1 + x_2 + \cdots + x_n
+$$

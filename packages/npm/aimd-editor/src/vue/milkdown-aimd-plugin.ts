@@ -12,11 +12,12 @@ import type { NodeSchema, MarkdownNode } from '@milkdown/kit/transformer'
 import type { Node as ProsemirrorNode } from '@milkdown/kit/prose/model'
 import type { EditorView, NodeView } from '@milkdown/kit/prose/view'
 import { restoreAimdInlineTemplates } from '@airalogy/aimd-core'
-import { findAimdInlineTemplates } from '@airalogy/aimd-core/parser'
-import { normalizeAimdInlineTemplateMarkdownEscapes } from './aimdInlineMarkdownNormalization'
+import { findAimdInlineTemplates, parseCheckContent, parseStepContent, parseVarDefinition } from '@airalogy/aimd-core/parser'
+import type { AimdEditorMessages } from './locales'
 import { hardbreakAttr, hardbreakSchema } from '@milkdown/kit/preset/commonmark'
 import { $node, $view, $remark, $inputRule } from '@milkdown/kit/utils'
 import { InputRule } from '@milkdown/kit/prose/inputrules'
+import { normalizeAimdInlineTemplateMarkdownEscapes } from './aimdInlineMarkdownNormalization'
 
 // ─── AIMD field type colors (matches types.ts) ───
 const AIMD_COLORS: Record<string, string> = {
@@ -346,6 +347,131 @@ class AimdFieldNodeView implements NodeView {
 export const aimdFieldView = $view(aimdFieldNode, () => {
   return (node, view, getPos) => new AimdFieldNodeView(node, view, getPos)
 })
+
+export interface AimdInputEditRequest {
+  content: string
+  apply: (content: string) => void
+}
+
+interface AimdFieldViewOptions {
+  compact: boolean
+  messages: AimdEditorMessages
+  edit: (request: AimdInputEditRequest) => void
+  editStep?: (request: AimdInputEditRequest) => void
+  editCheck?: (request: AimdInputEditRequest) => void
+}
+
+class AimdInputNodeView implements NodeView {
+  dom: HTMLButtonElement
+  private refresh = () => {
+    const { compact, messages } = this.options()
+    if (this.node.attrs.fieldType === 'step' || this.node.attrs.fieldType === 'check') {
+      const isCheck = this.node.attrs.fieldType === 'check'
+      const step = (isCheck ? parseCheckContent : parseStepContent)(this.node.attrs.fieldContent)
+      const labels = isCheck ? messages.checkField : messages.stepField
+      this.dom.replaceChildren()
+      const name = document.createElement('span')
+      name.textContent = `${messages.fieldTypes[isCheck ? 'check' : 'step'].label}${step.title ? `: ${step.title}` : ''}`
+      this.dom.append(name)
+      if (!compact) {
+        const key = document.createElement('small')
+        key.textContent = step.id
+        this.dom.append(key)
+      }
+      this.dom.className = `aimd-input-chip ${isCheck ? 'aimd-check-chip' : 'aimd-step-chip'}`
+      this.dom.title = labels.edit
+      this.dom.setAttribute('aria-label', `${labels.edit}: ${step.title || step.id}`)
+      this.dom.disabled = !this.view.editable
+      return
+    }
+    const definition = parseVarDefinition(this.node.attrs.fieldContent)
+    const label = typeof definition.kwargs?.title === 'string' ? definition.kwargs.title : messages.fieldTypes.var.label
+    this.dom.textContent = compact ? label : `var | ${this.node.attrs.fieldContent}`
+    this.dom.className = `aimd-input-chip${compact ? '' : ' aimd-input-chip--detailed'}`
+    this.dom.title = messages.inputField.edit
+    this.dom.setAttribute('aria-label', `${messages.inputField.edit}: ${label}`)
+    this.dom.disabled = !this.view.editable
+  }
+
+  constructor(private node: ProsemirrorNode, private view: EditorView, private getPos: () => number | undefined, private options: () => AimdFieldViewOptions) {
+    this.dom = document.createElement('button')
+    this.dom.type = 'button'
+    this.dom.contentEditable = 'false'
+    this.dom.dataset.fieldType = this.node.attrs.fieldType
+    this.refresh()
+    this.view.dom.addEventListener('aimd-field-display-change', this.refresh)
+    this.dom.addEventListener('click', event => {
+      event.preventDefault()
+      if (!this.view.editable) return
+      const isStep = this.node.attrs.fieldType === 'step'
+      const isCheck = this.node.attrs.fieldType === 'check'
+      const edit = isCheck ? this.options().editCheck : isStep ? this.options().editStep : this.options().edit
+      edit?.({
+        content: this.node.attrs.fieldContent,
+        apply: content => {
+          const pos = this.getPos()
+          if (pos === undefined || !this.view.editable) return
+          const current = this.view.state.doc.nodeAt(pos)
+          if (!current || !current.eq(this.node)) return
+          const parse = isCheck ? parseCheckContent : isStep ? parseStepContent : parseVarDefinition
+          const oldId = parse(this.node.attrs.fieldContent).id
+          const newId = parse(content).id
+          const tr = this.view.state.tr.setNodeMarkup(pos, undefined, { ...this.node.attrs, fieldContent: content })
+          if (!isCheck && oldId !== newId) {
+            this.view.state.doc.descendants((child, childPos) => {
+              if (child.type.name === 'aimd_field' && child.attrs.fieldType === (isStep ? 'ref_step' : 'ref_var') && child.attrs.fieldContent.trim() === oldId) {
+                tr.setNodeMarkup(childPos, undefined, { ...child.attrs, fieldContent: newId })
+              }
+            })
+          }
+          this.view.dispatch(tr)
+          this.view.focus()
+        },
+      })
+    })
+  }
+
+  update(node: ProsemirrorNode): boolean {
+    if (node.type.name !== 'aimd_field' || node.attrs.fieldType !== this.node.attrs.fieldType || (node.attrs.fieldType === 'var' && parseVarDefinition(node.attrs.fieldContent).subvars)) return false
+    if (node.attrs.fieldType === 'step' || node.attrs.fieldType === 'check') {
+      try {
+        (node.attrs.fieldType === 'check' ? parseCheckContent : parseStepContent)(node.attrs.fieldContent)
+      }
+      catch {
+        // Let the raw node view represent an incomplete source edit.
+        return false
+      }
+    }
+    this.node = node
+    this.refresh()
+    return true
+  }
+  stopEvent() { return true }
+  ignoreMutation() { return true }
+  destroy() { this.view.dom.removeEventListener('aimd-field-display-change', this.refresh) }
+}
+
+export function createAimdAuthoringPlugins(options: () => AimdFieldViewOptions): MilkdownPlugin[] {
+  const fieldView = $view(aimdFieldNode, () => (node, view, getPos) => {
+    try {
+      if (node.attrs.fieldType === 'step' && options().editStep) {
+        parseStepContent(node.attrs.fieldContent)
+        return new AimdInputNodeView(node, view, getPos, options)
+      }
+      if (node.attrs.fieldType === 'check' && options().editCheck) {
+        parseCheckContent(node.attrs.fieldContent)
+        return new AimdInputNodeView(node, view, getPos, options)
+      }
+      if (node.attrs.fieldType === 'var' && !parseVarDefinition(node.attrs.fieldContent).subvars) {
+        return new AimdInputNodeView(node, view, getPos, options)
+      }
+    } catch {
+      // Keep invalid drafts editable as raw syntax rather than breaking the whole editor.
+    }
+    return new AimdFieldNodeView(node, view, getPos)
+  })
+  return [aimdRemarkPlugin, aimdFieldNode, fieldView, inlineHardbreakSchema, aimdFieldInputRule].flat()
+}
 
 // ─── 5. Schema override: render inline hardbreak (`\n`) as <br> in WYSIWYG ───
 // Use schema-level toDOM override for stable rendering across editor view init/order.

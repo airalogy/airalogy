@@ -68,6 +68,7 @@
     "@airalogy/aimd-renderer": "workspace:^",
     "@codingame/monaco-vscode-editor-api": "^20.2.1",
     "@codingame/monaco-vscode-standalone-languages": "^20.2.1",
+    "@lucide/vue": "^1.62.0",
     "@milkdown/kit": "^7.18.0",
     "@milkdown/theme-nord": "^7.18.0",
     "@milkdown/vue": "^7.18.0"

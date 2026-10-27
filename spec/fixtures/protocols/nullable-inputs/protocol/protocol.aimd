@@ -1,0 +1,8 @@
+# Nullable Inputs
+
+Choice: {{var|choice: Literal["A|B", "None"] | None}}
+Count choice: {{var|count_choice: Optional[Literal[1, 2]]}}
+Confirmed: {{var|confirmed: bool | None}}
+Optional flag: {{var|optional_flag: Union[None, bool]}}
+Image: {{var|image: FileIdPNG | None}}
+JSON: {{var|json_text: JsonStr | None}}

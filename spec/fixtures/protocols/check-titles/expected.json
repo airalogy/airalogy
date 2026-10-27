@@ -1,0 +1,7 @@
+[
+  { "id": "safety_ready", "title": "防护检查, confirm \"PPE\"" },
+  { "id": "verify", "title": "Verify operator's reading" },
+  { "id": "legacy", "title": null },
+  { "id": "blank", "title": null },
+  { "id": "message_only", "title": null }
+]

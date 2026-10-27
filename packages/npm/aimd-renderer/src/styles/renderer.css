@@ -199,14 +199,32 @@
   color: var(--aimd-var-text);
 }
 
-.aimd-field--var .aimd-field__scope {
+.aimd-field:is(.aimd-field--var, .aimd-field--step, .aimd-field--check) .aimd-field__scope {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
   padding: 0 4px;
   border-radius: 2px;
-  background-color: var(--aimd-var-scope-bg);
-  color: var(--aimd-var-scope-text);
   font-size: 12px;
   font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
   text-transform: lowercase;
+}
+
+.aimd-field--var .aimd-field__scope {
+  background-color: var(--aimd-var-scope-bg);
+  color: var(--aimd-var-scope-text);
+}
+
+.aimd-field--step > .aimd-field__scope {
+  background-color: #ffe0b2;
+  color: #924900;
+}
+
+.aimd-field--check > .aimd-field__scope {
+  background-color: #fee2e2;
+  color: #b91c1c;
 }
 
 .aimd-field--var .aimd-field__name {
@@ -790,6 +808,10 @@
   font-size: 14px;
 }
 
+.aimd-step__identity { display: inline-flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.aimd-step__id { font: 12px/1.4 monospace; color: #667085; overflow-wrap: anywhere; }
+.aimd-step__title { font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.aimd-field--step .aimd-field__step-num { font-weight: 600; }
 .aimd-field--step .aimd-field__name {
   font-weight: 500;
 }
@@ -797,8 +819,8 @@
 .aimd-field--check {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
+  gap: 4px;
+  padding: 2px 4px;
   border: 1px solid rgba(185, 28, 28, 0.2);
   border-radius: 4px;
   background-color: #fffafa;
@@ -839,7 +861,16 @@
 .aimd-field--check .aimd-field__name {
   font-weight: 500;
   user-select: none;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
+
+.aimd-field--check .aimd-field__label { display: inline-flex; flex-direction: column; }
+.aimd-check__title { font-weight: 600; overflow-wrap: anywhere; }
+.aimd-check__id { font: 12px/1.4 monospace; color: #667085; overflow-wrap: anywhere; }
+
+.aimd-field--check:has(.aimd-checkbox:disabled) { cursor: default; }
+.aimd-field--check .aimd-checkbox:disabled { cursor: default; }
 
 .aimd-field--editable {
   min-width: 80px;

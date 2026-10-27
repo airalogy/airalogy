@@ -87,7 +87,21 @@ export interface DemoMessages {
       templateLoaded: string
       draftRestored: string
       draftSaveFailed: string
+      draftSaving: string
+      draftSaved: string
+      retryDraftRestore: string
+      draftLoading: string
+      saveTemplate: string
+      saveRecord: string
+      templateSaved: string
+      recordSaved: (version: number) => string
+      recordSaveFailed: string
+      externalRecordFiles: (count: number) => string
       sourceTitle: string
+      editForm: string
+      fillForm: string
+      splitView: string
+      fieldDetails: string
       previewTitle: string
       recorderTitle: string
       recordTableTitle: string
@@ -293,7 +307,21 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         templateLoaded: 'Template loaded',
         draftRestored: 'Local draft restored',
         draftSaveFailed: 'Local draft could not be saved',
+        draftSaving: 'Saving draft...',
+        draftSaved: 'Draft saved locally',
+        retryDraftRestore: 'Retry draft recovery',
+        draftLoading: 'Restoring draft...',
+        saveTemplate: 'Save template',
+        saveRecord: 'Save record .aira',
+        templateSaved: 'Template downloaded (without record values)',
+        recordSaved: version => `Record v${version} downloaded as .aira`,
+        recordSaveFailed: 'Record could not be saved',
+        externalRecordFiles: count => `${count} external attachment reference(s) were preserved without file contents.`,
         sourceTitle: 'Editor',
+        editForm: 'Edit form',
+        fillForm: 'Fill form',
+        splitView: 'Side by side',
+        fieldDetails: 'Show field details',
         previewTitle: 'Live Preview',
         recorderTitle: 'Recorder Form',
         recordTableTitle: 'Records Table',
@@ -497,7 +525,21 @@ const BASE_DEMO_MESSAGES: Record<DemoLocale, DemoMessages> = {
         templateLoaded: '已加载模板',
         draftRestored: '已恢复本地草稿',
         draftSaveFailed: '本地草稿保存失败',
+        draftSaving: '正在保存草稿…',
+        draftSaved: '草稿已保存到本机',
+        retryDraftRestore: '重试恢复草稿',
+        draftLoading: '正在恢复草稿…',
+        saveTemplate: '保存模板',
+        saveRecord: '保存记录 .aira',
+        templateSaved: '模板已下载（不含填写值）',
+        recordSaved: version => `记录 v${version} 已下载为 .aira`,
+        recordSaveFailed: '记录保存失败',
+        externalRecordFiles: count => `${count} 个外部附件仅保留引用，包内不含文件内容。`,
         sourceTitle: '编辑器',
+        editForm: '编辑表单',
+        fillForm: '填写表单',
+        splitView: '并排显示',
+        fieldDetails: '显示字段信息',
         previewTitle: '实时预览',
         recorderTitle: '填写表单',
         recordTableTitle: 'Records 表格',

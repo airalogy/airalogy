@@ -36,7 +36,7 @@ describe('createEditorProtocolDownload', () => {
 
   it('passes normalized AIMD into AIRA packaging', async () => {
     const archiveBytes = new Uint8Array([1, 2, 3])
-    const archiveFactory = vi.fn(async () => archiveBytes)
+    const archiveFactory = vi.fn(async (_options: { aimd: string }) => archiveBytes)
     const result = await createEditorProtocolDownload({
       aimd: missingIdFigure,
       filenameStem: 'figure-protocol',

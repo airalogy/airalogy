@@ -9,7 +9,11 @@ Assigner blocks are hidden from normal rendered output by default. You can opt i
 `parseAndExtract` returns the canonical core field structure, including simple `var` metadata in `fields.var_definitions`.
 Default `var` and `var_table` previews render AIMD `title`, preserve the canonical field id for automation, and expose `description` plus `example`/`examples` details only on hover or keyboard focus.
 
+Default variable, step and checkpoint previews use matching localized type badges, with blue, amber and red accents respectively. Step titles take priority over secondary IDs; checkpoint previews retain a disabled checkbox and explicitly show their type label. HTML and Vue output follow the same presentation.
+
 > Protocol-level AIMD syntax, assigner semantics, and validation rules are normative in Airalogy docs. `@airalogy/aimd-*` docs describe how the frontend parser, renderer, and recorder implement those rules.
+
+Checkpoint titles are optional: `{{check|safety_ready, title="Protective equipment"}}`. HTML and Vue previews display the title as text and the stable ID as secondary information. Untitled checkpoints retain their existing fallback label; following Markdown is never inferred as a title.
 
 ## Install
 

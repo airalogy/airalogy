@@ -106,18 +106,31 @@ class VarModel(BaseModel):
 ### 1.2 Step (`{{step}}`)
 
 ```aimd
-{{step|<step_id>, <level>[, duration="<duration>"][, timer="elapsed|countdown|both"][, check=True][, checked_message="..."]}}
+{{step|<step_id>, <level>[, title="<title>"][, duration="<duration>"][, timer="elapsed|countdown|both"][, check=True][, checked_message="..."]}}
 ```
 
 | Parameter         | Meaning                                                          |
 | ----------------- | ---------------------------------------------------------------- |
 | `<level>`         | 1, 2, or 3 (default = 1)                                         |
+| `title`           | Optional human-facing step name in single or double quotes; supports Unicode, commas and escaped quotes. Leading/trailing whitespace is trimmed; an empty title is omitted. |
 | `duration`        | Expected step duration, using compact units like `30s`, `10m`, `1h30m`, or `2d4h` |
 | `timer`           | Recorder timer display mode: `elapsed` (default), `countdown`, or `both` |
 | `check=True`      | Render a checkbox so the user can tick completion                |
 | `checked_message` | Banner text shown once the box is ticked (requires `check=True`) |
 
 `<step_id>` follows the same naming rules as `<var_id>` and must be unique.
+
+Titles may repeat; they do not change IDs, numbering, references, or Record keys. Text following a step marker on the same line remains body content and is not inferred as a title. Source line breaks and visual wrapping do not alter this rule. Existing title-free steps remain valid.
+
+```aimd
+{{step|dilute_and_mix, title="Dilute and mix", check=True, duration="2m"}}
+
+Add water dropwise to the mark, stopper, then mix by inversion.
+
+Actual volume: {{var|actual_volume: float, title="Actual volume mL"}}
+```
+
+Recorder displays the step number and title prominently, with the ID in smaller type when field details are shown. Compact display hides the ID, not the title; title-free steps use the number as their primary label. There is no need for a duplicate Markdown heading. Visual insertion generates a unique ID and makes the name optional; edit instructions directly in the document. Advanced settings allow adjusting a new ID before insertion; existing step IDs are read-only in the settings dialog so title edits cannot break records. Intentional ID migrations must explicitly update source references, Records and Collector bindings.
 
 Example:
 
@@ -135,18 +148,22 @@ When `timer="countdown"` or `timer="both"` is provided, the recorder can use `du
 ### 1.3 Checkpoint (`{{check}}`)
 
 ```aimd
-{{check|<checkpoint_id>[, checked_message="..."]}}
+{{check|<checkpoint_id>[, title="..."][, checked_message="..."]}}
 ```
 
 - `<checkpoint_id>` follows the same naming rules.
 - The UI renders a single checkbox.
+- `title` is an optional quoted, human-readable name. Single and double quotes, commas, Unicode and escaped quotes are supported; surrounding whitespace is trimmed and a blank title is treated as absent. Titles may repeat and do not change the stable ID or Record key.
 
 Example:
 
 ```aimd
 {{check|reagent_quality_check}} The reagents are of good quality.
+{{check|safety_ready, title="Protective equipment"}} Confirm gloves and eye protection before proceeding.
 {{check|prepare_pcr_reaction_on_ice, checked_message="Avoid condensation dripping into tubes."}} Prepare PCR reaction on ice.
 ```
+
+The title is a short label; subsequent Markdown remains the detailed check instructions and is never inferred as a title. Both styles above remain valid. Visual insertion generates an ID and makes the name optional. Existing IDs stay read-only in the settings dialog; changing the title preserves checked state and notes. Detailed display shows the title with a smaller ID; compact display hides the ID, not the title.
 
 ### 1.4 AIMD-looking text inside string parameters
 

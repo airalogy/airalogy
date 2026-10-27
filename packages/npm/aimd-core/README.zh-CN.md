@@ -66,6 +66,16 @@ const tree = processor.parse(protectedContent)
 processor.runSync(tree, file)
 ```
 
+`@airalogy/aimd-core/parser` 导出的 `findAimdInlineTemplates()` 返回完整行内模板及其源码位置，正确处理引号和转义引号。编辑工具应复用它，不要遇到第一个 `}}` 就结束匹配。该函数只扫描文本，不解析 Markdown 结构；排除代码块及校验字段应使用完整 parser。
+
+## 步骤标题
+
+`{{step|prepare_sample, title="准备样品", check=True}}` 声明可选的人类可读标题。`@airalogy/aimd-core/parser` 导出的 `parseStepContent()` 将其解析为 `title`；全文解析会保留在步骤节点和 `fields.step_hierarchy` 中，`toTemplateEnv()` 的步骤元数据也包含该字段。ID 仍然是 Record 键和 `ref_step` 引用目标。标记后面的文字仍是步骤正文，不会被自动推断为标题。标题必须是带引号的字符串，空白标题视为未设置，与 Python parser 保持一致。
+
+## 检查点标题
+
+`{{check|safety_ready, title="防护用品检查"}}` 同样支持选填标题。`@airalogy/aimd-core/parser` 导出 `parseCheckContent()`；`fields.check` 继续保留 ID 列表，`fields.check_definitions` 提供 `id`、可选的 `title` 和 `checked_message`。记录搜索标签与 `toTemplateEnv().record.byScope.check` 也保留标题，Record 仍以 ID 为键。
+
 ## CriticMarkup 审阅节点
 
 ```ts
@@ -181,13 +191,11 @@ const entityResolvers = createAimdEntityResolversFromConnectors(fields.connector
 
 `@airalogy/aimd-core/utils` 导出 `getAimdBuiltInTypeMetadata()` 和 `getAimdBuiltInTypeEnumValues()`。随包发布的元数据由 Python `airalogy.types` 注册表生成，因此 `BloodType` 这类官方命名枚举类型可以在浏览器工具中复用同一组取值，不需要在 npm 代码里重新维护 Python 类型定义。
 
+`getAimdBuiltInTypeNames()` 可列出注册类型，供编辑器生成附件格式等菜单。`@airalogy/aimd-core/parser` 的 `parseVarListEnumValues()` 可解析 `list[Literal[...]]` 和 `list[BloodType]`（含可空写法）的列表项候选值，不会将整个列表误判为单值枚举。
+
 ## 文档
 
 - EN: <https://airalogy.github.io/airalogy/aimd/en/packages/aimd-core>
 - 中文: <https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-core>
 - 解析结果结构与 `name` -> `id` 迁移说明见包文档。
 - 文档源码：`docs/aimd/en/packages/aimd-core/`、`docs/aimd/zh/packages/aimd-core/`
-
-## 行内模板扫描
-
-`@airalogy/aimd-core/parser` 导出的 `findAimdInlineTemplates()` 返回完整行内模板及其源码位置，正确处理引号和转义引号。编辑工具应复用它，不要遇到第一个 `}}` 就结束匹配。该函数只扫描文本，不解析 Markdown 结构；排除代码块及校验字段应使用完整 parser。

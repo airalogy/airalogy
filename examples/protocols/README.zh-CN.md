@@ -10,6 +10,8 @@
 | --- | --- | --- | --- | --- |
 | `meeting-notes` | 会议记录 | `en-US`, `zh-CN` | 否 | 适用于团队和项目的通用会议记录模板。 |
 | `cuaac-kinetics` | 点击化学反应动力学 | `en-US`, `zh-CN` | 是 | CuAAC 动力学数据上传、参数计算、绘图和报告生成。 |
+| `ai-glasses-vinegar-titration` | AI 眼镜：白醋总酸度滴定 | `zh-CN` | 否 | 18 步，覆盖定量稀释、液面读数、终点计时、平行质控和中断恢复。[测试指南](./ai-glasses-vinegar-titration/zh-CN/README.zh-CN.md)。 |
+| `ai-glasses-leaf-disk-photosynthesis` | AI 眼镜：叶圆片光合作用 | `zh-CN` | 否 | 19 步，覆盖浸润、三组对照、重复观察、ET50 区间和计数纠正。[测试指南](./ai-glasses-leaf-disk-photosynthesis/zh-CN/README.zh-CN.md)。 |
 | `field-water-sample-observation` | 野外水样观测与环境扰动分析 | `zh-CN` | 否 | 野外水样采集、当天气象场地记录、水化学与生化环境判读、季风和极端降雨扰动分析。 |
 | `literature-review-assistant` | AI 辅助文献调研与证据综述 | `zh-CN` | 是 | 配置 OpenAI 兼容联网大模型，完成候选文献初筛、人工证据提取、质量评价和综述草稿生成。 |
 | `stock-fundamental-analysis-assistant` | AI 辅助股票基本面分析 | `zh-CN` | 是 | 输入股票代码和公司名称，配置 OpenAI 兼容联网大模型，整理公开财报、业务分部、财务质量、估值比较、风险清单和研究报告草稿。 |
@@ -20,6 +22,8 @@
 | `diary` | 日记 | `en-US`, `zh-CN` | 否 | 轻量的结构化日记协议。 |
 
 机器可读清单位于 [index.json](./index.json)。
+
+两份 AI 眼镜协议是中文版教学与交互测试模板，不是已验证的实验室 SOP。先用清水/空器具排练，经本地实验室批准后再开展真实实验。Recorder 提供字段、步骤、计时和检查点；相机识别、语音命令、自动采集及强制流程拦截仍需宿主接入。结果由人工填写和审核，不提供伪造测量值或自动科学结论。
 
 ## 目录结构
 

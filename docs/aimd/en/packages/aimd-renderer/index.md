@@ -17,6 +17,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `renderReadonlyRecordToVue(content, recordData, { resolveAsset })` and `AimdMarkdownPreview` for readonly Vue rendering with Record data and file assets embedded in matching AIMD fields.
 - `parseAndExtract(content)` for canonical core field metadata extraction, including simple `var` definitions in `fields.var_definitions` and BibTeX references in `fields.refs`.
 - Default previews for `var` and `var_table` display AIMD `title`, preserve the canonical field id, and reveal `description` plus `example`/`examples` details only on hover or keyboard focus.
+- Variable, step and checkpoint previews share localized type badges with matching typography and spacing. Their colors remain distinct; steps prefer human-readable titles with secondary IDs, and checkpoints include an explicit type label and disabled checkbox. HTML and Vue output stay aligned.
 - Numbered citation markers with hover/focus reference details and generated end-of-document references lists for `{{cite|...}}` plus fenced `refs` blocks.
 - Host-side `resolveAssetUrl` support for rendering protocol-local figure and media assets from package, archive, or app-specific URLs without rewriting AIMD source.
 - Built-in AIMD prose typography when host applications place rendered output inside an `.aimd-renderer` container, including clearer heading hierarchy, list markers, and more compact body line height.
@@ -26,6 +27,10 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - Fenced `workflow` blocks render as structured Workflow UI with nodes, transitions, workflow-level assigners, assignment mappings, and optional run-state overlays supplied by the host.
 - Built-in quiz preview controls.
 - Built-in locale support via `locale`.
+
+## Checkpoint Titles
+
+`{{check|safety_ready, title="Protective equipment"}}` displays an optional human-readable title, with a smaller stable ID. Both HTML and Vue escape title content and retain the existing title-free behavior. Following Markdown remains instructions. Custom `CheckRenderer` components receive `title` separately from `name`, which remains the ID.
 
 ## Example
 

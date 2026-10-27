@@ -210,7 +210,7 @@ function createAimdNode(
     }
 
     case "check": {
-      const { id, checked_message, label } = parseCheckContent(content)
+      const { id, title, checked_message, label } = parseCheckContent(content)
       const checkNode: AimdCheckNode = {
         type: "aimd",
         fieldType: "check",
@@ -218,6 +218,7 @@ function createAimdNode(
         scope: "check",
         raw,
         label,
+        ...(title ? { title } : {}),
       }
 
       if (checked_message) {
@@ -675,6 +676,9 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
               case "check":
                 if (!fields.check.includes(aimdNode.id)) {
                   fields.check.push(aimdNode.id)
+                  const check = aimdNode as AimdCheckNode
+                  fields.check_definitions ??= []
+                  fields.check_definitions.push({ id: check.id, ...(check.title ? { title: check.title } : {}), ...(check.checked_message ? { checked_message: check.checked_message } : {}) })
                 }
                 break
               case "ref_step":
@@ -720,6 +724,7 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
     if (extractFields && stepContext.allSteps.length > 0) {
       fields.step_hierarchy = stepContext.allSteps.map(step => ({
         id: step.id,
+        ...(step.title ? { title: step.title } : {}),
         level: step.level,
         sequence: step.sequence,
         step: step.step,

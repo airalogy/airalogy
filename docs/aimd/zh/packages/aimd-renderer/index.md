@@ -17,6 +17,7 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - `renderReadonlyRecordToVue(content, recordData, { resolveAsset })` 与 `AimdMarkdownPreview`：输出带 Record 数据和文件资源的只读 Vue 渲染结果，把数据嵌入匹配的 AIMD 字段。
 - `parseAndExtract(content)`：提取 core 规范字段结构，包括 `fields.var_definitions` 中的普通 `var` 定义，以及 `fields.refs` 中的 BibTeX 文献条目。
 - `var` 与 `var_table` 的默认预览会显示 AIMD `title`，保留规范字段 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。
+- 变量、步骤和检查点的预览使用字号、间距一致的本地化类型徽标，保留各自的类型颜色；步骤优先显示标题并弱化 ID，检查点明确显示类型标签和禁用复选框。HTML 与 Vue 输出保持一致。
 - `{{cite|...}}` 与 fenced `refs` 代码块会渲染为带编号的引用标记、hover/focus 文献信息和文末参考文献列表。
 - 支持宿主通过 `resolveAssetUrl` 渲染 protocol-local 图像和媒体资源，让 `fig` / `media` 源码保留干净的相对路径，同时在包、archive 或应用内映射成真实可访问 URL。
 - 宿主把渲染输出放进 `.aimd-renderer` 容器后，可以使用 renderer 内置的 AIMD 正文排版，包括清晰的标题层级、列表 marker 和更紧凑的正文行距。
@@ -26,6 +27,10 @@ pnpm add @airalogy/aimd-renderer @airalogy/aimd-core
 - fenced `workflow` 代码块会渲染为结构化 Workflow UI，展示节点、transition、workflow 级 assigner、赋值映射，并可叠加宿主传入的运行状态。
 - 内建 quiz 预览控制。
 - 支持通过 `locale` 切换渲染标签语言。
+
+## 检查点标题
+
+`{{check|safety_ready, title="防护用品检查"}}` 显示可选的人类可读标题，稳定 ID 使用较小字号。HTML 与 Vue 均将标题作为转义的纯文本，兼容原有无标题写法。后续 Markdown 仍是检查正文。自定义 `CheckRenderer` 接收独立的 `title` 属性，`name` 仍然是 ID。
 
 ## 示例
 

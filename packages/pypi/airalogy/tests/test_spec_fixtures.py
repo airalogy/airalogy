@@ -7,7 +7,7 @@ from airalogy.examples.protocols import (
     load_index,
     protocols_root,
 )
-from airalogy.markdown import parse_aimd
+from airalogy.markdown import generate_model, parse_aimd
 from airalogy_protocol_examples_validation import validate_protocol_examples
 
 
@@ -28,6 +28,23 @@ def test_quoted_template_fixture_keeps_nested_references_literal():
     assert [field_name(field) for field in templates["check"]] == ["reading_stable"]
     assert not templates.get("ref_var")
     assert "{{ref_var|stable_wait_s}}" in templates["check"][0]["checked_message"]
+
+
+def test_choice_input_fixture_preserves_types_and_validates_arrays():
+    import pytest
+    from pydantic import ValidationError
+
+    content = (PROTOCOL_FIXTURES_ROOT / "input-choices/protocol/protocol.aimd").read_text(encoding="utf-8")
+    fields = parse_aimd(content)["templates"]["var"]
+    assert fields[1]["type_annotation"] == 'list[Literal["A", "B", "C"]] | None'
+    namespace = {}
+    exec(generate_model(content), namespace)
+    model = namespace["VarModel"]
+    value = model(status="Ready", tags=["A", "C"], levels=[1, 3], confirmed=None, blood_groups=["A+", "O"])
+    assert value.tags == ["A", "C"]
+    assert value.blood_groups == ["A+", "O"]
+    with pytest.raises(ValidationError):
+        model(status="Ready", tags=["invalid"], levels=[1], confirmed=True, blood_groups=["A"])
 
 
 def test_basic_protocol_fixture_fields_match_python_parser():
@@ -102,6 +119,14 @@ def test_protocol_fixtures_parse_with_python_parser():
     assert aimd_paths
     for aimd_path in aimd_paths:
         parse_aimd(aimd_path.read_text(encoding="utf-8"))
+
+
+def test_nullable_inputs_fixture_preserves_python_fields():
+    content = (PROTOCOL_FIXTURES_ROOT / "nullable-inputs/protocol/protocol.aimd").read_text(encoding="utf-8")
+    parsed = parse_aimd(content)
+    assert [field_name(field) for field in parsed["templates"]["var"]] == [
+        "choice", "count_choice", "confirmed", "optional_flag", "image", "json_text",
+    ]
 
 
 def test_critic_markup_fixture_keeps_review_marks_out_of_python_templates():

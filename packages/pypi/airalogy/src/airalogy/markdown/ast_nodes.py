@@ -192,6 +192,7 @@ class StepNode(ASTNode):
     estimated_duration_ms: Optional[int] = None
     timer: Optional[str] = None
     checked_message: Optional[str] = None
+    title: Optional[str] = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary format."""
@@ -205,6 +206,8 @@ class StepNode(ASTNode):
         }
         if self.check:
             result["check"] = self.check
+        if self.title:
+            result["title"] = self.title
         if self.duration:
             result["duration"] = self.duration
         if self.estimated_duration_ms is not None:
@@ -224,6 +227,7 @@ class CheckNode(ASTNode):
 
     name: str
     checked_message: Optional[str] = None
+    title: Optional[str] = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary format."""
@@ -236,6 +240,8 @@ class CheckNode(ASTNode):
         }
         if self.checked_message:
             result["checked_message"] = self.checked_message
+        if self.title:
+            result["title"] = self.title
         return result
 
 

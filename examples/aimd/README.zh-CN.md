@@ -10,7 +10,7 @@
 
 | ID | 场景 | 入口文件 | 说明 |
 | --- | --- | --- | --- |
-| `aimd-syntax-tour` | AIMD 语法导览 | [protocol.aimd](./aimd-syntax-tour/protocol.aimd) | 交互式语法导览，覆盖变量、表格、图、文献引用、步骤、检查点、题目、引用、Markdown 审阅标记和浏览器侧 client assigner。 |
+| `aimd-syntax-tour` | AIMD 语法导览 | [中文](./aimd-syntax-tour/protocol.zh-CN.aimd) / [English](./aimd-syntax-tour/protocol.aimd) | 中英双语交互式导览，覆盖变量、表格、图、文献引用、步骤、检查点、题目、引用、Markdown 审阅标记和浏览器侧 client assigner。 |
 | `clinical-information-record` | 临床信息记录 | [protocol.en-US.aimd](./clinical-information-record/protocol.en-US.aimd) / [protocol.zh-CN.aimd](./clinical-information-record/protocol.zh-CN.aimd) | 中英文双语案例，用于结构化记录临床就诊、评估、诊疗计划和审核信息。 |
 | `protocol-workflow` | Protocol Workflow 编排案例 | [workflow.aimd](./protocol-workflow/workflow.aimd) | 用分支、重试循环、数据传递和 workflow 级 assigner 编排多个 protocol 的 workflow 文档。 |
 

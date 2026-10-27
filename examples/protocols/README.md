@@ -10,6 +10,8 @@ Preview and fill the AIMD portions in the [AIMD demo examples page](https://aira
 | --- | --- | --- | --- | --- |
 | `meeting-notes` | Meeting notes | `en-US`, `zh-CN` | No | General-purpose meeting notes template for teams and projects. |
 | `cuaac-kinetics` | Click reaction kinetics | `en-US`, `zh-CN` | Yes | CuAAC kinetic data upload, parameter calculation, plots, and report drafting. |
+| `ai-glasses-vinegar-titration` | AI glasses: vinegar titration | `zh-CN` | No | 18 steps covering dilution, burette readings, endpoint timing, replicate QC, and interruption recovery. [Test guide](./ai-glasses-vinegar-titration/zh-CN/README.md). |
+| `ai-glasses-leaf-disk-photosynthesis` | AI glasses: floating leaf disks | `zh-CN` | No | 19 steps covering infiltration, three conditions, repeated observations, ET50 intervals, and counting corrections. [Test guide](./ai-glasses-leaf-disk-photosynthesis/zh-CN/README.md). |
 | `field-water-sample-observation` | Field water sample observation and disturbance analysis | `zh-CN` | No | Field water sampling, same-day weather and site records, water chemistry and biogeochemical interpretation, monsoon and extreme rainfall disturbance analysis. |
 | `literature-review-assistant` | AI-assisted literature review and evidence synthesis | `zh-CN` | Yes | Configure an OpenAI-compatible web-search model, screen candidate sources, extract evidence, appraise quality, and draft a review. |
 | `stock-fundamental-analysis-assistant` | AI-assisted stock fundamental analysis | `zh-CN` | Yes | Enter a stock ticker and company name, configure an OpenAI-compatible web-search model, and organize public filings, business segments, financial quality, valuation comparisons, risks, and a research report draft. |
@@ -20,6 +22,8 @@ Preview and fill the AIMD portions in the [AIMD demo examples page](https://aira
 | `diary` | Diary | `en-US`, `zh-CN` | No | Compact structured diary protocol. |
 
 The machine-readable registry is [index.json](./index.json).
+
+The two AI-glasses protocols are Chinese-language teaching and interaction-test templates, not validated laboratory SOPs. Begin with water/empty-vessel rehearsal and obtain local laboratory approval before wet-lab use. Recorder provides fields, steps, timers, and checks; camera recognition, voice commands, automatic capture, and enforced workflow gates require a host integration. Results are entered and reviewed manually; no fabricated measurements or automatic scientific conclusions are supplied.
 
 ## Layout
 

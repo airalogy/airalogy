@@ -8,6 +8,7 @@ import { NodeSelection } from '@milkdown/kit/prose/state'
 import { hardbreakAttr, hardbreakSchema } from '@milkdown/kit/preset/commonmark'
 import { $node, $prose, $remark, $view } from '@milkdown/kit/utils'
 import type { AimdQuizGradeResult, ExtractedAimdFields } from '@airalogy/aimd-core/types'
+import { parseVarDefinition } from '@airalogy/aimd-core/parser'
 import {
   aimdFieldInputRule,
   aimdFieldNode,
@@ -53,6 +54,7 @@ export interface RecorderMilkdownFieldIdentity {
 export interface RecorderMilkdownSurfaceState {
   record: AimdProtocolRecordData
   readonly: boolean
+  fieldDisplay?: 'compact' | 'detailed'
   currentUserName?: string
   now?: Date | string | number
   locale?: string
@@ -102,8 +104,8 @@ export interface RecorderMilkdownSurfaceState {
 interface RecorderMilkdownPluginOptions {
   appContext?: AppContext | null
   surfaceState: RecorderMilkdownSurfaceState
-  onEditField?: (field: RecorderMilkdownFieldIdentity) => void
-  onDeleteField?: (field: RecorderMilkdownFieldIdentity) => void
+  onEditField?: (field: RecorderMilkdownFieldIdentity, apply: (content: string) => boolean) => void
+  onDeleteField?: (field: RecorderMilkdownFieldIdentity, remove: () => void) => void
 }
 
 const RECORDER_QUIZ_MDAST_TYPE = 'aimdRecorderQuizBlock'
@@ -246,7 +248,7 @@ const recorderQuizNode = $node('aimd_recorder_quiz', () => ({
   },
 } as NodeSchema))
 
-class RecorderWidgetNodeView implements NodeView {
+export class RecorderWidgetNodeView implements NodeView {
   dom: HTMLElement
   private bodyEl: HTMLElement
   private summaryEl: HTMLElement
@@ -299,7 +301,26 @@ class RecorderWidgetNodeView implements NodeView {
 
       const identity = this.resolveIdentity()
       if (identity) {
-        this.options.onEditField?.(identity)
+        this.options.onEditField?.(identity, content => {
+          const pos = this.getPos()
+          if (typeof pos !== 'number' || this.options.surfaceState.readonly) return false
+          const current = this.view.state.doc.nodeAt(pos)
+          // Reparsing may replace a node with an equivalent instance while the dialog is open.
+          if (!current || !current.eq(this.node)) return false
+          const tr = this.view.state.tr.setNodeMarkup(pos, undefined, { ...current.attrs, fieldContent: content })
+          if (identity.fieldType === 'var') {
+            const nextId = parseVarDefinition(content).id
+            if (nextId !== identity.id) {
+              this.view.state.doc.descendants((child, childPos) => {
+                if (child.type.name === 'aimd_field' && child.attrs.fieldType === 'ref_var' && child.attrs.fieldContent.trim() === identity.id) {
+                  tr.setNodeMarkup(childPos, undefined, { ...child.attrs, fieldContent: nextId })
+                }
+              })
+            }
+          }
+          this.view.dispatch(tr)
+          return true
+        })
       }
     })
     actionsEl.appendChild(this.editButtonEl)
@@ -319,7 +340,13 @@ class RecorderWidgetNodeView implements NodeView {
 
       const identity = this.resolveIdentity()
       if (identity) {
-        this.options.onDeleteField?.(identity)
+        this.options.onDeleteField?.(identity, () => {
+          const pos = this.getPos()
+          if (typeof pos !== 'number' || this.options.surfaceState.readonly) return
+          const current = this.view.state.doc.nodeAt(pos)
+          if (!current || !current.eq(this.node)) return
+          this.view.dispatch(this.view.state.tr.delete(pos, pos + current.nodeSize))
+        })
       }
     })
     actionsEl.appendChild(this.deleteButtonEl)
@@ -383,12 +410,15 @@ class RecorderWidgetNodeView implements NodeView {
 
   private renderField() {
     const identity = this.resolveIdentity()
+    const isStep = this.resolveFieldType() === 'step'
     const label = identity?.id
       ? `${identity.fieldType} ${identity.id}`
       : this.resolveFieldType()
     this.summaryEl.textContent = label
     this.summaryEl.title = label
     this.dom.setAttribute('data-field-type', this.resolveFieldType())
+    // A step is a section header visually, but remains an inline AIMD token in the document.
+    this.dom.classList.toggle('aimd-recorder-wysiwyg-node--step', isStep)
     this.dom.draggable = !this.options.surfaceState.readonly
 
     if (this.dragHandleEl) {
@@ -406,7 +436,7 @@ class RecorderWidgetNodeView implements NodeView {
     const vnode = h(AimdRecorderWysiwygFieldHost, {
       surfaceState: this.options.surfaceState,
       rawContent: this.resolveRaw(),
-      displayMode: this.block ? 'block' : 'inline',
+      displayMode: this.block || isStep ? 'block' : 'inline',
     })
     vnode.appContext = this.options.appContext ?? null
     render(vnode, this.bodyEl)

@@ -60,6 +60,8 @@ export interface AimdEditorProps {
   messages?: AimdEditorMessagesInput
   /** Initial editor mode */
   mode?: 'source' | 'wysiwyg'
+  /** Visual field presentation. IDs remain in the serialized AIMD in either mode. */
+  fieldDisplay?: 'compact' | 'detailed'
   /** Theme name for Monaco */
   theme?: string
   /** Whether to show the top toolbar (mode switch + theme toggle) */
@@ -331,8 +333,8 @@ export function getDefaultAimdFields(
         score: '',
       }
     }
-    case 'step': return { name: '', level: '1' }
-    case 'check': return { name: '' }
+    case 'step': return { name: '', level: '1', title: '' }
+    case 'check': return { name: '', title: '', checkedMessage: '' }
     case 'ref_step': return { name: '' }
     case 'ref_var': return { name: '' }
     case 'ref_fig': return { name: '' }
@@ -364,7 +366,7 @@ export function buildAimdSyntax(
     case 'step': {
       const name = fields.name || 'my_step'
       const level = fields.level && fields.level !== '1' ? ', ' + fields.level : ''
-      return `{{step|${name}${level}}}`
+      return `{{step|${name}${level}${fields.title?.trim() ? `, title=${JSON.stringify(fields.title.trim())}` : ''}}}`
     }
     case 'quiz': {
       const quizType = (fields.quizType || 'choice').trim()
@@ -430,7 +432,7 @@ export function buildAimdSyntax(
       return lines.join('\n')
     }
     case 'check':
-      return `{{check|${fields.name || 'my_check'}}}`
+      return `{{check|${fields.name || 'my_check'}${fields.title?.trim() ? `, title=${JSON.stringify(fields.title.trim())}` : ''}${fields.checkedMessage ? `, checked_message=${JSON.stringify(fields.checkedMessage)}` : ''}}}`
     case 'ref_step':
       return `{{ref_step|${fields.name || 'step_id'}}}`
     case 'ref_var':

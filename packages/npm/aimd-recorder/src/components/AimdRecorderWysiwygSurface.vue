@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { computed, getCurrentInstance, nextTick, reactive, ref, watch, watchEffect } from 'vue'
+import { getMarkdown } from '@milkdown/kit/utils'
 import { parseAndExtract } from '@airalogy/aimd-renderer'
+import { parseVarDefinition } from '@airalogy/aimd-core/parser'
+import { collectAimdFieldIds, createAimdFieldId } from '@airalogy/aimd-editor/authoring'
 import {
   AimdEditorToolbar,
   AimdFieldDialog,
+  AimdInputFieldDialog,
+  AimdStepFieldDialog,
   AimdWysiwygEditor,
   createAimdEditorMessages,
   createAimdFieldTypes,
@@ -11,7 +16,7 @@ import {
   getQuickAimdSyntax,
   useEditorContent,
 } from '@airalogy/aimd-editor/vue'
-import type { AimdVarTypePresetOption } from '@airalogy/aimd-editor/vue'
+import type { AimdVarTypePresetOption, AimdEditorImageRequest } from '@airalogy/aimd-editor/vue'
 import type { AimdQuizGradeResult, ExtractedAimdFields } from '@airalogy/aimd-core/types'
 import type { AimdComponentRenderer } from '@airalogy/aimd-renderer'
 import { createAimdRecorderMessages } from '../locales'
@@ -68,6 +73,9 @@ const props = withDefaults(defineProps<{
   minHeight?: number
   locale?: string
   readonly?: boolean
+  fieldDisplay?: 'compact' | 'detailed'
+  showModeSwitch?: boolean
+  imageToolbarAction?: 'markdown' | 'custom'
   currentUserName?: string
   now?: Date | string | number
   messages?: AimdRecorderMessagesInput
@@ -105,6 +113,9 @@ const props = withDefaults(defineProps<{
   minHeight: 560,
   locale: undefined,
   readonly: false,
+  fieldDisplay: 'detailed',
+  showModeSwitch: false,
+  imageToolbarAction: 'markdown',
   currentUserName: undefined,
   now: undefined,
   messages: undefined,
@@ -152,6 +163,8 @@ const emit = defineEmits<{
   (e: 'validation', result: AimdRecorderValidationResult): void
   (e: 'edit-field', field: RecorderMilkdownFieldIdentity): void
   (e: 'delete-field', field: RecorderMilkdownFieldIdentity): void
+  (e: 'switch-mode', mode: 'source' | 'wysiwyg'): void
+  (e: 'request-image', request: AimdEditorImageRequest): void
 }>()
 
 const resolvedEditorMessages = computed(() => createAimdEditorMessages(props.locale))
@@ -332,6 +345,7 @@ function handleRecordUpdate(value: AimdProtocolRecordData) {
 const surfaceState = reactive<RecorderMilkdownSurfaceState>({
   record: recordState,
   readonly: props.readonly,
+  fieldDisplay: props.fieldDisplay,
   currentUserName: props.currentUserName,
   now: props.now,
   locale: props.locale,
@@ -377,6 +391,7 @@ const surfaceState = reactive<RecorderMilkdownSurfaceState>({
 
 watchEffect(() => {
   surfaceState.readonly = props.readonly
+  surfaceState.fieldDisplay = props.fieldDisplay
   surfaceState.currentUserName = props.currentUserName
   surfaceState.now = props.now
   surfaceState.locale = props.locale
@@ -416,8 +431,24 @@ const recorderMilkdownPlugins = [
   ...createRecorderMilkdownPlugins({
     appContext: instance?.appContext ?? null,
     surfaceState,
-    onEditField: field => emit('edit-field', field),
-    onDeleteField: field => emit('delete-field', field),
+    onEditField: (field, apply) => {
+      if (props.readonly) return
+      if (field.fieldType === 'step' || field.fieldType === 'check') {
+        stepDialogType.value = field.fieldType
+        stepEdit.value = { content: field.raw.slice(field.raw.indexOf('|') + 1, -2), apply }
+        showStepDialog.value = true
+        return
+      }
+      if (field.fieldType !== 'var') { emit('edit-field', field); return }
+      const fieldContent = field.raw.slice(field.raw.indexOf('|') + 1, -2)
+      if (parseVarDefinition(fieldContent).subvars) { emit('edit-field', field); return }
+      inputEdit.value = { content: fieldContent, apply }
+      showInputDialog.value = true
+    },
+    onDeleteField: (field, remove) => {
+      if (instance?.vnode.props?.onDeleteField) emit('delete-field', field)
+      else remove()
+    },
   }),
 ]
 
@@ -432,22 +463,83 @@ const refSuggestions = computed(() => {
 
 const showAimdDialog = ref(false)
 const aimdDialogType = ref<string>('var')
+const showInputDialog = ref(false)
+const inputPreset = ref('str')
+const inputEdit = ref<{ content: string; apply: (content: string) => boolean }>()
+const showStepDialog = ref(false)
+const stepDialogType = ref<'step' | 'check'>('step')
+const stepEdit = ref<{ content: string; apply: (content: string) => boolean }>()
+
+function saveStep(value: string) {
+  if (props.readonly) return
+  if (stepEdit.value) stepEdit.value.apply(value)
+  else insertTextIntoActiveEditor(`{{${stepDialogType.value}|${value}}}${stepDialogType.value === 'step' ? '\n\n' : ' '}`)
+}
+
+function saveInputField(value: string) {
+  if (props.readonly) return
+  if (inputEdit.value) {
+    const oldId = parseVarDefinition(inputEdit.value.content).id
+    const newId = parseVarDefinition(value).id
+    if (!inputEdit.value.apply(value)) return
+    if (newId !== oldId && Object.prototype.hasOwnProperty.call(recordState.var, oldId)) {
+      // Retain the old key as detached data so undoing the rename cannot lose a filled value.
+      recordState.var[newId] = cloneRecordData(recordState).var[oldId]
+      emit('update:modelValue', cloneRecordData(recordState))
+    }
+  } else {
+    insertTextIntoActiveEditor(`{{var|${value}}}`)
+  }
+}
 
 function openAimdDialog(type: string) {
+  if (props.readonly) return
+  if (type === 'step' || type === 'check') {
+    stepDialogType.value = type
+    stepEdit.value = undefined
+    showStepDialog.value = true
+    return
+  }
+  if (type === 'var') {
+    insertInput('str')
+    return
+  }
   aimdDialogType.value = RECORDER_EDITABLE_FIELD_SET.has(type) ? type : 'var'
   showAimdDialog.value = true
 }
 
+function insertInput(preset: string) {
+  if (props.readonly) return
+  inputEdit.value = undefined
+  inputPreset.value = preset
+  showInputDialog.value = true
+}
+
 function quickInsertAimd(type: string) {
-  if (!RECORDER_EDITABLE_FIELD_SET.has(type)) {
+  if (props.readonly || !RECORDER_EDITABLE_FIELD_SET.has(type)) {
     return
   }
 
-  insertTextIntoActiveEditor(getQuickAimdSyntax(type, resolvedEditorMessages.value))
+  insertTextIntoActiveEditor(type === 'var'
+    ? `{{var|${createAimdFieldId([...collectAimdFieldIds(content.value), ...Object.keys(recordState.var)])}: str}}`
+    : type === 'step'
+      ? `{{step|${createAimdFieldId([...collectAimdFieldIds(content.value), ...Object.keys(recordState.step)], 'step')}, check=True}}\n\n`
+    : getQuickAimdSyntax(type, resolvedEditorMessages.value))
 }
 
 function onDialogInsert(syntax: string) {
+  if (props.readonly) return
   insertTextIntoActiveEditor(syntax)
+}
+
+function onMdAction(action: string, event: MouseEvent) {
+  if (props.readonly) return
+  if (action === 'image' && props.imageToolbarAction === 'custom') {
+    const rect = (event.currentTarget as HTMLElement | null)?.getBoundingClientRect()
+    emit('request-image', { buttonRect: rect ? { top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left, width: rect.width, height: rect.height } : undefined })
+    return
+  }
+  handleMdAction(action)
 }
 
 function handleWysiwygReady(editor: any) {
@@ -457,8 +549,20 @@ function handleWysiwygReady(editor: any) {
 
 const wysiwygEditorRef = ref<InstanceType<typeof AimdWysiwygEditor> | null>(null)
 
+function switchEditorMode(mode: 'source' | 'wysiwyg') {
+  if (mode === 'wysiwyg') return
+  const editor = wysiwygEditorRef.value?.getEditor?.()
+  if (editor) {
+    // Flush the current document before the host unmounts this surface.
+    const markdown = editor.action(getMarkdown())
+    onMilkdownMarkdownUpdated(null, markdown, content.value)
+  }
+  emit('switch-mode', mode)
+}
+
 defineExpose({
   getEditor: () => wysiwygEditorRef.value?.getEditor?.(),
+  insertText: onDialogInsert,
   validate,
   validateField,
   clearValidation,
@@ -467,18 +571,20 @@ defineExpose({
 </script>
 
 <template>
-  <div ref="surfaceRoot" class="aimd-recorder-wysiwyg-surface" :style="surfaceCssVars">
+  <div ref="surfaceRoot" class="aimd-recorder-wysiwyg-surface" :class="{ 'aimd-recorder-wysiwyg-surface--compact': fieldDisplay === 'compact' }" :style="surfaceCssVars">
     <AimdEditorToolbar
-      :show-top-bar="false"
+      :show-top-bar="showModeSwitch"
       :show-md-toolbar="true"
       :show-aimd-toolbar="true"
       editor-mode="wysiwyg"
       :resolved-messages="resolvedEditorMessages"
       :localized-field-types="localizedFieldTypes"
       :localized-md-toolbar-items="localizedMdToolbarItems"
-      @md-action="handleMdAction"
+      @md-action="onMdAction"
+      @switch-mode="switchEditorMode"
       @open-aimd-dialog="openAimdDialog"
       @quick-insert-aimd="quickInsertAimd"
+      @insert-input="insertInput"
     />
 
     <AimdWysiwygEditor
@@ -494,6 +600,19 @@ defineExpose({
       @markdown-updated="onMilkdownMarkdownUpdated"
       @ready="handleWysiwygReady"
       @open-aimd-dialog="openAimdDialog"
+    />
+
+    <AimdStepFieldDialog v-model:visible="showStepDialog" :field-type="stepDialogType" :content="content" :field-content="stepEdit?.content" :reserved-ids="Object.keys(recordState[stepDialogType])" :messages="resolvedEditorMessages" @save="saveStep" />
+
+    <AimdInputFieldDialog
+      v-model:visible="showInputDialog"
+      :content="content"
+      :field-content="inputEdit?.content"
+      :initial-preset="inputPreset"
+      :reserved-ids="Object.keys(recordState.var)"
+      :messages="resolvedEditorMessages"
+      :var-type-plugins="dialogVarTypePlugins"
+      @save="saveInputField"
     />
 
     <AimdFieldDialog
@@ -514,6 +633,29 @@ defineExpose({
   display: flex;
   min-height: 0;
   flex-direction: column;
+}
+
+.aimd-recorder-wysiwyg-surface--compact :deep(.aimd-recorder-wysiwyg-node__summary) { display: none; }
+.aimd-recorder-wysiwyg-surface.aimd-recorder-wysiwyg-surface--compact :deep(.aimd-recorder-wysiwyg-node__chrome),
+.aimd-recorder-wysiwyg-surface.aimd-recorder-wysiwyg-surface--compact :deep(.aimd-recorder-wysiwyg-node__action),
+.aimd-recorder-wysiwyg-surface.aimd-recorder-wysiwyg-surface--compact :deep(.aimd-recorder-wysiwyg-node__drag) { border-radius: 4px; }
+.aimd-recorder-wysiwyg-surface.aimd-recorder-wysiwyg-surface--compact :deep(.aimd-recorder-wysiwyg-node) { margin: 2px; }
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node:has(.aimd-rec-inline--var-stacked--scalar-list, .aimd-code-field, .aimd-markdown-field, .aimd-rec-inline--var-dna, .aimd-rec-inline-table, .aimd-rec-collector)),
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-field-host:has(.aimd-rec-inline--var-stacked--scalar-list, .aimd-code-field, .aimd-markdown-field, .aimd-rec-inline--var-dna, .aimd-rec-inline-table, .aimd-rec-collector)) {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+}
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node__body:has(.aimd-rec-inline--var-stacked--scalar-list, .aimd-code-field, .aimd-markdown-field, .aimd-rec-inline--var-dna, .aimd-rec-inline-table, .aimd-rec-collector)) {
+  width: 100%;
+}
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-field-host:has(.aimd-rec-inline--var-stacked--scalar-list, .aimd-code-field, .aimd-markdown-field, .aimd-rec-inline--var-dna, .aimd-rec-inline-table, .aimd-rec-collector) > .aimd-protocol-recorder) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .aimd-recorder-wysiwyg-surface :deep(.aimd-editor-wysiwyg-mode) {
@@ -538,7 +680,75 @@ defineExpose({
   width: 100%;
 }
 
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node.aimd-recorder-wysiwyg-node--step) {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  margin: 8px 0 6px;
+  container: aimd-step-authoring / inline-size;
+}
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node--step > .aimd-recorder-wysiwyg-node__body) {
+  width: 100%;
+}
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node--step .aimd-rec-inline--step) {
+  margin: 0;
+  padding: 8px 12px;
+  gap: 8px;
+  border: 0;
+  border-left: 3px solid #d5a55e;
+  border-radius: 0;
+  background: #f8fafc;
+}
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node--step .aimd-step-field__main) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node--step .aimd-step-field__main-meta) {
+  max-width: 100%;
+}
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node--step .aimd-rec-inline__check-wrap) {
+  flex-wrap: nowrap;
+  max-width: 100%;
+}
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node--step .aimd-rec-inline__check-wrap > :not(.aimd-step-field__identity)) {
+  flex-shrink: 0;
+}
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node--step .aimd-step-field__title) {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #24292f;
+}
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node--step .aimd-step-field__main-actions) {
+  margin-left: auto;
+  align-items: center;
+}
+
+.aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node--step .aimd-step-field__toggle) {
+  min-height: 28px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+@container aimd-step-authoring (max-width: 480px) {
+  .aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node--step .aimd-step-field__main) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node__chrome) {
+  width: max-content;
+  white-space: nowrap;
   position: absolute;
   top: -12px;
   right: -2px;
@@ -567,6 +777,8 @@ defineExpose({
 }
 
 .aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node__chrome--inline) {
+  top: auto;
+  bottom: calc(100% + 2px);
   padding: 3px 5px;
 }
 

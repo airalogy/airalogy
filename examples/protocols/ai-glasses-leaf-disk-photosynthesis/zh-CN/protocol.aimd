@@ -1,0 +1,220 @@
+# AI 眼镜实验指导：叶圆片光合作用与对照实验
+
+## 目的与边界
+
+用食用菠菜叶片制作等大小圆片，经无针注射器负压浸润后比较不同条件下的上浮过程。叶片气体空间被溶液置换后下沉，光照时净产氧可促进上浮；结果同时受呼吸、叶片结构、浸润和附着气泡等影响，不能直接等同绝对光合速率或碳固定量。
+
+每轮设置“光照＋碳酸氢钠”“光照＋水”“避光＋碳酸氢钠”三杯，每杯 10 片，做三轮独立操作重复，共 9 杯、90 片；每轮观察 30 分钟，预计总用时 120–150 分钟。可先只做一轮交互排练，但不能把一轮或同杯 10 片宣称为三个独立重复。
+
+这是待本地审核和预实验确认的教学及 AI 眼镜交互测试模板，不涉及微生物培养、人体材料或基因操作。眼镜不替代防护眼镜；LED 灯和电源远离液体，禁止安装注射针头。语音识别、图像计数、自动提醒和流程拦截需要宿主另行接入；Recorder 目前提供步骤、计时、检查点和结构化填写，不能自动证明实验已完成。
+
+## 材料与实验设计
+
+| 项目 | 本次配置 |
+| --- | --- |
+| 植物材料 | 新鲜、未萎蔫菠菜，来自同一批次；不用厚蜡质叶或明显受损叶 |
+| 溶液 | 0.2%（m/v）NaHCO3 水溶液 600 mL；同批去离子水 600 mL |
+| 润湿剂 | 预先配好的 1%（v/v）低泡中性洗洁精水溶液，配方和批次记录在案 |
+| 器具 | 20 mL 无针塑料注射器至少 2 支、约 6 mm 打孔器、透明同规格杯 9 个、量筒、天平、镊子、秒表 |
+| 环境 | 低发热白光 LED、遮光盒或铝箔、温度计、刻度尺；可选照度计，不使用紫外光源 |
+
+| 杯组 | 编码 | 浸润及观察介质 | 观察方式 |
+| --- | --- | --- | --- |
+| 光照实验组 | L1、L2、L3 | 碳酸氢钠＋同剂量润湿剂 | 每分钟计数，计算 ET50 区间 |
+| 不添加碳酸氢钠的光照对照 | W1、W2、W3 | 水＋同剂量润湿剂 | 每分钟计数，计算 ET50 区间 |
+| 避光对照 | D1、D2、D3 | 碳酸氢钠＋同剂量润湿剂 | 0 分钟检查和 30 分钟终点计数；中途不打开 |
+
+W 组不是“完全没有 CO2”，水和叶片本身仍可能提供无机碳。D 组只有终点计数，不能计算 ET50。每一轮只同时处理 L、W、D 各一杯，避免准备时间差过大。
+
+{{step|register_run, check=True, title="建立任务"}}
+
+**操作：** 确认实验编号、人员、菠菜批次和执行模式。先用空杯练习杯号识别和计数复述；排练不生成真实生物学结论。
+
+运行编号：{{var|run_id: str, title="运行编号"}}
+
+操作人：{{var|operator: UserName, title="操作人"}}
+
+记录建立时间：{{var|record_created_at: CurrentTime, title="记录建立时间"}}
+
+执行模式：{{var|run_mode: Literal["空杯排练", "真实实验"], title="执行模式"}}
+
+菠菜批次及来源：{{var|leaf_batch: str, title="菠菜批次及来源"}}
+
+眼镜及软件版本：{{var|glasses_build: str | None, title="眼镜及软件版本"}}
+
+{{step|confirm_safety, check=True, title="安全与工作区"}}
+
+**操作：** 核对无针注射器，检查打孔器和电源。确认工作台稳定、台灯不易倾倒，液体与插座分离。禁止对着人喷射注射器液体；拉动阻力异常时停止，不暴力抽拉。处理过的食材不得食用。
+
+{{check|safety_ready, checked_message="无针器具、电气隔离和人工接管已确认"}}
+
+{{step|plan_groups, check=True, title="锁定分组与重复计划"}}
+
+**操作：** 写好 L1/W1/D1 至 L3/W3/D3 共 9 个杯号。L/W 在每轮交换左右位置，尽量避免灯下位置差异；D 与同轮杯保持相同室温，遮光但不密闭加热。选择同一批叶材并将圆片分散分配到各杯，不让一整片叶只进入一个条件。
+
+**完成条件：** 能说清每个杯号的条件和轮次，不能只靠颜色标签识别。杯才是观察单位，同杯 10 片不是 10 个独立样本；同批植物的三轮重复也不等同三个独立植物个体。
+
+计划轮数：{{var|planned_rounds: int = 3, title="计划轮数", ge=1, le=3}}
+
+分组与位置说明：{{var|allocation_note: str, title="分组及位置说明"}}
+
+{{check|groups_verified, checked_message="杯号、处理条件和重复单位已复核"}}
+
+{{step|prepare_bicarbonate, check=True, title="配制碳酸氢钠工作液"}}
+
+**操作：** 称取 1.20 g NaHCO3，用水溶解后配至最终 600 mL，得到 0.2%（m/v）工作液。另量取同批水 600 mL 作为 W 组介质。分别标识 B 和 W，不使用“看起来都是透明”来判断身份。
+
+NaHCO3 实际称量（g）：{{var|bicarbonate_mass_g: float, title="实际称量 g", gt=0}}
+
+B 液最终体积（mL）：{{var|bicarbonate_volume_ml: float, title="最终体积 mL", gt=0}}
+
+{{step|add_wetting_agent, check=True, title="加入匹配的润湿剂"}}
+
+**操作：** 本模板的预实验起点是每 100 mL B/W 工作液均加入 1 滴 1% 洗洁精水溶液，即各 600 mL 加 6 滴，使用同一滴管，轻轻混匀。洗洁精配方和滴体积会影响结果，这一剂量需先用备用圆片验证，不能视为适用于所有叶材的通用配方。
+
+**异常：** 若形成明显泡沫或备用片不能浸润，暂停并由负责人在正式轮次前确定新批次配方；B/W 同步处理并记录。不能只给失败的实验杯额外加洗洁精，也不能在看见结果后调浓度。
+
+润湿剂配方、批号与实际滴数：{{var|wetting_agent_note: str, title="润湿剂及实际用量"}}
+
+{{step|setup_light, check=True, title="布置光照与温度"}}
+
+**操作：** 先以 LED 距液面约 20 cm 作为预实验起点，确认所有光照杯位置均匀且无明显升温，再锁定位置。记录实际距离和光源型号；有照度计可记录照度，但 lux 不能直接当作光合光子通量。没有仪器时记录距离，不虚构光强。
+
+光源型号：{{var|lamp_model: str, title="光源型号"}}
+
+灯到液面距离（cm）：{{var|lamp_distance_cm: float, title="实际距离 cm", gt=0}}
+
+照度（lux，可不填）：{{var|illuminance_lux: float | None, title="照度 lux", ge=0}}
+
+本次预设：每轮 30 分钟、每 1 分钟观察一次；将开始与终点温差不超过 2 ℃作为本模板的演示质控条件，并非植物生理学通用标准。预实验不满足时先调整灯和环境，再另开正式轮次。
+
+{{step|cut_leaf_disks, check=True, title="制备本轮圆片"}}
+
+**操作：** 每轮新制至少 30 片完整圆片，使用同一打孔器，避开主叶脉和受损区域。将圆片暂存于湿润洁净表面，避免干燥；按预定方式分到 L/W/D 各 10 片。备用片不进入分母，替换必须在开始计时前完成。
+
+打孔器直径（mm）：{{var|disk_diameter_mm: float, title="圆片直径 mm", gt=0}}
+
+**完成条件：** 各组确有 10 片，直径一致且无明显裂口；不得用图像估数代替首次人工清点。
+
+{{step|load_syringe, check=True, title="分别装载浸润介质"}}
+
+**操作：** W 组使用标识为 W 的专用无针注射器；L/D 使用 B 介质，可共用另一支但每次分别处理一杯的 10 片。卸下活塞放入圆片，轻推回活塞但不挤压叶片，吸入约 5 mL 对应工作液。尖口朝上缓慢排出多余空气，保持叶片浸在液中。
+
+**异常：** 介质或杯号不明时丢弃该准备批次并重做，不能从外观推断后继续。
+
+{{step|vacuum_infiltrate, check=True, duration="10s", timer="both", title="负压浸润"}}
+
+**操作：** 用手指封住无针尖口，缓慢拉动活塞形成适度负压，保持约 10 秒，轻轻转动让圆片接触介质，然后受控释放负压。观察是否下沉；必要时重复，一杯最多 5 次。不能用更大拉力或无限循环来强迫失败叶片下沉。
+
+**完成条件：** 解除负压后 10 片均下沉，且不靠压住叶片维持。若仍有漂浮或明显损伤，记录失败并另备新片；这批不能假装从 10 片全沉开始。
+
+{{step|transfer_to_cups, check=True, title="转杯并记录初始状态"}}
+
+**操作：** 把圆片和浸润液轻轻转移到对应杯，补同种工作液至最终 80 mL。选用该体积能形成约 3 cm 液深的同规格杯；预实验若需改体积，三组统一修改并记录，不把体积差作为处理变量。检查圆片是否互相重叠、挂壁或附着明显气泡，轻轻转杯解除。
+
+**完成条件：** 本轮三杯各 10 片下沉，杯号、介质、总体积和开始温度已核对。不能悄悄丢弃已浮圆片并保留分母 10。
+
+{{var|cup_setup: list[CupSetup], title="每杯准备记录", subvars=[
+    var(cup_id: str, title="杯号"),
+    var(round_no: int, title="轮次", ge=1, le=3),
+    var(group: Literal["L", "W", "D"], title="组别"),
+    var(vacuum_cycles: int, title="负压次数", ge=1, le=5),
+    var(initial_sunken: int, title="初始沉底数", ge=0, le=10),
+    var(volume_ml: float, title="最终液量 mL", gt=0),
+    var(start_temperature_c: float, title="开始温度 ℃"),
+    var(note: str | None, title="备注")
+]}}
+
+{{check|initial_state_verified, checked_message="本轮杯号和每杯10片初始沉底已人工确认"}}
+
+{{step|start_round, check=True, duration="30m", timer="both", title="启动本轮观察"}}
+
+**操作：** L/W 放在锁定位置，D 放入遮光环境。确认初始计数后启动本轮共同计时，三杯开始时间尽量接近并记录偏差。0 分钟先记录 L/W 的上浮数 0；D 的初始沉底数留在准备表。计时器显示不是观测数据，不自动填写后续计数。
+
+{{step|observe_light_groups, check=True, title="分钟级计数与复述"}}
+
+**操作：** 在 1、2、3……30 分钟观察 L 和 W。每次先读杯号，再读当前自由上浮到液面的片数，必要时轻转杯以解除挂壁，按同一判据计数。记录的是该时刻状态，不强行要求单调增加；圆片重新下沉也如实填写。每次报读采用“杯号、实际经过时间、上浮片数”，人工确认后写入。
+
+**漏测：** 例如错过第 7 分钟，只记录第 8 分钟的实际时间和计数，在事件表写明漏测；不补造第 7 分钟值，不把未看到写成 0。不为拍照长时间移动杯子或改变光照。
+
+{{var|observations: list[LeafObservation], title="L/W 时间序列", subvars=[
+    var(cup_id: str, title="杯号"),
+    var(elapsed_s: float, title="本轮实际秒数", ge=0),
+    var(floating_count: int | None, title="上浮片数", ge=0, le=10),
+    var(note: str | None, title="挂壁、漏测或纠正")
+]}}
+
+{{step|maintain_dark_control, check=True, title="维持避光对照"}}
+
+**操作：** D 杯在观察窗口内保持遮光，不为逐分钟计数打开。若误开盖，记录时间和持续时长，终点数据保留但标记受干扰，不能将其作为完整避光对照。不要通过加热、密闭或额外化学处理“确保不浮”。
+
+{{step|record_round_endpoint, check=True, title="终点、温度与完整性复核"}}
+
+**操作：** 30 分钟记录 L/W 的最后计数；此时首次打开 D，立即记录实际时间和上浮数。记录各杯终点温度及总片数，检查洒失、贴壁、叶片损坏和照明变化。短暂开盖的 D 终点观察不能被称作连续避光时间序列。
+
+{{var|endpoints: list[LeafEndpoint], title="每杯终点和质控", subvars=[
+    var(cup_id: str, title="杯号"),
+    var(elapsed_s: float, title="实际终点秒数", ge=0),
+    var(floating_count: int, title="终点上浮数", ge=0, le=10),
+    var(recovered_count: int, title="总片数", ge=0, le=10),
+    var(end_temperature_c: float, title="终点温度 ℃"),
+    var(accepted: Literal["纳入", "排除"] | None, title="纳入分析"),
+    var(note: str | None, title="质控或排除理由")
+]}}
+
+{{step|repeat_rounds, check=True, title="处理异常与重复轮次"}}
+
+**操作：** 下一轮使用新鲜圆片和洁净同规格杯，从 {{ref_step|cut_leaf_disks}} 重复至 {{ref_step|record_round_endpoint}}，完成计划轮数。温度漂移超过预设 2 ℃、初始未全沉、杯号不确定、片数丢失或避光被破坏时，不删除数据；记录原因并由负责人决定是否另开补做运行。
+
+如果 L 组 30 分钟仍未有 5 片上浮，记录“观察期内未达到”，检查光照、叶材和浸润，但不要在本轮事后延长截止时间或把结果改成成功。演示失败也是眼镜异常处理测试的一部分。
+
+{{step|estimate_et50, check=True, title="ET50 与未达到终点的处理"}}
+
+**操作：** 每个合格 L/W 杯，找到第一次观察到至少 5/10 片上浮的时刻 t1，以及前一次少于 5 片的实测时刻 t0。报告“首次观测达半数时间 t1”和 ET50 的观测区间 (t0, t1]，不是精确发生时间。漏测会使区间更宽，不做默认线性插值。该区间依赖两次观察之间没有未观测到的上浮后再下沉；出现明显反复时标记无法可靠估计。
+
+未达到时记录为右删失于本杯最后有效观察时间，两个区间端点留空，不能填写 0 或强行填写 30 分钟。D 组没有连续观测，状态填“不适用”。本模板不自动计算或绘图。
+
+{{var|et50_results: list[Et50Result], title="ET50观测结果", subvars=[
+    var(cup_id: str, title="杯号"),
+    var(status: Literal["已达到", "观察期内未达到", "无法可靠估计", "不适用"], title="状态"),
+    var(lower_s: float | None, title="前次未达半数秒数", ge=0),
+    var(upper_s: float | None, title="首次观测达半数秒数", gt=0),
+    var(last_observed_s: float, title="最后有效观察秒数", ge=0),
+    var(note: str | None, title="区间或删失说明")
+]}}
+
+{{step|interpret_controls, check=True, title="对照解释与审核"}}
+
+**操作：** 画出或整理各杯上浮数随时间的变化；比较同轮 L/W，单独报告 D 的终点数。只比较通过预设质控的杯，列明所有排除原因和实际重复数。对未达到 ET50 的杯保留删失状态，不当作 0，也不从汇总中悄悄删除。
+
+不能凭单个杯上浮快就认定某种处理“提高光合作用”；先检查初始浸润、附着气泡、温度、叶材分配和光源位置。D 杯也可能因残留气体上浮，异常对照必须讨论。
+
+实验解释与局限：{{var|interpretation: str, title="对照解释与局限"}}
+
+{{check|data_reviewed, checked_message="杯号、计数、缺失值、质控及ET50区间已审核"}}
+
+{{step|cleanup, check=True, title="清场"}}
+
+**操作：** 关灯断电后再处理液体。按本地规定处理含洗洁精的工作液和植物残片，清洗器具、归位并洗手。保留标签及记录直到复核结束，不把处理过的菠菜混回食材。
+
+{{check|cleanup_confirmed, checked_message="电源、溶液、植物残片和器具已处理"}}
+
+{{step|review_guidance, check=True, title="眼镜交互复盘"}}
+
+记录杯号识别混淆、反光误计数、漏测提醒、语音数字纠正和中断恢复。观察窗口不会因界面暂停自动停止；中断时记下真实经过时间，恢复后继续记实际时间，不能把生物过程的时间轴压缩成“有效操作时间”。
+
+{{var|guidance_events: list[GuidanceEvent], title="眼镜交互与中断记录", subvars=[
+    var(elapsed_s: float, title="距运行开始秒数", ge=0),
+    var(step_id: str, title="对应步骤 ID"),
+    var(event: Literal["杯号纠正", "计数纠正", "漏测", "暂停恢复", "人工接管"], title="事件"),
+    var(observation: str, title="实际情况"),
+    var(resolution: str, title="处理及恢复位置")
+]}}
+
+审核人：{{var|reviewer: str, title="审核人"}}
+
+最终状态：{{var|run_status: Literal["已完成", "需重做", "已中止"], title="最终状态"}}
+
+## 方法来源与改编
+
+实验原理、浸润及对照设计参考 [University of Arizona 的 Floating Leaf Disk Assay](https://mcb.arizona.edu/outreach/resources/science-at-home/photosynthesis) 和 [College Board AP Biology 实验手册 Investigation 5](https://secure-media.collegeboard.org/digitalServices/pdf/ap/bio-manual/CB_Bio_Full_Manual_2012.pdf)。三轮分组、30 分钟窗口、2 ℃演示质控、ET50 区间记录和眼镜事件日志是本模板的实施设计，需预实验与本地审核，不代表来源机构验证过这套眼镜流程。

@@ -1,0 +1,198 @@
+# AI 眼镜实验指导：白醋总酸度滴定
+
+## 目的与边界
+
+用已标定的约 0.100 mol/L NaOH 滴定透明白醋，测定以乙酸计的总可滴定酸度，练习定量转移、液面读数、终点判断和重复性评价。预计 75–100 分钟；包括一次粗滴定和至少三次正式滴定。不是纯乙酸的选择性测定，也不是食品合规检测方法。
+
+本协议是待本地实验室审核、预实验确认的教学与 AI 眼镜交互测试模板，不是已验证 SOP。先用清水和空器具排练；真实实验须由受训人员在合适实验室执行。AI 眼镜不替代防护眼镜，不得遮挡视野。画面中的颜色、刻度和语音转写均须人工复核；系统不能仅凭“看起来完成了”自动确认关键步骤。
+
+步骤勾选、倒计时和检查点可在 Recorder 中使用；语音命令、相机识别、自动拍照和强制流程拦截需要眼镜宿主另行实现。以下“暂停/重做”是操作规则，不代表当前编辑器已经强制执行。
+
+## 材料与工作区
+
+| 项目 | 本次配置 |
+| --- | --- |
+| 样品 | 透明、无明显悬浮物、标示酸度约 4–6 g/100 mL 的白醋，至少 50 mL |
+| 滴定剂 | 实验室提供且在有效期内的已标定约 0.100 mol/L NaOH，约 150–200 mL；本协议不涉及固体 NaOH 配制 |
+| 指示剂 | 实验室提供的酚酞工作液；逐次使用相同的 2 滴，查阅供应商 SDS |
+| 量器 | 250.0 mL 容量瓶、25.00 mL 单标线移液管及吸球、50 mL 滴定管、铁架和滴定管夹 |
+| 其他 | 锥形瓶至少 4 个、去离子水洗瓶、小漏斗、白色背景板、标签、秒表、合适的废液容器 |
+
+佩戴实验服、防护眼镜及与试剂相容的手套；禁止口吸移液、品尝样品及明火。酚酞工作液可能含易燃溶剂，NaOH 对眼睛和皮肤有危害。发生飞溅或器具破裂，立即停止实验，按本地 SDS、冲洗和事故报告规程处理，不等待眼镜判断。
+
+{{step|register_run, check=True, title="建立本次任务"}}
+
+**操作：** 为本次实验建立唯一运行编号，选择清水排练或真实实验。确认眼镜时间与独立计时器一致，记录软件和设备版本。排练数据不得合并到实验结果。
+
+运行编号：{{var|run_id: str, title="运行编号"}}
+
+操作人：{{var|operator: UserName, title="操作人"}}
+
+记录建立时间：{{var|record_created_at: CurrentTime, title="记录建立时间"}}
+
+执行模式：{{var|run_mode: Literal["清水排练", "真实实验"], title="执行模式"}}
+
+眼镜及软件版本：{{var|glasses_build: str | None, title="眼镜及软件版本"}}
+
+{{step|confirm_safety, check=True, title="安全与人工接管确认"}}
+
+**操作：** 确认洗眼设施、废液位置、试剂 SDS 和现场负责人；检查眼镜与防护镜能同时佩戴。约定“暂停”“重复本步”“纠正读数”“需要帮助”的人工接管方式。
+
+**完成条件：** 防护用品到位，视野清晰，现场负责人同意开始；否则停止。
+
+{{check|safety_ready, checked_message="防护、SDS、废液和人工接管已确认"}}
+
+{{step|verify_reagents, check=True, title="核对样品与滴定剂"}}
+
+**操作：** 逐瓶读出名称、样品号、批号及有效期。将滴定剂证书上的实际浓度录入，不能直接把名义 0.1 当作实测浓度。使用其他颜色或含颗粒样品时停止本模板，不通过图像自动“扣除底色”。
+
+样品编号：{{var|sample_id: str, title="白醋样品编号"}}
+
+样品标示酸度（g/100 mL，可不填）：{{var|label_acidity: float | None, title="标签酸度", gt=0}}
+
+NaOH 批号及标定凭证：{{var|titrant_certificate: str, title="滴定剂批号及标定凭证"}}
+
+NaOH 实际浓度（mol/L）：{{var|naoh_concentration: float, title="实际浓度 mol/L", gt=0, le=0.2}}
+
+{{check|reagent_identity_confirmed, checked_message="样品、滴定剂和浓度已人工复核"}}
+
+{{step|inspect_glassware, check=True, title="检查量器与标识"}}
+
+**操作：** 检查玻璃裂纹、滴定管阀门和夹持稳定性。按量器要求清洗，确认内壁形成均匀水膜。容量瓶标注样品号和“10 倍稀释”；锥形瓶标注 R（粗滴定）和 T1、T2、T3。额外试次按 T4、T5 递增，不能覆盖旧记录。
+
+**异常：** 阀门漏液、挂液明显或刻度模糊，换器具后再继续；不能用软件修正掩盖器具问题。
+
+器具编号及检查备注：{{var|glassware_note: str, title="量器编号与状态"}}
+
+{{step|transfer_sample, check=True, title="定量转移原样"}}
+
+**操作：** 轻轻混匀白醋，用少量样品润洗 25.00 mL 移液管。使用吸球吸取样品，在视线与刻度同高时调节弯月面，转移 25.00 mL 到 250.0 mL 容量瓶。按量器标识规定的排液和等待方式操作，不强行吹出非吹出式移液管的残液。
+
+**完成条件：** 样品号、容量瓶号和移液体积三者一致。转移过程中溅失或无法确认体积时重新制备，不补估体积。
+
+原样移取体积（mL）：{{var|sample_transfer_ml: float = 25.00, title="原样移取体积 mL", gt=0}}
+
+{{step|dilute_and_mix, check=True, duration="2m", title="定容与混匀"}}
+
+**操作：** 加去离子水至容量瓶大部分体积，混匀后接近刻度时逐滴补水。以规定校准温度附近的溶液定容至 250.0 mL，塞好后倒转混匀约 10 次。拍摄或人工复核液面与标签；不要把容量瓶顶端当作量程刻度。
+
+**异常：** 定容超过刻度或混匀时漏液，整份重配，不吸出多余液体后继续。
+
+定容体积（mL）：{{var|dilution_volume_ml: float = 250.0, title="定容体积 mL", gt=0}}
+
+{{check|dilution_verified, checked_message="定量转移、定容及混匀已复核"}}
+
+{{step|condition_burette, check=True, title="润洗并装填滴定管"}}
+
+**操作：** 用少量 NaOH 工作液润洗滴定管内壁并经尖嘴排出，重复两次，润洗液进入废液容器。固定滴定管后加液，移除漏斗，避免后续漏斗液滴改变读数。保留足够试剂，不把剩余液倒回原瓶。
+
+{{step|purge_and_check_tip, check=True, title="排除气泡并确认不漏液"}}
+
+**操作：** 在废液容器上方放液，使尖嘴完全充液；观察尖嘴和阀门是否有气泡。关闭阀门后观察约 30 秒，确认没有持续滴漏。用白色背景辅助查看，但不能以“识别不到气泡”代替人工检查。
+
+**异常：** 出现气泡或漏液先修复并重新记录初始液面。滴定中才发现气泡时，保留该次数据并标为无效，另取样重做。
+
+{{check|burette_ready, checked_message="漏斗已移除，尖嘴无可见气泡且无漏液"}}
+
+{{step|open_titration_log, check=True, title="建立原始滴定记录"}}
+
+每次取 25.00 mL 稀释液到对应锥形瓶，加约 25 mL 去离子水和 2 滴酚酞。锥形瓶内加水不改变被移取的酸的物质的量，不计入稀释倍数。用稀释液润洗移液管，切勿再用未稀释原样润洗。
+
+滴定分取体积（mL）：{{var|aliquot_ml: float = 25.00, title="稀释液分取体积 mL", gt=0}}
+
+在表中先建对应试次行，再读初始液面。以视线平视弯月面底部读数，记录到仪器允许的精度；50 mL、0.1 mL 分度的常规滴定管通常估读至 0.01 mL。AI 必须复述数值和单位，操作人确认后才保存。读不清就重新观察，不猜测。
+
+{{var|titrations: list[Titration], title="原始滴定记录", subvars=[
+    var(trial_id: str, title="试次编号"),
+    var(kind: Literal["粗滴定", "正式"], title="试次类型"),
+    var(initial_ml: float, title="初始 mL", ge=0, le=50),
+    var(final_ml: float | None, title="终点 mL", ge=0, le=50),
+    var(titre_ml: float | None, title="消耗 mL", gt=0, le=50),
+    var(endpoint: Literal["未到终点", "淡粉保持30秒", "过量深粉", "无法判断"] | None, title="终点状态"),
+    var(accepted: Literal["纳入", "排除"] | None, title="纳入计算"),
+    var(note: str | None, title="异常或排除理由")
+]}}
+
+{{step|rough_titration, check=True, title="粗滴定定位范围"}}
+
+**操作：** 使用 R 瓶，一边轻轻旋摇一边加入 NaOH。局部粉红开始消退变慢时减慢到逐滴；以白色背景观察混匀后的整瓶颜色，估计终点体积并记录。粗滴定只用于规划接近终点的速度，不纳入最终平均值。
+
+**异常：** 整瓶立刻深粉、试剂消耗明显不合理或剩余量不足，在更换新样前核对试剂、10 倍稀释和移液体积。不得为“看到终点”无限继续加液。
+
+{{step|prepare_formal_trial, check=True, title="准备正式试次"}}
+
+**操作：** 另取新鲜稀释液，按步骤 9 准备 T1，先核对瓶号和表格行号。读出新初始读数；液面不必从 0.00 开始，但必须在量程内。一次滴定中不要补液；不足时先在取新样前补液、排泡、重新读数。
+
+**完成条件：** 瓶号、表格试次和初始读数已确认后才开阀。
+
+{{step|approach_endpoint, check=True, title="接近终点并逐滴操作"}}
+
+**操作：** 先较快加入到比粗滴定消耗量少约 1–2 mL 的位置，再逐滴加入、旋摇、观察。必要时用少量去离子水冲洗瓶内壁，把附着液滴带回溶液。每次判断均针对混匀后的整体颜色，而非滴入点的瞬时粉红。
+
+**眼镜提示：** 当前应显示“逐滴、旋摇、观察”，不能遮挡阀门、尖嘴或瓶体；识别不确定时提示人工确认，不自行发出“继续大量加液”。
+
+{{step|confirm_endpoint, check=True, duration="30s", timer="both", title="确认终点"}}
+
+**操作：** 当整体呈很浅的粉红时关闭阀门，轻轻旋摇，并从最后一滴加入后开始观察 30 秒。颜色保持才记录终点；30 秒内褪色则再加一滴、混匀并重新计时。计时结束不是自动合格判据。
+
+**异常：** 明显深粉视为过量，记录终点读数和过量原因，标记不纳入，不能加回白醋“补救”。照明或相机白平衡改变时由现场人员重判；相机图像不能单独作为合格证据。
+
+{{step|record_trial, check=True, title="记录消耗体积"}}
+
+**操作：** 人工复核终点液面，填写对应行的 final_ml、终点状态和纳入标记；计算 titre_ml = final_ml − initial_ml。必须 final_ml 大于 initial_ml，不能取绝对值掩盖录入或补液错误。在同一行记下漏液、过量、气泡、转写纠正等情况。
+
+{{step|repeat_and_review, check=True, title="重复与质控"}}
+
+**操作：** 按 {{ref_step|prepare_formal_trial}} 至 {{ref_step|record_trial}} 完成 T2、T3。三次是同一份稀释液的技术平行，不代表三个独立样品。粗滴定不纳入。
+
+本模板采用“三个连续、无明确操作失误的正式试次，其消耗体积极差不超过 0.10 mL”作为教学演示的预设质控条件，不是通用标准。若未达到，先排查原因，最多做到 T5；所有原始数据和排除原因均保留，不挑选看起来最接近的三次。仍不满足则结果标记为需重做，不给出通过结论。修改阈值或实验规模必须在新一轮开始前由负责人批准。
+
+质控结论：{{var|qc_result: Literal["通过", "需重做", "中止"], title="质控结论"}}
+
+参与平均的试次：{{var|accepted_trial_ids: list[str], title="纳入试次编号"}}
+
+{{check|raw_data_reviewed, checked_message="原始读数、排除理由和重复性质控已人工审核"}}
+
+{{step|calculate_acidity, check=True, title="换算总酸度"}}
+
+仅在质控通过后填写结果；否则保留为未填写。由原始读数独立复核一次，不能只检查 AI 输出是否“像正常值”。本模板不自动计算结果。
+
+设 C 为 NaOH 实际浓度（mol/L），V 为纳入试次平均消耗体积（mL），D = 定容体积 / 原样移取体积，Va 为稀释液分取体积（mL）：
+
+$$A\;(\mathrm{g/100\,mL}) = C\times\frac{V}{V_a}\times D\times\frac{60.052}{10}$$
+
+这是以乙酸计的总可滴定酸度；不要把 g/100 mL 直接当作质量百分数，不要假设醋中所有可滴定酸都是乙酸。示例核算：C=0.1000、V=20.00、D=10、Va=25.00 时 A=4.80416 g/100 mL；这只是公式校验值，不得当作本次测量。
+
+平均消耗（mL）：{{var|mean_titre_ml: float | None, title="平均消耗 mL", gt=0}}
+
+消耗体积极差（mL）：{{var|titre_range_ml: float | None, title="极差 mL", ge=0}}
+
+总酸度（g/100 mL）：{{var|total_acidity: float | None, title="以乙酸计总酸度", gt=0}}
+
+结果解释与限制：{{var|interpretation: str | None, title="结果解释"}}
+
+{{step|cleanup, check=True, title="清场与废液"}}
+
+**操作：** 关闭阀门和试剂瓶，按本地规定收集含 NaOH/指示剂的废液，不默认排入水槽。清洗、归位量器，清理台面并洗手。清水排练与真实实验废液分别处理。
+
+{{check|cleanup_confirmed, checked_message="试剂、废液、器具和台面已处理"}}
+
+{{step|review_run, check=True, title="审核与眼镜测试复盘"}}
+
+核对字段、原始读数、质控结论和人工纠正记录。任何中断都先关闭滴定管阀门，再说明最后已确认动作和待执行动作；恢复时重新核对瓶号、表格行及液面，不把暂停时间误计为终点保持时间。
+
+{{var|guidance_events: list[GuidanceEvent], title="眼镜交互与中断记录", subvars=[
+    var(elapsed_s: float, title="距运行开始秒数", ge=0),
+    var(step_id: str, title="对应步骤 ID"),
+    var(event: Literal["请求重复", "读数纠正", "暂停恢复", "识别不确定", "人工接管"], title="事件"),
+    var(observation: str, title="实际情况"),
+    var(resolution: str, title="处理及恢复位置")
+]}}
+
+审核人：{{var|reviewer: str, title="审核人"}}
+
+最终状态：{{var|run_status: Literal["已完成", "需重做", "已中止"], title="最终状态"}}
+
+## 方法来源与改编
+
+化学原理及滴定操作参考 [Manitoba Education《Grade 12 Chemistry》Appendix 5.6](https://www.edu.gov.mb.ca/k12/cur/science/found/gr12_chem/full_doc.pdf)；定量稀释参考 [Indiana University East 的酸碱滴定教学实验](https://iu.pressbooks.pub/iuegenchemlabs/chapter/analysis-of-acids-and-bases-by-titration/)。这里的试次上限、记录字段、眼镜提示和人工确认规则是面向交互测试的设计，不是来源机构验证或认可的眼镜工作流。

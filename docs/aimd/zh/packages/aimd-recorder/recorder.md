@@ -1,5 +1,65 @@
 # AimdRecorder
 
+## 检查点说明
+
+当 `checked_message` 包含类似 AIMD 的字面文本时，可视化表单和字段编辑工具会保留整个检查点。例如 `checked_message="保留字面文本 {{ref_var|wait_s}}"` 在勾选后原样显示，不解析其中的嵌套引用；参数字符串之外普通 Markdown 中的引用不受影响。编辑、移动或删除检查点时，操作对象均为完整定义。
+
+检查点可以有简短的 `title`，例如 `{{check|safety_ready, title="防护用品检查"}}`。详细展示显示标题和较小的 ID，简洁展示保留标题并隐藏 ID。可视化设置对话框编辑标题和勾选后提示，保留已有 ID、勾选状态及备注。标题选填，检查正文与标题独立。
+
+检查要求写在标记后，例如 `{{check|safety_ready}} 确认手套和护目镜已佩戴。`。ID 是稳定的 Record 键；后续段落是检查正文，不会自动变成标题。单独的检查点标记在没有正文时显示 ID。Recorder 及其可视化编辑控件只显示一次检查点徽标，不把预览控件当作正文，并保留真实正文及其中的输入框。
+
+## 可视化表单编辑
+
+步骤标记使用全宽、紧凑的步骤栏，不再作为小卡片挤在正文旁边。主信息是步骤编号和可选的 `title`，ID 作为小字号次要信息；精简显示隐藏 ID，但保留标题。没有标题时以步骤编号作为主标识。可视化控件使用整篇文档的编号，包括嵌套层级。说明文字在步骤栏下方保持可编辑，勾选框、预计时长、计时和备注操作集中排列。渲染器产生的空段落不会形成空白正文，也不会把备注按钮推到单独一行；真实正文、图片和控件仍然保留。
+
+`AimdRecorderWysiwygSurface` 把可编辑的文档文字和真实 Recorder 控件放在同一界面。用户可以插入一个输入框，立即在框内填写，不需要切到源码或另一个面板；它不是只能配置定义的占位块。
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { AimdRecorderWysiwygSurface, createEmptyProtocolRecordData } from "@airalogy/aimd-recorder"
+import "@airalogy/aimd-recorder/styles"
+
+const content = ref('样本：{{var|field_1: str, title="样本名"}}')
+const record = ref(createEmptyProtocolRecordData())
+</script>
+
+<template>
+  <AimdRecorderWysiwygSurface
+    v-model:content="content"
+    v-model="record"
+    field-display="compact"
+    locale="zh-CN"
+  />
+</template>
+```
+
+“输入框”对话框在插入前自动生成稳定、唯一的 ID。用户可选择文本、整数、小数、下拉选择、是/否、日期、文本列表，名称选填。字段旁的“编辑”操作打开属性面板，ID 放在高级设置中。填写值属于 `record`，不会写成 AIMD 的默认值。修改 var ID 时，当前值复制到新键，旧键保留为脱离文档的数据以便恢复；不会迁移外部 Records 或 assigner 代码。删除字段不会擦除已保存的值。步骤设置可编辑名称和计时参数，保留已有 ID、引用、勾选状态、备注和累计时间。其他结构编辑通过 `edit-field` 交给宿主，可打开高级设置或源码编辑器；需要完整多面板工作台时仍可使用 `AimdRecorderEditor`。
+
+`fieldDisplay="compact"` 隐藏 var 的 ID、title 等头部信息和表格技术键，同时保留填写控件和校验消息。空的原生输入框可用 title 作为占位提示，无障碍名称仍然保留。列表的逐项/JSON 切换、计算按钮和专用编辑器工具栏不会被一起隐藏。传入 `detailed` 可恢复元数据展示，不改变内容和数值。包组件默认仍为 `detailed`；AIMD Demo 默认使用全宽可视化表单，首次访问显示字段信息，之后恢复用户保存的显示偏好，并提供源码、只填写和并排视图。
+
+可视化编辑中的输入框使用 Recorder 的真实控件，不只是字段占位符：
+
+| 字段类型 | 填写控件 |
+| --- | --- |
+| `str`、`int`、`float` | 文本、整数、小数输入 |
+| `Literal[...]`、官方命名枚举、`enum` 选项 | 下拉框，保留选项的原始值类型 |
+| `list[Literal[...]]`、官方命名枚举列表 | 复选框组，保存选项数组 |
+| `bool` | 复选框，并显示“是／否” |
+| `bool \| None` | “未填写／是／否”下拉框 |
+| `date`、`time`、`datetime`、`CurrentTime` | 对应的日期或时间控件 |
+| `list[str]`、`list[int]`、`list[float]` | 逐项填写和 JSON 模式 |
+| 其他结构化列表、字典 | JSON 输入 |
+| `FileId*` | 文件选择及已有文件展示 |
+| `JsonStr` 等代码字符串、`AiralogyMarkdown`、`DNASequence` | 对应的专用编辑器 |
+| `EntityRef`、`ResourceRef` | 关联数据选择控件，数据源由宿主提供 |
+
+`T | None`、`Optional[T]`、`Union[T, None]` 保留 `T` 的控件类型；原生可空输入和选择框清空后写入 `null`。未知类型继续使用默认输入或宿主提供的 `typePlugins`，不会因为隐藏元数据而自动变成另一种数据类型。前端交互校验不能代替 Python/Pydantic 的最终校验。
+
+多选示例：`{{var|analyses: list[Literal["测序", "显微镜观察"]] | None}}`。选中多项保存为 `["测序", "显微镜观察"]`；逐一取消所有选项得到 `[]`，点击“未填写”恢复 `null`。前端会校验每个选项是否合法，仍由 Python/Pydantic 完成最终校验。`AimdRecorderWysiwygSurface` 和独立 `AimdRecorder` 使用相同控件。
+
+独立可视化宿主可调用 `insertText(text)` 在光标位置插入文本。`showModeSwitch` 显示源码/可视化切换并发出 `switch-mode`；`imageToolbarAction="custom"` 发出 `request-image`。`readonly` 同时禁用定义编辑和数值录入。校验及 provider 属性沿用 Recorder 的契约，每个内嵌字段不会重复显示“搜索当前记录”。
+
 当你希望把 AIMD 输入控件直接渲染在协议正文流里时，使用 `AimdRecorder`。
 
 ## 示例
@@ -47,6 +107,8 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 ```
 
 ## 内建 Recorder 行为
+
+Recorder 输出填写值，但不自行创建持久化记录、分配记录 ID/版本或写入浏览器存储，这些由宿主负责。[在线 Demo 的保存流程](../../demo#保存模板与记录)提供可恢复的填写草稿，并通过 `@airalogy/aira-core` 区分模板导出与 Record `.aira` 导出。填写值不会写入 AIMD 默认值。
 
 - `CurrentTime` 和 `UserName` 可以从运行时上下文自动填值。
 - `AiralogyMarkdown` 会渲染为横铺的 AIMD/Markdown 字段，支持 `预览` 与 `源码` 切换；预览会通过 AIMD renderer 输出 Markdown 并渲染 Mermaid 代码块，源码编辑仍保留切换到 `所见即所得` 的能力。
@@ -246,7 +308,3 @@ const quiz = {
 ```
 
 其中 `submitted` 由宿主应用控制。`AimdRecorder` 本身不会自动判断“是否已提交”，也不内建交卷按钮。
-
-## 检查点的字面提示
-
-当 `checked_message` 包含类似 AIMD 的字面文本时，可视化表单和字段编辑工具会保留整个检查点。例如 `checked_message="保留字面文本 {{ref_var|wait_s}}"` 在勾选后原样显示，不解析其中的嵌套引用；参数字符串之外普通 Markdown 中的引用不受影响。编辑、移动或删除检查点时，操作对象均为完整定义。

@@ -2,9 +2,12 @@
 
 ## Variable Definitions
 
+Sample note: {{var|field_1: str | None, title = "Sample note"}}
+
 Enter sample name: {{var|sample_name: str, title = "Sample Name", description = "Human-readable label used throughout this protocol", examples = ["S-001", "Control A"]}}
 
 Sample tags: {{var|sample_tags: list[str], title = "Sample Tags", description = "Repeatable manual scalar list for sample labels; drag items to reorder them"}}
+Requested analyses: {{var|requested_analyses: list[Literal["Microscopy", "Sequencing", "Spectroscopy"]] | None, title="Requested Analyses"}}
 Replicate counts: {{var|replicate_counts: list[int], title = "Replicate Counts", description = "Repeatable numeric scalar list; drag items to reorder them"}}
 
 Operator: {{var|operator: UserName, title = "Operator", description = "Person responsible for running and reviewing this protocol", examples = ["Dr. Chen"]}}
@@ -146,31 +149,31 @@ legend: Replace BV_ID with the video's BVID.
 
 ## Experiment Steps
 
-{{step|sample_preparation}} Prepare the sample and confirm sample name {{ref_var|sample_name}}. This step does not enable a checkpoint, so it should render without a checkbox.
+{{step|sample_preparation, title="Prepare sample"}} Prepare the sample and confirm sample name {{ref_var|sample_name}}. This step does not enable a checkpoint, so it should render without a checkbox.
 
 Record the preparation temperature here: {{var|prep_temperature_c: float}} °C
 
 Capture a short preparation note here: {{var|prep_observation: str}}
 
-{{step|pre_chill_tube, 2}} Place the collection tube on ice before adding reagents. This demonstrates a level 2 child step under sample preparation.
+{{step|pre_chill_tube, 2, title="Pre-chill tube"}} Place the collection tube on ice before adding reagents. This demonstrates a level 2 child step under sample preparation.
 
-{{step|verify_tube_label, 2, check=True}} Verify that the tube label matches {{ref_var|sample_name}}. This demonstrates a level 2 child step that also enables a checkpoint.
+{{step|verify_tube_label, 2, check=True, title="Verify tube label"}} Verify that the tube label matches {{ref_var|sample_name}}. This demonstrates a level 2 child step that also enables a checkpoint.
 
-{{step|quick_spin_sample, 3, duration='15s', timer='countdown'}} Briefly spin down the sample before continuing. This demonstrates a level 3 nested step with countdown timing.
+{{step|quick_spin_sample, 3, duration='15s', timer='countdown', title="Briefly spin sample"}} Briefly spin down the sample before continuing. This demonstrates a level 3 nested step with countdown timing.
 
-{{step|buffer_setup, check=True}} Prepare the dilution buffer for the sample. This step enables a checkpoint so the recorder shows a completion checkbox.
+{{step|buffer_setup, check=True, title="Prepare buffer"}} Prepare the dilution buffer for the sample. This step enables a checkpoint so the recorder shows a completion checkbox.
 
-{{step|mix_reaction, check=True, duration='2m'}} Mix the reaction thoroughly. This step uses the default elapsed timer mode with an estimated duration.
+{{step|mix_reaction, check=True, duration='2m', title="Mix reaction"}} Mix the reaction thoroughly. This step uses the default elapsed timer mode with an estimated duration.
 
-{{step|wash_window, duration='30s', timer='countdown'}} Finish the wash within 30 seconds. This step demonstrates countdown mode.
+{{step|wash_window, duration='30s', timer='countdown', title="Wash"}} Finish the wash within 30 seconds. This step demonstrates countdown mode.
 
-{{step|transfer_window, check=True, duration='90s', timer='both'}} Transfer the sample before overtime begins. This step demonstrates combined countdown and elapsed timing.
+{{step|transfer_window, check=True, duration='90s', timer='both', title="Transfer sample"}} Transfer the sample before overtime begins. This step demonstrates combined countdown and elapsed timing.
 
 {{step|data_analysis}} Analyze the data and verify temperature {{ref_var|temperature}}.
 
 ## Quality Checks
 
-{{check|quality_control}} Confirm data completeness, reagent lots, and sample identifiers before submission.
+{{check|quality_control, title="Quality control"}} Confirm data completeness, reagent lots, and sample identifiers before submission.
 
 {{check|quoted_message_boundary, checked_message="Literal AIMD-looking text stays plain here: {{ref_var|stable_wait_s}}."}} In normal AIMD body text, the same reference renders as data: wait {{ref_var|stable_wait_s}} s before marking this check stable.
 

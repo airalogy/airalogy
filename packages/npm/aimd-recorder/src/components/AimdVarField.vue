@@ -49,6 +49,9 @@ import {
   type ScalarListItemType,
 } from "../composables/useVarHelpers"
 import AimdRequiredMarker from "./AimdRequiredMarker.vue"
+import { useFieldPresentation } from "../composables/useFieldPresentation"
+import { parseVarListEnumValues } from '@airalogy/aimd-core/parser'
+import AimdMultiSelectField from './AimdMultiSelectField.vue'
 
 const AimdCodeField = defineAsyncComponent(() => import("./AimdCodeField.vue"))
 const AimdEntityRefField = defineAsyncComponent(() => import("./AimdEntityRefField.vue"))
@@ -279,7 +282,7 @@ function getScalarListTextMeasureContext(): CanvasRenderingContext2D | null {
 function getComputedFontShorthand(style: CSSStyleDeclaration): string {
   return style.font && style.font !== ""
     ? style.font
-    : `${style.fontStyle} ${style.fontVariant} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+    : `${style.fontStyle || 'normal'} ${style.fontWeight || '400'} ${style.fontSize || '14px'} ${style.fontFamily || 'sans-serif'}`
 }
 
 function getCssPixelValue(value: string): number {
@@ -513,6 +516,9 @@ export default defineComponent({
   },
   emits: ["change", "blur"],
   setup(props, { emit }) {
+    const fieldDisplay = useFieldPresentation()
+    const checkboxValue = ref(toBooleanValue(props.value))
+    watch(() => props.value, value => { checkboxValue.value = toBooleanValue(value) })
     const fileUploadError = ref("")
     const csvPreview = ref<CsvPreviewState | null>(null)
     const resolvedFileInfo = ref<FileDisplayInfo | null>(null)
@@ -660,9 +666,11 @@ export default defineComponent({
       const isIntegerInput = isIntegerVarType(type)
       const usesDecimalTextInput = inputKind === "number" && !isIntegerInput
       const meta = props.fieldMeta
+      const accessibleLabel = normalizeMetaString(meta?.title) ?? getAimdFieldDisplayLabel(id, node.definition)
       const disabled = props.disabled
       const extraClasses = props.extraClasses
       const placeholder = meta?.placeholder ?? getVarPlaceholder(node, meta)
+        ?? (fieldDisplay.value === "compact" ? normalizeMetaString(meta?.title ?? node.definition?.kwargs?.title) : undefined)
       const displayValue = props.displayValue
       const codeLanguage = resolveAimdCodeEditorLanguage(type, meta) ?? "plaintext"
       const numericInputAttributes: NumericInputAttributes = inputKind === "number"
@@ -757,7 +765,11 @@ export default defineComponent({
         ])
       }
 
-      const renderVarLabel = (headerAction?: VNode | null): VNode => {
+      const renderVarLabel = (headerAction?: VNode | null): VNode | null => {
+        if (fieldDisplay.value === 'compact') {
+          const actions = renderHeaderAssignerActions(headerAction)
+          return actions ? h('span', { class: 'aimd-rec-inline__compact-actions' }, [actions]) : null
+        }
         const metaTitle = normalizeMetaString(meta?.title)
         const definitionTitle = getAimdFieldTitle(node.definition)
         const displayTitle = metaTitle ?? getAimdFieldDisplayLabel(id, node.definition)
@@ -839,6 +851,8 @@ export default defineComponent({
           renderControlRow(h("select", {
             "data-rec-focus-key": `var:${id}`,
             class: "aimd-rec-inline__value-control aimd-rec-inline__input aimd-rec-inline__input--stacked aimd-rec-inline__select",
+            "aria-label": accessibleLabel,
+            "aria-required": props.required,
             disabled,
             value: selectedEnumValue,
             onChange: (e: Event) => {
@@ -876,22 +890,42 @@ export default defineComponent({
           renderAssignerError(),
         ])
 
+      if (inputKind === "multi-select") {
+        return renderStackedVar(h(AimdMultiSelectField, {
+          modelValue: props.value,
+          options: parseVarListEnumValues(type),
+          label: accessibleLabel,
+          fieldId: id,
+          disabled,
+          nullable: isNullableVarType(type),
+          emptyLabel: getAimdRecorderEmptyValueLabel(props.messages),
+          'onUpdate:modelValue': (value: unknown[] | null) => emit('change', { id, value, type, inputKind }),
+          onBlur: onVarBlur,
+        }), 'aimd-rec-inline--multi-select')
+      }
+
       if (inputKind === "checkbox") {
         return renderStackedVar(
-          h("span", { class: "aimd-rec-inline__checkbox-row" }, [
+          h("label", { class: "aimd-rec-inline__checkbox-row" }, [
             h("input", {
               "data-rec-focus-key": `var:${id}`,
               type: "checkbox",
+              "aria-label": accessibleLabel,
+              "aria-required": props.required,
               disabled,
-              checked: toBooleanValue(props.value),
+              checked: checkboxValue.value,
               onVnodeMounted: (vnode: any) => applyVarStackWidth(vnode.el as HTMLElement, inputKind),
               onVnodeUpdated: (vnode: any) => applyVarStackWidth(vnode.el as HTMLElement, inputKind),
               onChange: (event: Event) => {
                 const val = (event.target as HTMLInputElement).checked
+                checkboxValue.value = val
                 emit("change", { id, value: val, type, inputKind })
               },
               onBlur: onVarBlur,
             }),
+            fieldDisplay.value === 'compact'
+              ? h('span', { class: 'aimd-rec-inline__boolean-state' }, checkboxValue.value ? props.messages.boolean.true : props.messages.boolean.false)
+              : null,
           ]),
           "aimd-rec-inline--var-stacked--checkbox",
         )
@@ -902,6 +936,8 @@ export default defineComponent({
           h("select", {
             "data-rec-focus-key": `var:${id}`,
             class: "aimd-rec-inline__value-control aimd-rec-inline__input aimd-rec-inline__input--stacked aimd-rec-inline__select aimd-rec-inline__boolean-select",
+            "aria-label": accessibleLabel,
+            "aria-required": props.required,
             disabled,
             value: String(displayValue),
             onVnodeMounted: (vnode: any) => applyVarStackWidth(vnode.el as HTMLElement, inputKind),
@@ -922,6 +958,8 @@ export default defineComponent({
           h("textarea", {
             "data-rec-focus-key": `var:${id}`,
             class: "aimd-rec-inline__value-control aimd-rec-inline__textarea aimd-rec-inline__textarea--stacked",
+            "aria-label": accessibleLabel,
+            "aria-required": props.required,
             disabled,
             placeholder,
             value: displayValue,
@@ -1020,6 +1058,7 @@ export default defineComponent({
         const fileInput = h("input", {
           "data-rec-focus-key": `var:${id}`,
           class: "aimd-rec-file-field__input",
+          "aria-label": accessibleLabel,
           type: "file",
           accept: fileConfig.accept,
           disabled,
@@ -1321,6 +1360,7 @@ export default defineComponent({
           const isExplicitMultilineItem = !isNumericScalarList && hasExplicitLineBreak(item)
           const isWideTextItem = !isNumericScalarList && isWideScalarListTextItem(item, itemPlaceholder)
           const itemControlProps = {
+            "aria-label": `${accessibleLabel}: ${itemIndexLabel}`,
             "data-rec-focus-key": rowIndex === 0 ? `var:${id}` : `var:${id}:${rowIndex}`,
             class: [
               "aimd-rec-scalar-list__input",
@@ -1476,6 +1516,8 @@ export default defineComponent({
           h("textarea", {
             "data-rec-focus-key": `var:${id}`,
             class: "aimd-rec-inline__value-control aimd-rec-inline__textarea aimd-rec-inline__textarea--stacked aimd-rec-inline__textarea--stacked-text",
+            "aria-label": accessibleLabel,
+            "aria-required": props.required,
             rows: 1,
             disabled,
             placeholder,
@@ -1518,6 +1560,8 @@ export default defineComponent({
         h("input", {
           "data-rec-focus-key": `var:${id}`,
           class: "aimd-rec-inline__value-control aimd-rec-inline__input aimd-rec-inline__input--stacked",
+          "aria-label": accessibleLabel,
+          "aria-required": props.required,
           type: htmlInputType,
           inputmode: inputKind === "number" ? (isIntegerInput ? "numeric" : "decimal") : undefined,
           min: nativeNumericAttrs.min,

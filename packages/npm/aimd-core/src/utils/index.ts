@@ -2,6 +2,8 @@
  * Utility functions
  */
 
+export { isAimdNullableType, unwrapAimdNullableType } from './nullable-type'
+
 export {
   findVarTable,
   getSubvarDef,
@@ -18,6 +20,7 @@ export {
   formatAimdExamples,
   getAimdBuiltInTypeEnumValues,
   getAimdBuiltInTypeMetadata,
+  getAimdBuiltInTypeNames,
   getAimdFieldDescription,
   getAimdFieldDisplayLabel,
   getAimdFieldEnumValues,

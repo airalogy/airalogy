@@ -15,6 +15,7 @@ export {
   AimdCollectorField,
   AimdRecorder,
   AimdRecorderEditor,
+  AimdRecorderWysiwygSurface,
   AimdQuizRecorder,
   AimdRequiredMarker,
   AimdResourceForm,

@@ -805,6 +805,21 @@ describe('applyVarStackWidth', () => {
     expect(wrapper.style.maxWidth).toBe('100%')
   })
 
+  it.each([['checkbox', 64], ['boolean-select', 104]] as const)('keeps compact %s controls usable without a header', (kind, width) => {
+    const recorder = document.createElement('div')
+    recorder.className = 'aimd-protocol-recorder--compact'
+    const wrapper = document.createElement('span')
+    wrapper.className = 'aimd-rec-inline--var-stacked'
+    const control = document.createElement(kind === 'checkbox' ? 'input' : 'select')
+    wrapper.appendChild(control)
+    recorder.appendChild(wrapper)
+    document.body.appendChild(recorder)
+
+    applyVarStackWidth(control, kind)
+
+    expect(wrapper.style.width).toBe(`${width}px`)
+  })
+
   it('lets stacked vars inside markdown tables size from content before wrapping', () => {
     const table = document.createElement('table')
     const row = document.createElement('tr')

@@ -353,6 +353,7 @@ export default defineComponent({
       const focusKey = `var_table:${tableName}:${rowIndex}:${column}`
       const disabled = isColumnDisabled(column)
       const placeholder = getColumnPlaceholder(column)
+      const accessibleLabel = `${getAimdFieldDisplayLabel(column, getColumnDefinition(column))}: ${rowIndex + 1}`
 
       if (enumOptions.length > 0) {
         const selectedEnumValue = getVarEnumSelectValue(enumOptions, row[column])
@@ -363,6 +364,7 @@ export default defineComponent({
           : placeholder
         return h("select", {
           "data-rec-focus-key": focusKey,
+          "aria-label": accessibleLabel,
           class: [className, "aimd-rec-enum-select"],
           disabled,
           value: selectedEnumValue,
@@ -389,6 +391,7 @@ export default defineComponent({
 
       return h("input", {
         "data-rec-focus-key": focusKey,
+        "aria-label": accessibleLabel,
         class: className,
         disabled,
         placeholder,

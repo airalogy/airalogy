@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AimdFieldType, MdToolbarItem } from './types'
 import type { AimdEditorMessages } from './locales'
+import AimdInputToolbar from './AimdInputToolbar.vue'
 
 defineProps<{
   showTopBar: boolean
@@ -17,6 +18,7 @@ const emit = defineEmits<{
   (e: 'md-action', action: string, event: MouseEvent): void
   (e: 'open-aimd-dialog', type: string): void
   (e: 'quick-insert-aimd', type: string): void
+  (e: 'insert-input', preset: string): void
 }>()
 </script>
 
@@ -66,7 +68,7 @@ const emit = defineEmits<{
     <!-- AIMD buttons -->
     <template v-if="showAimdToolbar">
       <button
-        v-for="ft in localizedFieldTypes"
+        v-for="ft in localizedFieldTypes.filter(field => field.type !== 'var')"
         :key="ft.type"
         type="button"
         class="aimd-editor-fmt-btn aimd-editor-aimd-btn"
@@ -78,6 +80,7 @@ const emit = defineEmits<{
         <span class="aimd-editor-aimd-btn-icon" v-html="ft.svgIcon" />
         <span class="aimd-editor-aimd-btn-label">{{ ft.label }}</span>
       </button>
+      <AimdInputToolbar v-if="localizedFieldTypes.some(field => field.type === 'var')" :messages="resolvedMessages" @insert="emit('insert-input', $event)" />
     </template>
   </div>
 </template>

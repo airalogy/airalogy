@@ -118,6 +118,23 @@ export interface CreateProtocolAiraArchiveOptions {
   createdAt?: string
 }
 
+export interface CreateRecordsAiraArchiveFile {
+  file_id?: string
+  source_uri?: string
+  filename?: string
+  mime_type?: string
+  field_path?: string
+  data?: AiraArchiveEntryData
+}
+
+/** One immutable protocol snapshot and the records produced against it. */
+export interface CreateRecordsAiraArchiveOptions extends CreateProtocolAiraArchiveOptions {
+  records: Array<{
+    record: AiralogyRecordPayload
+    files?: CreateRecordsAiraArchiveFile[]
+  }>
+}
+
 type ZipEntryInternal = AiraEntry & {
   compressedDataStart: number
 }
@@ -579,6 +596,92 @@ export async function createProtocolAiraArchive(options: CreateProtocolAiraArchi
     ...fileNames.map(name => ({ name, bytes: entries.get(name)! })),
   ]
   return createStoredZip(archiveEntries)
+}
+
+function assertJsonValue(value: unknown, ancestors = new Set<object>()): void {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return
+  if (typeof value === 'number' && Number.isFinite(value)) return
+  if (typeof value !== 'object' || ancestors.has(value)
+    || (!Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)) {
+    throw new Error('Record payload must contain only finite JSON values (no files, cycles, or undefined values).')
+  }
+  ancestors.add(value)
+  for (const item of Object.values(value)) assertJsonValue(item, ancestors)
+  ancestors.delete(value)
+}
+
+export async function createRecordsAiraArchive(options: CreateRecordsAiraArchiveOptions): Promise<Uint8Array> {
+  if (!options.records.length) throw new Error('A records archive requires at least one record.')
+  const protocolArchive = await openAiraArchive(await createProtocolAiraArchive(options))
+  const root = 'protocols/protocol'
+  const protocol = { ...protocolArchive.manifest.protocol!, archive_root: root }
+  const entries: ZipEntryPayload[] = []
+  for (const name of protocol.files ?? []) {
+    entries.push({ name: `${root}/${name}`, bytes: await protocolArchive.readBytes(name) })
+  }
+  const records: AiraRecordManifest[] = []
+  const blobs = new Map<string, AiraBlobManifest>()
+  const files: AiraFileManifest[] = []
+  const identities = new Set<string>()
+  for (const [index, item] of options.records.entries()) {
+    assertJsonValue(item.record)
+    const issues = validateRecordPayload(item.record, `Record #${index + 1}`)
+    const id = item.record.record_id || item.record.airalogy_record_id
+    if (!id) issues.push('A record ID is required for export.')
+    if (item.record.record_version === undefined || item.record.record_version === null) issues.push('A record version is required for export.')
+    const identity = JSON.stringify([id, item.record.record_version])
+    if (identities.has(identity)) issues.push('Duplicate record ID and version.')
+    identities.add(identity)
+    for (const key of ['protocol_id', 'protocol_version'] as const) {
+      const value = item.record.metadata?.[key]
+      if (value != null && value !== protocol[key]) issues.push(`Record ${key} does not match the embedded protocol.`)
+    }
+    if (issues.length) throw new Error(issues.join('\n'))
+    if (item.record.files?.length && item.files === undefined) {
+      throw new Error('Supply files alongside an imported record to explicitly preserve or replace its attachment references.')
+    }
+    const path = `records/${String(index + 1).padStart(4, '0')}.json`
+    const recordFiles: AiraFileManifest[] = []
+    const fileIds = new Set<string>()
+    for (const file of item.files ?? []) {
+      if (!file.file_id && !file.source_uri) throw new Error('Record attachments require file_id or source_uri.')
+      const fileKey = file.file_id || file.source_uri!
+      if (fileIds.has(fileKey)) throw new Error(`Duplicate record attachment '${fileKey}'.`)
+      fileIds.add(fileKey)
+      const ref: AiraFileManifest = { record_path: path }
+      for (const key of ['file_id', 'source_uri', 'filename', 'mime_type', 'field_path'] as const) {
+        if (file[key] !== undefined) ref[key] = file[key]
+      }
+      if (file.data !== undefined) {
+        const bytes = await toArchiveBytes(file.data)
+        const hash = await sha256Hex(bytes)
+        const blobId = `sha256:${hash}`
+        const archivePath = `blobs/sha256/${hash}`
+        if (!blobs.has(blobId)) {
+          blobs.set(blobId, { blob_id: blobId, archive_path: archivePath, sha256: hash, size: bytes.byteLength })
+          entries.push({ name: archivePath, bytes })
+        }
+        ref.blob_id = blobId
+        ref.size = bytes.byteLength
+      }
+      files.push(ref)
+      recordFiles.push(ref)
+    }
+    const payload: AiralogyRecordPayload = {
+      ...item.record,
+      format: AIRALOGY_RECORD_FORMAT,
+      schema_version: AIRALOGY_RECORD_SCHEMA_VERSION,
+      metadata: { ...item.record.metadata, protocol_id: protocol.protocol_id, protocol_version: protocol.protocol_version },
+      ...(item.files ? { files: recordFiles.map(({ record_path: _path, ...file }) => file) } : {}),
+    }
+    const bytes = textEncoder.encode(`${JSON.stringify(payload, null, 2)}\n`)
+    entries.push({ name: path, bytes })
+    records.push({ path, record_id: id, record_version: payload.record_version, protocol_id: protocol.protocol_id,
+      protocol_version: protocol.protocol_version, embedded_protocol_root: root, sha256: await sha256Hex(bytes) })
+  }
+  const manifest: AiraManifest = { format: AIRA_ARCHIVE_FORMAT, version: 1, kind: 'records',
+    created_at: options.createdAt ?? new Date().toISOString(), protocols: [protocol], records, blobs: [...blobs.values()], files }
+  return createStoredZip([{ name: AIRA_MANIFEST_PATH, bytes: textEncoder.encode(`${JSON.stringify(manifest, null, 2)}\n`) }, ...entries])
 }
 
 export class ZipArchive {

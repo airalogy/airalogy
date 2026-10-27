@@ -83,7 +83,7 @@ test('AimdWysiwygEditor supports controlled content sync and readonly mode for e
   assert.match(wysiwygSource, /active\?: boolean/)
   assert.match(wysiwygSource, /readonly\?: boolean/)
   assert.match(wysiwygSource, /milkdownPlugins\?: MilkdownPlugin\[\]/)
-  assert.match(wysiwygSource, /\.use\(innerProps\.milkdownPlugins \?\? aimdMilkdownPlugins\)/)
+  assert.match(wysiwygSource, /\.use\(innerProps\.milkdownPlugins \?\? \(props\.editInputFields \? authoringPlugins : aimdMilkdownPlugins\)\)/)
   assert.match(wysiwygSource, /watch\(\(\) => props\.content, \(content\) => \{/)
   assert.match(wysiwygSource, /const comparableContent = normalizeComparableAimdMarkdown\(content\)/)
   assert.match(wysiwygSource, /if \(!props\.active \|\| !milkdownEditorRef\.value \|\| comparableContent === lastKnownMarkdown\)/)

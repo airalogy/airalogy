@@ -1,0 +1,13 @@
+# Step titles
+
+{{step|prepare, title="准备样品, then mix \"gently\"", check=True, duration="30s", timer="both"}}
+
+Body text and an input: {{var|volume: float}}
+
+{{step|verify, 2, title='Verify operator\'s reading', check=True, checked_message="Verified"}} This inline text remains body content.
+
+{{step|legacy}} Legacy inline instructions.
+
+{{step|blank, title="   "}}
+
+Return to {{ref_step|prepare}}.

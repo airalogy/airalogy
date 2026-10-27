@@ -7,6 +7,7 @@
 @import "@airalogy/aimd-renderer/styles";
 @import "./recorder-surface.css";
 @import "./collector-field.css";
+@import "./recorder-compact.css";
 
 /* Recorder-specific reference wrappers */
 .aimd-ref--step .research-step__sequence {
@@ -664,3 +665,6 @@ td .field__wrapper--tagged {
 .aimd-rec-table-cell-field .aimd-rec-validation-message {
   white-space: normal;
 }
+.aimd-check-field__identity { display: inline-flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.aimd-check-field__title { font-size: 14px; font-weight: 600; line-height: 1.5; }
+.aimd-check-field__identity .aimd-check-field__key { font: 12px/1.4 monospace; color: #667085; }

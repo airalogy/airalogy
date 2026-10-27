@@ -11,6 +11,7 @@ import AimdAssignerGraph from "./AimdAssignerGraph.vue"
 import AimdCollectorField from "./AimdCollectorField.vue"
 import AimdRecorder from "./AimdRecorder.vue"
 import AimdRecorderEditor from "./AimdRecorderEditor.vue"
+import AimdRecorderWysiwygSurface from "./AimdRecorderWysiwygSurface.vue"
 import AimdQuizRecorder from "./AimdQuizRecorder.vue"
 import AimdRequiredMarker from "./AimdRequiredMarker.vue"
 import AimdResourceForm from "./AimdResourceForm.vue"
@@ -25,6 +26,7 @@ export {
   AimdCollectorField,
   AimdRecorder,
   AimdRecorderEditor,
+  AimdRecorderWysiwygSurface,
   AimdQuizRecorder,
   AimdRequiredMarker,
   AimdResourceForm,

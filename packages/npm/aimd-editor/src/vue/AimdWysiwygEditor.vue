@@ -25,7 +25,7 @@ import { protectAimdInlineTemplates } from '@airalogy/aimd-core'
 import '@milkdown/theme-nord/style.css'
 import '@milkdown/kit/prose/tables/style/tables.css'
 
-import { aimdMilkdownPlugins } from './milkdown-aimd-plugin'
+import { aimdMilkdownPlugins, createAimdAuthoringPlugins, type AimdInputEditRequest } from './milkdown-aimd-plugin'
 import { createProgrammaticMarkdownSyncGuard } from './programmaticMarkdownSyncGuard'
 import { normalizeComparableAimdMarkdown } from './comparableAimdMarkdown'
 import type { AimdFieldType } from './types'
@@ -40,17 +40,32 @@ const props = withDefaults(defineProps<{
   resolvedMessages: AimdEditorMessages
   localizedFieldTypes: AimdFieldType[]
   milkdownPlugins?: MilkdownPlugin[]
+  fieldDisplay?: 'compact' | 'detailed'
+  editInputFields?: boolean
 }>(), {
   active: true,
   readonly: false,
   milkdownPlugins: undefined,
+  fieldDisplay: 'detailed',
+  editInputFields: false,
 })
 
 const emit = defineEmits<{
   (e: 'markdown-updated', ctx: any, markdown: string, prev: string): void
   (e: 'ready', editor: Editor): void
   (e: 'open-aimd-dialog', type: string): void
+  (e: 'edit-input', request: AimdInputEditRequest): void
+  (e: 'edit-step', request: AimdInputEditRequest): void
+  (e: 'edit-check', request: AimdInputEditRequest): void
 }>()
+
+const authoringPlugins = createAimdAuthoringPlugins(() => ({
+  compact: props.fieldDisplay === 'compact',
+  messages: props.resolvedMessages,
+  edit: request => emit('edit-input', request),
+  editStep: request => emit('edit-step', request),
+  editCheck: request => emit('edit-check', request),
+}))
 
 function toMilkdownMarkdown(markdown: string): string {
   return protectAimdInlineTemplates(markdown).content
@@ -280,6 +295,11 @@ const tableIcons = {
 }
 
 const milkdownEditorRef = shallowRef<Editor | null>(null)
+watch(() => [props.fieldDisplay, props.resolvedMessages, props.readonly], () => {
+  milkdownEditorRef.value?.action(ctx => {
+    ctx.get(editorViewCtx).dom.dispatchEvent(new Event('aimd-field-display-change'))
+  })
+}, { flush: 'post' })
 let isSyncingContent = false
 let lastKnownMarkdown = normalizeComparableAimdMarkdown(props.content)
 const programmaticMarkdownSyncGuard = createProgrammaticMarkdownSyncGuard()
@@ -319,7 +339,7 @@ const MilkdownEditorInner = defineComponent({
         .use(clipboard)
         .use(indent)
         .use(trailing)
-        .use(innerProps.milkdownPlugins ?? aimdMilkdownPlugins)
+        .use(innerProps.milkdownPlugins ?? (props.editInputFields ? authoringPlugins : aimdMilkdownPlugins))
         .use(tableBlock)
         .use(placeholderPlugin)
         .config((ctx) => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type VNode } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowReactive, watch, type VNode } from 'vue'
 import {
   openAiraArchive,
   openZipArchive,
@@ -7,6 +7,7 @@ import {
   type AiralogyRecordPayload,
   type AiraProtocolManifest,
   type AiraRecordManifest,
+  type AiraFileManifest,
   type ZipArchive,
 } from '@airalogy/aira-core'
 import {
@@ -23,7 +24,9 @@ import {
 } from '@airalogy/aimd-core/utils'
 import {
   AimdRecorder,
+  AimdRecorderWysiwygSurface,
   createEmptyProtocolRecordData,
+  createAimdRecorderMessages,
   type AimdCollectorProviderMap,
   type AimdProtocolRecordData,
 } from '@airalogy/aimd-recorder'
@@ -35,15 +38,22 @@ import {
   type AimdRecordViewKey,
 } from '@airalogy/aimd-renderer'
 import DemoExamplePicker from '../components/DemoExamplePicker.vue'
+import WorkspaceFieldDetailsToggle from '../components/WorkspaceFieldDetailsToggle.vue'
+import WorkspaceImportButton from '../components/WorkspaceImportButton.vue'
 import { useDemoLocale, useDemoMessages, type DemoLocale } from '../composables/demoI18n'
 import {
   DEFAULT_DEMO_EXAMPLE_ID,
   getDemoExample,
   resolveDemoExampleAsset,
+  resolveDemoExampleValue,
   useDemoExampleContent,
 } from '../composables/sampleContent'
 import { demoResourceResolvers } from '../composables/demoResourceResolvers'
 import { createEditorProtocolDownload } from '../composables/editorProtocolDownload'
+import { createEditorDraftStorage } from '../composables/editorDraftStorage'
+import { useEditorDisplayPreferences } from '../composables/useEditorDisplayPreferences'
+import { createEditorRecordDownload, prepareEditorProtocolSnapshot, protocolFingerprint, recordSignature, stableRecordJson,
+  type EditorProtocolIdentity, type EditorRecordIdentity, type EditorRecordFile } from '../composables/editorRecordDownload'
 import '@airalogy/aimd-renderer/styles'
 import '@airalogy/aimd-recorder/styles'
 
@@ -92,6 +102,13 @@ interface EditorDraftRecord {
   uploadedFigureSerial: number
   files: StoredProtocolFigureFile[]
   updatedAt: string
+  version?: 2
+  recorderData?: AimdProtocolRecordData
+  recordIdentity?: EditorRecordIdentity | null
+  protocolIdentity?: EditorProtocolIdentity
+  recordFiles?: EditorRecordFile[]
+  importedRecords?: ImportedRecordOption[]
+  selectedRecordId?: string
 }
 
 interface FigureBlockInput {
@@ -110,6 +127,7 @@ interface ImportedProtocolPackage {
   kind: 'protocol'
   aimd: string
   fileSources: ImportedProtocolFileSource[]
+  protocolIdentity?: EditorProtocolIdentity
 }
 
 interface ImportedRecordOption {
@@ -119,6 +137,10 @@ interface ImportedRecordOption {
   aimd: string
   fileSources: ImportedProtocolFileSource[]
   recordData: AimdProtocolRecordData
+  protocolIdentity?: EditorProtocolIdentity
+  recordIdentity?: EditorRecordIdentity | null
+  recordFiles?: EditorRecordFile[]
+  draftFiles?: StoredProtocolFigureFile[]
 }
 
 interface ImportedRecordViewOption extends ImportedRecordOption {
@@ -163,8 +185,6 @@ const IMAGE_EXTENSION_PATTERN = /^(?:avif|gif|jpe?g|png|svg|webp)$/i
 const FIGURE_POPOVER_WIDTH = 420
 const FIGURE_POPOVER_GAP = 12
 const EDITOR_DRAFT_DB_NAME = 'airalogy-aimd-demo-editor'
-const EDITOR_DRAFT_DB_VERSION = 1
-const EDITOR_DRAFT_STORE_NAME = 'drafts'
 const EDITOR_DRAFT_ID = 'current'
 const EDITOR_DRAFT_SAVE_DELAY_MS = 500
 
@@ -177,8 +197,10 @@ const {
   resetToSelectedExample,
 } = useDemoExampleContent(DEFAULT_DEMO_EXAMPLE_ID, locale)
 content.value = ''
-const mode = ref<'source' | 'wysiwyg'>('source')
-const previewMode = ref<PreviewMode>('render')
+const mode = ref<'source' | 'wysiwyg'>('wysiwyg')
+const previewMode = ref<PreviewMode>('recorder')
+const workspaceView = ref<'edit' | 'fill' | 'split'>('edit')
+const { showFieldDetails } = useEditorDisplayPreferences()
 const editorRef = ref<any>(null)
 const figureInputRef = ref<HTMLInputElement | null>(null)
 const packageInputRef = ref<HTMLInputElement | null>(null)
@@ -214,12 +236,21 @@ const previewNodes = ref<VNode[]>([])
 const previewError = ref('')
 const recorderError = ref('')
 const recorderData = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
+const protocolIdentity = ref<EditorProtocolIdentity>({ id: crypto.randomUUID() })
+const recordIdentity = ref<EditorRecordIdentity | null>(null)
+const recordFiles = ref<EditorRecordFile[]>([])
+const recordFileUrls = shallowReactive(new Map<string, string>())
+const draftState = ref<'loading' | 'pending' | 'saved' | 'failed'>('loading')
+const recordSaveStatus = ref('')
+const draftStorage = typeof indexedDB !== 'undefined'
+  ? createEditorDraftStorage<EditorDraftRecord>(indexedDB, EDITOR_DRAFT_DB_NAME) : null
 const figurePopoverPosition = ref({ top: 120, left: 24 })
 let uploadedFigureSerial = 1
 let previewRenderSerial = 0
 let draftSaveTimer: ReturnType<typeof setTimeout> | null = null
 let generatedFigureIdNoticeTimer: ReturnType<typeof setTimeout> | null = null
-let isDraftReady = false
+const isDraftReady = ref(false)
+const draftRecoveryFailed = ref(false)
 let isRestoringDraft = false
 
 const protocolFileCount = computed(() => protocolFiles.value.length)
@@ -347,71 +378,16 @@ function isEditorDraftStorageAvailable(): boolean {
   return typeof window !== 'undefined' && 'indexedDB' in window
 }
 
-function openEditorDraftDatabase(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    if (!isEditorDraftStorageAvailable()) {
-      reject(new Error('IndexedDB is not available'))
-      return
-    }
-
-    const request = window.indexedDB.open(EDITOR_DRAFT_DB_NAME, EDITOR_DRAFT_DB_VERSION)
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains(EDITOR_DRAFT_STORE_NAME)) {
-        db.createObjectStore(EDITOR_DRAFT_STORE_NAME, { keyPath: 'id' })
-      }
-    }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error ?? new Error('Failed to open editor draft database'))
-  })
-}
-
 async function readEditorDraft(): Promise<EditorDraftRecord | null> {
-  const db = await openEditorDraftDatabase()
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(EDITOR_DRAFT_STORE_NAME, 'readonly')
-    const store = transaction.objectStore(EDITOR_DRAFT_STORE_NAME)
-    const request = store.get(EDITOR_DRAFT_ID)
-    request.onsuccess = () => resolve((request.result as EditorDraftRecord | undefined) ?? null)
-    request.onerror = () => reject(request.error ?? new Error('Failed to read editor draft'))
-    transaction.oncomplete = () => db.close()
-    transaction.onerror = () => {
-      db.close()
-      reject(transaction.error ?? new Error('Failed to read editor draft'))
-    }
-  })
+  return await draftStorage?.read(EDITOR_DRAFT_ID) ?? null
 }
 
 async function writeEditorDraft(draft: EditorDraftRecord): Promise<void> {
-  const db = await openEditorDraftDatabase()
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(EDITOR_DRAFT_STORE_NAME, 'readwrite')
-    transaction.objectStore(EDITOR_DRAFT_STORE_NAME).put(draft)
-    transaction.oncomplete = () => {
-      db.close()
-      resolve()
-    }
-    transaction.onerror = () => {
-      db.close()
-      reject(transaction.error ?? new Error('Failed to save editor draft'))
-    }
-  })
+  await draftStorage?.write(draft)
 }
 
 async function deleteEditorDraft(): Promise<void> {
-  const db = await openEditorDraftDatabase()
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(EDITOR_DRAFT_STORE_NAME, 'readwrite')
-    transaction.objectStore(EDITOR_DRAFT_STORE_NAME).delete(EDITOR_DRAFT_ID)
-    transaction.oncomplete = () => {
-      db.close()
-      resolve()
-    }
-    transaction.onerror = () => {
-      db.close()
-      reject(transaction.error ?? new Error('Failed to clear editor draft'))
-    }
-  })
+  await draftStorage?.clear(EDITOR_DRAFT_ID)
 }
 
 function toStoredProtocolFigureFile(file: ProtocolFigureFile): StoredProtocolFigureFile {
@@ -444,16 +420,54 @@ function fromStoredProtocolFigureFile(file: StoredProtocolFigureFile): ProtocolF
 
 function hasEditorDraftContent(): boolean {
   return content.value.length > 0 || protocolFileCount.value > 0 || activeTemplateExampleId.value !== null
+    || recordIdentity.value !== null || importedRecordOptions.value.length > 0 || recordFiles.value.length > 0
+    || Object.values(recorderData.value).some(section => Object.keys(section).length > 0)
 }
 
 function handleEditorDraftError(error: unknown) {
   console.warn('AIMD editor draft storage failed:', error)
   archiveStatus.value = messages.value.pages.editor.draftSaveFailed
+  draftState.value = 'failed'
 }
 
 function resetRecorderData() {
   recorderData.value = createEmptyProtocolRecordData()
   recorderError.value = ''
+  recordIdentity.value = null
+  protocolIdentity.value = { id: crypto.randomUUID() }
+  setRecordFiles([])
+  recordSaveStatus.value = ''
+}
+
+function setRecordFiles(files: EditorRecordFile[]) {
+  for (const url of recordFileUrls.values()) URL.revokeObjectURL(url)
+  recordFileUrls.clear()
+  recordFiles.value = files
+  for (const file of files) if (file.blob) recordFileUrls.set(file.id, URL.createObjectURL(file.blob))
+}
+
+function uploadRecordFile(file: File, context: { fieldKey: string }) {
+  const extension = file.name.split('.').pop()?.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'bin'
+  const id = `airalogy.id.file.${crypto.randomUUID()}.${extension}`
+  recordFiles.value.push({ id, name: file.name, type: file.type, fieldPath: context.fieldKey.replace(':', '.'), blob: file })
+  recordFileUrls.set(id, URL.createObjectURL(file))
+  return id
+}
+
+function plainRecordFiles(files: EditorRecordFile[]): EditorRecordFile[] {
+  return files.map(file => ({ ...file }))
+}
+
+function captureImportedRecord() {
+  const current = selectedImportedRecord.value
+  if (!current) return
+  current.aimd = content.value
+  current.recordData = cloneRecorderData(recorderData.value)
+  current.recordIdentity = recordIdentity.value ? JSON.parse(JSON.stringify(recordIdentity.value)) : null
+  if (recordIdentity.value) current.label = `${recordIdentity.value.id} v${recordIdentity.value.version}`
+  current.protocolIdentity = { ...protocolIdentity.value }
+  current.recordFiles = plainRecordFiles(recordFiles.value)
+  current.draftFiles = protocolFiles.value.map(toStoredProtocolFigureFile)
 }
 
 function clearImportedRecords() {
@@ -472,14 +486,17 @@ function clearImportedRecords() {
 }
 
 async function saveEditorDraftNow(): Promise<void> {
-  if (!isDraftReady || isRestoringDraft) return
+  if (!isDraftReady.value || isRestoringDraft) return
   if (!isEditorDraftStorageAvailable()) return
 
   if (!hasEditorDraftContent()) {
     await deleteEditorDraft()
+    draftState.value = 'saved'
     return
   }
 
+  captureImportedRecord()
+  const generation = draftGeneration
   await writeEditorDraft({
     id: EDITOR_DRAFT_ID,
     content: content.value,
@@ -490,11 +507,30 @@ async function saveEditorDraftNow(): Promise<void> {
     uploadedFigureSerial,
     files: protocolFiles.value.map(toStoredProtocolFigureFile),
     updatedAt: new Date().toISOString(),
+    version: 2,
+    recorderData: cloneRecorderData(recorderData.value),
+    protocolIdentity: { ...protocolIdentity.value },
+    recordIdentity: recordIdentity.value ? JSON.parse(JSON.stringify(recordIdentity.value)) : null,
+    recordFiles: plainRecordFiles(recordFiles.value),
+    importedRecords: importedRecordOptions.value.map(record => ({ ...record,
+      recordData: cloneRecorderData(record.recordData),
+      recordIdentity: record.recordIdentity ? JSON.parse(JSON.stringify(record.recordIdentity)) : null,
+      protocolIdentity: record.protocolIdentity ? { ...record.protocolIdentity } : undefined,
+      recordFiles: plainRecordFiles(record.recordFiles ?? []),
+      draftFiles: record.draftFiles?.map(file => ({ ...file })),
+      fileSources: record.fileSources.map(file => ({ path: file.path, bytes: new Uint8Array(file.bytes) })),
+    })),
+    selectedRecordId: selectedImportedRecordId.value,
   })
+  if (generation === draftGeneration) draftState.value = 'saved'
 }
 
+let draftGeneration = 0
 function scheduleEditorDraftSave() {
-  if (!isDraftReady || isRestoringDraft) return
+  if (!isDraftReady.value || isRestoringDraft) return
+  if (!isPackagingArchive.value) recordSaveStatus.value = ''
+  draftGeneration += 1
+  draftState.value = draftStorage ? 'pending' : 'failed'
   if (draftSaveTimer) {
     clearTimeout(draftSaveTimer)
   }
@@ -514,8 +550,11 @@ async function clearEditorDraft() {
 }
 
 async function restoreEditorDraft() {
+  draftRecoveryFailed.value = false
+  draftState.value = 'loading'
   if (!isEditorDraftStorageAvailable()) {
-    isDraftReady = true
+    isDraftReady.value = true
+    draftState.value = 'failed'
     return
   }
 
@@ -534,18 +573,28 @@ async function restoreEditorDraft() {
     insertedFigureIds.value = [...draft.insertedFigureIds]
     uploadedFigureSerial = Math.max(1, draft.uploadedFigureSerial || 1)
     protocolFiles.value = draft.files.map(fromStoredProtocolFigureFile)
+    if (draft.recorderData) recorderData.value = cloneRecorderData(draft.recorderData)
+    if (draft.protocolIdentity) protocolIdentity.value = draft.protocolIdentity
+    recordIdentity.value = draft.recordIdentity ?? null
+    setRecordFiles(draft.recordFiles ?? [])
+    importedRecordOptions.value = draft.importedRecords ?? []
+    selectedImportedRecordId.value = draft.selectedRecordId ?? ''
     archiveStatus.value = messages.value.pages.editor.draftRestored
   }
   catch (error) {
     handleEditorDraftError(error)
+    draftRecoveryFailed.value = true
   }
   finally {
+    await nextTick()
     isRestoringDraft = false
-    isDraftReady = true
+    isDraftReady.value = !draftRecoveryFailed.value
+    if (!draftRecoveryFailed.value) draftState.value = 'saved'
   }
 }
 
 function handleExampleTemplateSelect(id: string) {
+  if (!isDraftReady.value || isPackagingArchive.value || isImportingPackage.value) return
   clearProtocolFiles()
   clearImportedRecords()
   resetRecorderData()
@@ -556,6 +605,7 @@ function handleExampleTemplateSelect(id: string) {
 }
 
 function loadSelectedExampleTemplate() {
+  if (!isDraftReady.value || isPackagingArchive.value || isImportingPackage.value) return
   clearProtocolFiles()
   clearImportedRecords()
   resetRecorderData()
@@ -587,7 +637,13 @@ function resolvePreviewAssetUrl(src: string): string | undefined {
 }
 
 function resolveRecorderFile(src: string): string | null {
-  return resolvePreviewAssetUrl(src) ?? null
+  return recordFileUrls.get(src) ?? resolvePreviewAssetUrl(src) ?? null
+}
+
+function resolveRecorderFileInfo(src: string) {
+  const file = recordFiles.value.find(file => file.id === src)
+  return file ? { id: file.id, name: file.name, type: file.type, size: file.blob?.size,
+    url: recordFileUrls.get(src) ?? file.sourceUri } : null
 }
 
 async function renderPreview() {
@@ -705,7 +761,7 @@ function getPathDir(path: string): string {
 
 function isIgnoredZipEntry(path: string): boolean {
   const segments = path.split('/').filter(Boolean)
-  return segments.includes('__MACOSX') || segments.some(segment => segment === '.DS_Store')
+  return segments.includes('__MACOSX') || segments.includes('.git') || segments.some(segment => segment === '.DS_Store' || /^\.env(?:\.|$)/.test(segment) && segment !== '.env.example')
 }
 
 function isImagePath(path: string): boolean {
@@ -761,12 +817,9 @@ function cloneRecordSection(value: unknown): Record<string, unknown> {
 }
 
 function cloneRecorderData(data: AimdProtocolRecordData): AimdProtocolRecordData {
-  return {
-    var: { ...data.var },
-    step: { ...data.step },
-    check: { ...data.check },
-    quiz: { ...data.quiz },
-  }
+  const copy = (value: unknown): unknown => Array.isArray(value) ? value.map(copy)
+    : isPlainRecordObject(value) ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key, copy(item)])) : value
+  return copy(data) as AimdProtocolRecordData
 }
 
 function recordPayloadToRecorderData(payload: AiralogyRecordPayload | null | undefined): AimdProtocolRecordData {
@@ -912,7 +965,7 @@ async function readAiraProtocolEntryPackage(
   const imagePaths = listAiraProtocolFiles(archive, entry)
     .filter(path => {
       const archivePath = joinArchivePath(entry.root, path)
-      return path !== entrypoint && archive.has(archivePath) && !isIgnoredZipEntry(path) && isImagePath(path)
+      return path !== entrypoint && archive.has(archivePath) && !isIgnoredZipEntry(path)
     })
     .sort((a, b) => a.localeCompare(b))
 
@@ -924,7 +977,10 @@ async function readAiraProtocolEntryPackage(
     })
   }
 
-  return { aimd, fileSources }
+  return { aimd, fileSources, protocolIdentity: {
+    id: entry.protocol.protocol_id || crypto.randomUUID(), version: entry.protocol.protocol_version,
+    fingerprint: await protocolFingerprint(aimd, fileSources.map(file => ({ path: file.path, data: file.bytes }))),
+  } }
 }
 
 async function readAiraProtocolPackage(archive: AiraArchive): Promise<ImportedProtocolPackage> {
@@ -970,13 +1026,36 @@ async function readAiraRecordsPackage(archive: AiraArchive): Promise<ImportedRec
     }
 
     const payload = await archive.readJson<AiralogyRecordPayload>(record.path)
+    const recordData = recordPayloadToRecorderData(payload)
+    const attachedFiles: EditorRecordFile[] = []
+    const fileReferences = [...archive.manifest.files ?? [], ...payload.files ?? []] as AiraFileManifest[]
+    for (const file of fileReferences) {
+      if (file.record_path && file.record_path !== record.path) continue
+      const id = file.file_id || file.source_uri
+      if (!id || attachedFiles.some(item => item.id === id)) continue
+      const blob = archive.manifest.blobs?.find(item => item.blob_id === file.blob_id)
+      attachedFiles.push({ id, name: file.filename || id, type: file.mime_type || 'application/octet-stream',
+        ...(file.field_path ? { fieldPath: file.field_path } : {}),
+        ...(file.source_uri ? { sourceUri: file.source_uri } : {}),
+        ...(blob ? { blob: new Blob([await archive.readBytes(blob.archive_path)], { type: file.mime_type || '' }) } : {}),
+      })
+    }
+    const identity: EditorRecordIdentity | null = payload?.record_id || payload?.airalogy_record_id || record.record_id
+      ? { id: (payload?.record_id || payload?.airalogy_record_id || record.record_id)!,
+        version: Number(payload?.record_version ?? record.record_version ?? 1),
+        payload: payload ?? undefined,
+        signature: recordSignature(recordData, protocolPackage.protocolIdentity!.fingerprint!),
+      } : null
     importedRecords.push({
       id: record.path || `record-${index + 1}`,
       label: getImportedRecordLabel(record, payload, index),
       protocolKey: protocolEntry.path,
       aimd: protocolPackage.aimd,
       fileSources: protocolPackage.fileSources,
-      recordData: recordPayloadToRecorderData(payload),
+      recordData,
+      protocolIdentity: protocolPackage.protocolIdentity,
+      recordIdentity: identity,
+      recordFiles: attachedFiles,
     })
   }
 
@@ -1010,7 +1089,7 @@ async function readZipFolderPackage(archive: ZipArchive): Promise<ImportedProtoc
     .filter(path => path !== entrypoint && !isIgnoredZipEntry(path))
     .map(path => ({ path, relativePath: toProtocolRelativePath(path, root) }))
     .filter((item): item is { path: string; relativePath: string } => (
-      typeof item.relativePath === 'string' && isImagePath(item.relativePath)
+      typeof item.relativePath === 'string'
     ))
     .sort((a, b) => a.relativePath.localeCompare(b.relativePath))
 
@@ -1030,9 +1109,11 @@ async function readProtocolPackage(file: File): Promise<ImportedPackage> {
   try {
     airaArchive = await openAiraArchive(file)
   }
-  catch {}
+  catch (error) { if (file.name.toLowerCase().endsWith('.aira')) throw error }
 
   if (airaArchive) {
+    const result = await airaArchive.validate()
+    if (!result.ok) throw new Error(result.issues.join('\n'))
     return readAiraPackage(airaArchive)
   }
 
@@ -1043,6 +1124,7 @@ function applyImportedProtocolPackage(protocolPackage: ImportedProtocolPackage) 
   clearImportedRecords()
   clearProtocolFiles()
   resetRecorderData()
+  if (protocolPackage.protocolIdentity) protocolIdentity.value = protocolPackage.protocolIdentity
   activeTemplateExampleId.value = null
   content.value = protocolPackage.aimd
   const files = createImportedProtocolFiles(protocolPackage.fileSources)
@@ -1056,11 +1138,14 @@ function applyImportedRecordOption(record: ImportedRecordOption) {
   clearProtocolFiles()
   activeTemplateExampleId.value = null
   content.value = record.aimd
-  const files = createImportedProtocolFiles(record.fileSources)
+  const files = record.draftFiles ? record.draftFiles.map(fromStoredProtocolFigureFile) : createImportedProtocolFiles(record.fileSources)
   protocolFiles.value = files
   protocolFilesExpanded.value = false
   uploadedFigureSerial = Math.max(files.length + 1, 1)
   recorderData.value = cloneRecorderData(record.recordData)
+  protocolIdentity.value = record.protocolIdentity ?? { id: crypto.randomUUID() }
+  recordIdentity.value = record.recordIdentity ?? null
+  setRecordFiles(record.recordFiles ?? [])
   recorderError.value = ''
   previewMode.value = 'recorder'
   archiveStatus.value = `${messages.value.pages.editor.packageImportedRecords}: ${record.label}`
@@ -1073,6 +1158,7 @@ function applyImportedRecordsPackage(packageData: ImportedRecordsPackage) {
   const selectedRecord = packageData.records.find(record => record.id === packageData.selectedRecordId) ?? packageData.records[0]
   if (selectedRecord) {
     applyImportedRecordOption(selectedRecord)
+    workspaceView.value = 'split'
     const sameProtocolRecordCount = packageData.records.filter(record => record.protocolKey === selectedRecord.protocolKey).length
     previewMode.value = sameProtocolRecordCount > 1 ? 'records-table' : 'recorder'
   }
@@ -1096,6 +1182,7 @@ function handleImportedRecordSelected(event: Event) {
   if (!selectedRecord) {
     return
   }
+  captureImportedRecord()
   selectedImportedRecordId.value = selectedId
   applyImportedRecordOption(selectedRecord)
 }
@@ -1114,6 +1201,7 @@ function openImportedRecord(record: unknown) {
   if (!selectedRecord) {
     return
   }
+  captureImportedRecord()
   selectedImportedRecordId.value = selectedRecord.id
   applyImportedRecordOption(selectedRecord)
 }
@@ -1388,59 +1476,116 @@ function showGeneratedFigureIdNotice(count: number) {
   }, 10000)
 }
 
+async function includeExampleAssets() {
+  if (!activeTemplateExampleId.value) return
+  const example = getDemoExample(activeTemplateExampleId.value)
+  const base = resolveDemoExampleValue(example.assetBase, activeTemplateLocale.value)
+  for (const [modulePath, url] of Object.entries(example.assetModules)) {
+    if (!modulePath.startsWith(base)) continue
+    const path = modulePath.slice(base.length)
+    if (protocolFiles.value.some(file => file.path === path)) continue
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`Unable to include template asset: ${path}`)
+    const blob = await response.blob()
+    const file = new File([blob], path.split('/').pop()!, { type: blob.type })
+    protocolFiles.value.push({ id: path, index: 0, title: file.name, path, file, previewUrl: URL.createObjectURL(file) })
+  }
+}
+
 async function downloadProtocolFile() {
   if (isPackagingArchive.value) return
   clearGeneratedFigureIdNotice()
   isPackagingArchive.value = true
   archiveStatus.value = messages.value.pages.editor.packagingDownload
   try {
+    await includeExampleAssets()
+    const files = protocolFiles.value.map(file => ({ path: file.path, data: file.file }))
+    const snapshot = await prepareEditorProtocolSnapshot(content.value, files, protocolIdentity.value)
     const protocolName = getProtocolName()
     const filenameStem = slugify(protocolName, 'aimd-protocol')
     const download = await createEditorProtocolDownload({
       aimd: content.value,
       filenameStem,
       protocol: {
-        protocol_id: slugify(protocolName, selectedExampleId.value || 'aimd-protocol'),
+        protocol_id: protocolIdentity.value.id,
+        protocol_version: snapshot.protocol.version,
         protocol_name: protocolName,
       },
-      files: protocolFiles.value.map(file => ({
-        path: file.path,
-        data: file.file,
-      })),
+      files,
     })
     if (download.changed) {
       content.value = download.aimd
       await nextTick()
     }
+    protocolIdentity.value = snapshot.protocol
     downloadBlob([download.data], download.filename, download.mimeType)
     archiveStatus.value = download.kind === 'aimd'
       ? messages.value.pages.editor.downloadCompleteAimd
       : messages.value.pages.editor.downloadCompleteAira
     showGeneratedFigureIdNotice(download.generatedFigureIds.length)
+    recordSaveStatus.value = messages.value.pages.editor.templateSaved
+    await saveEditorDraftNow().catch(handleEditorDraftError)
   }
   catch (error: any) {
     archiveStatus.value = `${messages.value.pages.editor.downloadFailed}: ${error?.message || String(error)}`
+    recordSaveStatus.value = archiveStatus.value
   }
   finally {
     isPackagingArchive.value = false
   }
 }
 
+async function downloadRecordFile() {
+  if (isPackagingArchive.value || !content.value.trim()) return
+  isPackagingArchive.value = true
+  recordSaveStatus.value = messages.value.pages.editor.packagingDownload
+  try {
+    await includeExampleAssets()
+    const download = await createEditorRecordDownload({
+      aimd: content.value, data: cloneRecorderData(recorderData.value),
+      protocol: { ...protocolIdentity.value }, protocolName: getProtocolName(),
+      files: protocolFiles.value.map(file => ({ path: file.path, data: file.file })),
+      recordFiles: plainRecordFiles(recordFiles.value), identity: recordIdentity.value,
+      messages: createAimdRecorderMessages(locale.value).validation,
+    })
+    content.value = download.aimd
+    recorderData.value = download.data
+    protocolIdentity.value = download.protocol
+    recordIdentity.value = download.identity
+    captureImportedRecord()
+    await nextTick()
+    // Persist the identity before downloading so reloads and retries never create a new record.
+    await saveEditorDraftNow().catch(handleEditorDraftError)
+    downloadBlob([download.bytes], download.filename, 'application/vnd.airalogy.archive+zip')
+    recordSaveStatus.value = messages.value.pages.editor.recordSaved(download.identity.version)
+    if (download.externalFileCount) recordSaveStatus.value += ` ${messages.value.pages.editor.externalRecordFiles(download.externalFileCount)}`
+    showGeneratedFigureIdNotice(download.generatedFigureIds.length)
+  }
+  catch (error) {
+    recordSaveStatus.value = `${messages.value.pages.editor.recordSaveFailed}: ${error instanceof Error ? error.message : String(error)}`
+  }
+  finally { isPackagingArchive.value = false }
+}
+
 watch([content, locale, protocolFileCount], renderPreview, { immediate: true })
 watch([content, locale], () => {
   recorderError.value = ''
 })
-watch(filteredImportedRecordOptions, (records) => {
+watch([importedRecordFilterQuery, importedRecordFilterFieldKey, importedRecordFilterOperator], () => {
+  if (isRestoringDraft) return
+  const records = filteredImportedRecordOptions.value
   if (importedRecordCount.value <= 1 || records.length === 0) {
     return
   }
   if (records.some(record => record.id === selectedImportedRecordId.value)) {
     return
   }
+  captureImportedRecord()
   selectedImportedRecordId.value = records[0].id
   applyImportedRecordOption(records[0])
 })
 watch([content, protocolFileCount, activeTemplateExampleId, activeTemplateLocale], scheduleEditorDraftSave)
+watch([recorderData, recordFiles, recordIdentity, protocolIdentity, selectedImportedRecordId], scheduleEditorDraftSave, { deep: true })
 
 function handleEditorPageHide() {
   if (draftSaveTimer) {
@@ -1465,6 +1610,7 @@ onBeforeUnmount(() => {
   clearGeneratedFigureIdNotice()
   revokeSelectedLocalFigurePreview()
   revokeProtocolFilePreviews()
+  for (const url of recordFileUrls.values()) URL.revokeObjectURL(url)
 })
 </script>
 
@@ -1473,6 +1619,7 @@ onBeforeUnmount(() => {
     <h2 class="page-title">{{ messages.pages.editor.title }}</h2>
 
     <DemoExamplePicker
+      :inert="!isDraftReady || isPackagingArchive || isImportingPackage"
       :selected-id="selectedExampleId"
       :title-label="messages.pages.editor.templatePickerTitle"
       :change-label="messages.pages.editor.changeTemplate"
@@ -1569,8 +1716,22 @@ onBeforeUnmount(() => {
       </section>
     </Teleport>
 
-    <div class="editor-workspace">
-      <section class="workspace-panel workspace-panel--editor">
+    <div class="workspace-view-controls">
+      <div class="preview-mode-tabs" role="group" :aria-label="messages.pages.editor.sourceTitle">
+        <button v-for="view in (['edit', 'fill', 'split'] as const)" :key="view" type="button" class="preview-mode-tab" :class="{ 'preview-mode-tab--active': workspaceView === view }" :aria-pressed="workspaceView === view" @click="workspaceView = view">
+          {{ view === 'edit' ? messages.pages.editor.editForm : view === 'fill' ? messages.pages.editor.fillForm : messages.pages.editor.splitView }}
+        </button>
+      </div>
+      <span class="workspace-draft-status" role="status" :class="{ 'workspace-draft-status--error': draftState === 'failed' }">{{ draftState === 'saved' ? messages.pages.editor.draftSaved : draftState === 'failed' ? messages.pages.editor.draftSaveFailed : draftState === 'loading' ? messages.pages.editor.draftLoading : messages.pages.editor.draftSaving }}</span>
+      <button v-if="draftRecoveryFailed" type="button" class="archive-button" @click="restoreEditorDraft">{{ messages.pages.editor.retryDraftRestore }}</button>
+      <div class="workspace-save-actions">
+        <button type="button" class="archive-button workspace-panel__download" :title="downloadButtonLabel" :disabled="!isDraftReady || isPackagingArchive || isImportingPackage || !content.trim()" @click="downloadProtocolFile">{{ messages.pages.editor.saveTemplate }}</button>
+        <button type="button" class="archive-button archive-button--primary" :disabled="!isDraftReady || isPackagingArchive || isImportingPackage || !content.trim()" @click="downloadRecordFile">{{ messages.pages.editor.saveRecord }}</button>
+      </div>
+    </div>
+    <p v-if="recordSaveStatus" class="workspace-save-status" role="status" aria-live="polite">{{ recordSaveStatus }}</p>
+    <div class="editor-workspace" :inert="!isDraftReady || isPackagingArchive || isImportingPackage" :class="{ 'editor-workspace--single': workspaceView !== 'split' }">
+      <section v-show="workspaceView !== 'fill'" class="workspace-panel workspace-panel--editor">
         <div class="workspace-panel__header workspace-panel__header--split">
           <h3 class="workspace-panel__title">{{ messages.pages.editor.sourceTitle }}</h3>
           <div class="workspace-panel__actions" aria-label="AIMD archive tools">
@@ -1591,7 +1752,7 @@ onBeforeUnmount(() => {
             <span class="workspace-panel__status" role="status" aria-live="polite" :title="archiveStatusLabel">{{ archiveStatusDisplayLabel }}</span>
             <select
               v-if="importedRecordCount > 1"
-              v-model="selectedImportedRecordId"
+              :value="selectedImportedRecordId"
               class="workspace-panel__record-select"
               :disabled="filteredImportedRecordOptions.length === 0"
               :aria-label="messages.pages.editor.importedRecordSelect"
@@ -1599,6 +1760,9 @@ onBeforeUnmount(() => {
             >
               <option v-if="filteredImportedRecordOptions.length === 0" value="">
                 {{ messages.pages.editor.importedRecordNoMatches }}
+              </option>
+              <option v-if="selectedImportedRecord && !filteredImportedRecordOptions.some(record => record.id === selectedImportedRecordId)" :value="selectedImportedRecordId" disabled>
+                {{ selectedImportedRecord.label }}
               </option>
               <option v-for="record in filteredImportedRecordOptions" :key="record.id" :value="record.id">
                 {{ record.label }}
@@ -1627,20 +1791,12 @@ onBeforeUnmount(() => {
             >
               {{ protocolFilesExpanded ? messages.pages.editor.hideFiles : messages.pages.editor.showFiles }}
             </button>
-            <span class="workspace-panel__import-wrap">
-              <button
-                type="button"
-                class="archive-button workspace-panel__import"
-                :disabled="isPackagingArchive || isImportingPackage"
-                aria-describedby="editor-import-package-tooltip"
-                @click="openPackageFilePicker"
-              >
-                {{ isImportingPackage ? messages.pages.editor.importingPackage : messages.pages.editor.importPackage }}
-              </button>
-              <span id="editor-import-package-tooltip" class="workspace-panel__import-tooltip" role="tooltip">
-                {{ messages.pages.editor.importPackageHint }}
-              </span>
-            </span>
+            <WorkspaceImportButton
+              :label="isImportingPackage ? messages.pages.editor.importingPackage : messages.pages.editor.importPackage"
+              :hint="messages.pages.editor.importPackageHint"
+              :disabled="isPackagingArchive || isImportingPackage"
+              @click="openPackageFilePicker"
+            />
             <button
               type="button"
               class="archive-button workspace-panel__clear"
@@ -1649,14 +1805,11 @@ onBeforeUnmount(() => {
             >
               {{ messages.pages.editor.clearContent }}
             </button>
-            <button
-              type="button"
-              class="archive-button archive-button--primary workspace-panel__download"
-              :disabled="isPackagingArchive || isImportingPackage"
-              @click="downloadProtocolFile"
-            >
-              {{ isPackagingArchive ? messages.pages.editor.packagingDownload : downloadButtonLabel }}
-            </button>
+            <WorkspaceFieldDetailsToggle
+              v-if="workspaceView !== 'fill'"
+              v-model="showFieldDetails"
+              :label="messages.pages.editor.fieldDetails"
+            />
           </div>
         </div>
         <div v-if="showImportedRecordFilterPanel" id="editor-record-filter" class="workspace-panel__record-filter">
@@ -1692,7 +1845,7 @@ onBeforeUnmount(() => {
         </div>
         <ul v-if="protocolFileCount > 0 && protocolFilesExpanded" id="editor-protocol-file-list" class="protocol-file-list">
           <li v-for="file in protocolFiles" :key="file.path" class="protocol-file">
-            <img class="protocol-file__preview" :src="file.previewUrl" :alt="file.title">
+            <img v-if="file.file.type.startsWith('image/')" class="protocol-file__preview" :src="file.previewUrl" :alt="file.title">
             <code class="protocol-file__path">{{ file.path }}</code>
             <span class="protocol-file__size">{{ formatFileSize(file.file.size) }}</span>
             <button type="button" class="protocol-file__remove" @click="removeProtocolFile(file.path)">
@@ -1702,9 +1855,12 @@ onBeforeUnmount(() => {
         </ul>
         <div class="workspace-panel__body workspace-panel__body--editor">
           <AimdEditor
+            v-if="mode === 'source'"
             ref="editorRef"
             v-model="content"
             v-model:mode="mode"
+            :field-display="showFieldDetails ? 'detailed' : 'compact'"
+            :keep-inactive-editors-mounted="false"
             :locale="locale"
             :min-height="520"
             :enable-block-handle="true"
@@ -1712,44 +1868,73 @@ onBeforeUnmount(() => {
             @ready="onReady"
             @request-image="openImageInsertPanel"
           />
+          <AimdRecorderWysiwygSurface
+            v-else
+            ref="editorRef"
+            v-model:content="content"
+            v-model="recorderData"
+            :locale="locale"
+            :field-display="showFieldDetails ? 'detailed' : 'compact'"
+            :min-height="0"
+            :show-mode-switch="true"
+            :resolve-file="resolveRecorderFile"
+            :upload-file="uploadRecordFile"
+            :resolve-file-info="resolveRecorderFileInfo"
+            :collector-providers="collectorProviders"
+            :resource-resolvers="demoResourceResolvers"
+            collector-actor-id="demo-user"
+            image-toolbar-action="custom"
+            @switch-mode="mode = $event"
+            @edit-field="mode = 'source'"
+            @ready="onReady"
+            @request-image="openImageInsertPanel"
+            @error="recorderError = $event"
+          />
         </div>
       </section>
 
-      <section class="workspace-panel workspace-panel--preview">
+      <section v-show="workspaceView !== 'edit'" class="workspace-panel workspace-panel--preview">
         <div class="workspace-panel__header workspace-panel__header--split">
           <h3 class="workspace-panel__title">{{ previewPanelTitle }}</h3>
-          <div class="preview-mode-tabs" :aria-label="messages.pages.editor.previewModeLabel">
-            <button
-              type="button"
-              :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'render' }]"
-              @click="previewMode = 'render'"
-            >
-              {{ messages.pages.editor.renderMode }}
-            </button>
-            <button
-              type="button"
-              :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'recorder' }]"
-              @click="previewMode = 'recorder'"
-            >
-              {{ importedRecordCount > 0 ? messages.pages.editor.singleRecordMode : messages.pages.editor.recorderMode }}
-            </button>
-            <button
-              v-if="hasImportedRecordCollection"
-              type="button"
-              :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'records-table' }]"
-              @click="previewMode = 'records-table'"
-            >
-              {{ messages.pages.editor.recordTableMode }}
-            </button>
-            <button
-              v-if="hasImportedRecordCollection"
-              type="button"
-              :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'records-compare' }]"
-              :disabled="!canCompareImportedRecords"
-              @click="previewMode = 'records-compare'"
-            >
-              {{ messages.pages.editor.recordCompareMode(selectedImportedRecords.length) }}
-            </button>
+          <div class="workspace-panel__view-actions">
+            <div class="preview-mode-tabs" :aria-label="messages.pages.editor.previewModeLabel">
+              <button
+                type="button"
+                :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'render' }]"
+                @click="previewMode = 'render'"
+              >
+                {{ messages.pages.editor.renderMode }}
+              </button>
+              <button
+                type="button"
+                :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'recorder' }]"
+                @click="previewMode = 'recorder'"
+              >
+                {{ importedRecordCount > 0 ? messages.pages.editor.singleRecordMode : messages.pages.editor.recorderMode }}
+              </button>
+              <button
+                v-if="hasImportedRecordCollection"
+                type="button"
+                :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'records-table' }]"
+                @click="previewMode = 'records-table'"
+              >
+                {{ messages.pages.editor.recordTableMode }}
+              </button>
+              <button
+                v-if="hasImportedRecordCollection"
+                type="button"
+                :class="['preview-mode-tab', { 'preview-mode-tab--active': previewMode === 'records-compare' }]"
+                :disabled="!canCompareImportedRecords"
+                @click="previewMode = 'records-compare'"
+              >
+                {{ messages.pages.editor.recordCompareMode(selectedImportedRecords.length) }}
+              </button>
+            </div>
+            <WorkspaceFieldDetailsToggle
+              v-if="workspaceView !== 'edit'"
+              v-model="showFieldDetails"
+              :label="messages.pages.editor.fieldDetails"
+            />
           </div>
         </div>
         <div v-if="previewMode === 'render'" class="workspace-panel__body render-preview aimd-renderer">
@@ -1773,7 +1958,10 @@ onBeforeUnmount(() => {
             v-model="recorderData"
             :content="content"
             :locale="locale"
+            :field-display="showFieldDetails ? 'detailed' : 'compact'"
             :resolve-file="resolveRecorderFile"
+            :upload-file="uploadRecordFile"
+            :resolve-file-info="resolveRecorderFileInfo"
             :collector-providers="collectorProviders"
             :resource-resolvers="demoResourceResolvers"
             collector-actor-id="demo-user"
@@ -2056,6 +2244,13 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
+.editor-workspace--single { grid-template-columns: minmax(0, 1fr); }
+.workspace-view-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.workspace-save-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.workspace-draft-status { font-size: 12px; color: #57606a; }
+.workspace-draft-status--error { color: #b42318; }
+.workspace-save-status { margin: 0 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+
 .workspace-panel {
   display: flex;
   min-width: 0;
@@ -2069,6 +2264,7 @@ onBeforeUnmount(() => {
 
 .workspace-panel__header {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   min-height: 42px;
   padding: 0 14px;
@@ -2091,6 +2287,15 @@ onBeforeUnmount(() => {
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.workspace-panel__view-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  margin-left: auto;
 }
 
 .preview-mode-tabs {
@@ -2257,46 +2462,8 @@ onBeforeUnmount(() => {
   background: #dbeafe;
 }
 
-.workspace-panel__import-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.workspace-panel__import,
 .workspace-panel__clear {
   height: 32px;
-}
-
-.workspace-panel__import-tooltip {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 8px);
-  right: 0;
-  width: min(360px, calc(100vw - 32px));
-  padding: 10px 12px;
-  border: 1px solid #cbd7e6;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 14px 34px rgb(15 23 42 / 16%), 0 2px 8px rgb(15 23 42 / 8%);
-  color: #334155;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.55;
-  opacity: 0;
-  pointer-events: none;
-  text-align: left;
-  transform: translateY(-4px);
-  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
-  visibility: hidden;
-  white-space: pre-wrap;
-}
-
-.workspace-panel__import-wrap:hover .workspace-panel__import-tooltip,
-.workspace-panel__import-wrap:focus-within .workspace-panel__import-tooltip {
-  opacity: 1;
-  transform: translateY(0);
-  visibility: visible;
 }
 
 .workspace-panel__download {
@@ -2318,6 +2485,18 @@ onBeforeUnmount(() => {
   height: 100%;
   border: none;
   border-radius: 0;
+}
+
+.workspace-panel__body--editor :deep(.aimd-recorder-wysiwyg-surface) {
+  height: 100%;
+}
+
+.workspace-panel__body--editor :deep(.aimd-recorder-wysiwyg-surface > .aimd-editor-toolbar) {
+  flex-shrink: 0;
+}
+
+.workspace-panel__body--editor :deep(.aimd-recorder-wysiwyg-surface > .aimd-editor-wysiwyg-mode) {
+  flex: 1 1 0;
 }
 
 .workspace-panel__body--editor :deep(.aimd-editor-panel) {

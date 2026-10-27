@@ -86,6 +86,30 @@
       ]
     },
     {
+      "id": "ai-glasses-vinegar-titration",
+      "category": "chemistry",
+      "languages": ["zh-CN"],
+      "title": { "zh-CN": "AI 眼镜实验指导：白醋总酸度滴定" },
+      "description": { "zh-CN": "18 个操作步骤，覆盖定量稀释、滴定管读数、30 秒终点确认、平行测量、质控与眼镜中断恢复测试。" },
+      "protocol_dir": { "zh-CN": "ai-glasses-vinegar-titration/zh-CN" },
+      "entry": { "zh-CN": "ai-glasses-vinegar-titration/zh-CN/protocol.aimd" },
+      "toml": { "zh-CN": "ai-glasses-vinegar-titration/zh-CN/protocol.toml" },
+      "engine_required": false,
+      "tags": ["AI眼镜", "AI-glasses", "chemistry", "titration", "step-guidance", "quality-control"]
+    },
+    {
+      "id": "ai-glasses-leaf-disk-photosynthesis",
+      "category": "biology",
+      "languages": ["zh-CN"],
+      "title": { "zh-CN": "AI 眼镜实验指导：叶圆片光合作用与对照实验" },
+      "description": { "zh-CN": "19 个操作步骤，覆盖三组对照、负压浸润、三轮重复、分钟级计数、ET50 区间及眼镜识别纠正测试。" },
+      "protocol_dir": { "zh-CN": "ai-glasses-leaf-disk-photosynthesis/zh-CN" },
+      "entry": { "zh-CN": "ai-glasses-leaf-disk-photosynthesis/zh-CN/protocol.aimd" },
+      "toml": { "zh-CN": "ai-glasses-leaf-disk-photosynthesis/zh-CN/protocol.toml" },
+      "engine_required": false,
+      "tags": ["AI眼镜", "AI-glasses", "biology", "photosynthesis", "step-guidance", "time-series"]
+    },
+    {
       "id": "field-water-sample-observation",
       "category": "environment",
       "languages": [

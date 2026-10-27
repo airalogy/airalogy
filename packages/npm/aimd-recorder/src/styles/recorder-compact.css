@@ -1,0 +1,45 @@
+.aimd-protocol-recorder--compact .aimd-rec-inline--var-stacked {
+  border-color: #bbc7d5;
+  border-radius: 4px;
+  background: white;
+}
+
+.aimd-protocol-recorder--compact .aimd-rec-inline__compact-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px;
+  border-bottom: 1px solid #e4e9ef;
+  background: #f8fafb;
+}
+
+.aimd-protocol-recorder--compact .aimd-rec-inline__checkbox-row {
+  gap: 6px;
+  cursor: pointer;
+}
+
+.aimd-protocol-recorder--compact .aimd-rec-inline__boolean-state {
+  min-width: 2em;
+}
+
+.aimd-protocol-recorder--compact .aimd-rec-inline-table > .aimd-field__header > :is(.aimd-field__scope, .aimd-field__name) {
+  display: none;
+}
+
+.aimd-protocol-recorder--compact .aimd-rec-inline-table > .aimd-field__header:not(:has(.aimd-rec-inline-table__header-actions)) {
+  display: none;
+}
+
+.aimd-protocol-recorder--compact .aimd-rec-inline-table .aimd-field__key {
+  display: none;
+}
+
+.aimd-protocol-recorder--compact :is(.aimd-markdown-field, .aimd-rec-inline--var-dna) > .aimd-field__label > :is(.aimd-field__scope, .aimd-field__id),
+.aimd-protocol-recorder--compact .aimd-rec-inline--var-dna > .aimd-field__label,
+.aimd-protocol-recorder--compact .aimd-rec-collector__header > :is(.aimd-field__scope, .aimd-rec-collector__identity) {
+  display: none;
+}
+
+.aimd-protocol-recorder--compact .aimd-markdown-field > .aimd-field__label {
+  background: #f8fafb;
+  border-bottom-color: #e4e9ef;
+}

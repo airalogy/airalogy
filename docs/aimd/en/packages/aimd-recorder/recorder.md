@@ -46,7 +46,69 @@ const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 }
 ```
 
+## Checkpoint Instructions
+
+The visual form and field editing tools preserve the whole checkpoint when `checked_message` contains literal AIMD-looking text. For example, `checked_message="Keep {{ref_var|wait_s}} literal"` displays exactly that text after checking, without resolving the nested reference. References in ordinary Markdown outside the parameter string are unaffected. Editing, moving, or removing the checkpoint operates on its complete definition.
+
+Checkpoints may have a short `title`, for example `{{check|safety_ready, title="Protective equipment"}}`. Detailed display shows the title and a smaller ID; compact display retains the title but hides the ID. The visual settings dialog edits the title and checked message while retaining the existing ID, checked state and notes. The title is optional; body content remains separate.
+
+Write check instructions after the marker, for example `{{check|safety_ready}} Confirm gloves and eye protection.` The marker's ID is the stable Record key; its following paragraph is instruction content, not an implicit title. A standalone marker falls back to its ID. Recorder and its visual authoring widgets display the checkpoint badge once, exclude preview controls from the body, and preserve actual body content including nested inputs.
+
+## Visual Form Authoring
+
+Step markers use full-width, compact headers instead of inline cards. The number and optional `title` are primary; the ID is smaller secondary metadata and is hidden in compact display without hiding the title. Without a title, the number remains the primary label. Visual widgets use numbering from the whole document, including nested levels. Instructions stay editable below the header, with checkbox, expected duration, timer and note controls together. Empty renderer paragraphs do not create a blank body or move Notes onto a separate row; real body text, images and controls remain intact.
+
+`AimdRecorderWysiwygSurface` combines editable prose with real Recorder widgets. Users can insert an input and immediately fill it, without switching to source or another pane. This is different from definition-only WYSIWYG placeholders.
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import { AimdRecorderWysiwygSurface, createEmptyProtocolRecordData } from "@airalogy/aimd-recorder"
+import "@airalogy/aimd-recorder/styles"
+
+const content = ref('Sample: {{var|field_1: str, title="Sample name"}}')
+const record = ref(createEmptyProtocolRecordData())
+</script>
+
+<template>
+  <AimdRecorderWysiwygSurface
+    v-model:content="content"
+    v-model="record"
+    field-display="compact"
+    locale="en-US"
+  />
+</template>
+```
+
+The Input dialog generates a stable, unique ID before insertion. Users can choose text, integer, decimal, dropdown, yes/no, date, or text-list controls; title is optional. The Edit action beside a field opens its settings with the ID under Advanced. Values belong to `record`, not AIMD defaults. Renaming a var preserves the current value under its new key and retains the old key as detached data for recovery; external records and assigner code are not migrated. Deleting a field does not erase its stored value. Step settings edit the name and timer options while preserving the existing ID, references, checked state, notes and elapsed time. Other structural edits are delegated through `edit-field`; hosts can open their advanced/source editor. `AimdRecorderEditor` remains available for a complete multi-panel workbench.
+
+`fieldDisplay="compact"` hides var headers and technical table keys, including IDs and titles, while retaining controls and validation messages. Empty native inputs can use the title as a placeholder; accessible labels remain available. List/JSON switches, calculation actions, and specialized editor toolbars remain usable. Pass `detailed` to restore metadata without changing content or values. All package components default to `detailed`; the AIMD Demo starts with a full-width visual form, shows field details on first visit, and restores the user's saved display preference. It also offers source, fill-only, and side-by-side views.
+
+Visual authoring uses real Recorder controls, not definition-only placeholders:
+
+| Field type | Input control |
+| --- | --- |
+| `str`, `int`, `float` | Text, integer, decimal inputs |
+| `Literal[...]`, official named enums, `enum` options | Selects that preserve the original option value types |
+| `list[Literal[...]]`, lists of official named enums | Checkbox groups storing option arrays |
+| `bool` | Checkbox with visible Yes/No feedback |
+| `bool \| None` | Unset/Yes/No select |
+| `date`, `time`, `datetime`, `CurrentTime` | Corresponding date or time controls |
+| `list[str]`, `list[int]`, `list[float]` | Item and JSON modes |
+| Other structured lists and dictionaries | JSON input |
+| `FileId*` | File selection and existing-file display |
+| `JsonStr` and other code strings, `AiralogyMarkdown`, `DNASequence` | Dedicated editors |
+| `EntityRef`, `ResourceRef` | Reference selection backed by host-provided data sources |
+
+`T | None`, `Optional[T]`, and `Union[T, None]` retain the control for `T`; clearing a nullable native input or select writes `null`. Unknown types continue to use the default input or host-provided `typePlugins`; hiding metadata does not change the data type. Frontend interaction validation does not replace final Python/Pydantic validation.
+
+For example, `{{var|analyses: list[Literal["Sequencing", "Microscopy"]] | None}}` stores `["Sequencing", "Microscopy"]` when both options are selected. Unchecking all options produces `[]`; Unset restores `null`. Frontend validation checks item membership, while Python/Pydantic remains authoritative. `AimdRecorderWysiwygSurface` and standalone `AimdRecorder` use the same control.
+
+For visual-only hosts, `insertText(text)` inserts at the current caret. `showModeSwitch` exposes the source/visual switch and emits `switch-mode`; `imageToolbarAction="custom"` emits `request-image`. `readonly` disables both definition editing and value entry. Validation and provider props use the existing Recorder contracts. Embedded fields do not repeat the current-record search toolbar.
+
 ## Built-In Recorder Behaviors
+
+Recorder emits Record values but does not create a persisted record, assign its identity/version, or write browser storage. The host owns these steps. The [online demo's save workflow](../../demo#save-templates-and-records) stores recoverable drafts and separates template export from `.aira` Record export using `@airalogy/aira-core`. Editing values never writes them into AIMD defaults.
 
 - `CurrentTime` and `UserName` can fill recorder values automatically from runtime context.
 - `AiralogyMarkdown` renders as a full-width embedded AIMD/Markdown field with `Preview` and `Source` modes; preview uses the AIMD renderer and renders Mermaid code blocks, while source editing still supports switching to `WYSIWYG`.
@@ -246,7 +308,3 @@ Homework / reveal-after-submit example:
 ```
 
 `submitted` is controlled by the host app. `AimdRecorder` does not infer submission state on its own and does not include a built-in submit button.
-
-## Quoted Checkpoint Messages
-
-The visual form and field editing tools preserve the whole checkpoint when `checked_message` contains literal AIMD-looking text. For example, `checked_message="Keep {{ref_var|wait_s}} literal"` displays exactly that text after checking, without resolving the nested reference. References in ordinary Markdown outside the parameter string are unaffected. Editing, moving, or removing the checkpoint operates on its complete definition.

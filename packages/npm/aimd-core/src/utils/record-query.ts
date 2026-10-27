@@ -319,7 +319,7 @@ export function collectAimdRecordFieldRefs(fields: ExtractedAimdFields | undefin
   for (const rawId of fields.check || []) {
     const id = extractFieldId(rawId)
     if (id) {
-      refs.push(makeSimpleRef('check', id))
+      refs.push(makeSimpleRef('check', id, fields.check_definitions?.find(field => field.id === id)))
     }
   }
 

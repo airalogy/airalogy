@@ -1,5 +1,6 @@
 import type { AimdVarDefinition } from "../types/nodes"
 import builtInTypeMetadata from "../types/airalogy-built-in-type-metadata.generated.json"
+import { unwrapAimdNullableType } from './nullable-type'
 
 export interface AimdBuiltInTypeMetadata {
   type_name: string
@@ -32,7 +33,6 @@ const officialTypeMetadataByLookupName = Object.fromEntries(
     ...(metadata.aliases ?? []).map(alias => [alias, metadata] as const),
   ]),
 ) as Record<string, AimdBuiltInTypeMetadata>
-const noneTypeNames = new Set(["None", "none", "null", "Null", "undefined"])
 
 function normalizeString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined
@@ -71,65 +71,21 @@ function normalizeTypeToken(value: string): string | undefined {
   return parts[parts.length - 1]
 }
 
-function splitTopLevelTypeUnion(annotation: string): string[] {
-  const parts: string[] = []
-  let current = ""
-  let bracketDepth = 0
-
-  for (const char of annotation) {
-    if (char === "[") {
-      bracketDepth += 1
-      current += char
-      continue
-    }
-    if (char === "]") {
-      bracketDepth = Math.max(0, bracketDepth - 1)
-      current += char
-      continue
-    }
-    if (char === "|" && bracketDepth === 0) {
-      const trimmed = current.trim()
-      if (trimmed) {
-        parts.push(trimmed)
-      }
-      current = ""
-      continue
-    }
-    current += char
-  }
-
-  const trimmed = current.trim()
-  if (trimmed) {
-    parts.push(trimmed)
-  }
-
-  return parts
-}
-
-function unwrapOptionalTypeAnnotation(annotation: string): string {
-  const optionalMatch = annotation
-    .trim()
-    .match(/^(?:(?:typing|typing_extensions)\.)?Optional\s*\[([\s\S]+)\]$/)
-  return optionalMatch ? optionalMatch[1].trim() : annotation.trim()
-}
-
 function resolveSingleNamedType(annotation?: string): string | undefined {
   if (!annotation) {
     return undefined
   }
 
-  const unwrapped = unwrapOptionalTypeAnnotation(annotation)
-  const unionParts = splitTopLevelTypeUnion(unwrapped)
-  const candidates = (unionParts.length > 0 ? unionParts : [unwrapped])
-    .map(normalizeTypeToken)
-    .filter((token): token is string => typeof token === "string" && !noneTypeNames.has(token))
-
-  return candidates.length === 1 ? candidates[0] : undefined
+  return normalizeTypeToken(unwrapAimdNullableType(annotation))
 }
 
 export function getAimdBuiltInTypeMetadata(typeAnnotation?: string): AimdBuiltInTypeMetadata | undefined {
   const typeName = resolveSingleNamedType(typeAnnotation)
   return typeName ? officialTypeMetadataByLookupName[typeName] : undefined
+}
+
+export function getAimdBuiltInTypeNames(): string[] {
+  return Object.keys(officialTypeMetadata.types)
 }
 
 export function getAimdBuiltInTypeEnumValues(typeAnnotation?: string): unknown[] {

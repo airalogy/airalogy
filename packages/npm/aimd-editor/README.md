@@ -36,6 +36,30 @@ source = prepared.content
 
 Do not call this normalizer from automatic draft saving. `AimdSourceEditor` separately diagnoses closed figures with missing IDs and offers a generate-ID quick fix without rewriting incomplete input.
 
+## Input Field Authoring
+
+The toolbar provides Text, Integer, Decimal, Single choice, Multiple choice, and Yes/no shortcuts. More inputs contains dates, times, date/time, text lists, attachments, and custom types. Each shortcut opens a preselected form; choices are entered one per line without writing type syntax. A unique `field_1`, `field_2`, etc. ID is generated and written into AIMD on insertion; existing IDs never change just because fields move. Names are optional. Advanced settings expose the editable ID, custom type, and default value, with invalid or duplicate IDs rejected.
+
+Use `mode="wysiwyg" field-display="compact"` to hide technical syntax in visual field placeholders. Click a placeholder to edit its properties. The package defaults remain source mode and detailed display. For actual data entry in the same editable document, use `AimdRecorderWysiwygSurface` from `@airalogy/aimd-recorder`; `AimdEditor` edits definitions, not Record values.
+
+`collectAimdFieldIds`, `createAimdFieldId`, and `updateAimdInputField` are available from `@airalogy/aimd-editor/authoring`, and `AimdInputFieldDialog` is available from `@airalogy/aimd-editor/vue` for host integrations.
+
+The input configuration dialog stays centered in the current viewport even when the host resets element margins. It keeps spacing on narrow screens and scrolls internally when its content is too tall.
+
+Multiline `var_table` declarations remain structured fields in visual mode. Switching modes and saving preserves nested column IDs, titles, types and constraints; their `var(...)` definitions are not displayed as column labels.
+
+## Step Authoring
+
+The Step action opens `AimdStepFieldDialog`: names are optional, IDs are generated, and Advanced settings expose level and timer options. Existing IDs stay read-only when editing a title. The reusable `updateAimdStepField` authoring helper preserves unrelated parameters and stable identities. `{{step|mix, title="Mix sample", check=True}}` keeps its instructions in ordinary Markdown, not in the title. Recorder owns filled values and timing state.
+
+## Checkpoint and Advanced Input Authoring
+
+Quoted AIMD-looking text, such as `checked_message="Keep {{ref_var|wait_s}} literal"`, stays inside its parent field in visual mode and survives saving and reopening. Only references in ordinary document text become separate reference nodes.
+
+The Checkpoint action also accepts an optional name, generates a persistent ID, and keeps existing IDs read-only. `AimdStepFieldDialog` accepts `fieldType="check"`; `updateAimdCheckField` preserves the ID while editing the title and checked message. Instructions stay in Markdown; recorded values belong to Recorder.
+
+**Advanced / custom** offers all built-in types from the generated Python registry and host `varTypePlugins`, with a free-edit type expression below. Selecting a known type preserves nullability; expressions such as `list[MyType] | None` remain editable. Listing a custom type does not install its Python definition or a Recorder widget.
+
 ## Vue Editor i18n
 
 ```vue
@@ -75,7 +99,3 @@ If `@airalogy/aimd-editor` is useful in your work, please cite the Airalogy pape
       url={https://arxiv.org/abs/2506.18586},
 }
 ```
-
-## Quoted Template Parameters
-
-Quoted AIMD-looking text, such as `checked_message="Keep {{ref_var|wait_s}} literal"`, stays inside its parent field in visual mode and survives saving and reopening. Only references in ordinary document text become separate reference nodes.

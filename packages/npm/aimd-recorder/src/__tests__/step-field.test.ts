@@ -1,11 +1,13 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { h, nextTick, reactive } from 'vue'
+import { Fragment, createCommentVNode, createTextVNode, h, nextTick, reactive } from 'vue'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AimdCheckNode, AimdStepNode } from '@airalogy/aimd-core/types'
 
 import { createAimdRecorderMessages } from '../locales'
 import { AimdCheckField, AimdStepField } from '../components/AimdStepCheckField.vue'
 import { createEmptyStepRecordItem, startStepTimer } from '../composables/useStepTimers'
+import { fieldDisplayKey } from '../composables/useFieldPresentation'
+import { ref } from 'vue'
 
 vi.mock('@airalogy/aimd-editor/vue', async () => {
   const { defineComponent, h } = await import('vue')
@@ -51,6 +53,29 @@ async function flushStepFieldAsync() {
 }
 
 describe('AimdStepField', () => {
+  it('renders titles separately from IDs and hides only metadata in compact mode', async () => {
+    const display = ref<'compact' | 'detailed'>('detailed')
+    const state = reactive({ ...createEmptyStepRecordItem(), checked: true, annotation: 'Kept note' })
+    const wrapper = mount(AimdStepField, {
+      props: { ...createBaseProps({ title: 'Prepare sample', check: true }), state },
+      global: { provide: { [fieldDisplayKey as symbol]: display } },
+    })
+    expect(wrapper.get('.aimd-step-field__title').text()).toBe('Prepare sample')
+    expect(wrapper.get('.aimd-step-field__id').text()).toBe('prepare')
+    expect(wrapper.get('input[type="checkbox"]').attributes('aria-label')).toBe('step 1: Prepare sample')
+    display.value = 'compact'
+    await nextTick()
+    expect(wrapper.find('.aimd-step-field__id').exists()).toBe(false)
+    expect(wrapper.get('.aimd-step-field__title').text()).toBe('Prepare sample')
+    await wrapper.setProps({ node: { ...createBaseProps().node, title: 'Mix sample', check: true } })
+    expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
+    expect(state.annotation).toBe('Kept note')
+    expect(wrapper.emitted('check-change')).toBeUndefined()
+    await wrapper.setProps({ node: createBaseProps().node })
+    expect(wrapper.find('.aimd-step-field__title').exists()).toBe(false)
+    expect(wrapper.get('.aimd-rec-inline__step-num').text()).toBe('1')
+    wrapper.unmount()
+  })
   afterEach(() => {
     vi.useRealTimers()
   })
@@ -109,6 +134,34 @@ describe('AimdStepField', () => {
     })
 
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(true)
+  })
+
+  it('keeps notes beside timer controls when the rendered body only contains empty paragraphs', () => {
+    const wrapper = mount(AimdStepField, {
+      props: {
+        ...createBaseProps(), state: createEmptyStepRecordItem(),
+        bodyNodes: [h('p'), h('p', [createTextVNode('  '), createCommentVNode('empty')]), h(Fragment, [h('p')])],
+      },
+    })
+    expect(wrapper.find('.aimd-step-field__body').exists()).toBe(false)
+    expect(wrapper.find('.aimd-step-field__body-actions').exists()).toBe(false)
+    expect(wrapper.find('.aimd-step-field__main-actions .aimd-step-field__toggle--annotation').exists()).toBe(true)
+    expect(wrapper.find('.aimd-step-field__main-actions .aimd-step-field__toggle--timer').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('preserves real body content, including images and interactive fields without text', () => {
+    const wrapper = mount(AimdStepField, {
+      props: {
+        ...createBaseProps(), state: createEmptyStepRecordItem(),
+        bodyNodes: [h('p', 'Instructions'), h('p', [h('img', { src: 'test.png', alt: 'Equipment' })]), h('p', [h('input')])],
+      },
+    })
+    expect(wrapper.get('.aimd-step-field__body').text()).toContain('Instructions')
+    expect(wrapper.find('.aimd-step-field__body img').exists()).toBe(true)
+    expect(wrapper.find('.aimd-step-field__body input').exists()).toBe(true)
+    expect(wrapper.find('.aimd-step-field__body-action').exists()).toBe(true)
+    wrapper.unmount()
   })
 
   it('shows the annotation detail when a note already exists in auto mode', async () => {

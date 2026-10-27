@@ -1,5 +1,7 @@
 # `@airalogy/aira-core`
 
+[English](./README.md) | [简体中文](./README.zh-CN.md)
+
 Core TypeScript parser and validator for Airalogy `.aira` archives.
 
 It opens `.aira` files in browser-compatible JavaScript, reads `_airalogy_archive/manifest.json`, lists archive members, loads JSON/text payloads, and validates manifest references, Record payload structure, Record hashes, Protocol file hashes, and offline blob hashes.
@@ -57,3 +59,27 @@ const bytes = await createProtocolAiraArchive({
 ```
 
 `.aira` archives are standard ZIP containers. The core package keeps reading independent from the full Airalogy platform, database, or execution engine.
+
+## Export Records
+
+`createRecordsAiraArchive` exports one or more records sharing an embedded protocol snapshot. The host supplies validated values, a stable record ID, a positive integer record version, and protocol identity. The writer validates JSON/identity consistency, not the protocol's Pydantic model, and never generates record IDs or saves drafts.
+
+```ts
+import { createRecordsAiraArchive } from '@airalogy/aira-core'
+
+const bytes = await createRecordsAiraArchive({
+  aimd: '{{var|temperature: float}}',
+  protocol: { protocol_id: 'temperature-log', protocol_version: '1.0.0' },
+  records: [{
+    record: {
+      record_id: crypto.randomUUID(),
+      record_version: 1,
+      data: { var: { temperature: 37.5 }, step: {}, check: {}, quiz: {} },
+    },
+  }],
+})
+```
+
+Use top-level `files: [{ path, data }]` for protocol assets. Use each record's `files: [{ file_id, filename, mime_type, field_path, data }]` for its attachments; the value in `record.data` must reference the same `file_id`. Attachment `data` accepts a `Blob`, string, `ArrayBuffer`, or `Uint8Array`. Identical bytes share one SHA-256 blob. Without `data`, the attachment remains an external reference (`file_id` or `source_uri`), not an offline copy. Duplicate record ID/version pairs are rejected. The resulting archive includes file hashes and can be checked with `openAiraArchive(bytes).then(archive => archive.validate())`.
+
+When repackaging a payload that already contains `record.files`, explicitly supply the sibling `files` list, including any bytes recovered from the original archive. This prevents stale blob references from being silently copied into a package that does not contain their files. An explicit empty list removes those associations.

@@ -26,6 +26,8 @@ const renderedContent = computed(() => (
       :content="renderedContent"
       :model-value="surfaceState.record"
       :readonly="surfaceState.readonly"
+      :field-display="surfaceState.fieldDisplay"
+      :show-search="false"
       :current-user-name="surfaceState.currentUserName"
       :now="surfaceState.now"
       :locale="surfaceState.locale"
@@ -104,11 +106,17 @@ const renderedContent = computed(() => (
   display: none;
 }
 
+.aimd-recorder-wysiwyg-field-host--inline :deep(.aimd-protocol-recorder__content > p) {
+  margin: 0;
+}
+
 .aimd-recorder-wysiwyg-field-host :deep(.aimd-recorder-wysiwyg-field-host__anchor) {
   display: none;
 }
 
 .aimd-recorder-wysiwyg-field-host--inline :deep(.aimd-protocol-recorder) {
   width: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 </style>

@@ -1,0 +1,7 @@
+# Choice inputs
+
+Single choice: {{var|status: Literal["Ready", "Done"] | None}}
+Multiple choice: {{var|tags: list[Literal["A", "B", "C"]] | None}}
+Numeric choices: {{var|levels: list[Literal[1, 2, 3]]}}
+Yes/no: {{var|confirmed: bool | None}}
+Registered choices: {{var|blood_groups: list[BloodType]}}

@@ -10,6 +10,10 @@ import '@milkdown/kit/prose/tables/style/tables.css'
 
 // Internal
 import AimdFieldDialog from './AimdFieldDialog.vue'
+import AimdInputFieldDialog from './AimdInputFieldDialog.vue'
+import AimdStepFieldDialog from './AimdStepFieldDialog.vue'
+import type { AimdInputEditRequest } from './milkdown-aimd-plugin'
+import { collectAimdFieldIds, createAimdFieldId } from '../authoring/fields'
 import AimdEditorToolbar from './AimdEditorToolbar.vue'
 import AimdSourceEditor from './AimdSourceEditor.vue'
 import AimdWysiwygEditor from './AimdWysiwygEditor.vue'
@@ -27,6 +31,7 @@ const props = withDefaults(defineProps<AimdEditorProps>(), {
   modelValue: '',
   messages: () => ({}),
   mode: 'source',
+  fieldDisplay: 'detailed',
   theme: 'aimd-light',
   showTopBar: true,
   showToolbar: true,
@@ -99,6 +104,44 @@ const localizedMdToolbarItems = computed(() => createMdToolbarItems(resolvedMess
 // --- AIMD Dialog ---
 const showAimdDialog = ref(false)
 const aimdDialogType = ref('var')
+const showInputDialog = ref(false)
+const inputPreset = ref('str')
+const inputEditRequest = ref<AimdInputEditRequest>()
+const showStepDialog = ref(false)
+const stepDialogType = ref<'step' | 'check'>('step')
+const stepEditRequest = ref<AimdInputEditRequest>()
+
+function editStep(request: AimdInputEditRequest) {
+  if (props.readonly) return
+  stepDialogType.value = 'step'
+  stepEditRequest.value = request
+  showStepDialog.value = true
+}
+
+function editCheck(request: AimdInputEditRequest) {
+  if (props.readonly) return
+  stepDialogType.value = 'check'
+  stepEditRequest.value = request
+  showStepDialog.value = true
+}
+
+function saveStep(value: string) {
+  if (props.readonly) return
+  if (stepEditRequest.value) stepEditRequest.value.apply(value)
+  else insertTextIntoActiveEditor(`{{${stepDialogType.value}|${value}}}${stepDialogType.value === 'step' ? '\n\n' : ' '}`)
+}
+
+function editInput(request: AimdInputEditRequest) {
+  if (props.readonly) return
+  inputEditRequest.value = request
+  showInputDialog.value = true
+}
+
+function saveInput(fieldContent: string) {
+  if (props.readonly) return
+  if (inputEditRequest.value) inputEditRequest.value.apply(fieldContent)
+  else insertTextIntoActiveEditor(`{{var|${fieldContent}}}`)
+}
 
 const refSuggestions = computed(() => {
   const fields = extractedFields.value
@@ -117,11 +160,39 @@ const existingQuizIds = computed(() => {
 })
 
 function openAimdDialog(type: string) {
+  if (props.readonly) return
+  if (type === 'step' || type === 'check') {
+    stepDialogType.value = type
+    stepEditRequest.value = undefined
+    showStepDialog.value = true
+    return
+  }
+  if (type === 'var') {
+    insertInput('str')
+    return
+  }
   aimdDialogType.value = type
   showAimdDialog.value = true
 }
 
+function insertInput(preset: string) {
+  if (props.readonly) return
+  inputEditRequest.value = undefined
+  inputPreset.value = preset
+  showInputDialog.value = true
+}
+
 function quickInsertAimd(type: string) {
+  if (props.readonly) return
+  if (type === 'step') {
+    insertTextIntoActiveEditor(`{{step|${createAimdFieldId(collectAimdFieldIds(content.value), 'step')}, check=True}}\n\n`)
+    return
+  }
+  if (type === 'var') {
+    const id = createAimdFieldId(collectAimdFieldIds(content.value))
+    insertTextIntoActiveEditor(`{{var|${id}: str}}`)
+    return
+  }
   insertTextIntoActiveEditor(getQuickAimdSyntax(type, resolvedMessages.value))
 }
 
@@ -208,6 +279,7 @@ defineExpose({
       @md-action="handleMdToolbarAction"
       @open-aimd-dialog="openAimdDialog"
       @quick-insert-aimd="quickInsertAimd"
+      @insert-input="insertInput"
     />
 
     <!-- Editor area -->
@@ -238,14 +310,30 @@ defineExpose({
           :active="editorMode === 'wysiwyg'"
           :resolved-messages="resolvedMessages"
           :localized-field-types="localizedFieldTypes"
+          :field-display="fieldDisplay"
+          :edit-input-fields="true"
+          :readonly="readonly"
           @markdown-updated="onMilkdownMarkdownUpdated"
           @ready="onWysiwygReady"
           @open-aimd-dialog="openAimdDialog"
+          @edit-input="editInput"
+          @edit-step="editStep"
+          @edit-check="editCheck"
         />
       </div>
     </div>
 
     <!-- AIMD Field Dialog -->
+    <AimdStepFieldDialog v-model:visible="showStepDialog" :field-type="stepDialogType" :content="content" :field-content="stepEditRequest?.content" :messages="resolvedMessages" @save="saveStep" />
+    <AimdInputFieldDialog
+      v-model:visible="showInputDialog"
+      :content="content"
+      :field-content="inputEditRequest?.content"
+      :initial-preset="inputPreset"
+      :var-type-plugins="varTypePlugins"
+      :messages="resolvedMessages"
+      @save="saveInput"
+    />
     <AimdFieldDialog
       :visible="showAimdDialog"
       :initial-type="aimdDialogType"
@@ -260,6 +348,30 @@ defineExpose({
 </template>
 
 <style>
+.aimd-input-chip {
+  display: inline-flex;
+  align-items: center;
+  min-width: 100px;
+  max-width: 100%;
+  min-height: 30px;
+  padding: 2px 10px;
+  margin: 0 3px;
+  border: 1px solid #a8bfd8;
+  border-radius: 4px;
+  background: #f7fafc;
+  color: #56697c;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  vertical-align: baseline;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.aimd-input-chip:hover { border-color: #1769d2; background: #eef5ff; }
+.aimd-input-chip:focus-visible { outline: 2px solid #1769d2; outline-offset: 2px; }
+.aimd-input-chip--detailed { font-family: monospace; font-size: 13px; color: #2563eb; }
+:is(.aimd-step-chip, .aimd-check-chip) { gap: 6px; flex-wrap: wrap; color: #24292f; }
+:is(.aimd-step-chip, .aimd-check-chip) > small { font: 12px/1.4 monospace; color: #667085; }
 .aimd-editor {
   display: flex;
   flex-direction: column;

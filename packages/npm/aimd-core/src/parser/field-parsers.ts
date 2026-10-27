@@ -1,6 +1,7 @@
 import type { AimdClientAssignerField, AimdFigField, AimdMediaField, AimdReferenceField } from "../types/aimd"
 import type { AimdStepNode, AimdStepTimerMode, AimdVarDefinition } from "../types/nodes"
 import { getAimdBuiltInTypeEnumValues } from "../utils/field-metadata"
+import { unwrapAimdNullableType } from "../utils/nullable-type"
 export { validateClientAssigners } from "./assigner-graph"
 import { parseClientAssignerContent as parseClientAssignerContentImpl } from "./client-assigner-syntax"
 
@@ -196,7 +197,7 @@ function normalizeEnumValues(values: unknown): unknown[] {
 }
 
 function parseLiteralEnumValues(type: string | undefined): unknown[] {
-  const match = type?.trim().match(/^(?:(?:typing|typing_extensions)\.)?Literal\s*\[([\s\S]*)\]$/)
+  const match = unwrapAimdNullableType(type).match(/^(?:(?:typing|typing_extensions)\.)?Literal\s*\[([\s\S]*)\]$/)
   if (!match) {
     return []
   }
@@ -221,6 +222,16 @@ export function parseVarEnumValues(
   }
 
   return getAimdBuiltInTypeEnumValues(type)
+}
+
+/** Resolve allowed item values without treating an array as a scalar enum. */
+export function parseVarListEnumValues(type: string | undefined): unknown[] {
+  const base = unwrapAimdNullableType(type)
+  const match = base.match(/^(?:(?:typing|typing_extensions)\.)?(?:list|List)\s*\[/)
+  if (!match) return []
+  const open = match[0].length - 1
+  if (findMatchingBracketIndex(base, open) !== base.length - 1) return []
+  return parseVarEnumValues(base.slice(open + 1, -1))
 }
 
 function applyVarEnumMetadata(def: AimdVarDefinition): AimdVarDefinition {
@@ -434,9 +445,7 @@ export function parseStepContent(content: string): {
     if ("check" in kvParams) {
       check = Boolean(kvParams.check)
     }
-    if ("title" in kvParams) {
-      title = String(kvParams.title)
-    }
+    if (/^title\s*=/.test(part)) title = parseFieldTitle(part, "Step")
     if ("subtitle" in kvParams) {
       subtitle = String(kvParams.subtitle)
     }
@@ -460,14 +469,20 @@ export function parseStepContent(content: string): {
   return { id, level, check, title, subtitle, checked_message, estimated_duration_ms, timer_mode, result, props }
 }
 
-/**
- * Parse checkpoint content according to AIMD spec.
- * Supports formats:
- * - "checkpoint_id"
- * - "checkpoint_id, checked_message='message'"
- */
+function parseFieldTitle(part: string, kind: string): string | undefined {
+  const literal = part.slice(part.indexOf("=") + 1).trim()
+  if (!/^(["'])(?:\\[\s\S]|(?!\1)[^\\])*\1$/.test(literal)) {
+    throw new Error(`${kind} title must be a quoted string`)
+  }
+  return (literal.startsWith('"')
+    ? JSON.parse(literal)
+    : literal.slice(1, -1).replace(/\\(\\|'|"|n|r|t)/g, (_, char: string) => ({ n: "\n", r: "\r", t: "\t" }[char] ?? char))).trim() || undefined
+}
+
+/** Parse a checkpoint ID with optional quoted title and checked_message. */
 export function parseCheckContent(content: string): {
   id: string
+  title?: string
   checked_message?: string
   label: string
 } {
@@ -475,15 +490,17 @@ export function parseCheckContent(content: string): {
   const parts = splitTopLevelCommaSegments(trimmed)
   const id = parts[0].trim()
   let checked_message: string | undefined
+  let title: string | undefined
 
   for (let i = 1; i < parts.length; i++) {
+    if (/^title\s*=/.test(parts[i].trim())) title = parseFieldTitle(parts[i], "Checkpoint")
     const kvParams = parseKeyValueParams(parts[i])
     if ("checked_message" in kvParams) {
       checked_message = String(kvParams.checked_message)
     }
   }
 
-  return { id, checked_message, label: id }
+  return { id, ...(title ? { title } : {}), checked_message, label: title ?? id }
 }
 
 /**

@@ -29,6 +29,74 @@ const rendererStylesPath = existsSync('src/styles/renderer.css')
   : 'packages/npm/aimd-renderer/src/styles/renderer.css'
 const rendererStyles = readFileSync(rendererStylesPath, 'utf8')
 
+describe('consistent field preview badges', () => {
+  const content = '{{var|sample: str, title="Sample"}}\n\n{{step|prepare, title="Prepare sample"}}\n\n{{check|ready}}'
+
+  it.each([
+    { locale: 'zh-CN', labels: ['变量', '步骤', '检查点'] },
+    { locale: 'en-US', labels: ['var', 'step', 'check'] },
+  ])('uses localized badges for all three field types in HTML and Vue ($locale)', async ({ locale, labels }) => {
+    const html = document.createElement('div')
+    html.innerHTML = renderToHtmlSync(content, { locale }).html
+    const result = await renderToVue(content, { locale, mode: 'preview' })
+    const wrapper = mount({ render: () => h('div', result.nodes) })
+    const roots: Element[] = [html, wrapper.element]
+    for (const root of roots) {
+      expect(Array.from(root.querySelectorAll('.aimd-field > .aimd-field__scope'), badge => badge.textContent)).toEqual(labels)
+      expect(root.querySelector('#step-prepare .aimd-step__title')?.textContent).toBe('Prepare sample')
+      expect(root.querySelector('#step-prepare .aimd-step__id')?.textContent).toBe('prepare')
+      const check = root.querySelector<HTMLInputElement>('#check-ready input[type="checkbox"]')!
+      expect(check.disabled).toBe(true)
+      expect(check.getAttribute('aria-label')).toBe(`${labels[2]} ready`)
+    }
+    wrapper.unmount()
+  })
+
+  it('honors host labels while sharing badge dimensions across field types', async () => {
+    const result = await renderToVue(content, { messages: { scope: { var: 'Input', step: 'Stage', check: 'Gate' } } })
+    const wrapper = mount({ render: () => h('div', result.nodes) })
+    expect(wrapper.findAll('.aimd-field > .aimd-field__scope').map(badge => badge.text())).toEqual(['Input', 'Stage', 'Gate'])
+    expect(rendererStyles).toMatch(/\.aimd-field:is\(\.aimd-field--var, \.aimd-field--step, \.aimd-field--check\) \.aimd-field__scope\s*\{[^}]*font-size: 12px;[^}]*line-height: 1\.5;/)
+    wrapper.unmount()
+  })
+})
+
+it('renders step titles as text, keeps IDs secondary and preserves inline body and references', async () => {
+  const content = '{{step|mix, title="Mix <sample>", check=True}} Inline instructions.\n\n{{step|legacy}} Legacy body.\n\nSee {{ref_step|mix}}.'
+  const { html } = renderToHtmlSync(content, { locale: 'en-US' })
+  const rendered = document.createElement('div')
+  rendered.innerHTML = html
+  expect(rendered.querySelector('.aimd-step__title')?.textContent).toBe('Mix <sample>')
+  expect(rendered.querySelector('sample')).toBeNull()
+  expect(html).toContain('class="aimd-step__id">mix')
+  expect(html).toContain('Inline instructions.')
+  expect(html).toContain('Legacy body.')
+  expect(rendered.querySelector('[data-aimd-ref-target="mix"]')?.getAttribute('data-aimd-step-sequence')).toBe('1')
+  const result = await renderToVue(content, { locale: 'en-US' })
+  const wrapper = mount({ render: () => h('div', result.nodes) })
+  expect(wrapper.findAll('.aimd-step__title').map(title => title.text())).toEqual(['Mix <sample>'])
+  expect(wrapper.findAll('.aimd-step__id').map(id => id.text())).toEqual(['mix', 'legacy'])
+  expect(wrapper.find('sample').exists()).toBe(false)
+  wrapper.unmount()
+})
+
+it('renders optional checkpoint titles safely in HTML and Vue with secondary IDs', async () => {
+  const content = '{{check|safe, title="Safety <check>"}} Confirm **PPE**.\n\n{{check|legacy}} Legacy body.'
+  const { html } = renderToHtmlSync(content, { locale: 'en-US' })
+  const rendered = document.createElement('div')
+  rendered.innerHTML = html
+  expect(rendered.querySelector('.aimd-check__title')?.textContent).toBe('Safety <check>')
+  expect(rendered.querySelector('.aimd-check__id')?.textContent).toBe('safe')
+  expect(rendered.querySelector('check')).toBeNull()
+  const result = await renderToVue(content, { locale: 'en-US' })
+  const wrapper = mount({ render: () => h('div', result.nodes) })
+  expect(wrapper.findAll('.aimd-check__title').map(title => title.text())).toEqual(['Safety <check>'])
+  expect(wrapper.get('.aimd-check__id').text()).toBe('safe')
+  expect(wrapper.text()).toContain('Legacy body.')
+  expect(wrapper.find('check').exists()).toBe(false)
+  wrapper.unmount()
+})
+
 function findVNodeByType(node: any, expectedType: string): any | null {
   if (!node || typeof node !== 'object') {
     return null

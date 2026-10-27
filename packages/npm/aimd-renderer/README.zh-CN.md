@@ -9,7 +9,11 @@ AIMD（Airalogy Markdown）渲染引擎：支持 HTML 渲染、Vue 渲染与字�
 `parseAndExtract` 返回 core 的规范字段结构，其中也包括 `fields.var_definitions` 里的普通 `var` 元数据。
 默认的 `var` 和 `var_table` 预览会渲染 AIMD 的 `title`，保留用于自动化的规范字段 id，并且只在 hover 或键盘 focus 时展示 `description` 与 `example`/`examples` 详情。
 
+变量、步骤和检查点的默认预览使用统一的本地化类型徽标，分别保留蓝色、琥珀色和红色区分。步骤优先展示标题，ID 作为次要信息；检查点保留禁用复选框，并明确显示“检查点”标签。HTML 与 Vue 输出遵循同一套展示规则。
+
 > 协议级 AIMD 语法、assigner 语义与校验规则以 Airalogy 文档为准；`@airalogy/aimd-*` 文档只描述前端 parser、renderer、recorder 如何实现这些规范。
+
+检查点支持可选标题：`{{check|safety_ready, title="防护用品检查"}}`。HTML 与 Vue 预览将标题作为纯文本显示，稳定 ID 作为次要信息。无标题检查点保留原有回退标签，后续 Markdown 不会被自动推断为标题。
 
 ## 安装
 

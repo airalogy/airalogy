@@ -7,6 +7,7 @@
 
 import { resolveAimdTypePlugin } from '../type-plugins'
 import { isAimdCodeEditorType } from '../code-types'
+import { parseVarListEnumValues } from '@airalogy/aimd-core/parser'
 import {
   getAimdFileDisplayName,
   getAimdFileInputConfig,
@@ -14,7 +15,9 @@ import {
   isAimdAiralogyFileId,
   isAimdFileLikeType,
   isKnownAimdFileTypeName,
+  isAimdNullableType,
   normalizeAimdTypeName,
+  unwrapAimdNullableType,
   toAimdBooleanValue,
   unwrapAimdStructuredValue,
   type AimdAssetKind,
@@ -88,7 +91,10 @@ export function getFileInputConfig(
   kwargs?: Record<string, unknown>,
   fieldMeta?: AimdFieldMeta,
 ): FileInputConfig {
-  return getAimdFileInputConfig(type, kwargs, fieldMeta)
+  const baseType = unwrapAimdNullableType(type)
+  const config = getAimdFileInputConfig(baseType, kwargs, fieldMeta)
+  if (normalizeAimdTypeName(baseType) === 'fileiddna' && !config.accept) return { ...config, accept: '.dna' }
+  return config
 }
 
 export function isFileLikeVarType(
@@ -233,108 +239,12 @@ export function normalizeVarTypeName(type: string | undefined): string {
   return normalizeAimdTypeName(type)
 }
 
-function splitTopLevelTypeUnion(annotation: string): string[] {
-  const parts: string[] = []
-  let depth = 0
-  let quote: string | null = null
-  let current = ""
-
-  for (let index = 0; index < annotation.length; index += 1) {
-    const char = annotation[index]
-    const previous = annotation[index - 1]
-
-    if (quote) {
-      current += char
-      if (char === quote && previous !== "\\") {
-        quote = null
-      }
-      continue
-    }
-
-    if (char === "\"" || char === "'") {
-      quote = char
-      current += char
-      continue
-    }
-
-    if (char === "[" || char === "(" || char === "{") {
-      depth += 1
-      current += char
-      continue
-    }
-
-    if (char === "]" || char === ")" || char === "}") {
-      depth = Math.max(0, depth - 1)
-      current += char
-      continue
-    }
-
-    if (char === "|" && depth === 0) {
-      parts.push(current.trim())
-      current = ""
-      continue
-    }
-
-    current += char
-  }
-
-  if (current.trim()) {
-    parts.push(current.trim())
-  }
-
-  return parts.length > 0 ? parts : [annotation.trim()]
-}
-
 function canonicalizeTypeExpression(type: string | undefined): string {
   return typeof type === "string" ? type.trim().replace(/\s+/g, "").toLowerCase() : ""
 }
 
-function unwrapOptionalTypeAnnotation(type: string | undefined): string {
-  let raw = typeof type === "string" ? type.trim() : ""
-
-  for (let index = 0; index < 4; index += 1) {
-    const compact = canonicalizeTypeExpression(raw)
-    const optionalMatch = compact.match(/^(?:typing\.)?optional\[(.*)\]$/)
-    if (optionalMatch) {
-      raw = optionalMatch[1]
-      continue
-    }
-
-    const unionParts = splitTopLevelTypeUnion(raw)
-    if (unionParts.length > 1) {
-      const valueParts = unionParts.filter(part => {
-        const normalized = canonicalizeTypeExpression(part)
-        return normalized !== "none" && normalized !== "null" && normalized !== "undefined"
-      })
-      if (valueParts.length === 1) {
-        raw = valueParts[0]
-        continue
-      }
-    }
-
-    break
-  }
-
-  return raw
-}
-
-export function isNullableVarType(type: string | undefined): boolean {
-  const raw = typeof type === "string" ? type.trim() : ""
-  if (!raw) {
-    return false
-  }
-
-  const compact = canonicalizeTypeExpression(raw)
-  if (/^(?:typing\.)?optional\[.*\]$/.test(compact)) {
-    return true
-  }
-
-  const unionParts = splitTopLevelTypeUnion(raw)
-  return unionParts.length > 1 && unionParts.some(part => {
-    const normalized = canonicalizeTypeExpression(part)
-    return normalized === "none" || normalized === "null" || normalized === "undefined"
-  })
-}
+const unwrapOptionalTypeAnnotation = unwrapAimdNullableType
+export const isNullableVarType = isAimdNullableType
 
 export function isNumericVarType(type: string | undefined): boolean {
   const normalized = normalizeVarTypeName(unwrapOptionalTypeAnnotation(type))
@@ -553,6 +463,8 @@ export function getVarInputKind(type: string | undefined, options: VarInputKindO
   if (isScalarListVarType(type)) {
     return "scalar-list"
   }
+
+  if (parseVarListEnumValues(type).length) return "multi-select"
 
   const unwrappedType = unwrapOptionalTypeAnnotation(type)
   const normalized = normalizeVarTypeName(unwrappedType)
@@ -1093,6 +1005,10 @@ export function parseVarInputValue(
 
 function getVarControlMinWidth(inputKind: VarInputKind): number {
   switch (inputKind) {
+    case "checkbox":
+      return 64
+    case "boolean-select":
+      return 104
     case "textarea":
     case "dna":
     case "code":
@@ -1237,6 +1153,7 @@ function measureFieldNameWidth(name: HTMLElement): number {
 }
 
 export function measureVarLabelWidth(wrapper: HTMLElement): number {
+  if (wrapper.closest('.aimd-protocol-recorder--compact')) return 0
   const scope = wrapper.querySelector(".aimd-field__scope--var") as HTMLElement | null
   const name = wrapper.querySelector(".aimd-field__name") as HTMLElement | null
   const id = wrapper.querySelector(".aimd-field__id") as HTMLElement | null
@@ -1269,12 +1186,14 @@ export function measureSingleLineControlWidth(input: HTMLElement): number {
   const fontStyle = computed.fontStyle || "normal"
   ctx.font = `${fontStyle} ${fontWeight} ${fontSize} ${fontFamily}`
 
-  const text = "value" in input
+  const text = input instanceof HTMLSelectElement
+    ? Array.from(input.options).map(option => option.text).reduce((longest, option) => ctx.measureText(option).width > ctx.measureText(longest).width ? option : longest, '')
+    : "value" in input
     ? ((input as HTMLInputElement | HTMLTextAreaElement).value || (input as HTMLInputElement | HTMLTextAreaElement).placeholder || "")
     : ((input.textContent || "").trim())
   const textWidth = ctx.measureText(text).width
   const padding = parsePx(computed.paddingLeft) + parsePx(computed.paddingRight)
-  return textWidth + padding + 2
+  return textWidth + padding + (input instanceof HTMLSelectElement ? 26 : 2)
 }
 
 function measureOptionalControlSlotWidth(wrapper: HTMLElement, selector: string, fallbackWidth: number): number {

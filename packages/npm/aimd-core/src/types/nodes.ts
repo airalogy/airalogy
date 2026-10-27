@@ -277,6 +277,8 @@ export interface AimdStepNode extends BaseNode {
  */
 export interface AimdCheckNode extends BaseNode {
   fieldType: "check"
+  /** Optional human-readable title; never changes the record key. */
+  title?: string
   /** Display label for the checkpoint */
   label?: string
   /** Message to display when checkpoint is checked */

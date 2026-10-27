@@ -7,9 +7,12 @@ import { fileURLToPath } from 'node:url'
 import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 import { unified } from 'unified'
+import { collectAimdRecordFieldRefs, toTemplateEnv } from '../dist/utils.js'
 
 import {
   isAimdWorkflowReference,
+  parseCheckContent,
+  parseStepContent,
   parseWorkflowContent,
   protectAimdInlineTemplates,
   remarkAimd,
@@ -25,6 +28,37 @@ const mediaFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/media/prot
 const entityRefConnectorsFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/entity-ref-connectors/protocol/protocol.aimd')
 const collectorsFixture = path.join(monorepoRoot, 'spec/fixtures/protocols/collectors/protocol/protocol.aimd')
 const workflowFixture = path.join(monorepoRoot, 'spec/fixtures/workflows/parameter-optimization/workflow.aimd')
+
+test('shared step titles preserve identities, hierarchy, timers, and legacy inline content', () => {
+  const fixture = path.join(monorepoRoot, 'spec/fixtures/protocols/step-titles')
+  const content = readFileSync(path.join(fixture, 'protocol/protocol.aimd'), 'utf8')
+  const expected = JSON.parse(readFileSync(path.join(fixture, 'expected.json'), 'utf8'))
+  const fields = parseAimd(content)
+  assert.deepEqual(fields.step_hierarchy.map(step => ({ id: step.id, title: step.title ?? null })), expected)
+  assert.deepEqual(fields.ref_step, ['prepare'])
+  assert.equal(fields.step_hierarchy[0].estimated_duration_ms, 30000)
+  assert.equal(fields.step_hierarchy[0].timer_mode, 'both')
+  assert.equal(fields.step_hierarchy[1].level, 2)
+  for (const value of ['42', 'True', 'None', 'unquoted', '[]']) {
+    assert.throws(() => parseStepContent(`prepare, title=${value}`), /quoted string/)
+  }
+})
+
+test('shared checkpoint titles preserve IDs, messages, and legacy instructions', () => {
+  const fixture = path.join(monorepoRoot, 'spec/fixtures/protocols/check-titles')
+  const content = readFileSync(path.join(fixture, 'protocol/protocol.aimd'), 'utf8')
+  const expected = JSON.parse(readFileSync(path.join(fixture, 'expected.json'), 'utf8'))
+  const fields = parseAimd(content)
+  assert.deepEqual(fields.check_definitions.map(check => ({ id: check.id, title: check.title ?? null })), expected)
+  assert.deepEqual(fields.check, expected.map(check => check.id))
+  assert.equal(toTemplateEnv(fields).record.byScope.check.safety_ready.title, expected[0].title)
+  assert.equal(collectAimdRecordFieldRefs(fields).find(field => field.scope === 'check' && field.id === 'safety_ready').title, expected[0].title)
+  assert.equal(fields.check_definitions[0].checked_message, 'Confirmed')
+  assert.equal(fields.check_definitions.at(-1).checked_message, 'done, title="not a title"')
+  for (const value of ['42', 'True', 'None', 'unquoted', '[]']) {
+    assert.throws(() => parseCheckContent(`safety_ready, title=${value}`), /quoted string/)
+  }
+})
 
 function parseAimd(content) {
   const processor = unified()

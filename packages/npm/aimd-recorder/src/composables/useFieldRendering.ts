@@ -223,6 +223,7 @@ export function useFieldRendering(options: FieldRenderingOptions) {
     })
     if (inputKind === "boolean-select") return null
     if (isNullableVarType(type) && inputKind !== "scalar-list" && inputKind !== "checkbox") return null
+    if (inputKind === "multi-select") return []
     if (inputKind === "checkbox") return false
     if (inputKind === "scalar-list") return []
     if (inputKind === "dna") return normalizeDnaSequenceValue(undefined)

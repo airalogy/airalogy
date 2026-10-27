@@ -26,7 +26,21 @@ Collector 绑定的 `Observation[T]` 和 `list[Observation[T]]` 变量在宿主�
 pnpm add @airalogy/aimd-recorder @airalogy/aimd-core
 ```
 
+## 检查点标题
+
+可视化表单和字段编辑工具会完整保留 `checked_message` 引号内类似 AIMD 的字面文本。勾选后显示该消息，不会计算其中的嵌套引用；参数字符串之外的引用保持正常正文行为。
+
+检查点支持可选 `title`，例如 `{{check|safety_ready, title="防护用品检查"}}`。详细展示以标题为主、较小的 ID 为辅；简洁展示保留标题并隐藏 ID。后续 Markdown 仍是检查正文。可视化检查点设置修改名称时保留 ID、勾选状态和备注。
+
 ## 快速开始
+
+检查点如 `{{check|safety_ready}} 确认手套和护目镜已佩戴。` 只显示一次类型标签。标记后的正文是检查要求；单独的检查点标记在没有正文时显示 ID。Recorder 不会把预览徽标或禁用的复选框当作正文，可视化编辑中也遵循这一规则。
+
+可视化编辑中的步骤使用全宽紧凑步骤栏，说明文字在下方保持可编辑。可选的 `title` 作为主要名称，稳定 ID 仅在详细模式下作为次要信息显示；没有标题时使用步骤编号，不再放大显示 ID。编号遵循整篇 Protocol，包括嵌套步骤。计时与备注操作集中排列，没有正文的步骤不会产生多余空白行。步骤设置弹窗可修改标题，不会重命名 Record 键，也不会重置完成状态、备注或计时数据。
+
+`list[Literal["A", "B"]]` 和官方枚举列表可直接使用多选复选框组，保存真实数组；可空多选还能恢复为 `null`。可视化表单工具栏提供常用输入类型的快捷插入，填写控件与独立 Recorder 一致。
+
+需要像 Word 表单一样在同一个界面编辑文档、插入输入框并直接填写数据时，使用导出的 `AimdRecorderWysiwygSurface`：`v-model:content` 保存 AIMD 定义，`v-model` 保存 Record 数据。“输入框”操作自动生成稳定 ID，填写控件复用 Recorder。设置 `field-display="compact"` 可隐藏技术标签，同时保留列表操作、计算按钮和校验提示。`AimdRecorder` 和 `AimdRecorderEditor` 也支持该设置，组件默认仍为 `detailed`。完整示例见[可视化表单编辑](https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-recorder/recorder#可视化表单编辑)。
 
 ```vue
 <script setup lang="ts">
@@ -155,6 +169,8 @@ client assigner 也会用这些约束判断依赖是否就绪，因此依赖的�
 `AimdProtocolRecorder` 仍保留为已废弃的兼容别名，但新的代码建议直接使用 `AimdRecorder`。
 
 ## Record 校验
+
+填写值与 Protocol 源文件具有独立的生命周期。Recorder 不负责持久化草稿，也不分配记录 ID 或版本；宿主负责存储与显式保存，通过 `@airalogy/aira-core` 导出归档。[Demo 保存流程](https://airalogy.github.io/airalogy/aimd/zh/demo#保存模板与记录)已提供本地草稿恢复、仅保存模板和当前记录连同附件的 `.aira` 导出。
 
 把 Protocol 解析返回的 Pydantic JSON Schema 传给 Recorder，即可让 Python 模型成为唯一的校验契约：
 
@@ -374,7 +390,3 @@ const quiz = {
 - EN: <https://airalogy.github.io/airalogy/aimd/en/packages/aimd-recorder>
 - 中文: <https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-recorder>
 - 文档源码：`docs/aimd/en/packages/aimd-recorder.md`、`docs/aimd/zh/packages/aimd-recorder.md`
-
-## 检查点的字面提示
-
-可视化表单和字段编辑工具会完整保留 `checked_message` 引号内类似 AIMD 的字面文本。勾选后显示该消息，不会计算其中的嵌套引用；参数字符串之外的引用保持正常正文行为。

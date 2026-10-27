@@ -1,7 +1,9 @@
 """Step, checkpoint, reference, and citation parsing helpers for AIMD."""
 
 import ast
+import io
 import re
+import tokenize
 from typing import List, Optional
 
 from ..ast_nodes import (
@@ -18,6 +20,32 @@ from ..tokens import Token
 
 _DURATION_PART_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)", re.IGNORECASE)
 _STEP_TIMER_MODES = {"elapsed", "countdown", "both"}
+
+
+def _split_field_parameters(value: str, token: Token, kind: str) -> list[str]:
+    # Python tokens preserve commas and escaped quotes inside title/message strings.
+    offsets = [0]
+    for line in value.splitlines(keepends=True):
+        offsets.append(offsets[-1] + len(line))
+    cuts = [-1]
+    try:
+        for item in tokenize.generate_tokens(io.StringIO(value).readline):
+            if item.type == tokenize.OP and item.string == ",":
+                cuts.append(offsets[item.start[0] - 1] + item.start[1])
+    except (tokenize.TokenError, IndentationError) as exc:
+        raise InvalidSyntaxError(f"Invalid {kind} parameters", position=token.position) from exc
+    cuts.append(len(value))
+    return [value[start + 1:end].strip() for start, end in zip(cuts, cuts[1:]) if value[start + 1:end].strip()]
+
+
+def _parse_field_title(part: str, token: Token, kind: str) -> Optional[str]:
+    try:
+        title = ast.literal_eval(part.split("=", 1)[1].strip())
+        if not isinstance(title, str):
+            raise ValueError("Expected a string")
+        return title.strip() or None
+    except (SyntaxError, ValueError) as exc:
+        raise InvalidSyntaxError(f"{kind} title must be a quoted string", position=token.position) from exc
 
 
 def _extract_quoted_param_value(value: str, name: str) -> tuple[Optional[str], str]:
@@ -100,25 +128,12 @@ class StepParserMixin:
         """
         value = token.value.strip()
 
-        # Extract quoted params first so commas inside checked_message do not break splitting.
-        checked_message, value = _extract_quoted_param_value(value, "checked_message")
-        duration, value = _extract_quoted_param_value(value, "duration")
-        timer, value = _extract_quoted_param_value(value, "timer")
-        estimated_duration_ms = (
-            _parse_duration_to_ms(duration) if duration is not None else None
-        )
-        if duration is not None and estimated_duration_ms is None:
-            raise InvalidSyntaxError(
-                f"Invalid duration value: {duration}", position=token.position
-            )
-        timer_mode = _parse_step_timer_mode(timer) if timer is not None else None
-        if timer is not None and timer_mode is None:
-            raise InvalidSyntaxError(
-                f"Invalid timer mode: {timer}", position=token.position
-            )
-
-        # Split by comma
-        parts = [p.strip() for p in value.split(",") if p.strip()]
+        parts = _split_field_parameters(value, token, "step")
+        title = None
+        checked_message = None
+        duration = None
+        estimated_duration_ms = None
+        timer_mode = None
 
         if not parts:
             raise InvalidSyntaxError("Empty step definition", position=token.position)
@@ -168,8 +183,11 @@ class StepParserMixin:
                         f"Invalid timer mode: {timer}",
                         position=token.position,
                     )
-            # Ignore checked_message here (already extracted)
-            elif not part.startswith("checked_message"):
+            elif re.match(r"title\s*=", part):
+                title = _parse_field_title(part, token, "Step")
+            elif re.match(r"checked_message\s*=", part):
+                checked_message = _strip_optional_quotes(part.split("=", 1)[1])
+            else:
                 raise InvalidSyntaxError(
                     f"Unknown step parameter: {part}", position=token.position
                 )
@@ -183,6 +201,7 @@ class StepParserMixin:
             estimated_duration_ms=estimated_duration_ms,
             timer=timer_mode,
             checked_message=checked_message,
+            title=title,
         )
 
     def _parse_check(self, token: Token) -> CheckNode:
@@ -202,10 +221,15 @@ class StepParserMixin:
         """
         value = token.value.strip()
 
-        checked_message, value = _extract_quoted_param_value(value, "checked_message")
-
-        # Clean up remaining value
-        check_name = value.split(",")[0].strip()
+        parts = _split_field_parameters(value, token, "checkpoint")
+        check_name = parts[0] if parts else ""
+        title = None
+        checked_message = None
+        for part in parts[1:]:
+            if re.match(r"title\s*=", part):
+                title = _parse_field_title(part, token, "Checkpoint")
+            elif re.match(r"checked_message\s*=", part):
+                checked_message, _ = _extract_quoted_param_value(part, "checked_message")
 
         if not check_name:
             raise InvalidSyntaxError("Empty check definition", position=token.position)
@@ -216,6 +240,7 @@ class StepParserMixin:
             position=token.position,
             name=check_name,
             checked_message=checked_message,
+            title=title,
         )
 
     def _parse_ref_var(self, token: Token) -> RefVarNode:

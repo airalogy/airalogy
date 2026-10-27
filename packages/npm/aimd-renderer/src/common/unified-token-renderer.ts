@@ -549,10 +549,10 @@ function createAimdRenderers(options: UnifiedTokenRendererOptions): Record<strin
         if (PreviewRenderer) {
           return h(PreviewRenderer, { type: "step" }, {
             default: () => children,
-            name: () => id,
+            name: () => stepNode.title || id,
           })
         }
-        return h("span", { class: "research-step__sequence" }, messages.step.sequence(step))
+        return h("span", { class: "research-step__sequence" }, [messages.step.sequence(step), stepNode.title ? ` ${stepNode.title}` : ""])
       }
 
       // Edit mode
@@ -564,6 +564,7 @@ function createAimdRenderers(options: UnifiedTokenRendererOptions): Record<strin
           item,
           annotationItem,
           name: id,
+          title: stepNode.title,
           step: String(step),
           check,
         }, {
@@ -571,7 +572,7 @@ function createAimdRenderers(options: UnifiedTokenRendererOptions): Record<strin
         })
       }
 
-      return h("span", { class: "research-step__sequence" }, messages.step.sequence(step))
+      return h("span", { class: "research-step__sequence" }, [messages.step.sequence(step), stepNode.title ? ` ${stepNode.title}` : ""])
     },
 
     check: async (node, ctx, children) => {
@@ -582,10 +583,10 @@ function createAimdRenderers(options: UnifiedTokenRendererOptions): Record<strin
         if (PreviewRenderer) {
           return h(PreviewRenderer, { type: "check" }, {
             default: () => children,
-            name: () => id,
+            name: () => checkNode.title || id,
           })
         }
-        return renderPreviewTag(scope, id, messages)
+        return renderPreviewTag(scope, checkNode.title || id, messages)
       }
 
       // Edit mode
@@ -597,12 +598,13 @@ function createAimdRenderers(options: UnifiedTokenRendererOptions): Record<strin
           item,
           annotationItem,
           name: id,
+          title: checkNode.title,
         }, {
           default: () => children,
         })
       }
 
-      return renderPreviewTag(scope, id, messages)
+      return renderPreviewTag(scope, checkNode.title || id, messages)
     },
 
     ref_step: (node, ctx) => {

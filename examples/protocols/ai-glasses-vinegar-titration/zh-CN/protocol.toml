@@ -1,0 +1,10 @@
+[airalogy_protocol]
+id = "ai_glasses_vinegar_titration_zh"
+version = "0.1.0"
+name = "AI 眼镜实验指导：白醋总酸度滴定"
+description = "含器具核对、定量稀释、滴定终点、平行测量、质控和中断恢复记录的教学实验协议。"
+authors = [{ name = "Airalogy" }]
+maintainers = [{ name = "Airalogy" }]
+disciplines = ["chemistry", "analytical chemistry", "human-computer interaction"]
+keywords = ["AI glasses", "titration", "vinegar", "step guidance", "quality control"]
+license = "Apache-2.0"

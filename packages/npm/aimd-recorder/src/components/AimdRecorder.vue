@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, defineComponent, h, nextTick, onBeforeUnmount, reactive, ref, watch, type PropType, type VNode, type VNodeChild } from "vue"
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, provide, reactive, ref, watch, type PropType, type VNode, type VNodeChild } from "vue"
+import { fieldDisplayKey } from "../composables/useFieldPresentation"
 import type {
   AimdCheckNode,
   AimdClientAssignerField,
@@ -142,6 +143,8 @@ const props = withDefaults(defineProps<{
   showSearch?: boolean
   /** Expands the built-in record search toolbar by default. */
   searchDefaultExpanded?: boolean
+  /** Compact hides field metadata while preserving controls, validation and accessible names. */
+  fieldDisplay?: 'compact' | 'detailed'
 
   // ── Extension props ──────────────────────────────────────────────────────
 
@@ -252,6 +255,7 @@ const props = withDefaults(defineProps<{
   stepDetailDisplay: "auto",
   showSearch: true,
   searchDefaultExpanded: false,
+  fieldDisplay: 'detailed',
   fieldMeta: undefined,
   serverAssigners: undefined,
   assigners: undefined,
@@ -328,6 +332,7 @@ const autoServerAssignerSignatures = new Map<string, string>()
 let autoServerAssignerScheduled = false
 
 const resolvedLocale = computed(() => resolveAimdRecorderLocale(props.locale))
+provide(fieldDisplayKey, computed(() => props.fieldDisplay))
 const resolvedMessages = computed(() => createAimdRecorderMessages(resolvedLocale.value, props.messages))
 const resolvedTypePlugins = computed(() => createAimdTypePlugins(props.typePlugins))
 const resolvedServerAssigners = computed(() => props.serverAssigners ?? props.assigners)
@@ -1618,7 +1623,7 @@ function isDefaultCheckControlNode(node: unknown): boolean {
     && classNames.includes("aimd-checkbox")
   ) || (
     vnode.type === "span"
-    && classNames.includes("aimd-field__label")
+    && (classNames.includes("aimd-field__label") || classNames.includes("aimd-field__scope"))
   )
 }
 
@@ -1649,6 +1654,8 @@ function normalizeCheckBodyNodes(bodyNodes: VNodeChild[] = []): VNodeChild[] {
   return bodyNodes
 }
 
+const contextStepNumbers = ref<Record<string, string | undefined>>({})
+
 function renderInlineStep(node: AimdStepNode, bodyNodes: VNodeChild[] = []): VNode {
   const id = node.id
   const fieldKey = `step:${id}`
@@ -1666,7 +1673,7 @@ function renderInlineStep(node: AimdStepNode, bodyNodes: VNodeChild[] = []): VNo
   const normalizedBodyNodes = normalizeStepBodyNodes(bodyNodes)
 
   const vnode = h(AimdStepField, {
-    node,
+    node: { ...node, step: contextStepNumbers.value[id] ?? node.step },
     state,
     bodyNodes: normalizedBodyNodes,
     disabled,
@@ -1878,6 +1885,7 @@ async function parseAndBuild() {
     const contextFields = props.protocolContext
       ? parseAndExtract(props.protocolContext)
       : undefined
+    contextStepNumbers.value = Object.fromEntries((contextFields?.step_hierarchy ?? []).map(step => [step.id, step.step]))
     collectorValidationContext.value = contextFields
       ? {
           connectors: contextFields.connectors,
@@ -2025,6 +2033,15 @@ watch(
 )
 
 watch(
+  () => props.fieldDisplay,
+  () => {
+    // Input events keep native controls current without rebuilding every keystroke.
+    // Refresh their VNode props before switching the presentation of those controls.
+    scheduleInlineRebuild()
+  },
+)
+
+watch(
   () => props.submitted,
   () => {
     scheduleInlineRebuild()
@@ -2055,7 +2072,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="aimd-protocol-recorder">
+  <div class="aimd-protocol-recorder" :class="{ 'aimd-protocol-recorder--compact': fieldDisplay === 'compact' }">
     <div v-if="renderError" class="aimd-protocol-recorder__error">{{ renderError }}</div>
 
     <template v-else>

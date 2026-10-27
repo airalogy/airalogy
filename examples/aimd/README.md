@@ -10,7 +10,7 @@ Preview and fill examples online on the [Demo examples page](https://airalogy.gi
 
 | ID | Scenario | Entry | Summary |
 | --- | --- | --- | --- |
-| `aimd-syntax-tour` | AIMD syntax tour | [protocol.aimd](./aimd-syntax-tour/protocol.aimd) | Interactive syntax tour covering variables, tables, figures, citations, steps, checks, quizzes, references, Markdown review marks, and browser-side client assigners. |
+| `aimd-syntax-tour` | AIMD syntax tour | [English](./aimd-syntax-tour/protocol.aimd) / [中文](./aimd-syntax-tour/protocol.zh-CN.aimd) | Bilingual interactive syntax tour covering variables, tables, figures, citations, steps, checks, quizzes, references, Markdown review marks, and browser-side client assigners. |
 | `clinical-information-record` | Clinical information record | [protocol.en-US.aimd](./clinical-information-record/protocol.en-US.aimd) / [protocol.zh-CN.aimd](./clinical-information-record/protocol.zh-CN.aimd) | Bilingual case for structured clinical encounter, assessment, plan, and review records. |
 | `protocol-workflow` | Protocol workflow | [workflow.aimd](./protocol-workflow/workflow.aimd) | Workflow document coordinating multiple protocols with branches, retry loops, data passing, and workflow-level assigners. |
 

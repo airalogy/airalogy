@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { AimdEditorMessages } from './locales'
+import AimdTypePicker from './AimdTypePicker.vue'
 import {
   createAimdFieldTypes,
   createAimdVarTypePresets,
@@ -535,15 +536,7 @@ function close() {
                 </button>
               </div>
             </div>
-            <label class="aimd-field-row">
-              <span class="aimd-field-label">{{ props.messages.dialog.customType }}</span>
-              <input
-                v-model="fields.type"
-                :placeholder="props.messages.placeholders.type"
-                class="aimd-field-input"
-              />
-              <span class="aimd-field-hint">{{ props.messages.dialog.customTypeHint }}</span>
-            </label>
+            <AimdTypePicker v-model="fields.type" :messages="messages" :var-type-plugins="varTypePlugins" />
             <label class="aimd-field-row">
               <span class="aimd-field-label">{{ props.messages.dialog.defaultValue }}</span>
               <input v-model="fields.default" :placeholder="props.messages.placeholders.defaultValue" class="aimd-field-input" />
@@ -569,6 +562,10 @@ function close() {
 
           <!-- step fields -->
           <template v-if="dialogType === 'step'">
+            <label class="aimd-field-row">
+              <span class="aimd-field-label">{{ props.messages.stepField.name }}</span>
+              <input v-model="fields.title" class="aimd-field-input" />
+            </label>
             <label class="aimd-field-row">
               <span class="aimd-field-label">{{ props.messages.dialog.stepId }} <em>*</em></span>
               <input v-model="fields.name" :placeholder="props.messages.placeholders.stepId" class="aimd-field-input" />
@@ -713,8 +710,16 @@ function close() {
           <!-- check fields -->
           <template v-if="dialogType === 'check'">
             <label class="aimd-field-row">
+              <span class="aimd-field-label">{{ props.messages.checkField.name }}</span>
+              <input v-model="fields.title" class="aimd-field-input" />
+            </label>
+            <label class="aimd-field-row">
               <span class="aimd-field-label">{{ props.messages.dialog.checkpointId }} <em>*</em></span>
               <input v-model="fields.name" :placeholder="props.messages.placeholders.checkpointId" class="aimd-field-input" />
+            </label>
+            <label class="aimd-field-row">
+              <span class="aimd-field-label">{{ props.messages.checkField.checkedMessage }}</span>
+              <input v-model="fields.checkedMessage" class="aimd-field-input" />
             </label>
           </template>
 

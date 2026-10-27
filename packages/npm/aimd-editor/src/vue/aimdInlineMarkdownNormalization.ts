@@ -18,6 +18,15 @@ function normalizeSingleAimdInlineTemplate(template: string): string {
       result += template[++index]
       continue
     }
+    // Older visual-editor drafts escaped leading indentation as character references.
+    if (char === '&' && /^[ \t]*$/.test(result.slice(result.lastIndexOf('\n') + 1))) {
+      const space = template.slice(index).match(/^&#(?:x0*20|0*32);/i)
+      if (space) {
+        result += ' '
+        index += space[0].length - 1
+        continue
+      }
+    }
     result += char
   }
   return result

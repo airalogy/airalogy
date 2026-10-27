@@ -333,6 +333,8 @@ export interface AimdQuizField {
  * Step field definition
  */
 export interface AimdStepField {
+  /** Human-facing name; stable references continue to use id. */
+  title?: string
   /** Step id */
   id: string
   /** Step number */
@@ -363,6 +365,8 @@ export interface AimdStepField {
 export interface AimdCheckField {
   /** Checkpoint id */
   id: string
+  title?: string
+  checked_message?: string
 }
 
 /**
@@ -712,6 +716,8 @@ export interface ExtractedAimdFields {
   step: string[]
   /** Checkpoints */
   check: string[]
+  /** Checkpoint metadata; check remains the backward-compatible ID list. */
+  check_definitions?: AimdCheckField[]
   /** Step references */
   ref_step: string[]
   /** Variable references */

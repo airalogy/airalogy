@@ -1,5 +1,5 @@
 <script lang="ts">
-import { computed, defineAsyncComponent, defineComponent, h, nextTick, onBeforeUnmount, ref, watch, type PropType, type VNodeChild } from "vue"
+import { Comment, Fragment, Text, computed, defineAsyncComponent, defineComponent, h, isVNode, nextTick, onBeforeUnmount, ref, watch, type PropType, type VNodeChild } from "vue"
 import type { AimdStepNode, AimdCheckNode, AimdStepTimerMode } from "@airalogy/aimd-core/types"
 import type { AimdRecorderMessages } from "../locales"
 import { getAimdRecorderScopeLabel } from "../locales"
@@ -14,8 +14,24 @@ import {
   resolveStepTimerMode,
 } from "../composables/useStepTimers"
 import AimdRequiredMarker from "./AimdRequiredMarker.vue"
+import { useFieldPresentation } from "../composables/useFieldPresentation"
 
 const AimdMarkdownNoteField = defineAsyncComponent(() => import("./AimdMarkdownNoteField.vue"))
+
+function hasStepBodyContent(node: VNodeChild): boolean {
+  if (node == null || typeof node === "boolean") return false
+  if (typeof node === "string") return node.trim().length > 0
+  if (Array.isArray(node)) return node.some(hasStepBodyContent)
+  if (!isVNode(node)) return true
+  if (node.type === Comment) return false
+  // A standalone step can receive an empty paragraph from the Markdown renderer.
+  if (node.type === "p" || node.type === Text || node.type === Fragment) {
+    if (node.children == null || typeof node.children === "string" || Array.isArray(node.children)) {
+      return hasStepBodyContent(node.children)
+    }
+  }
+  return true
+}
 
 export const AimdStepField = defineComponent({
   name: "AimdStepField",
@@ -32,6 +48,7 @@ export const AimdStepField = defineComponent({
   },
   emits: ["check-change", "annotation-change", "timer-start", "timer-pause", "timer-reset", "blur"],
   setup(props, { emit }) {
+    const fieldDisplay = useFieldPresentation()
     const nowMs = ref(Date.now())
     const rootEl = ref<HTMLElement | null>(null)
     const annotationDetailsEl = ref<HTMLElement | null>(null)
@@ -199,7 +216,8 @@ export const AimdStepField = defineComponent({
       const state = props.state
       const stepNumber = node.step || "?"
       const hasCheck = Boolean(node.check)
-      const hasBody = props.bodyNodes.length > 0
+      const bodyNodes = props.bodyNodes.filter(hasStepBodyContent)
+      const hasBody = bodyNodes.length > 0
       const disabled = props.disabled
       const extraClasses = props.extraClasses
       const canResetTimer = hasRecordedDuration.value || timerRunning.value
@@ -298,6 +316,7 @@ export const AimdStepField = defineComponent({
           hasCheck
             ? h("input", {
               "data-rec-focus-key": `step:${id}:checked`,
+              "aria-label": `${getAimdRecorderScopeLabel("step", props.messages)} ${stepNumber}${node.title ? `: ${node.title}` : ""}`,
               type: "checkbox",
               disabled,
               checked: Boolean(state.checked),
@@ -312,7 +331,10 @@ export const AimdStepField = defineComponent({
             : null,
           h("span", { class: "aimd-field__scope" }, getAimdRecorderScopeLabel("step", props.messages)),
           h("span", { class: "aimd-rec-inline__step-num" }, stepNumber),
-          h("span", { class: "aimd-field__name" }, id),
+          h("span", { class: "aimd-step-field__identity" }, [
+            node.title?.trim() ? h("span", { class: "aimd-step-field__title" }, node.title.trim()) : null,
+            fieldDisplay.value === "detailed" ? h("span", { class: "aimd-step-field__id" }, id) : null,
+          ]),
           props.required ? h(AimdRequiredMarker, { label: props.messages.common.required }) : null,
         ]),
       )
@@ -361,8 +383,8 @@ export const AimdStepField = defineComponent({
         )
       }
 
-      const bodyChildren = props.bodyNodes.length > 0
-        ? h("div", { key: "body", class: "aimd-step-field__body" }, props.bodyNodes.slice())
+      const bodyChildren = hasBody
+        ? h("div", { key: "body", class: "aimd-step-field__body" }, bodyNodes)
         : null
       const bodyAnnotationAction = hasBody && !disabled && !showAnnotationEditor.value
         ? h("div", {
@@ -437,6 +459,7 @@ export const AimdCheckField = defineComponent({
   },
   emits: ["check-change", "annotation-change", "blur"],
   setup(props, { emit }) {
+    const fieldDisplay = useFieldPresentation()
     const rootEl = ref<HTMLElement | null>(null)
     const detailsEl = ref<HTMLElement | null>(null)
     const annotationExpanded = ref(false)
@@ -566,6 +589,7 @@ export const AimdCheckField = defineComponent({
             h("label", { class: "aimd-rec-inline__check-wrap aimd-check-field__toggle" }, [
               h("input", {
                 "data-rec-focus-key": `check:${id}:checked`,
+                "aria-label": `${getAimdRecorderScopeLabel("check", props.messages)} ${node.title || fallbackLabel}`,
                 type: "checkbox",
                 class: "aimd-checkbox",
                 disabled,
@@ -579,13 +603,18 @@ export const AimdCheckField = defineComponent({
                 onBlur: () => emit("blur", { id }),
               }),
               h("span", { class: "aimd-field__scope" }, getAimdRecorderScopeLabel("check", props.messages)),
-              !hasBody
+              node.title
+                ? h("span", { class: "aimd-check-field__identity" }, [
+                    h("span", { class: "aimd-check-field__title" }, node.title),
+                    fieldDisplay.value === "detailed" ? h("small", { class: "aimd-check-field__key" }, id) : null,
+                  ])
+                : !hasBody
                 ? h("span", { class: "aimd-field__name aimd-check-field__key" }, [
                     fallbackLabel,
                     props.required ? h(AimdRequiredMarker, { label: props.messages.common.required }) : null,
                   ])
                 : null,
-              hasBody && props.required
+              (hasBody || node.title) && props.required
                 ? h(AimdRequiredMarker, { label: props.messages.common.required })
                 : null,
             ]),

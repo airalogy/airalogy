@@ -1,5 +1,6 @@
 import type { ExtractedAimdFields } from "@airalogy/aimd-core/types"
 import { getAimdBuiltInTypeMetadata } from "@airalogy/aimd-core/utils"
+import { parseVarListEnumValues } from '@airalogy/aimd-core/parser'
 import type { ErrorObject } from "ajv"
 import Ajv2020 from "ajv/dist/2020"
 import addFormats from "ajv-formats"
@@ -695,6 +696,11 @@ function validateValue(
 
   const allowedValues = meta?.enumOptions?.map(option => option.value) ?? fallbackEnumValues
   if (allowedValues?.length && !allowedValues.some(item => Object.is(item, value))) {
+    addIssue(issues, fieldKey, section, "enum", options.messages.enum(label), value, details)
+  }
+
+  const allowedItems = parseVarListEnumValues(type)
+  if (allowedItems.length && Array.isArray(value) && value.some(item => !allowedItems.some(option => Object.is(option, item)))) {
     addIssue(issues, fieldKey, section, "enum", options.messages.enum(label), value, details)
   }
 

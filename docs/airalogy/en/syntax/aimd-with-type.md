@@ -6,6 +6,18 @@ However, in real-world usage, users often don’t need complex types or cross-fi
 
 ## Simple Example
 
+### Single Choice, Multiple Choice, and Yes/No
+
+```aimd
+Status: {{var|status: Literal["Ready", "Done"] | None}}
+Analyses: {{var|analyses: list[Literal["Sequencing", "Microscopy"]] | None}}
+Repeat required: {{var|repeat: bool | None}}
+```
+
+Single choice stores one option; multiple choice stores an array such as `["Sequencing", "Microscopy"]`. `None` allows an empty value. Recorder provides a dropdown, a checkbox group, and an Unset/Yes/No select respectively. Unchecking every multiple-choice option produces `[]`; resetting to Unset produces `null`. `list[Literal[...]]` and lists of registered scalar types do not require `subvars`; structured row tables still use `subvars`. The visual editor offers toolbar shortcuts and generates IDs automatically, so users need not write this syntax manually.
+
+### Text and Integers
+
 For example, to define an Airalogy Protocol that records a student’s name and age, the classic approach uses two files:
 
 `protocol.aimd`:

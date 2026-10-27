@@ -26,7 +26,21 @@ For simultaneous protocol restructuring and data entry, `AimdRecorderEditor` kee
 pnpm add @airalogy/aimd-recorder @airalogy/aimd-core
 ```
 
+## Checkpoint Titles
+
+The visual form and field editing tools preserve quoted AIMD-looking text in `checked_message` as literal text. Checking the field displays that message without evaluating nested references; references outside the parameter string retain normal document behavior.
+
+Checkpoints accept an optional `title`, for example `{{check|safety_ready, title="Protective equipment"}}`. Detailed display shows the title with a smaller ID; compact display retains the title without the ID. Following Markdown remains check instructions. Visual checkpoint settings preserve the ID, checked state and notes when editing the name.
+
 ## Quick Start
+
+Checkpoints such as `{{check|safety_ready}} Confirm gloves and eye protection.` display one type badge. The following body text supplies the check instructions; a standalone marker falls back to its ID. Recorder does not treat the renderer's preview badge or disabled checkbox as body content, including in visual authoring.
+
+In visual authoring, steps appear as full-width, compact headers with their editable instructions underneath. An optional `title` is the primary label; the stable ID appears as secondary information only in detailed mode. Steps without a title use their number, never an oversized ID. Numbering follows the whole Protocol, including nested steps. Timer and note actions stay together; empty step bodies do not create a blank row. The step settings dialog edits the title without renaming the Record key or resetting completion, notes, or timers.
+
+`list[Literal["A", "B"]]` and lists of official enums use multiple-choice checkbox groups and store real arrays; nullable choices can also be reset to `null`. The visual form toolbar provides common input shortcuts using the same controls as standalone Recorder.
+
+For a Word-like document that can be edited and filled on the same surface, use the exported `AimdRecorderWysiwygSurface` with `v-model:content` for AIMD and `v-model` for Record data. Its Input action generates stable IDs automatically, and its widgets reuse Recorder's typed controls. `field-display="compact"` hides technical field labels without removing list controls, calculation actions, or validation feedback. `AimdRecorder` and `AimdRecorderEditor` support the same display setting; their default remains `detailed`. See [the visual form example](https://airalogy.github.io/airalogy/aimd/en/packages/aimd-recorder/recorder#visual-form-authoring).
 
 ```vue
 <script setup lang="ts">
@@ -155,6 +169,8 @@ Use `locale` to switch built-in recorder labels (`en-US` / `zh-CN`).
 `AimdProtocolRecorder` is still available as a deprecated compatibility alias, but new code should use `AimdRecorder`.
 
 ## Record Validation
+
+Record values and protocol source have separate lifecycles. Recorder does not persist drafts or assign record IDs/versions. The host owns storage and explicit save actions; use `@airalogy/aira-core` for archive export. The [demo save workflow](https://airalogy.github.io/airalogy/aimd/en/demo#save-templates-and-records) includes local draft recovery, template-only export, and current-record `.aira` export with attachments.
 
 Pass the Pydantic JSON Schema returned by protocol parsing to make the Python model the single validation contract:
 
@@ -390,7 +406,3 @@ If `@airalogy/aimd-recorder` is useful in your work, please cite the Airalogy pa
       url={https://arxiv.org/abs/2506.18586},
 }
 ```
-
-## Quoted Checkpoint Messages
-
-The visual form and field editing tools preserve quoted AIMD-looking text in `checked_message` as literal text. Checking the field displays that message without evaluating nested references; references outside the parameter string retain normal document behavior.

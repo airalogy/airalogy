@@ -308,11 +308,12 @@ Step和CheckPoint均具有固定的数据结构，因而无需在Model中对其�
 #### AIMD语法
 
 ```aimd
-{{step|<step_id>, <step_level>[, duration="<duration>"][, timer="elapsed|countdown|both"]}}
+{{step|<step_id>, <step_level>[, title="<title>"][, duration="<duration>"][, timer="elapsed|countdown|both"]}}
 ```
 
 - `<step_level>`为Step的层级，为整数`1`, `2`, `3`。之所以约束最多为3层，是为了保证Step的层级不会过深，以保证前端的易读性。
 - 如果用户没有主动定义`<step_level>`，则默认为`1`。
+- `title`是可选的步骤名称，使用单引号或双引号字符串；支持中文、逗号和转义引号。首尾空白会被去掉，空标题等同于未设置。标题可以重复，不改变步骤 ID、编号或 Record 中的键。
 - `duration`用于声明该Step的预计时长，推荐使用紧凑单位串，如`30s`、`10m`、`1h30m`、`2d4h`。
 - `timer`用于声明该Step的计时展示模式，可选`elapsed`、`countdown`、`both`。默认是`elapsed`。
 
@@ -345,6 +346,20 @@ Step 2: B
 ```
 
 注意在`{{step|step_level_1_step_2}}`中，我们没有显式定义`<step_level>`，则默认为`1`。
+
+#### 步骤名称与操作正文
+
+```aimd
+{{step|dilute_and_mix, title="定容与混匀", check=True, duration="2m"}}
+
+逐滴加入去离子水至刻度，塞好后倒转混匀。
+
+实际体积：{{var|actual_volume: float, title="实际体积 mL"}}
+```
+
+`id` 是引用和数据关联的稳定标识，`title` 是给人看的名称，后续 Markdown 是操作正文。模板后面的同行文字仍然是正文，不会因源码换行或屏幕自动换行变成标题。不要把完整操作说明塞入 `title`，也无需额外写一个同名 Markdown 标题。旧的无 `title` 写法继续有效。
+
+Recorder 优先显示“步骤编号 + 名称”，开启字段信息时用小字号显示 ID；关闭字段信息仍保留名称。无名称时只以步骤编号作为主标识。可视化编辑器插入步骤时自动生成唯一 ID，名称选填，操作正文直接在文档中编辑；修改名称不会修改已有 ID、引用或记录值。插入前可在高级设置中调整生成的 ID，已有步骤设置窗口保持 ID 只读；确需迁移 ID 时，应在源码及相关引用、Records、Collector 绑定中显式处理。
 
 对于每个Step，前端通常都会提供备注能力；当备注为空时，可以采用渐进披露的方式，仅在用户主动展开或已有备注内容时显示备注编辑区域。
 
@@ -449,7 +464,7 @@ Checkpoint通常用于标记在一个Airalogy Protocol中的重要检查点。�
 #### AIMD语法
 
 ```aimd
-{{check|<checkpoint_id>}}
+{{check|<checkpoint_id>[, title="..."][, checked_message="..."]}}
 ```
 
 用户可以替换`<checkpoint_id>`为任意Checkpoint的名字。
@@ -469,6 +484,16 @@ Checkpoint通常用于标记在一个Airalogy Protocol中的重要检查点。�
 其前端渲染效果类似Markdown中的checkbox。
 
 - [ ] 是否在冰上进行PCR反应体系的制备。
+
+#### 可选标题
+
+```aimd
+{{check|safety_ready, title="防护用品检查"}} 确认手套和护目镜已佩戴，再继续操作。
+```
+
+`title` 是选填的短名称，支持单引号、双引号、中文、逗号和转义引号；首尾空白会去掉，空标题视为未设置。标题可以重复，不改变稳定 ID 或 Record 中的键。标记后的 Markdown 仍是详细检查要求，不会自动变成标题；原有不含标题的语法继续有效。
+
+可视化插入会自动生成 ID，名称无需填写。编辑已有检查点时 ID 保持只读，修改标题不会重置勾选状态和备注。详细展示以标题为主、较小的 ID 为辅；简洁展示隐藏 ID，不隐藏标题。
 
 #### 检查后提示
 

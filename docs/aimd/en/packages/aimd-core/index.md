@@ -55,6 +55,10 @@ assigner(
 ```
 ````
 
+## Checkpoint Titles
+
+Checkpoints support `{{check|safety_ready, title="Protective equipment"}}`. `parseCheckContent()` from `@airalogy/aimd-core/parser` returns the optional quoted `title`; blank titles are absent. `fields.check` remains an ID list; `fields.check_definitions` exposes `id`, optional `title` and `checked_message`. Record search and `toTemplateEnv().record.byScope.check` use this metadata without changing Record keys. Following Markdown stays instruction content. Python and npm use the same compatibility fixture.
+
 ## Choice Followups
 
 Choice options may declare conditional structured fields under `followups`. The parser extracts these fields as `options[].followups` and accepts only `str`, `int`, `float`, and `bool`; `number` is intentionally not part of the AIMD followup type set.
@@ -109,6 +113,10 @@ const file = { data: { aimdInlineTemplates: templates } } as any
 const tree = processor.parse(protectedContent)
 processor.runSync(tree, file)
 ```
+
+## Shared Inline Template Scanner
+
+`findAimdInlineTemplates(content)` from `@airalogy/aimd-core/parser` returns `{ type, content, raw, start, end }` for each complete template. `start` is inclusive and `end` exclusive, using JavaScript string offsets. Quoted `{{...}}` and `}}` remain part of the outer template, including escaped quotes. Authoring tools may opt into `{ allowMarkdownEscapedTypes: true }` to recover legacy `var\_table` or `ref\_var` type spellings; the default remains strict. This scanner does not exclude Markdown code examples or validate field parameters; use it on appropriate text nodes, or use the full parser for document semantics.
 
 ## CriticMarkup Review Nodes
 
@@ -168,6 +176,8 @@ import {
 
 `@airalogy/aimd-core/utils` exports `getAimdBuiltInTypeMetadata()` and `getAimdBuiltInTypeEnumValues()`. The metadata is generated from the Python `airalogy.types` registry, so official named enum types such as `BloodType` expose the same values to browser tools without duplicating Python type definitions in npm code.
 
+`getAimdBuiltInTypeNames()` lists registered type names for authoring menus, including attachment formats. `parseVarListEnumValues()` from `@airalogy/aimd-core/parser` resolves item choices for `list[Literal[...]]` and lists of registered enums, including nullable variants. The item's enum is separate from the scalar `definition.enum`; a multiple-choice input stores an array, not a single enum value.
+
 ## Entity Connector Utilities
 
 `@airalogy/aimd-core/utils` also exports `createAimdEntityResolversFromConnectors()`, `searchAimdEntityConnector()`, and `resolveAimdEntityConnector()` for hosts that want parsed `connectors` metadata to power `EntityRef` recorder controls. The host still supplies `loadDescriptor`, `fetch`, and `getSecret`, so parser-only usage remains offline and browser bundles do not read `.env` secrets directly.
@@ -180,7 +190,3 @@ import {
 - [Parsed Nodes](/en/packages/aimd-core/parsed-nodes)
 - [Extracted Fields](/en/packages/aimd-core/extracted-fields)
 - [Migration](/en/packages/aimd-core/compatibility)
-
-## Shared Inline Template Scanner
-
-`findAimdInlineTemplates(content)` from `@airalogy/aimd-core/parser` returns `{ type, content, raw, start, end }` for each complete template. `start` is inclusive and `end` exclusive, using JavaScript string offsets. Quoted `{{...}}` and `}}` remain part of the outer template, including escaped quotes. Authoring tools may opt into `{ allowMarkdownEscapedTypes: true }` to recover legacy `var\_table` or `ref\_var` type spellings; the default remains strict. This scanner does not exclude Markdown code examples or validate field parameters; use it on appropriate text nodes, or use the full parser for document semantics.

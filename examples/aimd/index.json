@@ -7,7 +7,8 @@
       "kind": "example",
       "category": "general",
       "languages": [
-        "en-US"
+        "en-US",
+        "zh-CN"
       ],
       "title": {
         "en-US": "AIMD Syntax Tour",
@@ -18,10 +19,12 @@
         "zh-CN": "一个交互式语法导览，覆盖 AIMD 变量、表格、图、文献引用、步骤、检查点、题目、引用、Markdown 审阅标记和浏览器侧 client assigner。"
       },
       "protocol_dir": {
-        "en-US": "aimd-syntax-tour"
+        "en-US": "aimd-syntax-tour",
+        "zh-CN": "aimd-syntax-tour"
       },
       "entry": {
-        "en-US": "aimd-syntax-tour/protocol.aimd"
+        "en-US": "aimd-syntax-tour/protocol.aimd",
+        "zh-CN": "aimd-syntax-tour/protocol.zh-CN.aimd"
       },
       "engine_required": false,
       "tags": [

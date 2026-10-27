@@ -1,4 +1,6 @@
 export { default as AimdEditor } from './AimdEditor.vue'
+export { default as AimdInputFieldDialog } from './AimdInputFieldDialog.vue'
+export { default as AimdStepFieldDialog } from './AimdStepFieldDialog.vue'
 export { default as AimdEditorToolbar } from './AimdEditorToolbar.vue'
 export { default as AimdEditorTopBar } from './AimdEditorTopBar.vue'
 export { default as AimdSourceEditor } from './AimdSourceEditor.vue'

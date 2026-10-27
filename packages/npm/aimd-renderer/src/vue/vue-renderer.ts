@@ -11,6 +11,7 @@ import {
   getAimdFieldTitle,
 } from "@airalogy/aimd-core/utils"
 import { Fragment, h } from "vue"
+import type { AimdCheckNode } from "@airalogy/aimd-core/types"
 import type { AimdRendererI18nOptions, AimdRendererLocale, AimdRendererMessages } from "../locales"
 import { resolveAimdAssetUrl } from "../common/assetUrls"
 import { formatCitationReferenceSummary, moveReferenceSectionsToEnd } from "../common/citationNumbering"
@@ -703,17 +704,21 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
     const stepNum = stepNode.step || "1"
 
     if (ctx.mode === "preview") {
-      // Preview mode: render as localized step label + sequence + id
+      // Preview mode: title first, with the stable ID as secondary metadata.
       return h("span", {
         "class": "aimd-field aimd-field--step",
         "data-aimd-type": "step",
         "data-aimd-id": id,
         "data-aimd-step": stepNum,
+        "data-aimd-scope": scope,
         "id": `step-${id}`,
       }, [
         h("span", { class: "aimd-field__scope" }, getAimdRendererScopeLabel(scope, ctx.messages)),
         h("span", { class: "aimd-field__step-num" }, stepNum),
-        h("span", { class: "aimd-field__name" }, id),
+        h("span", { class: "aimd-step__identity" }, [
+          stepNode.title ? h("span", { class: "aimd-step__title" }, stepNode.title) : null,
+          h("span", { class: "aimd-step__id" }, id),
+        ]),
       ])
     }
 
@@ -728,6 +733,8 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
     }, [
       h("div", { class: "research-step__header" }, [
         h("span", { class: "research-step__sequence" }, ctx.messages.step.sequence(stepNum)),
+        stepNode.title ? h("span", { class: "aimd-step__title" }, stepNode.title) : null,
+        h("span", { class: "aimd-step__id" }, id),
       ]),
       children && children.length > 0
         ? h("div", { class: "research-step__content" }, children)
@@ -736,23 +743,30 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
   },
 
   check: (node, ctx, children) => {
+    const checkNode = node as AimdCheckNode
     const { id, scope } = node
     const label = "label" in node ? node.label : id
 
     if (ctx.mode === "preview") {
-      // Preview mode: render with checkbox (disabled)
+      // Keep the type badge consistent with variable and step previews.
       return h("label", {
         "class": "aimd-field aimd-field--check",
         "data-aimd-type": "check",
         "data-aimd-id": id,
+        "data-aimd-scope": scope,
         "id": `check-${id}`,
       }, [
+        h("span", { class: "aimd-field__scope" }, getAimdRendererScopeLabel(scope, ctx.messages)),
         h("input", {
           type: "checkbox",
           disabled: true,
           class: "aimd-checkbox",
+          "aria-label": `${getAimdRendererScopeLabel(scope, ctx.messages)} ${label || id}`,
         }),
-        h("span", { class: "aimd-field__label" }, label),
+        h("span", { class: "aimd-field__label" }, checkNode.title ? [
+          h("span", { class: "aimd-check__title" }, checkNode.title),
+          h("small", { class: "aimd-check__id" }, id),
+        ] : label),
       ])
     }
 
@@ -1810,7 +1824,7 @@ export function createStepCardRenderer(
   return (node, ctx, children) => {
     const stepNode = node as AimdStepNode
     const stepLabel = stepNode.step || "?"
-    const title = stepNode.title || stepNode.id
+    const title = stepNode.title || ctx.messages.step.sequence(stepLabel)
     const subtitle = stepNode.subtitle || ""
     const isResult = Boolean(stepNode.result)
     const hasCheck = Boolean(stepNode.check)

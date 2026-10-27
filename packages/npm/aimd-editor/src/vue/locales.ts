@@ -13,6 +13,53 @@ type DeepPartial<T> = {
 }
 
 export interface AimdEditorMessages {
+  checkField: { insert: string; edit: string; name: string; id: string; checkedMessage: string }
+  stepField: {
+    insert: string
+    edit: string
+    name: string
+    id: string
+    check: string
+    duration: string
+    timer: string
+    elapsed: string
+    countdown: string
+    both: string
+    invalidDuration: string
+  }
+  inputField: {
+    insert: string
+    edit: string
+    save: string
+    name: string
+    advanced: string
+    id: string
+    invalidId: string
+    duplicateId: string
+    invalidOptions: string
+    options: string
+    text: string
+    integer: string
+    number: string
+    choice: string
+    multipleChoice: string
+    boolean: string
+    checkbox: string
+    date: string
+    time: string
+    datetime: string
+    list: string
+    custom: string
+    knownTypes: string
+    builtInTypes: string
+    pluginTypes: string
+    customExpression: string
+    details: string
+    more: string
+    file: string
+    fileFormat: string
+    insertType: (label: string) => string
+  }
   mode: {
     source: string
     sourceTitle: string
@@ -234,10 +281,30 @@ function detectRuntimeLocale(): string | undefined {
 }
 
 const EN_US_MESSAGES: AimdEditorMessages = {
+  checkField: { insert: 'Insert checkpoint', edit: 'Checkpoint settings', name: 'Checkpoint name (optional)', id: 'Checkpoint ID', checkedMessage: 'Message after checking (optional)' },
+  stepField: {
+    insert: 'Insert step', edit: 'Step settings', name: 'Step name (optional)',
+    id: 'Step ID', check: 'Completion checkbox', duration: 'Estimated duration', timer: 'Timer display',
+    elapsed: 'Elapsed', countdown: 'Countdown', both: 'Both', invalidDuration: 'Enter a duration such as 30s or 2m. Countdown requires a duration.',
+  },
+  inputField: {
+    insert: 'Insert input', edit: 'Input settings', save: 'Save', name: 'Label (optional)',
+    advanced: 'Advanced settings', id: 'Field ID (generated automatically)',
+    invalidId: 'Use letters, numbers and underscores; start with a letter or underscore.',
+    duplicateId: 'This ID is already in use.', invalidOptions: 'Enter at least one distinct option.',
+    options: 'Choices (one per line)', text: 'Text', integer: 'Integer', number: 'Decimal',
+    multipleChoice: 'Multiple choice', more: 'More inputs', file: 'Attachment', insertType: label => `Insert ${label.toLowerCase()} input`,
+    checkbox: 'Checkbox',
+    fileFormat: 'File format',
+    time: 'Time', datetime: 'Date and time',
+    choice: 'Single choice', boolean: 'Yes / no', date: 'Date', list: 'Text list', custom: 'Advanced / custom',
+    knownTypes: 'Available types', builtInTypes: 'Airalogy built-in types', pluginTypes: 'Additional types', customExpression: 'Custom type expression',
+    details: 'Show field details',
+  },
   mode: {
     source: 'Source',
     sourceTitle: 'Source Mode',
-    wysiwyg: 'WYSIWYG',
+    wysiwyg: 'Visual',
     wysiwygTitle: 'WYSIWYG Mode',
   },
   common: {
@@ -250,8 +317,8 @@ const EN_US_MESSAGES: AimdEditorMessages = {
     available: 'Available',
   },
   fieldTypes: {
-    var: { label: 'Variable', desc: 'Define a variable' },
-    var_table: { label: 'Var Table', desc: 'Define a variable table' },
+    var: { label: 'Input', desc: 'Insert an input field' },
+    var_table: { label: 'Data table', desc: 'Insert a table for repeated entries' },
     quiz: { label: 'Quiz', desc: 'Define a quiz item' },
     step: { label: 'Step', desc: 'Define a step' },
     check: { label: 'Checkpoint', desc: 'Define a checkpoint' },
@@ -437,10 +504,30 @@ const EN_US_MESSAGES: AimdEditorMessages = {
 }
 
 const ZH_CN_MESSAGES: AimdEditorMessages = {
+  checkField: { insert: '插入检查点', edit: '检查点设置', name: '检查点名称（选填）', id: '检查点 ID', checkedMessage: '勾选后提示（选填）' },
+  stepField: {
+    insert: '插入步骤', edit: '步骤设置', name: '步骤名称（选填）',
+    id: '步骤 ID', check: '完成复选框', duration: '预计时长', timer: '计时显示',
+    elapsed: '正计时', countdown: '倒计时', both: '同时显示', invalidDuration: '请输入 30s 或 2m 等时长。倒计时需要预计时长。',
+  },
+  inputField: {
+    insert: '插入输入框', edit: '输入框设置', save: '保存', name: '名称（选填）',
+    advanced: '高级设置', id: '字段 ID（自动生成）',
+    invalidId: '请使用字母、数字和下划线，并以字母或下划线开头。',
+    duplicateId: '此 ID 已被使用。', invalidOptions: '请至少填写一个选项，且选项不能重复。',
+    options: '选项（每行一个）', text: '文本', integer: '整数', number: '小数',
+    multipleChoice: '多选', more: '更多输入框', file: '附件', insertType: label => `插入${label}输入框`,
+    checkbox: '复选框',
+    fileFormat: '文件格式',
+    time: '时间', datetime: '日期时间',
+    choice: '单选', boolean: '是／否', date: '日期', list: '文本列表', custom: '高级 / 自定义',
+    knownTypes: '已有类型', builtInTypes: 'Airalogy 内置类型', pluginTypes: '扩展类型', customExpression: '自定义类型表达式',
+    details: '显示字段信息',
+  },
   mode: {
     source: '源码',
     sourceTitle: '源码模式',
-    wysiwyg: '所见即所得',
+    wysiwyg: '可视化',
     wysiwygTitle: '所见即所得模式',
   },
   common: {
@@ -453,13 +540,13 @@ const ZH_CN_MESSAGES: AimdEditorMessages = {
     available: '可用项',
   },
   fieldTypes: {
-    var: { label: '变量', desc: '定义一个变量' },
-    var_table: { label: '变量表', desc: '定义一个变量表' },
+    var: { label: '输入框', desc: '插入输入框' },
+    var_table: { label: '数据表', desc: '插入可重复填写的数据表' },
     quiz: { label: '题目', desc: '定义一个题目块' },
     step: { label: '步骤', desc: '定义一个步骤' },
     check: { label: '检查点', desc: '定义一个检查点' },
     ref_step: { label: '引用步骤', desc: '引用已定义的步骤' },
-    ref_var: { label: '引用变量', desc: '引用已定义的变量' },
+    ref_var: { label: '引用输入框', desc: '引用已定义的输入框' },
     ref_fig: { label: '引用图片', desc: '引用已定义的图片' },
     cite: { label: '引用文献', desc: '插入文献引用' },
   },

@@ -258,7 +258,7 @@ export type AimdCollectorPermissionHandler = (
   request: AimdCollectorPermissionRequest,
 ) => AimdCollectorPermissionDecision | Promise<AimdCollectorPermissionDecision>
 
-export type AimdVarInputKind = "text" | "number" | "checkbox" | "boolean-select" | "textarea" | "scalar-list" | "entity-ref" | "resource-ref" | "date" | "datetime" | "time" | "dna" | "code" | "file"
+export type AimdVarInputKind = "text" | "number" | "checkbox" | "boolean-select" | "multi-select" | "textarea" | "scalar-list" | "entity-ref" | "resource-ref" | "date" | "datetime" | "time" | "dna" | "code" | "file"
 export type AimdStepDetailDisplay = "auto" | "always"
 export type AimdChoiceOptionExplanationMode = "hidden" | "selected" | "submitted" | "graded"
 export type AimdScaleGradeDisplayMode = "hidden" | "completed" | "submitted" | "graded"

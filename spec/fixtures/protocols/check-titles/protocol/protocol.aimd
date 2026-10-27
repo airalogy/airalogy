@@ -1,0 +1,11 @@
+# Checkpoint titles
+
+{{check|safety_ready, title="防护检查, confirm \"PPE\"", checked_message="Confirmed"}} Confirm goggles and gloves before proceeding.
+
+{{check|verify, title='Verify operator\'s reading'}} Record the reading: {{var|reading: float | None}}
+
+{{check|legacy}} This instruction is not an implicit title.
+
+{{check|blank, title="  "}}
+
+{{check|message_only, checked_message='done, title="not a title"'}}

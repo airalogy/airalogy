@@ -1,0 +1,10 @@
+[airalogy_protocol]
+id = "ai_glasses_leaf_disk_photosynthesis_zh"
+version = "0.1.0"
+name = "AI 眼镜实验指导：叶圆片光合作用与对照实验"
+description = "含样品分组、无针注射器浸润、明暗对照、分钟级观察、ET50 区间及异常处理的教学实验协议。"
+authors = [{ name = "Airalogy" }]
+maintainers = [{ name = "Airalogy" }]
+disciplines = ["biology", "plant physiology", "human-computer interaction"]
+keywords = ["AI glasses", "photosynthesis", "leaf disk", "time series", "controls"]
+license = "Apache-2.0"

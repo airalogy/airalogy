@@ -4,6 +4,7 @@ import type { VNode } from "vue"
 import type { AimdAssetUrlResolver } from "./assetUrls"
 import type {
   AimdFieldType,
+  AimdCheckNode,
   AimdCollectorValidationContext,
   AimdNode,
   AimdQuizNode,
@@ -1077,6 +1078,8 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     nodeData.columns = node.columns
   if ("label" in node)
     nodeData.label = node.label
+  if ("title" in node)
+    nodeData.title = node.title
   if ("refTarget" in node)
     nodeData.refTarget = node.refTarget
   if ("checked_message" in node)
@@ -1376,7 +1379,7 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
     }
   }
   else if (fieldType === "step") {
-    // Step: scope label + sequence + id
+    // Stable IDs remain metadata; the optional title is the human-facing name.
     const stepNode = node as AimdStepNode
     const stepNum = stepNode.step || "1"
 
@@ -1396,26 +1399,44 @@ function createAimdHandler(options: AimdRendererOptions = {}) {
       {
         type: "element",
         tagName: "span",
-        properties: { className: ["aimd-field__name"] },
-        children: [{ type: "text", value: id }],
+        properties: { className: ["aimd-step__identity"] },
+        children: [
+          ...(stepNode.title ? [{ type: "element", tagName: "span", properties: { className: ["aimd-step__title"] }, children: [{ type: "text", value: stepNode.title }] } as Element] : []),
+          { type: "element", tagName: "span", properties: { className: ["aimd-step__id"] }, children: [{ type: "text", value: id }] } as Element,
+        ],
       } as Element,
     )
   }
   else if (fieldType === "check") {
-    // Check: checkbox + label
+    // Check: type badge, disabled checkbox and label, matching the Vue preview.
     const label = "label" in node ? node.label : id
+    const checkNode = node as AimdCheckNode
     children.push(
       {
         type: "element",
+        tagName: "span",
+        properties: { className: ["aimd-field__scope"] },
+        children: [{ type: "text", value: getAimdRendererScopeLabel("check", messages) }],
+      } as Element,
+      {
+        type: "element",
         tagName: "input",
-        properties: { type: "checkbox", className: ["aimd-checkbox"], disabled: true },
+        properties: {
+          type: "checkbox",
+          className: ["aimd-checkbox"],
+          disabled: true,
+          "aria-label": `${getAimdRendererScopeLabel("check", messages)} ${label || id}`,
+        },
         children: [],
       } as Element,
       {
         type: "element",
         tagName: "span",
         properties: { className: ["aimd-field__label"] },
-        children: [{ type: "text", value: label || id }],
+        children: checkNode.title ? [
+          { type: "element", tagName: "span", properties: { className: ["aimd-check__title"] }, children: [{ type: "text", value: checkNode.title }] } as Element,
+          { type: "element", tagName: "small", properties: { className: ["aimd-check__id"] }, children: [{ type: "text", value: id }] } as Element,
+        ] : [{ type: "text", value: label || id }],
       } as Element,
     )
   }

@@ -13,3 +13,4 @@ export {
   type NormalizeAimdFigureIdsResult,
   type PrepareAimdFormalOutputResult,
 } from './fig'
+export { AIMD_FIELD_ID_PATTERN, collectAimdFieldIds, createAimdFieldId, updateAimdInputField, updateAimdStepField, updateAimdCheckField } from './fields'

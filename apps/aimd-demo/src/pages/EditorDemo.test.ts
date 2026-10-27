@@ -36,7 +36,7 @@ describe('EditorDemo archive export', () => {
     expect(source).toContain('makeResourceBaseName(getFileStem(file.name), `uploaded-figure-${index}`)')
     expect(source).toContain('replace(/[^\\p{L}\\p{N}._-]+/gu, \'-\')')
     expect(source).toContain('files/${baseName}.${extension}')
-    expect(source).not.toContain('airalogy.id.file')
+    expect(source.slice(source.indexOf('function buildFigureBlock('), source.indexOf('function insertFigureBlock('))).not.toContain('airalogy.id.file')
   })
 
   it('uses the editor image toolbar as the figure insertion entrypoint', () => {
@@ -87,9 +87,8 @@ describe('EditorDemo archive export', () => {
     expect(source).toContain("const protocolFilesExpanded = ref(false)")
     expect(source).toContain('protocolFilesExpanded.value = false')
     expect(source).toContain('importPackageHint')
-    expect(source).toContain('workspace-panel__import-tooltip')
-    expect(source).toContain('aria-describedby="editor-import-package-tooltip"')
-    expect(source).toContain('white-space: pre-wrap;')
+    expect(source).toContain('<WorkspaceImportButton')
+    expect(source).toContain(':hint="messages.pages.editor.importPackageHint"')
   })
 
   it('imports records .aira packages by loading the embedded protocol and selected record data', () => {
@@ -163,7 +162,10 @@ describe('EditorDemo archive export', () => {
 
   it('autosaves and restores local editor drafts with protocol files', () => {
     expect(source).toContain('EDITOR_DRAFT_DB_NAME')
-    expect(source).toContain('indexedDB.open')
+    expect(source).toContain('createEditorDraftStorage')
+    expect(source).toContain('recorderData: cloneRecorderData(recorderData.value)')
+    expect(source).toContain('recordIdentity: recordIdentity.value')
+    expect(source).toContain('if (draft.recorderData) recorderData.value')
     expect(source).toContain('StoredProtocolFigureFile')
     expect(source).toContain('blob: file.file')
     expect(source).toContain('new File([file.blob], file.name')
@@ -178,11 +180,39 @@ describe('EditorDemo archive export', () => {
     expect(source).toContain('draftSaveFailed')
   })
 
+  it('separates template and record saves at the host layer in all views', () => {
+    expect(source).toContain('messages.pages.editor.saveTemplate')
+    expect(source).toContain('messages.pages.editor.saveRecord')
+    expect(source).toContain('createEditorRecordDownload')
+    expect(source).toContain('recordIdentity.value = download.identity')
+    expect(source).toContain(':upload-file="uploadRecordFile"')
+    expect(source).toContain('captureImportedRecord()')
+    const editorStart = source.indexOf('<AimdEditor\n')
+    const recorderStart = source.indexOf('<AimdRecorderWysiwygSurface')
+    expect(source.slice(editorStart, recorderStart)).not.toContain('recorderData')
+    expect(source.slice(source.indexOf('<div class="workspace-view-controls">'), source.indexOf('<div class="editor-workspace"'))).toContain('@click="downloadRecordFile"')
+  })
+
+  it('places shared field detail toggles inside each workspace panel instead of the save bar', () => {
+    const saveBar = source.slice(source.indexOf('<div class="workspace-view-controls">'), source.indexOf('<div class="editor-workspace"'))
+    expect(saveBar).not.toContain('fieldDetails')
+    expect(saveBar).not.toContain('WorkspaceFieldDetailsToggle')
+    expect(source.match(/<WorkspaceFieldDetailsToggle/g)).toHaveLength(2)
+    expect(source.match(/v-model="showFieldDetails"/g)).toHaveLength(2)
+    expect(source).toContain('const { showFieldDetails } = useEditorDisplayPreferences()')
+    const draft = source.slice(source.indexOf('async function saveEditorDraftNow'), source.indexOf('let draftGeneration'))
+    expect(draft).not.toContain('showFieldDetails')
+  })
+
   it('lets the right panel switch between static render preview and a fillable recorder form', () => {
     expect(source).toContain('AimdRecorder')
     expect(source).toContain('createEmptyProtocolRecordData')
     expect(source).toContain("type PreviewMode = 'render' | 'recorder' | 'records-table' | 'records-compare'")
-    expect(source).toContain("const previewMode = ref<PreviewMode>('render')")
+    expect(source).toContain("const previewMode = ref<PreviewMode>('recorder')")
+    expect(source).toContain("const workspaceView = ref<'edit' | 'fill' | 'split'>('edit')")
+    expect(source).toContain('<AimdRecorderWysiwygSurface')
+    expect(source).toContain('v-model:content="content"')
+    expect(source).toContain(':field-display="showFieldDetails ? \'detailed\' : \'compact\'"')
     expect(source).toContain('previewPanelTitle')
     expect(source).toContain('preview-mode-tabs')
     expect(source).toContain("previewMode = 'render'")

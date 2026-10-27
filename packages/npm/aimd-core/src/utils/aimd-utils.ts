@@ -99,6 +99,7 @@ export function toTemplateEnv(fields: ExtractedAimdFields): AimdTemplateEnv {
       const prevId = step.prev_id
       const node = {
         id: stepId,
+        ...(step.title ? { title: step.title } : {}),
         scope: "step",
         level: step.level ?? 0,
         step: step.step,
@@ -136,7 +137,7 @@ export function toTemplateEnv(fields: ExtractedAimdFields): AimdTemplateEnv {
       byScope: {
         var: {},
         step: byId,
-        check: {},
+        check: Object.fromEntries((fields.check_definitions ?? []).map(check => [check.id, { ...check, scope: "check" }])),
         var_table: {},
         quiz: {},
       },

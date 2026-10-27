@@ -146,6 +146,8 @@ body.aimd-demo-body--bounded #app {
 
 .app-nav {
   display: flex;
+  min-width: 0;
+  overflow-x: auto;
   gap: 4px;
   flex: 1;
 }
@@ -186,6 +188,8 @@ body.aimd-demo-body--bounded #app {
 }
 
 .nav-link {
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 8px 16px;
   border-radius: 6px;
   text-decoration: none;

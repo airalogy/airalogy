@@ -64,6 +64,7 @@ const props = withDefaults(defineProps<{
   modelValue?: Partial<AimdProtocolRecordData>
   locale?: string
   readonly?: boolean
+  fieldDisplay?: 'compact' | 'detailed'
   currentUserName?: string
   now?: Date | string | number
   messages?: AimdRecorderMessagesInput
@@ -121,6 +122,7 @@ const props = withDefaults(defineProps<{
   modelValue: undefined,
   locale: undefined,
   readonly: false,
+  fieldDisplay: 'detailed',
   currentUserName: undefined,
   now: undefined,
   messages: undefined,
@@ -1483,6 +1485,7 @@ defineExpose({
             :choice-option-explanation-mode="choiceOptionExplanationMode"
             :scale-grade-display-mode="scaleGradeDisplayMode"
             :step-detail-display="stepDetailDisplay"
+            :field-display="fieldDisplay"
             :field-meta="fieldMeta"
             :server-assigners="serverAssigners"
             :assigners="assigners"
@@ -1536,6 +1539,7 @@ defineExpose({
             :choice-option-explanation-mode="choiceOptionExplanationMode"
             :scale-grade-display-mode="scaleGradeDisplayMode"
             :step-detail-display="stepDetailDisplay"
+            :field-display="fieldDisplay"
             :field-meta="fieldMeta"
             :server-assigners="serverAssigners"
             :assigners="assigners"

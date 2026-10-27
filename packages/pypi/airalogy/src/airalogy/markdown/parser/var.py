@@ -5,12 +5,33 @@ import re
 import textwrap
 from typing import Any, Dict, List, Optional, Tuple
 
+from airalogy.types.registry import get_airalogy_type_registry
+
 from ..ast_nodes import VarNode, VarTableNode
 from ..errors import InvalidSyntaxError
 from ..tokens import Token, TokenType
 
 
 class VarParserMixin:
+    @staticmethod
+    def _is_registered_or_literal_scalar(annotation: str) -> bool:
+        """Scalar item types do not need the columns required by row models."""
+        descriptor = get_airalogy_type_registry().get(annotation.strip())
+        if descriptor is not None:
+            return descriptor.storage_kind == "scalar"
+        try:
+            expression = ast.parse(annotation.strip(), mode="eval").body
+            if not isinstance(expression, ast.Subscript):
+                return False
+            target = ast.unparse(expression.value)
+            if target not in {"Literal", "typing.Literal", "typing_extensions.Literal"}:
+                return False
+            values = ast.literal_eval(expression.slice)
+            values = values if isinstance(values, tuple) else (values,)
+            return bool(values) and all(value is None or isinstance(value, (str, int, float, bool)) for value in values)
+        except (SyntaxError, ValueError, TypeError):
+            return False
+
     def _parse_var_typed(
         self, token: Token
     ) -> Tuple[str, Optional[str], Optional[Any], Dict[str, Any]]:
@@ -439,6 +460,8 @@ class VarParserMixin:
                 has_explicit_subvars = False
                 if type_annotation.startswith("list["):
                     list_item_type = type_annotation[5:-1]
+                    if self._is_registered_or_literal_scalar(list_item_type):
+                        is_var_table = False
 
         if is_var_table:
             # Parse subvars if present

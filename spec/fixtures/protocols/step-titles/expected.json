@@ -1,0 +1,6 @@
+[
+  { "id": "prepare", "title": "准备样品, then mix \"gently\"" },
+  { "id": "verify", "title": "Verify operator's reading" },
+  { "id": "legacy", "title": null },
+  { "id": "blank", "title": null }
+]

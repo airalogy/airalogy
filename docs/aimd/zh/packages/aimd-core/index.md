@@ -55,6 +55,10 @@ assigner(
 ```
 ````
 
+## 检查点标题
+
+检查点支持 `{{check|safety_ready, title="防护用品检查"}}`。`@airalogy/aimd-core/parser` 的 `parseCheckContent()` 返回可选的带引号 `title`，空标题视为未设置。`fields.check` 仍为 ID 列表，`fields.check_definitions` 提供 `id`、可选的 `title` 和 `checked_message`。记录搜索和 `toTemplateEnv().record.byScope.check` 使用这些元数据，但不改变 Record 键。后续 Markdown 仍是检查正文，Python 与 npm 由同一兼容性样例验证。
+
 ## Choice 后续字段
 
 选择题选项可以在 `followups` 下声明条件触发的结构化字段。parser 会把这些字段提取为 `options[].followups`，字段类型只接受 `str`、`int`、`float`、`bool`；`number` 有意不属于 AIMD followup 类型集合。
@@ -109,6 +113,10 @@ const file = { data: { aimdInlineTemplates: templates } } as any
 const tree = processor.parse(protectedContent)
 processor.runSync(tree, file)
 ```
+
+## 共享行内模板扫描器
+
+`@airalogy/aimd-core/parser` 导出的 `findAimdInlineTemplates(content)` 为完整模板返回 `{ type, content, raw, start, end }`。`start` 包含起点、`end` 不包含终点，使用 JavaScript 字符串偏移。引号内的 `{{...}}`、`}}` 和转义引号不会提前结束外层模板。编辑工具可显式传入 `{ allowMarkdownEscapedTypes: true }`，恢复旧草稿中 `var\_table`、`ref\_var` 等类型拼写；默认仍为严格模式。扫描器不会排除 Markdown 代码示例，也不校验字段参数；应在合适的文本节点上使用，文档语义应交给完整 parser。
 
 ## CriticMarkup 审阅节点
 
@@ -168,6 +176,8 @@ import {
 
 `@airalogy/aimd-core/utils` 导出 `getAimdBuiltInTypeMetadata()` 和 `getAimdBuiltInTypeEnumValues()`。这些元数据由 Python `airalogy.types` 注册表生成，因此 `BloodType` 这类官方命名枚举类型可以在浏览器工具中复用同一组取值，不需要在 npm 代码里重新维护 Python 类型定义。
 
+`getAimdBuiltInTypeNames()` 可列出注册类型名，供编辑器生成附件格式等菜单。`@airalogy/aimd-core/parser` 的 `parseVarListEnumValues()` 可解析 `list[Literal[...]]` 和注册枚举列表（含可空写法）的列表项候选值。列表项枚举与单值 `definition.enum` 分开处理；多选输入保存数组，而不是一个枚举值。
+
 ## Entity Connector 工具
 
 `@airalogy/aimd-core/utils` 也导出 `createAimdEntityResolversFromConnectors()`、`searchAimdEntityConnector()` 和 `resolveAimdEntityConnector()`，供宿主把解析出的 `connectors` metadata 接到 `EntityRef` recorder 控件。`loadDescriptor`、`fetch` 和 `getSecret` 仍然由宿主提供，因此 parser-only 使用仍然离线可用，浏览器 bundle 也不会直接读取 `.env` secret。
@@ -180,7 +190,3 @@ import {
 - [解析节点](/zh/packages/aimd-core/parsed-nodes)
 - [字段提取结果](/zh/packages/aimd-core/extracted-fields)
 - [迁移说明](/zh/packages/aimd-core/compatibility)
-
-## 共享行内模板扫描器
-
-`@airalogy/aimd-core/parser` 导出的 `findAimdInlineTemplates(content)` 为完整模板返回 `{ type, content, raw, start, end }`。`start` 包含起点、`end` 不包含终点，使用 JavaScript 字符串偏移。引号内的 `{{...}}`、`}}` 和转义引号不会提前结束外层模板。编辑工具可显式传入 `{ allowMarkdownEscapedTypes: true }`，恢复旧草稿中 `var\_table`、`ref\_var` 等类型拼写；默认仍为严格模式。扫描器不会排除 Markdown 代码示例，也不校验字段参数；应在合适的文本节点上使用，文档语义应交给完整 parser。

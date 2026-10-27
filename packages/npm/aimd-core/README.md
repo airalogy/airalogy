@@ -66,6 +66,16 @@ const tree = processor.parse(protectedContent)
 processor.runSync(tree, file)
 ```
 
+`findAimdInlineTemplates()` from `@airalogy/aimd-core/parser` returns complete inline templates with source offsets, respecting quoted strings and escaped quotes. Reuse it in authoring tools instead of stopping at the first `}}`. It scans text rather than Markdown structure; use the full parser for code-block exclusion and field validation.
+
+## Step Titles
+
+`{{step|prepare_sample, title="Prepare the sample", check=True}}` declares an optional human-readable title. `parseStepContent()` from `@airalogy/aimd-core/parser` exposes it as `title`; a full parse retains it on step nodes and `fields.step_hierarchy`. `toTemplateEnv()` also includes it in the step metadata. The ID remains the Record key and `ref_step` target. Text following the marker remains the step body and is not inferred as a title. Titles must be quoted strings; blank titles are treated as absent, consistently with the Python parser.
+
+## Checkpoint Titles
+
+`{{check|safety_ready, title="Protective equipment"}}` also supports an optional title. `parseCheckContent()` is exported from `@airalogy/aimd-core/parser`; `fields.check` remains an ID list, while `fields.check_definitions` carries `id`, optional `title` and `checked_message`. Checkpoint titles are available to Record search labels and `toTemplateEnv().record.byScope.check`; the ID remains the Record key.
+
 ## CriticMarkup Review Nodes
 
 ```ts
@@ -181,6 +191,8 @@ The helper also exposes lower-level `searchAimdEntityConnector()` and `resolveAi
 
 `@airalogy/aimd-core/utils` exports `getAimdBuiltInTypeMetadata()` and `getAimdBuiltInTypeEnumValues()`. The bundled metadata is generated from the Python `airalogy.types` registry, so official named enum types such as `BloodType` expose the same values to browser tools without duplicating Python type definitions in npm code.
 
+`getAimdBuiltInTypeNames()` lists the registered types for authoring menus, including attachment formats. `parseVarListEnumValues()` from `@airalogy/aimd-core/parser` resolves the item choices of `list[Literal[...]]` and `list[BloodType]`, including nullable variants, without treating the whole list as a scalar enum.
+
 ## Documentation
 
 - EN: <https://airalogy.github.io/airalogy/aimd/en/packages/aimd-core>
@@ -203,7 +215,3 @@ If `@airalogy/aimd-core` is useful in your work, please cite the Airalogy paper:
       url={https://arxiv.org/abs/2506.18586},
 }
 ```
-
-## Inline Template Scanning
-
-`findAimdInlineTemplates()` from `@airalogy/aimd-core/parser` returns complete inline templates with source offsets, respecting quoted strings and escaped quotes. Reuse it in authoring tools instead of stopping at the first `}}`. It scans text rather than Markdown structure; use the full parser for code-block exclusion and field validation.
