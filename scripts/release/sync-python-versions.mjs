@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { engineImageName, engineImageVersionFile, filesWithDefaultImage } from '../airalogy-engine/image-release-contract.mjs'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const checkOnly = process.argv.includes('--check')
@@ -42,9 +43,9 @@ function replaceProjectVersion(pyprojectText, version, relativePath) {
   return updated
 }
 
-function replaceAiralogyEngineDevDependency(pyprojectText, airalogyVersion) {
+function replaceAiralogyEngineDependencies(pyprojectText, airalogyVersion) {
   return pyprojectText.replace(
-    /("airalogy~=)[^"]+(")/,
+    /("airalogy~=)[^"]+(")/g,
     (_match, prefix, suffix) => `${prefix}${airalogyVersion}${suffix}`,
   )
 }
@@ -57,6 +58,12 @@ for (const packageDir of pythonPackages) {
 }
 
 const changedFiles = []
+
+function updateFile(relativePath, original, updated) {
+  if (updated === original) return
+  changedFiles.push(relativePath)
+  if (!checkOnly) writeText(relativePath, updated)
+}
 
 for (const packageDir of pythonPackages) {
   const packageJson = readJson(`${packageDir}/package.json`)
@@ -73,19 +80,26 @@ for (const packageDir of pythonPackages) {
   let updated = replaceProjectVersion(original, packageJson.version, pyprojectPath)
 
   if (packageJson.name === 'airalogy-engine') {
-    updated = replaceAiralogyEngineDevDependency(updated, versions.get('airalogy'))
+    updated = replaceAiralogyEngineDependencies(updated, versions.get('airalogy'))
   }
 
-  if (updated !== original) {
-    changedFiles.push(pyprojectPath)
-    if (!checkOnly) {
-      writeText(pyprojectPath, updated)
-    }
+  updateFile(pyprojectPath, original, updated)
+}
+
+const coreVersion = versions.get('airalogy')
+updateFile(engineImageVersionFile, readText(engineImageVersionFile), `${coreVersion}\n`)
+const imagePattern = new RegExp(`${engineImageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:[0-9A-Za-z.-]+`, 'g')
+for (const relativePath of filesWithDefaultImage) {
+  const original = readText(relativePath)
+  const updated = original.replace(imagePattern, `${engineImageName}:${coreVersion}`)
+  if (!updated.includes(`${engineImageName}:${coreVersion}`)) {
+    throw new Error(`Could not find the default Engine image in ${relativePath}`)
   }
+  updateFile(relativePath, original, updated)
 }
 
 if (checkOnly && changedFiles.length > 0) {
-  console.error('Python version metadata is out of sync:')
+  console.error('Python and Engine image version metadata is out of sync:')
   for (const file of changedFiles) {
     console.error(`- ${file}`)
   }
@@ -94,7 +108,7 @@ if (checkOnly && changedFiles.length > 0) {
 }
 
 if (changedFiles.length === 0) {
-  console.log('Python version metadata is already in sync.')
+  console.log('Python and Engine image version metadata is already in sync.')
 } else {
-  console.log(`Updated Python version metadata in ${changedFiles.join(', ')}.`)
+  console.log(`Updated Python and Engine image version metadata in ${changedFiles.join(', ')}.`)
 }

@@ -36,9 +36,11 @@ corepack pnpm sync:python-versions
 corepack pnpm lock:python
 ```
 
-That syncs the Changesets-computed versions into `pyproject.toml`, updates the
-`airalogy-engine` development dependency on `airalogy`, and refreshes Python
-lockfiles.
+That syncs the Changesets-computed versions into `pyproject.toml`, aligns both runtime and development dependencies on `airalogy`, and refreshes Python lockfiles. It also synchronizes the Engine image `VERSION` and the default image tags used by the Python client, Node client, tests, and Protocol Demo. Normal feature work must not update these versions manually.
+
+The private Python Engine version anchor declares its core dependency so Changesets includes it when a core minor release changes the supported version series. When a core release changes the default image, include a patch changeset for both `airalogy-engine` and `@airalogy/airalogy-engine`, including for core patch releases: Changesets cannot infer a Node client release from an image string in source code.
+
+Image publication remains a separate operation through `.github/workflows/release-engine-image.yml`. Before publishing engine clients that default to a new image tag, ensure the matching image has been published and verified. Synchronizing a version or merging a release PR does not itself publish that image.
 
 ## Local Checks
 
@@ -46,6 +48,8 @@ Verify Python release metadata without changing files:
 
 ```bash
 corepack pnpm check:python-versions
+corepack pnpm check:engine-image-release
+corepack pnpm test:release
 ```
 
 Regenerate synced metadata after a manual release-maintenance change:

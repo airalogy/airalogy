@@ -15,6 +15,15 @@ _EXAMPLE_PROTOCOL = str(_MONOREPO_ROOT / "examples/airalogy-engine")
 _DEFAULT_IMAGE = "ghcr.io/airalogy/airalogy-engine:0.16.0"
 
 
+@pytest.fixture(scope="session", autouse=True)
+def isolated_default_boxlite_home():
+    # Engines without an explicit home must not lock a running demo or Node test runtime.
+    with tempfile.TemporaryDirectory(prefix="aebl-default-", dir="/tmp") as home:
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setenv("BOXLITE_HOME", home)
+            yield home
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--sandbox-mode",

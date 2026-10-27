@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { engineImageName, engineImageVersionFile, filesWithDefaultImage } from './image-release-contract.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repositoryRoot = path.resolve(__dirname, '../..')
@@ -12,7 +13,7 @@ const runtimeDirectory = path.join(
 const readText = async filePath => (await readFile(filePath, 'utf8')).trim()
 const readJson = async filePath => JSON.parse(await readText(filePath))
 
-const imageVersion = await readText(path.join(runtimeDirectory, 'VERSION'))
+const imageVersion = await readText(path.join(repositoryRoot, engineImageVersionFile))
 if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(imageVersion)) {
   throw new Error(`Invalid Engine image version: ${imageVersion}`)
 }
@@ -31,15 +32,7 @@ if (corePackage.version !== imageVersion || coreProjectVersion !== imageVersion)
   )
 }
 
-const expectedImage = `ghcr.io/airalogy/airalogy-engine:${imageVersion}`
-const filesWithDefaultImage = [
-  'packages/pypi/airalogy-engine/src/airalogy_engine/engine.py',
-  'packages/pypi/airalogy-engine/tests/conftest.py',
-  'packages/npm/airalogy-engine/src/index.ts',
-  'packages/npm/airalogy-engine/tests/engine.test.ts',
-  'apps/protocol-demo/scripts/server.mjs',
-  'apps/protocol-demo/src/App.vue',
-]
+const expectedImage = `${engineImageName}:${imageVersion}`
 for (const relativePath of filesWithDefaultImage) {
   const contents = await readText(path.join(repositoryRoot, relativePath))
   if (!contents.includes(expectedImage)) {

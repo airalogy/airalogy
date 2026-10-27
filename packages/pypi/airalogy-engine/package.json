@@ -4,6 +4,9 @@
   "private": true,
   "description": "Python protocol execution sandbox API",
   "license": "Apache-2.0",
+  "dependencies": {
+    "airalogy": "workspace:~"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/airalogy/airalogy.git",

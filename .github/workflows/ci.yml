@@ -28,6 +28,9 @@ jobs:
       - name: Verify release contract
         run: node scripts/airalogy-engine/check-image-release.mjs
 
+      - name: Verify Python release synchronization
+        run: node --test scripts/release/*.test.mjs
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 

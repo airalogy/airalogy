@@ -517,7 +517,11 @@ importers:
 
   packages/pypi/airalogy: {}
 
-  packages/pypi/airalogy-engine: {}
+  packages/pypi/airalogy-engine:
+    dependencies:
+      airalogy:
+        specifier: workspace:~
+        version: link:../airalogy
 
 packages:
 

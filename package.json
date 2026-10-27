@@ -52,6 +52,7 @@
     "test:aimd": "pnpm --filter '@airalogy/aimd-*' -r --if-present test",
     "test:engine-node": "pnpm --filter @airalogy/airalogy-engine test",
     "test:npm": "pnpm test:aimd && pnpm test:aira && pnpm test:engine-node && pnpm test:vitest",
+    "test:release": "node --test scripts/release/*.test.mjs",
     "test:python:airalogy": "uv --directory packages/pypi/airalogy run pytest tests/",
     "test:python:airalogy:examples": "UV_CACHE_DIR=.uv-cache uv --directory packages/pypi/airalogy run --with pytest python -m pytest tests/test_spec_fixtures.py",
     "test:python:engine": "uv --directory packages/pypi/airalogy-engine run pytest tests/ --sandbox-mode=rootfs",

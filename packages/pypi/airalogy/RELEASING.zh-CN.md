@@ -31,7 +31,11 @@ corepack pnpm sync:python-versions
 corepack pnpm lock:python
 ```
 
-这会把 Changesets 计算出的版本同步到 `pyproject.toml`，更新 `airalogy-engine` 对 `airalogy` 的开发依赖版本，并刷新 Python lockfile。
+这会把 Changesets 计算出的版本同步到 `pyproject.toml`，同时更新对 `airalogy` 的运行时和开发依赖，并刷新 Python lockfile。同步过程也会更新 Engine 镜像的 `VERSION`，以及 Python 客户端、Node 客户端、测试和 Protocol Demo 使用的默认镜像标签。普通功能开发不应手动修改这些版本。
+
+Python Engine 的私有版本锚点声明了对核心包的依赖，因此核心包 minor 升级改变兼容版本系列时，Changesets 会联动更新它。核心包发布需要切换默认镜像时，应为 `airalogy-engine` 和 `@airalogy/airalogy-engine` 都添加 patch changeset，包括核心包仅 patch 升级的情况：Changesets 无法从源码中的镜像地址自动推断 Node 客户端需要发布。
+
+镜像发布仍是独立操作，由 `.github/workflows/release-engine-image.yml` 处理。发布默认使用新标签的 Engine 客户端之前，应先确认对应镜像已经发布并验证。同步版本或合并 release PR 本身不会发布该镜像。
 
 ## 本地检查
 
@@ -39,6 +43,8 @@ corepack pnpm lock:python
 
 ```bash
 corepack pnpm check:python-versions
+corepack pnpm check:engine-image-release
+corepack pnpm test:release
 ```
 
 如果在 release 维护场景中手动调整了版本锚点，可以重新同步：
