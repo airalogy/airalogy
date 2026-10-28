@@ -3,6 +3,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { npmVersionExists, orderPackagesForPublishing } from './npm-publication.mjs'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const npmRoot = path.join(repoRoot, 'packages/npm')
@@ -85,12 +86,27 @@ if (packageDirs.length === 0) {
   process.exit(0)
 }
 
-console.log(`Publishing npm packages: ${packageDirs.join(', ')}`)
+const packages = orderPackagesForPublishing(packageDirs
+  .map(dir => ({ ...readJson(path.join(repoRoot, dir, 'package.json')), dir }))
+  .filter(pkg => !pkg.private))
+const pending = []
+for (const pkg of packages) {
+  if (await npmVersionExists(pkg.name, pkg.version)) {
+    console.log(`Already published ${pkg.name}@${pkg.version}; skipping.`)
+  } else {
+    pending.push(pkg)
+  }
+}
+if (pending.length === 0) {
+  console.log('All selected npm versions are already published.')
+  process.exit(0)
+}
+
+console.log(`Publishing npm packages in dependency order: ${pending.map(pkg => pkg.name).join(', ')}`)
 run('corepack', ['pnpm', 'build:npm'])
 
-for (const packageDir of packageDirs) {
-  const packageJson = readJson(path.join(repoRoot, packageDir, 'package.json'))
-  console.log(`Publishing ${packageJson.name}@${packageJson.version}`)
+for (const pkg of pending) {
+  console.log(`Publishing ${pkg.name}@${pkg.version}`)
   run('corepack', [
     'pnpm',
     'publish',
@@ -98,5 +114,5 @@ for (const packageDir of packageDirs) {
     '--access',
     'public',
     '--provenance',
-  ], { cwd: path.join(repoRoot, packageDir) })
+  ], { cwd: path.join(repoRoot, pkg.dir) })
 }

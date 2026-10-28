@@ -37,6 +37,8 @@ Python Engine 的私有版本锚点声明了对核心包的依赖，因此核心
 
 镜像发布仍是独立操作，由 `.github/workflows/release-engine-image.yml` 处理。发布默认使用新标签的 Engine 客户端之前，应先确认对应镜像已经发布并验证。同步版本或合并 release PR 本身不会发布该镜像。
 
+应先从最终 release PR 提交构建、发布并验证镜像，再合并该 PR。后续包工作流会先发布 Python Core，再发布 Python Engine；npm 包会先发布运行时依赖，再发布使用它们的包。部分发布失败后重试时会跳过已发布版本；注册表请求出错时必须停止发布，不能把错误视为版本不存在。
+
 ## 本地检查
 
 检查 Python 发布元数据是否同步：

@@ -61,11 +61,17 @@ jobs:
           rm -rf dist-to-publish
           mkdir -p dist-to-publish
           for package_dir in ${{ steps.python.outputs.package_dirs }}; do
-            uv build "$package_dir" --out-dir dist-to-publish
+            uv build "$package_dir" --out-dir "dist-to-publish/$(basename "$package_dir")"
           done
 
-      - name: Publish package distributions to PyPI
-        if: steps.python.outputs.has_packages == 'true'
+      - name: Publish Airalogy Core to PyPI
+        if: steps.python.outputs.has_core == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: dist-to-publish
+          packages-dir: dist-to-publish/airalogy
+
+      - name: Publish Airalogy Engine to PyPI after Core
+        if: steps.python.outputs.has_engine == 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist-to-publish/airalogy-engine

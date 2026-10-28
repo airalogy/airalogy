@@ -42,6 +42,8 @@ The private Python Engine version anchor declares its core dependency so Changes
 
 Image publication remains a separate operation through `.github/workflows/release-engine-image.yml`. Before publishing engine clients that default to a new image tag, ensure the matching image has been published and verified. Synchronizing a version or merging a release PR does not itself publish that image.
 
+Publish and verify the image from the final release PR commit before merging that PR. The package workflows then publish Python Core before Python Engine, and npm runtime dependencies before their consumers. Already-published package versions are skipped when retrying a partially completed release; registry errors must stop the release rather than be interpreted as missing versions.
+
 ## Local Checks
 
 Verify Python release metadata without changing files:

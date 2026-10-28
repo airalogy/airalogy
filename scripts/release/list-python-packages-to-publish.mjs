@@ -130,6 +130,8 @@ for (const packageDir of candidatePackageDirs()) {
 }
 
 setOutput('has_packages', packagesToPublish.length > 0 ? 'true' : 'false')
+setOutput('has_core', String(packagesToPublish.some(pkg => pkg.name === 'airalogy')))
+setOutput('has_engine', String(packagesToPublish.some(pkg => pkg.name === 'airalogy-engine')))
 setOutput('package_dirs', packagesToPublish.map((packageInfo) => packageInfo.dir).join(' '))
 
 console.log(JSON.stringify({ packages: packagesToPublish }, null, 2))
