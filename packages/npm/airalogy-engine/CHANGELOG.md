@@ -1,5 +1,11 @@
 # @airalogy/airalogy-engine
 
+## 0.0.6
+
+### Patch Changes
+
+- 0bde6d6: Track the Python core dependency in Changesets so core minor releases also update the engine package. Keep runtime and development dependency constraints, the Engine image version, and Python/Node/demo default image tags aligned when preparing release versions. Include both engine clients in this release so they use the updated core image.
+
 ## 0.0.5
 
 ### Patch Changes
