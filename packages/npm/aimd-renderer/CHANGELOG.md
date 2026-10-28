@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.14.0
+
+### Minor Changes
+
+- d983aca: Support optional checkpoint titles consistently in Python and npm, expose checkpoint metadata, and add title-first preview and visual settings without changing Record keys or values. Offer generated built-in type choices and host extensions alongside editable custom type expressions. Include shared syntax fixtures, regression tests, bilingual documentation and examples.
+
+### Patch Changes
+
+- d983aca: Unify variable, step and checkpoint preview badges across HTML and Vue rendering. Add the missing localized checkpoint label, share badge typography and spacing while retaining type colors, and keep step titles primary with secondary IDs.
+- d983aca: Support optional quoted step titles consistently in Python and npm. Add reusable step settings with generated IDs, title-first rendering and compact metadata, preserve existing step identities and Record values, and use document numbering in embedded visual widgets. Update AI-glasses examples and bilingual documentation with shared compatibility fixtures.
+- Updated dependencies [d983aca]
+- Updated dependencies [d983aca]
+- Updated dependencies [fdc7a53]
+- Updated dependencies [d983aca]
+- Updated dependencies [d983aca]
+  - @airalogy/aimd-core@2.17.0
+
 ## 2.13.0
 
 ### Minor Changes

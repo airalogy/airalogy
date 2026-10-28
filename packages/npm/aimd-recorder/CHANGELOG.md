@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.26.0
+
+### Minor Changes
+
+- d983aca: Support optional checkpoint titles consistently in Python and npm, expose checkpoint metadata, and add title-first preview and visual settings without changing Record keys or values. Offer generated built-in type choices and host extensions alongside editable custom type expressions. Include shared syntax fixtures, regression tests, bilingual documentation and examples.
+- d983aca: Add plain-language toolbar shortcuts for text, integer, decimal, single-choice, multiple-choice, and yes/no inputs, with date, time, text-list, attachment, and advanced inputs in a More menu. Preset dialogs generate persistent IDs without requiring syntax knowledge. Yes/no insertion uses a nullable boolean so unanswered values do not silently become false.
+
+  Resolve list item enums separately from scalar enums. Render `list[Literal[...]]` and lists of registered enums as checkbox groups, preserve typed array values and nullable resets, and validate item membership without changing the underlying AIMD syntax.
+
+  Allow Python AIMD scalar lists containing Literal values or registered scalar types without requiring table column definitions.
+
+- d983aca: Support optional quoted step titles consistently in Python and npm. Add reusable step settings with generated IDs, title-first rendering and compact metadata, preserve existing step identities and Record values, and use document numbering in embedded visual widgets. Update AI-glasses examples and bilingual documentation with shared compatibility fixtures.
+- d983aca: Add plain-language input authoring with persistent automatically generated field IDs and optional advanced settings. Expose the recorder-aware visual surface for editing prose and filling typed Record values together, and add compact field presentation without changing AIMD syntax or Record storage. Default the AIMD Demo to visual editing with field information shown, an always-accessible display toggle, and a browser-persisted preference for detailed or compact presentation.
+
+  Keep enum dropdowns, yes/no boolean controls, scalar lists, file restrictions and dedicated editors in compact forms. Share nullable-type unwrapping so `Literal[...] | None`, `Optional[T]` and `Union[T, None]` retain their original control, value type and optional state.
+
+### Patch Changes
+
+- d983aca: Exclude the renderer's checkpoint type badge from Recorder body content so standalone checkpoints display one badge and their ID instead of a duplicate badge and an empty-looking body. Preserve actual checkpoint instructions and nested controls in both standalone and visual form recording.
+- d983aca: Preserve multiline AIMD field definitions during visual-editor serialization instead of escaping indentation into character references. Recover legacy escaped indentation in visual drafts so nested var_table columns retain their IDs, titles and input types, while preserving quoted string escapes and literal text.
+- fdc7a53: Expose the shared quote-aware inline template scanner and use it for visual editing, draft normalization, and Recorder field editing. Preserve literal AIMD-looking text inside quoted checkpoint messages, step titles, and field values instead of truncating fields or rendering nested references.
+- d983aca: Render step markers as compact, full-width headers in visual authoring, keeping instructions editable below and actions aligned. Ignore empty renderer paragraphs when deciding whether a step has body content, without changing AIMD tokens or step interactions.
+
+  Refresh rendered field values when switching between compact and detailed presentation so recently typed values remain visible.
+
+- Updated dependencies [d983aca]
+- Updated dependencies [d983aca]
+- Updated dependencies [d983aca]
+- Updated dependencies [d983aca]
+- Updated dependencies [d983aca]
+- Updated dependencies [fdc7a53]
+- Updated dependencies [d983aca]
+- Updated dependencies [d983aca]
+  - @airalogy/aimd-core@2.17.0
+  - @airalogy/aimd-editor@1.13.0
+  - @airalogy/aimd-renderer@2.14.0
+
 ## 1.25.1
 
 ### Patch Changes

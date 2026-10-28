@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 0.17.0
+
+### Minor Changes
+
+- d983aca: Support optional checkpoint titles consistently in Python and npm, expose checkpoint metadata, and add title-first preview and visual settings without changing Record keys or values. Offer generated built-in type choices and host extensions alongside editable custom type expressions. Include shared syntax fixtures, regression tests, bilingual documentation and examples.
+- d983aca: Support optional quoted step titles consistently in Python and npm. Add reusable step settings with generated IDs, title-first rendering and compact metadata, preserve existing step identities and Record values, and use document numbering in embedded visual widgets. Update AI-glasses examples and bilingual documentation with shared compatibility fixtures.
+
+### Patch Changes
+
+- d983aca: Add Chinese-language vinegar titration and floating leaf disk photosynthesis Protocol examples for AI-glasses guidance testing, with detailed procedures, human checks, timers, raw-data tables, exception handling, and bilingual rehearsal guides. Register both for the AIMD Demo and bundled Python protocol examples; hardware integration and scientific review remain host and laboratory responsibilities.
+- d983aca: Add plain-language toolbar shortcuts for text, integer, decimal, single-choice, multiple-choice, and yes/no inputs, with date, time, text-list, attachment, and advanced inputs in a More menu. Preset dialogs generate persistent IDs without requiring syntax knowledge. Yes/no insertion uses a nullable boolean so unanswered values do not silently become false.
+
+  Resolve list item enums separately from scalar enums. Render `list[Literal[...]]` and lists of registered enums as checkbox groups, preserve typed array values and nullable resets, and validate item membership without changing the underlying AIMD syntax.
+
+  Allow Python AIMD scalar lists containing Literal values or registered scalar types without requiring table column definitions.
+
 ## 0.16.0
 
 ### Minor Changes
