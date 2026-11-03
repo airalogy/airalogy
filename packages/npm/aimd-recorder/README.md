@@ -20,6 +20,8 @@ For simultaneous protocol restructuring and data entry, `AimdRecorderEditor` kee
 
 > Protocol-level AIMD syntax, assigner semantics, and validation rules are normative in Airalogy docs. `@airalogy/aimd-*` docs describe how the frontend parser, renderer, and recorder implement those rules.
 
+Use `createExampleRecord(fields, options)` from `@airalogy/aimd-recorder/record` to build a fresh test Record from parsed AIMD. It returns `record` and the names of skipped scalar fields, and performs no I/O.
+
 ## Install
 
 ```bash

@@ -14,6 +14,8 @@ It also exposes `remarkCriticMarkup` for CriticMarkup-style review marks in the 
 
 > Protocol-level AIMD syntax, assigner semantics, and validation rules are normative in Airalogy docs. `@airalogy/aimd-*` docs describe how the frontend parser, renderer, and recorder implement those rules.
 
+Use `getAimdFieldExampleCandidates(field, options)` from `@airalogy/aimd-core/utils` to inspect the ordered candidates for a preview field. Declared field examples and defaults take precedence over type fallbacks. A file reference or context field returns no candidates.
+
 ## Install
 
 ```bash

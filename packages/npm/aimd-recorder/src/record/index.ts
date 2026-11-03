@@ -8,6 +8,7 @@ export type {
   AimdStepRecordItem,
   AimdStepOrCheckRecordItem,
 } from '../types'
+export { createExampleRecord, type AimdExampleRecordOptions } from './example-record'
 export { createEmptyProtocolRecordData } from '../types'
 export type {
   AimdRecorderValidationCode,

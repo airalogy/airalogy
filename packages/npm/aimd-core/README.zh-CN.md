@@ -14,6 +14,8 @@ Fenced `collectors` YAML 代码块会被提取到 `fields.collectors`；parser �
 
 > 协议级 AIMD 语法、assigner 语义与校验规则以 Airalogy 文档为准；`@airalogy/aimd-*` 文档只描述前端 parser、renderer、recorder 如何实现这些规范。
 
+从 `@airalogy/aimd-core/utils` 导入 `getAimdFieldExampleCandidates(field, options)` 可读取预览字段的有序候选值。作者声明的示例和默认值优先，文件引用和上下文字段返回空列表。
+
 ## 安装
 
 ```bash

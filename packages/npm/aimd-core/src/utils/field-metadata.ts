@@ -11,6 +11,8 @@ export interface AimdBuiltInTypeMetadata {
   type?: string
   title?: string
   description?: string
+  pattern?: string
+  preview?: { kind: "enum" | "skip" } | { kind: "examples"; values: (string | number | boolean)[] }
   enum?: unknown[]
   schema_extra?: Record<string, unknown>
 }
@@ -81,7 +83,7 @@ function resolveSingleNamedType(annotation?: string): string | undefined {
 
 export function getAimdBuiltInTypeMetadata(typeAnnotation?: string): AimdBuiltInTypeMetadata | undefined {
   const typeName = resolveSingleNamedType(typeAnnotation)
-  return typeName ? officialTypeMetadataByLookupName[typeName] : undefined
+  return typeName && Object.prototype.hasOwnProperty.call(officialTypeMetadataByLookupName, typeName) ? officialTypeMetadataByLookupName[typeName] : undefined
 }
 
 export function getAimdBuiltInTypeNames(): string[] {

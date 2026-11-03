@@ -163,3 +163,9 @@
 ```
 
 如果你在升级旧接入，需要注意旧的 `name` 别名已经移除。详见[迁移说明](/zh/packages/aimd-core/compatibility)。
+
+## 示例 Record
+
+从 `@airalogy/aimd-core/utils` 导入 `getAimdFieldExampleCandidates(field, options)` 可读取预览字段的有序候选值。作者声明的示例和默认值优先，文件引用和上下文字段返回空列表。
+
+可用 `variablesSchema` 传入已发布的变量结构。数值字段限定为 20–40 时，候选值 `0` 会在校验阶段被排除。`ATCG` 提供类型示例，`BloodType` 使用类型声明的枚举。采用候选值前应进行 Recorder 校验。

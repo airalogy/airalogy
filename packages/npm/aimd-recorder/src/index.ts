@@ -120,6 +120,7 @@ export {
   type ResolveAimdRequiredFieldOptions,
   type ValidateAimdRecordOptions,
 } from './record/validation'
+export { createExampleRecord, type AimdExampleRecordOptions } from './record/example-record'
 export { createEmptyProtocolRecordData } from './types'
 export {
   BUILT_IN_AIMD_TYPE_PLUGINS,

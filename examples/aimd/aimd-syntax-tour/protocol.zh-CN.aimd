@@ -26,6 +26,8 @@
 
 样品血型：{{var|blood_type: BloodType | None, title = "血型", description = "常见 ABO 血型，可包含 Rh 阳性或阴性信息；例如 A+ 表示 A 型且 Rh 阳性", examples = ["A+", "O-", "Rh+"]}}
 
+预览序列：{{var|preview_sequence: ATCG | None, title = "预览序列", description = "未声明字段示例时，示例 Record 使用 ATCG。"}}
+
 Python 分析片段：{{var|python_code: PyStr, title = "Python 分析代码"}}
 
 JavaScript 格式转换：{{var|javascript_code: JsStr, title = "JavaScript 格式转换代码"}}

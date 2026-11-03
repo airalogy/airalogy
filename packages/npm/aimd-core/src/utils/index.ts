@@ -2,6 +2,7 @@
  * Utility functions
  */
 
+export { getAimdFieldExampleCandidates, type AimdFieldExampleOptions } from './field-example-candidates'
 export { isAimdNullableType, unwrapAimdNullableType } from './nullable-type'
 
 export {

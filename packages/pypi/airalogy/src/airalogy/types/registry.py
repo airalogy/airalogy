@@ -5,9 +5,10 @@ Registry for Airalogy type descriptors and pluggable type packages.
 from __future__ import annotations
 
 import inspect
+import math
 from collections import OrderedDict
 from collections.abc import Callable, Iterable, Iterator, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from importlib import import_module
 from importlib.metadata import entry_points
 from typing import Any
@@ -41,6 +42,14 @@ class AiralogyTypeDescriptor:
     ui_kind: str | None = None
     schema_extra: Mapping[str, object] = field(default_factory=dict)
     source: str = "manual"
+    preview_examples: tuple[str | int | float | bool, ...] | None = None
+
+    def __post_init__(self) -> None:
+        for value in self.preview_examples or ():
+            if not isinstance(value, (str, bool, int, float)) or (
+                isinstance(value, float) and not math.isfinite(value)
+            ) or (isinstance(value, int) and abs(value) > 2**53 - 1):
+                raise ValueError("Preview examples must be portable JSON scalar values.")
 
     def lookup_names(self) -> tuple[str, ...]:
         return (self.type_name, *self.aliases)
@@ -199,15 +208,7 @@ def discover_airalogy_type_plugins(*, force: bool = False) -> list[AiralogyTypeD
         descriptors = _coerce_plugin_descriptors(loaded)
         for descriptor in descriptors:
             _REGISTRY.register(
-                AiralogyTypeDescriptor(
-                    type_name=descriptor.type_name,
-                    import_from=descriptor.import_from,
-                    aliases=descriptor.aliases,
-                    storage_kind=descriptor.storage_kind,
-                    ui_kind=descriptor.ui_kind,
-                    schema_extra=descriptor.schema_extra,
-                    source=f"entrypoint:{entry_point.name}",
-                ),
+                replace(descriptor, source=f"entrypoint:{entry_point.name}"),
                 replace=True,
             )
             loaded_descriptors.append(descriptor)
@@ -295,6 +296,16 @@ def export_airalogy_type_metadata(*, load_plugins: bool = False) -> dict[str, An
         enum_values = _schema_scalar_list(schema.get("enum"))
         if enum_values:
             metadata["enum"] = enum_values
+
+        # Preview opt-in never supplies a default for an actual Record.
+        if descriptor.storage_kind == "scalar" and enum_values:
+            metadata["preview"] = {"kind": "enum"}
+        elif descriptor.storage_kind == "scalar" and descriptor.preview_examples is not None:
+            metadata["preview"] = {"kind": "examples", "values": list(descriptor.preview_examples)}
+            if isinstance(schema.get("pattern"), str):
+                metadata["pattern"] = schema["pattern"]
+        else:
+            metadata["preview"] = {"kind": "skip"}
 
         types[descriptor.type_name] = metadata
 

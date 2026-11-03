@@ -156,3 +156,7 @@ Airalogy registry 本身不直接定义前端 widget。它定义的是后端规�
 前端部分请参考 AIMD 文档：
 
 - [`Type Plugins`](https://airalogy.github.io/airalogy/aimd/zh/packages/type-plugins)
+
+## 示例 Record 元数据
+
+注册的标量枚举会导出枚举预览策略。其他标量描述符可用 `preview_examples=("example",)` 指定可移植的测试值。运行 `pnpm sync:aimd-type-metadata` 可将内置类型元数据同步至 npm 核心包。空元组表示允许采用字段声明的示例或默认值。其余描述符导出跳过策略。npm 内置表包含官方类型，Python 调用方可用 `export_airalogy_type_metadata(load_plugins=True)` 获取插件元数据。仅在应用显式生成示例 Record 时使用这些值。

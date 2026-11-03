@@ -20,6 +20,8 @@ Collector 绑定的 `Observation[T]` 和 `list[Observation[T]]` 变量在宿主�
 
 > 协议级 AIMD 语法、assigner 语义与校验规则以 Airalogy 文档为准；`@airalogy/aimd-*` 文档只描述前端 parser、renderer、recorder 如何实现这些规范。
 
+从 `@airalogy/aimd-recorder/record` 导入 `createExampleRecord(fields, options)` 可基于已解析的 AIMD 创建独立测试 Record。返回值包含 `record` 和跳过的标量字段名，生成过程中不读写外部数据。
+
 ## 安装
 
 ```bash

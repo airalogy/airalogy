@@ -308,3 +308,18 @@ const quiz = {
 ```
 
 其中 `submitted` 由宿主应用控制。`AimdRecorder` 本身不会自动判断“是否已提交”，也不内建交卷按钮。
+
+## 示例 Record
+
+从 `@airalogy/aimd-recorder/record` 导入 `createExampleRecord(fields, options)` 可基于已解析的 AIMD 创建独立测试 Record。返回值包含 `record` 和跳过的标量字段名，生成过程中不读写外部数据。
+
+可选的 `schema` 与 `validateAimdRecord` 使用相同结构。通过 `assignedFields` 传入服务端计算字段名，客户端 Assigner 的输出从已解析字段中识别。`locale` 和 `exampleText` 可指定语言或普通文本占位值。
+
+```ts
+import { parseAndExtract } from "@airalogy/aimd-renderer"
+import { createExampleRecord } from "@airalogy/aimd-recorder/record"
+
+const fields = parseAndExtract('{{var|sequence: ATCG}} {{var|image: FileIdPNG}}')
+const { record, skipped } = createExampleRecord(fields)
+// record.var.sequence === "ATCG", skipped.includes("image")
+```

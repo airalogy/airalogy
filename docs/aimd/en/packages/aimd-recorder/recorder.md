@@ -308,3 +308,18 @@ Homework / reveal-after-submit example:
 ```
 
 `submitted` is controlled by the host app. `AimdRecorder` does not infer submission state on its own and does not include a built-in submit button.
+
+## Example Records
+
+Use `createExampleRecord(fields, options)` from `@airalogy/aimd-recorder/record` to build a fresh test Record from parsed AIMD. It returns `record` and the names of skipped scalar fields, and performs no I/O.
+
+The optional `schema` uses the same shape as `validateAimdRecord`. Supply server-calculated field names in `assignedFields`. Client assigner outputs are discovered from the parsed fields. You can set `locale` or override `exampleText` for ordinary text fields.
+
+```ts
+import { parseAndExtract } from "@airalogy/aimd-renderer"
+import { createExampleRecord } from "@airalogy/aimd-recorder/record"
+
+const fields = parseAndExtract('{{var|sequence: ATCG}} {{var|image: FileIdPNG}}')
+const { record, skipped } = createExampleRecord(fields)
+// record.var.sequence === "ATCG", skipped.includes("image")
+```

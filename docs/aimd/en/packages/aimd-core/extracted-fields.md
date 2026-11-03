@@ -163,3 +163,9 @@ These scopes are still simple `string[]`, and each string is an identifier:
 ```
 
 If you are upgrading older integrations, note that the old `name` aliases have been removed. Read [Migration](/en/packages/aimd-core/compatibility).
+
+## Example Records
+
+Use `getAimdFieldExampleCandidates(field, options)` from `@airalogy/aimd-core/utils` to inspect the ordered candidates for a preview field. Declared field examples and defaults take precedence over type fallbacks. A file reference or context field returns no candidates.
+
+Provide the published variables schema with `variablesSchema` if available. For a numeric field constrained to 20–40, validation can discard the initial candidate `0`. `ATCG` supplies a portable sequence example and `BloodType` uses its declared enum. Use Recorder validation before accepting candidates.

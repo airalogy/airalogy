@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from airalogy.markdown import generate_model
 from airalogy.types.registry import (
     AiralogyTypeDescriptor,
@@ -129,3 +131,25 @@ def test_generate_model_imports_registered_external_types():
         assert "sample_matrix: SpecimenMatrix" in code
     finally:
         unregister_airalogy_type("SpecimenMatrix")
+
+
+def test_preview_metadata_comes_from_type_descriptors_without_setting_defaults():
+    from pydantic import TypeAdapter
+    from airalogy import types as airalogy_types
+
+    metadata = export_airalogy_type_metadata(load_plugins=False)["types"]
+    assert metadata["BloodType"]["preview"] == {"kind": "enum"}
+    for name in ("ATCG", "SnakeStr", "VersionStr"):
+        adapter = TypeAdapter(getattr(airalogy_types, name))
+        preview = metadata[name]["preview"]
+        assert preview["kind"] == "examples"
+        assert all(adapter.validate_python(value) == value for value in preview["values"])
+        assert "default" not in adapter.json_schema()
+    for name in ("FileIdPNG", "ResourceRef", "CurrentRecordId", "UserName", "Observation"):
+        assert metadata[name]["preview"] == {"kind": "skip"}
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), 2**53, {"ref": "missing"}])
+def test_unportable_type_examples_are_rejected(value):
+    with pytest.raises(ValueError, match="portable JSON scalar"):
+        AiralogyTypeDescriptor("Example", storage_kind="scalar", preview_examples=(value,))

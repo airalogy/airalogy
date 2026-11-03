@@ -7,7 +7,10 @@
       "storage_kind": "scalar",
       "ui_kind": "current-user",
       "type": "string",
-      "description": "The user name of the current Airalogy user"
+      "description": "The user name of the current Airalogy user",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "CurrentTime": {
       "type_name": "CurrentTime",
@@ -15,21 +18,30 @@
       "storage_kind": "scalar",
       "ui_kind": "current-time",
       "type": "string",
-      "description": "The current time. The timezone is based on the user's browser."
+      "description": "The current time. The timezone is based on the user's browser.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "CurrentProtocolId": {
       "type_name": "CurrentProtocolId",
       "import_from": "airalogy.types",
       "storage_kind": "scalar",
       "type": "string",
-      "description": "The ID of the current Airalogy Protocol."
+      "description": "The ID of the current Airalogy Protocol.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "CurrentRecordId": {
       "type_name": "CurrentRecordId",
       "import_from": "airalogy.types",
       "storage_kind": "scalar",
       "type": "string",
-      "description": "The ID of the current Airalogy Record."
+      "description": "The ID of the current Airalogy Record.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "EntityRef": {
       "type_name": "EntityRef",
@@ -38,7 +50,10 @@
       "ui_kind": "entity-ref",
       "type": "object",
       "title": "EntityRef",
-      "description": "Reference to a named entity in a connector-backed source.\n\n`entity` is the entity namespace, such as plasmid or strain. `id` is the\nstable identifier inside that namespace/source. Extra fields are allowed so\nhosts can retain display snapshots or source-specific reference metadata."
+      "description": "Reference to a named entity in a connector-backed source.\n\n`entity` is the entity namespace, such as plasmid or strain. `id` is the\nstable identifier inside that namespace/source. Extra fields are allowed so\nhosts can retain display snapshots or source-specific reference metadata.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "ResourceRef": {
       "type_name": "ResourceRef",
@@ -47,7 +62,10 @@
       "ui_kind": "resource-ref",
       "type": "object",
       "title": "ResourceRef",
-      "description": "Stable reference to a Platform-managed resource.\n\nQuantities are represented by :class:`~decimal.Decimal` in Python and are\nserialized as strings so a Record never loses precision while crossing a\nJSON or JavaScript boundary."
+      "description": "Stable reference to a Platform-managed resource.\n\nQuantities are represented by :class:`~decimal.Decimal` in Python and are\nserialized as strings so a Record never loses precision while crossing a\nJSON or JavaScript boundary.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "Observation": {
       "type_name": "Observation",
@@ -56,7 +74,10 @@
       "ui_kind": "observation",
       "type": "object",
       "title": "Observation",
-      "description": "A typed value with observation time, receipt time, and provenance."
+      "description": "A typed value with observation time, receipt time, and provenance.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "ObservationSeriesRef": {
       "type_name": "ObservationSeriesRef",
@@ -65,7 +86,10 @@
       "ui_kind": "observation-series",
       "type": "object",
       "title": "ObservationSeriesRef",
-      "description": "Reference to a file-backed high-volume observation series."
+      "description": "Reference to a file-backed high-volume observation series.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "BloodType": {
       "type_name": "BloodType",
@@ -89,7 +113,10 @@
         "O-",
         "Rh+",
         "Rh-"
-      ]
+      ],
+      "preview": {
+        "kind": "enum"
+      }
     },
     "ChineseEducationLevel": {
       "type_name": "ChineseEducationLevel",
@@ -108,7 +135,10 @@
         "本科",
         "硕士",
         "博士"
-      ]
+      ],
+      "preview": {
+        "kind": "enum"
+      }
     },
     "ChineseEthnicGroup": {
       "type_name": "ChineseEthnicGroup",
@@ -174,7 +204,10 @@
         "门巴族",
         "珞巴族",
         "基诺族"
-      ]
+      ],
+      "preview": {
+        "kind": "enum"
+      }
     },
     "ChineseGender": {
       "type_name": "ChineseGender",
@@ -186,7 +219,10 @@
       "enum": [
         "男",
         "女"
-      ]
+      ],
+      "preview": {
+        "kind": "enum"
+      }
     },
     "ChineseMaritalStatus": {
       "type_name": "ChineseMaritalStatus",
@@ -201,7 +237,10 @@
         "丧偶",
         "离婚",
         "再婚"
-      ]
+      ],
+      "preview": {
+        "kind": "enum"
+      }
     },
     "ChineseProvinceLevelRegion": {
       "type_name": "ChineseProvinceLevelRegion",
@@ -245,7 +284,10 @@
         "新疆",
         "香港",
         "澳门"
-      ]
+      ],
+      "preview": {
+        "kind": "enum"
+      }
     },
     "AiralogyMarkdown": {
       "type_name": "AiralogyMarkdown",
@@ -253,13 +295,20 @@
       "storage_kind": "scalar",
       "ui_kind": "markdown",
       "type": "string",
-      "description": "An Airalogy Markdown string"
+      "description": "An Airalogy Markdown string",
+      "preview": {
+        "kind": "examples",
+        "values": []
+      }
     },
     "RecordId": {
       "type_name": "RecordId",
       "import_from": "airalogy.types",
       "storage_kind": "scalar",
-      "type": "string"
+      "type": "string",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdPNG": {
       "type_name": "FileIdPNG",
@@ -267,7 +316,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdPNG. This type allows users to upload a .png file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdPNG. This type allows users to upload a .png file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdJPG": {
       "type_name": "FileIdJPG",
@@ -275,7 +327,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdJPG. This type allows users to upload a .jpg file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdJPG. This type allows users to upload a .jpg file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdSVG": {
       "type_name": "FileIdSVG",
@@ -283,7 +338,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdSVG. This type allows users to upload a .svg file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdSVG. This type allows users to upload a .svg file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdWEBP": {
       "type_name": "FileIdWEBP",
@@ -291,7 +349,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdWEBP. This type allows users to upload a .webp file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdWEBP. This type allows users to upload a .webp file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdTIFF": {
       "type_name": "FileIdTIFF",
@@ -299,7 +360,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdTIFF. This type allows users to upload a .tiff file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdTIFF. This type allows users to upload a .tiff file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdMP4": {
       "type_name": "FileIdMP4",
@@ -307,7 +371,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdMP4. This type allows users to upload a .mp4 file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdMP4. This type allows users to upload a .mp4 file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdMP3": {
       "type_name": "FileIdMP3",
@@ -315,7 +382,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdMP3. This type allows users to upload a .mp3 file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdMP3. This type allows users to upload a .mp3 file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdAIMD": {
       "type_name": "FileIdAIMD",
@@ -323,7 +393,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdAIMD. This type allows users to upload a .aimd file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdAIMD. This type allows users to upload a .aimd file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdMD": {
       "type_name": "FileIdMD",
@@ -331,7 +404,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdMD. This type allows users to upload a .md file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdMD. This type allows users to upload a .md file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdTXT": {
       "type_name": "FileIdTXT",
@@ -339,7 +415,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdTXT. This type allows users to upload a .txt file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdTXT. This type allows users to upload a .txt file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdCSV": {
       "type_name": "FileIdCSV",
@@ -347,7 +426,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdCSV. This type allows users to upload a .csv file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdCSV. This type allows users to upload a .csv file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdJSON": {
       "type_name": "FileIdJSON",
@@ -355,7 +437,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdJSON. This type allows users to upload a .json file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdJSON. This type allows users to upload a .json file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdDOCX": {
       "type_name": "FileIdDOCX",
@@ -363,7 +448,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdDOCX. This type allows users to upload a .docx file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdDOCX. This type allows users to upload a .docx file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdXLSX": {
       "type_name": "FileIdXLSX",
@@ -371,7 +459,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdXLSX. This type allows users to upload a .xlsx file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdXLSX. This type allows users to upload a .xlsx file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdPPTX": {
       "type_name": "FileIdPPTX",
@@ -379,7 +470,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdPPTX. This type allows users to upload a .pptx file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdPPTX. This type allows users to upload a .pptx file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdPDF": {
       "type_name": "FileIdPDF",
@@ -387,7 +481,10 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdPDF. This type allows users to upload a .pdf file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdPDF. This type allows users to upload a .pdf file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "FileIdDNA": {
       "type_name": "FileIdDNA",
@@ -395,20 +492,29 @@
       "storage_kind": "file-id",
       "ui_kind": "file",
       "type": "string",
-      "description": "Airalogy built-in type: FileIdDNA. This type allows users to upload a .dna file and inject it into the related data field."
+      "description": "Airalogy built-in type: FileIdDNA. This type allows users to upload a .dna file and inject it into the related data field.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "Recommended": {
       "type_name": "Recommended",
       "import_from": "airalogy.types",
       "storage_kind": "scalar",
-      "type": "object"
+      "type": "object",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "IgnoreStr": {
       "type_name": "IgnoreStr",
       "import_from": "airalogy.types",
       "storage_kind": "scalar",
       "type": "string",
-      "description": "In an Airalogy Field of this type, a user may provide a string; however, when the Airalogy Record is submitted, the string is not persisted. This is intended for sensitive input (such as an API key) that the Airalogy Protocol Assigner can consume during processing but that should never be stored in the final Record."
+      "description": "In an Airalogy Field of this type, a user may provide a string; however, when the Airalogy Record is submitted, the string is not persisted. This is intended for sensitive input (such as an API key) that the Airalogy Protocol Assigner can consume during processing but that should never be stored in the final Record.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "CodeStr": {
       "type_name": "CodeStr",
@@ -416,7 +522,11 @@
       "storage_kind": "scalar",
       "ui_kind": "code",
       "type": "string",
-      "description": "Airalogy built-in type: CodeStr (plaintext). Strings of this type contain language-agnostic code or structured text and are rendered in a plain code editor."
+      "description": "Airalogy built-in type: CodeStr (plaintext). Strings of this type contain language-agnostic code or structured text and are rendered in a plain code editor.",
+      "preview": {
+        "kind": "examples",
+        "values": []
+      }
     },
     "PyStr": {
       "type_name": "PyStr",
@@ -424,7 +534,11 @@
       "storage_kind": "scalar",
       "ui_kind": "code",
       "type": "string",
-      "description": "Airalogy built-in type: CodeStr (python). Strings of this type contain python source code and are rendered in an editor with python syntax highlighting."
+      "description": "Airalogy built-in type: CodeStr (python). Strings of this type contain python source code and are rendered in an editor with python syntax highlighting.",
+      "preview": {
+        "kind": "examples",
+        "values": []
+      }
     },
     "JsStr": {
       "type_name": "JsStr",
@@ -432,7 +546,11 @@
       "storage_kind": "scalar",
       "ui_kind": "code",
       "type": "string",
-      "description": "Airalogy built-in type: CodeStr (javascript). Strings of this type contain javascript source code and are rendered in an editor with javascript syntax highlighting."
+      "description": "Airalogy built-in type: CodeStr (javascript). Strings of this type contain javascript source code and are rendered in an editor with javascript syntax highlighting.",
+      "preview": {
+        "kind": "examples",
+        "values": []
+      }
     },
     "TsStr": {
       "type_name": "TsStr",
@@ -440,7 +558,11 @@
       "storage_kind": "scalar",
       "ui_kind": "code",
       "type": "string",
-      "description": "Airalogy built-in type: CodeStr (typescript). Strings of this type contain typescript source code and are rendered in an editor with typescript syntax highlighting."
+      "description": "Airalogy built-in type: CodeStr (typescript). Strings of this type contain typescript source code and are rendered in an editor with typescript syntax highlighting.",
+      "preview": {
+        "kind": "examples",
+        "values": []
+      }
     },
     "JsonStr": {
       "type_name": "JsonStr",
@@ -448,7 +570,11 @@
       "storage_kind": "scalar",
       "ui_kind": "code",
       "type": "string",
-      "description": "Airalogy built-in type: CodeStr (json). Strings of this type contain json source code and are rendered in an editor with json syntax highlighting."
+      "description": "Airalogy built-in type: CodeStr (json). Strings of this type contain json source code and are rendered in an editor with json syntax highlighting.",
+      "preview": {
+        "kind": "examples",
+        "values": []
+      }
     },
     "TomlStr": {
       "type_name": "TomlStr",
@@ -456,7 +582,11 @@
       "storage_kind": "scalar",
       "ui_kind": "code",
       "type": "string",
-      "description": "Airalogy built-in type: CodeStr (toml). Strings of this type contain toml source code and are rendered in an editor with toml syntax highlighting."
+      "description": "Airalogy built-in type: CodeStr (toml). Strings of this type contain toml source code and are rendered in an editor with toml syntax highlighting.",
+      "preview": {
+        "kind": "examples",
+        "values": []
+      }
     },
     "YamlStr": {
       "type_name": "YamlStr",
@@ -464,14 +594,25 @@
       "storage_kind": "scalar",
       "ui_kind": "code",
       "type": "string",
-      "description": "Airalogy built-in type: CodeStr (yaml). Strings of this type contain yaml source code and are rendered in an editor with yaml syntax highlighting."
+      "description": "Airalogy built-in type: CodeStr (yaml). Strings of this type contain yaml source code and are rendered in an editor with yaml syntax highlighting.",
+      "preview": {
+        "kind": "examples",
+        "values": []
+      }
     },
     "ATCG": {
       "type_name": "ATCG",
       "import_from": "airalogy.types",
       "storage_kind": "scalar",
       "ui_kind": "dna-text",
-      "type": "string"
+      "type": "string",
+      "preview": {
+        "kind": "examples",
+        "values": [
+          "ATCG"
+        ]
+      },
+      "pattern": "^[ATCG]*$"
     },
     "DNASequence": {
       "type_name": "DNASequence",
@@ -480,25 +621,45 @@
       "ui_kind": "dna-sequence",
       "type": "object",
       "title": "DNASequence",
-      "description": "Structured DNA sequence value used by Airalogy's dedicated sequence editor.\n\nThis model intentionally stays simpler than full GenBank flatfiles while\npreserving the core pieces needed for practical import/export alignment:\nmulti-segment feature locations, partial flags, and qualifier rows."
+      "description": "Structured DNA sequence value used by Airalogy's dedicated sequence editor.\n\nThis model intentionally stays simpler than full GenBank flatfiles while\npreserving the core pieces needed for practical import/export alignment:\nmulti-segment feature locations, partial flags, and qualifier rows.",
+      "preview": {
+        "kind": "skip"
+      }
     },
     "SnakeStr": {
       "type_name": "SnakeStr",
       "import_from": "airalogy.types",
       "storage_kind": "scalar",
-      "type": "string"
+      "type": "string",
+      "preview": {
+        "kind": "examples",
+        "values": [
+          "example_sample"
+        ]
+      },
+      "pattern": "^(?!.*__)[a-z](?:[a-z\\d_]*[a-z\\d])?$"
     },
     "VersionStr": {
       "type_name": "VersionStr",
       "import_from": "airalogy.types",
       "storage_kind": "scalar",
-      "type": "string"
+      "type": "string",
+      "preview": {
+        "kind": "examples",
+        "values": [
+          "0.1.0"
+        ]
+      },
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
     },
     "ProtocolId": {
       "type_name": "ProtocolId",
       "import_from": "airalogy.types",
       "storage_kind": "scalar",
-      "type": "string"
+      "type": "string",
+      "preview": {
+        "kind": "skip"
+      }
     }
   }
 }

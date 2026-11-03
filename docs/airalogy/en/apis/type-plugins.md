@@ -156,3 +156,7 @@ The Airalogy registry does not define frontend widgets by itself. It defines the
 See the AIMD docs for the frontend half of this design:
 
 - [`Type Plugins`](https://airalogy.github.io/airalogy/aimd/en/packages/type-plugins)
+
+## Example Record metadata
+
+Registered scalar enums export an enum preview policy. A scalar descriptor can instead declare portable preview values with `preview_examples=("example",)`. Built-in metadata is synchronized to the npm core by `pnpm sync:aimd-type-metadata`. An empty tuple allows only examples or defaults supplied by the field. Other descriptors export a skip policy. The bundled npm registry includes official types. Python callers can request plugin metadata with `export_airalogy_type_metadata(load_plugins=True)`. Preview values apply only when an application explicitly builds an example Record.
