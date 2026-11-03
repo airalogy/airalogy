@@ -28,6 +28,7 @@ import '@milkdown/kit/prose/tables/style/tables.css'
 import { aimdMilkdownPlugins, createAimdAuthoringPlugins, type AimdInputEditRequest } from './milkdown-aimd-plugin'
 import { createProgrammaticMarkdownSyncGuard } from './programmaticMarkdownSyncGuard'
 import { normalizeComparableAimdMarkdown } from './comparableAimdMarkdown'
+import { codeBlockMetadataSchema } from './milkdown-code-block-metadata'
 import type { AimdFieldType } from './types'
 import type { AimdEditorMessages } from './locales'
 
@@ -333,6 +334,7 @@ const MilkdownEditorInner = defineComponent({
             })
         })
         .use(commonmark)
+        .use(codeBlockMetadataSchema)
         .use(gfm)
         .use(history)
         .use(listener)
