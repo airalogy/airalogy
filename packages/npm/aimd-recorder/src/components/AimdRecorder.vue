@@ -1433,7 +1433,10 @@ function renderInlineVarTable(node: AimdVarTableNode): VNode {
       : undefined,
     assignerError: tableAssignerControl?.state?.error,
     onCellInput: (payload: { tableName: string, column: string, rowIndex: number, value: string, row: Record<string, string> }) => {
-      payload.row[payload.column] = payload.value
+      // Normalization can replace row objects while an inline VNode still holds an older row.
+      const currentRows = localRecord.var[payload.tableName]
+      if (!Array.isArray(currentRows) || !currentRows[payload.rowIndex]) return
+      currentRows[payload.rowIndex][payload.column] = payload.value
       markRecordChanged({ runClientAssigners: true })
       const validationFieldKey = getAimdVarTableCellFieldKey(payload.tableName, payload.rowIndex, payload.column)
       emit("field-change", {
