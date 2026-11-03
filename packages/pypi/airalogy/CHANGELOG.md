@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.18.0
+
+### Minor Changes
+
+- 28de12b: Export preview policies from the Python type registry, expose deterministic field example candidates, and generate validated in-memory example Records from parsed AIMD. File references, context fields, and calculated outputs are skipped.
+
 ## 0.17.0
 
 ### Minor Changes
