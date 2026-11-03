@@ -13,6 +13,7 @@
 | `ai-glasses-vinegar-titration` | AI 眼镜：白醋总酸度滴定 | `zh-CN` | 否 | 18 步，覆盖定量稀释、液面读数、终点计时、平行质控和中断恢复。[测试指南](./ai-glasses-vinegar-titration/zh-CN/README.zh-CN.md)。 |
 | `ai-glasses-leaf-disk-photosynthesis` | AI 眼镜：叶圆片光合作用 | `zh-CN` | 否 | 19 步，覆盖浸润、三组对照、重复观察、ET50 区间和计数纠正。[测试指南](./ai-glasses-leaf-disk-photosynthesis/zh-CN/README.zh-CN.md)。 |
 | `field-water-sample-observation` | 野外水样观测与环境扰动分析 | `zh-CN` | 否 | 野外水样采集、当天气象场地记录、水化学与生化环境判读、季风和极端降雨扰动分析。 |
+| `surface-water-quality-review` | 地表水监测数据复核 | `zh-CN` | 否 | 填写读数 → 自动比对 → 资料追溯，附三组模拟记录和 [3 / 5 / 8 分钟分层演示指南](./surface-water-quality-review/zh-CN/README.zh-CN.md)。 |
 | `literature-review-assistant` | AI 辅助文献调研与证据综述 | `zh-CN` | 是 | 配置 OpenAI 兼容联网大模型，完成候选文献初筛、人工证据提取、质量评价和综述草稿生成。 |
 | `stock-fundamental-analysis-assistant` | AI 辅助股票基本面分析 | `zh-CN` | 是 | 输入股票代码和公司名称，配置 OpenAI 兼容联网大模型，整理公开财报、业务分部、财务质量、估值比较、风险清单和研究报告草稿。 |
 | `monitoring-site-flow-graph-3d-print` | 监测站点物理约束图与 3D 打印参数 | `zh-CN` | 是 | 基于站点经纬度和海拔生成物理约束有向图，并输出 3D 打印节点、边、缩放和结构参数。 |

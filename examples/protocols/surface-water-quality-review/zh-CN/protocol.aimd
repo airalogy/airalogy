@@ -1,0 +1,180 @@
+# 地表水监测数据复核
+
+以一次溶解氧（DO）数据复核为例，填写监测读数、查看比对结果，并关联原始资料。
+
+> 演示案例：示例数据为模拟值；计算阈值仅用于功能展示，不作为正式监测判据。
+
+## 一、填写监测读数
+
+{{step|register_task, title="建立核查任务", check=True}}
+
+登记本次任务和核查点位。
+
+任务编号：{{var|task_id: str, title="任务编号", examples=["DEMO-WQ-001"]}}
+
+核查点位：{{var|site_name: str, title="点位名称", examples=["演示河道 A 断面（虚构）"]}}
+
+任务类型：{{var|task_reason: Literal["例行比对", "自动站异常提示", "质控异常复查"], title="任务类型"}}
+
+{{step|record_readings, title="记录现场重复读数", check=True}}
+
+录入一个自动站读数和两次现场重复读数，单位均为 mg/L。每条记录填写一组配对；未测值留空，复测另建记录。根据已核实的仪器和配对条件选择是或否，尚未确认时留空。
+
+{{var|reading_pairs: list[WaterReadingPair] = [], title="DO 原始比对读数（mg/L）", subvars=[
+    var(pair_id: str, title="配对编号"),
+    var(auto_do: float | None = None, title="自动站 DO", ge=0),
+    var(field_do_1: float | None = None, title="现场第 1 次", ge=0),
+    var(field_do_2: float | None = None, title="现场第 2 次", ge=0),
+    var(calibration_valid: Literal["是", "否"] | None = None, title="仪器核查有效"),
+    var(comparable: Literal["是", "否"] | None = None, title="可比性确认")
+]}}
+
+现场测量备注：{{var|measurement_note: str | None = None, title="探头、稳定性和重复读数说明"}}
+
+## 二、查看比对结果
+
+{{step|review_comparison, title="检查质控与比对结果", check=True}}
+
+下表自动计算现场均值、两次读数的相对百分差（RPD）以及与自动站的差值。原始读数更新后，结果同步更新。
+
+{{var|comparison_results: list[WaterComparisonResult] = [], title="计算结果（演示规则）", subvars=[
+    var(pair_id: str, title="配对编号"),
+    var(field_mean: float | None = None, title="现场均值 mg/L", ge=0),
+    var(repeat_rpd: float | None = None, title="重复读数 RPD %", ge=0),
+    var(absolute_difference: float | None = None, title="绝对差 mg/L", ge=0),
+    var(status: str, title="待办/规则结果")
+]}}
+
+{{var|review_brief: AiralogyMarkdown | None = None, title="复核摘要"}}
+
+演示规则 `DEMO-DO-001 v1`：先确认仪器和配对条件，再检查 RPD ≤ 10%、绝对差 ≤ 0.50 mg/L；现场均值 < 5.00 mg/L 时另行提示复核。
+
+{{step|document_actions, title="记录核查措施与复测关联", check=True}}
+
+根据提示选择核查措施，记录处理情况；如需复测，保留本次读数并关联新记录。
+
+核查措施：{{var|actions: list[Literal["核对原始数据", "复核配对条件", "核查仪器", "重新测量", "安排实验室复核", "按程序报告负责人"]] | None = None, title="核查措施"}}
+
+异常事实与处理依据：{{var|action_note: str | None = None, title="事实、证据与处置说明"}}
+
+关联复测任务/Record 编号：{{var|followup_record_id: str | None = None, title="后续记录关联"}}
+
+## 三、补充追溯信息
+
+{{step|verify_equipment, title="关联人员与仪器记录", check=True}}
+
+关联本次测量的人员、方法和仪器核查记录。
+
+现场人员：{{var|field_operator: str, title="现场人员"}}
+
+方法与版本依据：{{var|method_reference: str, title="方法及任务方案版本", examples=["DEMO-DO-001 v1"]}}
+
+现场情况：{{var|site_observation: str | None = None, title="天气、水位及现场扰动"}}
+
+现场仪器编号：{{var|field_instrument_id: str, title="现场仪器编号"}}
+
+仪器核查凭证：{{var|calibration_reference: str, title="校准或核查记录编号"}}
+
+{{check|safety_reviewed, title="现场安全确认"}} 已按现场作业要求确认安全条件。
+
+{{step|pair_source_data, title="关联原始数据与配对依据", check=True}}
+
+记录数据来源和时间，并注明点位、取水位置、时间窗、方法、单位及补偿条件的配对依据。
+
+点位编码：{{var|site_code: str, title="点位编码", examples=["DEMO-SITE-A"]}}
+
+自动站编号：{{var|auto_station_id: str, title="自动站编号"}}
+
+原始数据批次/文件编号：{{var|source_batch_id: str, title="原系统数据批次"}}
+
+自动站数据时间：{{var|auto_observed_at: datetime, title="自动站数据时间"}}
+
+现场测量时间：{{var|field_observed_at: datetime, title="现场测量时间"}}
+
+配对条件及依据：{{var|pairing_basis: str, title="时间窗、位置、方法与补偿条件"}}
+
+原始 CSV 附件（可选）：{{var|source_attachment: FileIdCSV | None = None, title="原始数据或仪器导出 CSV"}}
+
+{{step|track_samples, title="记录采样与样品交接", check=True}}
+
+需要实验室补充检测时，按检测项目的批准方法填写保存和交接信息；无送检样品时留空。
+
+{{var|samples: list[WaterReviewSample] = [], title="送检样品与交接", subvars=[
+    var(sample_id: str, title="样品编号"),
+    var(test_items: str, title="拟复核项目"),
+    var(preservation_basis: str, title="保存方式及方法依据"),
+    var(handover_reference: str | None = None, title="交接单及时间"),
+    var(receipt_status: Literal["未送检", "待接收", "已接收", "接收异常"] | None = None, title="接收状态")
+]}}
+
+实验室复核结果/附件编号：{{var|lab_review_reference: str | None = None, title="实验室复核记录关联"}}
+
+{{step|human_review, title="人工复核并整理交付", check=True}}
+
+回看 {{ref_step|record_readings}}、{{ref_step|pair_source_data}} 和 {{ref_step|track_samples}}，核对原始资料、计算结果和处理情况，填写复核意见。
+
+{{check|raw_evidence_reviewed, title="原始资料与质控人工复核"}} 已核对原始记录、计算条件及未关闭事项。
+
+技术复核意见：{{var|review_decision: Literal["待复核", "需补测或补证", "已完成技术复核（演示）"] | None = None, title="人工复核意见"}}
+
+复核人：{{var|reviewer: str | None = None, title="复核人"}}
+
+复核说明：{{var|review_note: str | None = None, title="复核说明"}}
+
+```assigner runtime=client
+assigner(
+  {
+    mode: "auto",
+    dependent_fields: ["reading_pairs"],
+    assigned_fields: ["comparison_results", "review_brief"],
+  },
+  function review_water_pairs({ reading_pairs }) {
+    const pairs = Array.isArray(reading_pairs) ? reading_pairs : [];
+    let results = [];
+    if (pairs.length > 0) {
+      const item = pairs[0] || {};
+      const id = typeof item.pair_id === "string" ? item.pair_id.trim() : "";
+      const result = { pair_id: id || "未填写", field_mean: null, repeat_rpd: null, absolute_difference: null, status: "待补充原始读数" };
+      const aRaw = typeof item.auto_do === "string" ? item.auto_do.trim() : item.auto_do;
+      const xRaw = typeof item.field_do_1 === "string" ? item.field_do_1.trim() : item.field_do_1;
+      const yRaw = typeof item.field_do_2 === "string" ? item.field_do_2.trim() : item.field_do_2;
+      const a = Number(aRaw);
+      const x = Number(xRaw);
+      const y = Number(yRaw);
+      if (pairs.length !== 1) {
+        result.status = "一条记录只允许一次配对，请拆分记录";
+      } else if (!id || aRaw === null || aRaw === undefined || aRaw === "" || xRaw === null || xRaw === undefined || xRaw === "" || yRaw === null || yRaw === undefined || yRaw === "") {
+        result.status = "待补充原始读数";
+      } else if ((typeof aRaw !== "number" && typeof aRaw !== "string") || (typeof xRaw !== "number" && typeof xRaw !== "string") || (typeof yRaw !== "number" && typeof yRaw !== "string") || !Number.isFinite(a) || !Number.isFinite(x) || !Number.isFinite(y) || a < 0 || x < 0 || y < 0) {
+        result.status = "输入不合法，请核对";
+      } else if (item.calibration_valid !== "是") {
+        result.status = item.calibration_valid === "否" ? "仪器核查未通过" : "待确认仪器核查";
+      } else if (item.comparable !== "是") {
+        result.status = item.comparable === "否" ? "不可直接比对" : "待确认可比性";
+      } else {
+        const mean = x / 2 + y / 2;
+        result.field_mean = Number(mean.toFixed(2));
+        if (mean === 0) {
+          result.status = "零均值，需另行复核";
+        } else {
+          const rpd = Math.abs(x - y) / mean * 100;
+          result.repeat_rpd = Number(rpd.toFixed(2));
+          if (rpd > 10) {
+            result.status = "重复读数需复测";
+          } else {
+            const difference = Math.abs(a - mean);
+            result.absolute_difference = Number(difference.toFixed(2));
+            result.status = difference > 0.5 ? "比对差异需核查" : mean < 5 ? "一致但低值待复核" : "演示规则内一致";
+          }
+        }
+      }
+      results = [result];
+    }
+    const conclusion = results.length === 0 ? "尚无配对读数，请补充。" : results[0].status;
+    return {
+      comparison_results: results,
+      review_brief: "### DO 复核摘要\n\n配对记录：" + pairs.length + " 条。\n\n" + conclusion + "\n\n演示规则：DEMO-DO-001 v1。",
+    };
+  }
+);
+```

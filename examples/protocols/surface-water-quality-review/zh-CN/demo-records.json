@@ -1,0 +1,110 @@
+{
+  "description": "Synthetic demonstration records only. No real monitoring data or authenticated approvals.",
+  "records": [
+    {
+      "record_id": "DEMO-WQ-001-consistent",
+      "record_version": 1,
+      "data": {
+        "var": {
+          "task_id": "DEMO-WQ-001",
+          "site_name": "演示河道 A 断面（虚构）",
+          "site_code": "DEMO-SITE-A",
+          "task_reason": "例行比对",
+          "field_operator": "演示采样员 A（虚构）",
+          "method_reference": "DEMO-DO-001 v1",
+          "site_observation": "模拟晴天，无明显现场扰动。",
+          "field_instrument_id": "DEMO-METER-01",
+          "calibration_reference": "DEMO-CAL-001（虚构核查凭证）",
+          "auto_station_id": "DEMO-AUTO-A",
+          "source_batch_id": "DEMO-SOURCE-001（合成数据）",
+          "auto_observed_at": "2026-11-03T09:00:00+08:00",
+          "field_observed_at": "2026-11-03T09:05:00+08:00",
+          "pairing_basis": "模拟配对：同点位、同单位，时间间隔 5 分钟；方法与补偿条件一致。",
+          "reading_pairs": [{ "pair_id": "PAIR-001", "auto_do": 6.7, "field_do_1": 6.8, "field_do_2": 6.6, "calibration_valid": "是", "comparable": "是" }],
+          "samples": [],
+          "measurement_note": "两次现场重复读数稳定，本次无送检样品。",
+          "source_attachment": null,
+          "lab_review_reference": null,
+          "review_brief": null,
+          "actions": null,
+          "action_note": null,
+          "followup_record_id": null,
+          "reviewer": null,
+          "review_note": null,
+          "review_decision": "待复核"
+        },
+        "step": {}, "check": {}, "quiz": {}
+      }
+    },
+    {
+      "record_id": "DEMO-WQ-002-discrepancy",
+      "record_version": 1,
+      "data": {
+        "var": {
+          "task_id": "DEMO-WQ-002",
+          "site_name": "演示河道 A 断面（虚构）",
+          "site_code": "DEMO-SITE-A",
+          "task_reason": "自动站异常提示",
+          "field_operator": "演示采样员 A（虚构）",
+          "method_reference": "DEMO-DO-001 v1",
+          "site_observation": "合成场景：自动站低值提示后开展现场核查，原因未知。",
+          "field_instrument_id": "DEMO-METER-01",
+          "calibration_reference": "DEMO-CAL-002（虚构核查凭证）",
+          "auto_station_id": "DEMO-AUTO-A",
+          "source_batch_id": "DEMO-SOURCE-002（合成数据）",
+          "auto_observed_at": "2026-11-03T10:00:00+08:00",
+          "field_observed_at": "2026-11-03T10:05:00+08:00",
+          "pairing_basis": "模拟配对：同点位、同单位，时间间隔 5 分钟；方法与补偿条件一致。",
+          "reading_pairs": [{ "pair_id": "PAIR-002", "auto_do": 3.2, "field_do_1": 6.8, "field_do_2": 6.6, "calibration_valid": "是", "comparable": "是" }],
+          "samples": [{ "sample_id": "DEMO-SAMPLE-002", "test_items": "补充检测项目待确认", "preservation_basis": "待检测项目确定后按批准方法填写", "handover_reference": null, "receipt_status": "未送检" }],
+          "actions": ["核对原始数据", "复核配对条件", "核查仪器"],
+          "action_note": "已记录自动站与现场读数差异，待核查原因。",
+          "source_attachment": null,
+          "measurement_note": null,
+          "lab_review_reference": null,
+          "review_brief": null,
+          "followup_record_id": null,
+          "reviewer": null,
+          "review_note": null,
+          "review_decision": "待复核"
+        },
+        "step": {}, "check": {}, "quiz": {}
+      }
+    },
+    {
+      "record_id": "DEMO-WQ-003-repeatability",
+      "record_version": 1,
+      "data": {
+        "var": {
+          "task_id": "DEMO-WQ-003",
+          "site_name": "演示河道 A 断面（虚构）",
+          "site_code": "DEMO-SITE-A",
+          "task_reason": "质控异常复查",
+          "field_operator": "演示采样员 B（虚构）",
+          "method_reference": "DEMO-DO-001 v1",
+          "site_observation": "合成场景：重复读数不一致，待排查测量条件。",
+          "field_instrument_id": "DEMO-METER-02",
+          "calibration_reference": "DEMO-CAL-003（虚构核查凭证）",
+          "auto_station_id": "DEMO-AUTO-A",
+          "source_batch_id": "DEMO-SOURCE-003（合成数据）",
+          "auto_observed_at": "2026-11-03T11:00:00+08:00",
+          "field_observed_at": "2026-11-03T11:05:00+08:00",
+          "pairing_basis": "模拟配对：同点位、同单位，时间间隔 5 分钟；方法与补偿条件一致。",
+          "reading_pairs": [{ "pair_id": "PAIR-003", "auto_do": 5.0, "field_do_1": 6.8, "field_do_2": 3.2, "calibration_valid": "是", "comparable": "是" }],
+          "samples": [],
+          "actions": ["核查仪器", "重新测量"],
+          "action_note": "已保留两次原始读数，安排仪器核查与重新测量。",
+          "source_attachment": null,
+          "measurement_note": null,
+          "lab_review_reference": null,
+          "review_brief": null,
+          "followup_record_id": null,
+          "reviewer": null,
+          "review_note": null,
+          "review_decision": "需补测或补证"
+        },
+        "step": {}, "check": {}, "quiz": {}
+      }
+    }
+  ]
+}

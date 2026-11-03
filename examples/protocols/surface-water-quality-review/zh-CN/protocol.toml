@@ -1,0 +1,10 @@
+[airalogy_protocol]
+id = "surface_water_quality_review_zh"
+version = "0.1.0"
+name = "地表水监测数据复核"
+description = "从填写溶解氧读数开始，逐步展示自动比对、异常提示和资料追溯；使用模拟数据和演示规则。"
+authors = [{ name = "Airalogy" }]
+maintainers = [{ name = "Airalogy" }]
+disciplines = ["environmental monitoring", "water quality", "quality assurance"]
+keywords = ["地表水", "自动监测", "异常复核", "采样追溯", "质量控制", "演示"]
+license = "Apache-2.0"

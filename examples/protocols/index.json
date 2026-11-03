@@ -110,6 +110,19 @@
       "tags": ["AI眼镜", "AI-glasses", "biology", "photosynthesis", "step-guidance", "time-series"]
     },
     {
+      "id": "surface-water-quality-review",
+      "category": "environment",
+      "languages": ["zh-CN"],
+      "title": { "zh-CN": "地表水监测数据复核" },
+      "description": { "zh-CN": "从填写溶解氧读数开始，逐步展示自动比对、异常提示和资料追溯，附三组模拟记录。" },
+      "protocol_dir": { "zh-CN": "surface-water-quality-review/zh-CN" },
+      "entry": { "zh-CN": "surface-water-quality-review/zh-CN/protocol.aimd" },
+      "toml": { "zh-CN": "surface-water-quality-review/zh-CN/protocol.toml" },
+      "sample_data": { "zh-CN": ["surface-water-quality-review/zh-CN/demo-records.json"] },
+      "engine_required": false,
+      "tags": ["environment", "水质监测", "quality-control", "traceability", "client-assigner"]
+    },
+    {
       "id": "field-water-sample-observation",
       "category": "environment",
       "languages": [
