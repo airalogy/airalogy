@@ -36,6 +36,8 @@ pnpm add @airalogy/aimd-recorder @airalogy/aimd-core
 
 ## 快速开始
 
+在应用入口统一导入一次 `@airalogy/aimd-recorder/styles`。该入口同时包含编译后的 Vue 组件样式（含可视化表单工具栏和弹窗）以及 Recorder/Renderer 公共样式。发布包不能只加载 `src/styles/recorder.css`；通过工作区链接使用源码仓库时，请先构建 Recorder，确保匹配的 `dist/aimd-recorder.css` 已生成。
+
 检查点如 `{{check|safety_ready}} 确认手套和护目镜已佩戴。` 只显示一次类型标签。标记后的正文是检查要求；单独的检查点标记在没有正文时显示 ID。Recorder 不会把预览徽标或禁用的复选框当作正文，可视化编辑中也遵循这一规则。
 
 可视化编辑中的步骤使用全宽紧凑步骤栏，说明文字在下方保持可编辑。可选的 `title` 作为主要名称，稳定 ID 仅在详细模式下作为次要信息显示；没有标题时使用步骤编号，不再放大显示 ID。编号遵循整篇 Protocol，包括嵌套步骤。计时与备注操作集中排列，没有正文的步骤不会产生多余空白行。步骤设置弹窗可修改标题，不会重命名 Record 键，也不会重置完成状态、备注或计时数据。

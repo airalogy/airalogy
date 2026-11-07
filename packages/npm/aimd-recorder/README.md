@@ -36,6 +36,8 @@ Checkpoints accept an optional `title`, for example `{{check|safety_ready, title
 
 ## Quick Start
 
+Import `@airalogy/aimd-recorder/styles` once in the application entry. This includes both the compiled Vue component styles (including visual form toolbars and dialogs) and the shared Recorder/Renderer rules. Importing only `src/styles/recorder.css` is insufficient for the published package. When consuming the repository through a workspace link, build Recorder first so the matching `dist/aimd-recorder.css` exists.
+
 Checkpoints such as `{{check|safety_ready}} Confirm gloves and eye protection.` display one type badge. The following body text supplies the check instructions; a standalone marker falls back to its ID. Recorder does not treat the renderer's preview badge or disabled checkbox as body content, including in visual authoring.
 
 In visual authoring, steps appear as full-width, compact headers with their editable instructions underneath. An optional `title` is the primary label; the stable ID appears as secondary information only in detailed mode. Steps without a title use their number, never an oversized ID. Numbering follows the whole Protocol, including nested steps. Timer and note actions stay together; empty step bodies do not create a blank row. The step settings dialog edits the title without renaming the Record key or resetting completion, notes, or timers.

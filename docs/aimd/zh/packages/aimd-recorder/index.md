@@ -27,3 +27,5 @@ pnpm add @airalogy/aimd-recorder @airalogy/aimd-core
 - [AimdRecorder](/zh/packages/aimd-recorder/recorder)：在协议正文里直接渲染 recorder 输入控件。
 - [AimdRecorderEditor](/zh/packages/aimd-recorder/recorder-editor)：一边编辑 AIMD 结构，一边继续填写 recorder 数据。
 - [自定义](/zh/packages/aimd-recorder/customization)：适配字段组件、覆盖标签、或注入按 type 的专用行为。
+
+宿主应用应统一导入一次 `@airalogy/aimd-recorder/styles`。该入口包含编译后的 Vue 组件样式与 Recorder/Renderer 公共样式，使可视化输入工具栏和弹窗不再依赖其他编辑器偶然加载的样式。工作区链接使用者需要先构建 Recorder，再启动宿主应用。
