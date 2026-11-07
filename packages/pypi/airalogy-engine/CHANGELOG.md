@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.12
+
+### Patch Changes
+
+- Updated dependencies [f2043e7]
+  - airalogy@0.19.0
+
 ## 0.0.11
 
 ### Patch Changes

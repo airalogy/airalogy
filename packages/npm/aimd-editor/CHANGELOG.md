@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.13.1
+
+### Patch Changes
+
+- fd5422e: Preserve fenced-code metadata during visual editing and DOM round trips, including `runtime=client` on browser assigners. Loading or switching editor modes must not silently disable client calculations by rewriting their fence to a plain `assigner` block.
+
 ## 1.13.0
 
 ### Minor Changes

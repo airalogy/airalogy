@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.27.2
+
+### Patch Changes
+
+- 3b7ea21: Apply table cell edits to the current Record row before running client assigners, avoiding stale values when normalization has replaced the row object retained by an inline field view.
+- Updated dependencies [fd5422e]
+  - @airalogy/aimd-editor@1.13.1
+
 ## 1.27.1
 
 ### Patch Changes
