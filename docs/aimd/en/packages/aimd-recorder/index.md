@@ -27,3 +27,5 @@ pnpm add @airalogy/aimd-recorder @airalogy/aimd-core
 - [AimdRecorder](/en/packages/aimd-recorder/recorder): render a protocol inline and collect record data.
 - [AimdRecorderEditor](/en/packages/aimd-recorder/recorder-editor): keep editing AIMD structure while filling recorder data.
 - [Customization](/en/packages/aimd-recorder/customization): adapt built-in fields, override labels, or inject per-type behavior.
+
+Import `@airalogy/aimd-recorder/styles` once in the host application. It includes the compiled Vue component styles as well as the shared Recorder/Renderer rules, so the visual input toolbar and dialogs do not depend on accidentally loading another editor first. Workspace consumers must build Recorder before starting the host app.

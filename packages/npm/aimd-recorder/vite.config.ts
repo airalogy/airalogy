@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   build: {
     lib: {
+      cssFileName: 'aimd-recorder',
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         components: resolve(__dirname, 'src/components/index.ts'),

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.27.1
+
+### Patch Changes
+
+- 850cf3c: Include the compiled Vue component stylesheet in the public styles entry, restoring visual form toolbar spacing, dropdowns, and dialogs in hosts that consume the published Recorder build. Validate matching scoped styles as part of the package build.
+
 ## 1.27.0
 
 ### Minor Changes

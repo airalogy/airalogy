@@ -1,0 +1,4 @@
+/* Keep the scoped styles emitted with the compiled Vue components together
+ * with the shared Recorder/Renderer rules behind the public styles entry. */
+@import "../../dist/aimd-recorder.css";
+@import "./recorder.css";

@@ -1,7 +1,7 @@
 {
   "name": "@airalogy/aimd-recorder",
   "type": "module",
-  "version": "1.27.0",
+  "version": "1.27.1",
   "description": "AIMD (Airalogy Markdown) recorder Vue components and UI",
   "license": "Apache-2.0",
   "repository": {
@@ -38,8 +38,8 @@
       "import": "./dist/record.js"
     },
     "./styles": {
-      "import": "./src/styles/recorder.css",
-      "default": "./src/styles/recorder.css"
+      "import": "./src/styles/index.css",
+      "default": "./src/styles/index.css"
     }
   },
   "main": "./dist/index.js",
@@ -53,7 +53,7 @@
   ],
   "scripts": {
     "type-check": "vue-tsc --noEmit",
-    "build": "vite build",
+    "build": "vite build && node --test tests/package-styles.test.mjs",
     "dev": "vite build --watch",
     "test": "vitest run --config vitest.config.ts"
   },
