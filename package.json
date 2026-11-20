@@ -39,7 +39,7 @@
     "docs:airalogy-engine:build": "pnpm -C docs/airalogy-engine docs:build",
     "docs:airalogy-engine:preview": "pnpm -C docs/airalogy-engine docs:preview",
     "docs:aimd:dev": "pnpm -C docs/aimd docs:dev",
-    "docs:aimd:build": "DEMO_BASE=\"${BASE_PATH%/}/demo/\" pnpm --filter @airalogy/aimd-demo build && pnpm -C docs/aimd docs:build && rm -rf docs/aimd/.vitepress/dist/demo && mkdir -p docs/aimd/.vitepress/dist/demo && cp -R apps/aimd-demo/dist/. docs/aimd/.vitepress/dist/demo/ && node ./scripts/aimd/create-demo-route-shims.mjs",
+    "docs:aimd:build": "DEMO_BASE=\"${BASE_PATH%/}/demo/\" pnpm --filter '@airalogy/aimd-demo...' run build && pnpm -C docs/aimd docs:build && rm -rf docs/aimd/.vitepress/dist/demo && mkdir -p docs/aimd/.vitepress/dist/demo && cp -R apps/aimd-demo/dist/. docs/aimd/.vitepress/dist/demo/ && node ./scripts/aimd/create-demo-route-shims.mjs",
     "docs:aimd:preview": "pnpm -C docs/aimd docs:preview",
     "lock:python": "UV_CACHE_DIR=.uv-cache uv --directory packages/pypi/airalogy lock && UV_CACHE_DIR=.uv-cache uv --directory packages/pypi/airalogy-engine lock",
     "release:npm": "node scripts/release/publish-npm-packages.mjs",
