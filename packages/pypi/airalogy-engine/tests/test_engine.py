@@ -10,6 +10,8 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -562,6 +564,28 @@ class TestDebugMode:
 class TestBoxLifecycle:
     """Tests for AiralogyEngine-managed BoxLite box lifecycle."""
 
+    def test_box_status_without_event_loop(self):
+        engine = AiralogyEngine(_EXAMPLE_PROTOCOL)
+        state = SimpleNamespace(running=True)
+        engine._box = SimpleNamespace(
+            info=AsyncMock(return_value=SimpleNamespace(state=state))
+        )
+        assert engine.box_status() is state
+
+    @pytest.mark.asyncio
+    async def test_replaced_box_is_not_reused_after_status_lookup(self):
+        engine = AiralogyEngine(_EXAMPLE_PROTOCOL)
+        info = SimpleNamespace(state=SimpleNamespace(running=True))
+        replacement = SimpleNamespace(info=AsyncMock(return_value=info))
+
+        async def replace_during_lookup():
+            engine._box = replacement
+            return info
+
+        engine._box = SimpleNamespace(info=replace_during_lookup)
+        assert await engine._ensure_running_box() is replacement
+        replacement.info.assert_awaited_once()
+
     @pytest.mark.asyncio
     async def test_auto_stop_true_clears_box_after_command(
         self,
@@ -762,7 +786,7 @@ class TestConcurrency:
             def __init__(self):
                 self.stop_count = 0
 
-            def info(self):
+            async def info(self):
                 return FakeInfo()
 
             async def stop(self):
@@ -779,9 +803,6 @@ class TestConcurrency:
         max_running = 0
         both_started = asyncio.Event()
 
-        async def fake_ensure_running_box():
-            return fake_box
-
         async def fake_exec_command_with_timeout(box, command, timeout, env=None):
             nonlocal running, max_running
             running += 1
@@ -794,7 +815,6 @@ class TestConcurrency:
             running -= 1
             return FakeExecResult(), '{"success":true,"data":{}}', "", False
 
-        monkeypatch.setattr(engine, "_ensure_running_box", fake_ensure_running_box)
         monkeypatch.setattr(
             engine_module,
             "_exec_command_with_timeout",

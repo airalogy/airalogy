@@ -4,6 +4,7 @@ import os
 import tempfile
 import uuid
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,6 @@ _COPY_OPTIONS = CopyOptions(
     recursive=True,
     overwrite=True,
     follow_symlinks=False,
-    include_parent=False,
 )
 _BACKGROUND_CLEANUP_TASKS: set[asyncio.Task[Any]] = set()
 
@@ -171,7 +171,44 @@ def _is_running_state(state: BoxStateInfo | None) -> bool:
     return str(getattr(state, "status", "")).lower() == "running"
 
 
-class AiralogyEngine:
+async def _read_box_state(box: Box) -> BoxStateInfo:
+    return (await box.info()).state
+
+
+class _BoxStatus:
+    _box: Box | None
+    _box_active_counts: dict[str, int]
+
+    def box_status(self) -> BoxStateInfo | None:
+        """Return the current BoxLite state, or None when no box exists."""
+        box = self._box
+        if box is None:
+            return None
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(_read_box_state(box))
+        # The public API is synchronous, even for callers already inside an event loop.
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            return executor.submit(asyncio.run, _read_box_state(box)).result()
+
+    async def _current_running_box(self) -> Box | None:
+        while (box := self._box) is not None:
+            try:
+                running = _is_running_state(await _read_box_state(box))
+            except Exception:
+                running = False
+            # Another task may stop or replace the box while info() is pending.
+            if self._box is not box:
+                continue
+            if running:
+                return box
+            self._box = None
+            self._box_active_counts.pop(box.id, None)
+        return None
+
+
+class AiralogyEngine(_BoxStatus):
     """Protocol execution engine backed by a shared BoxLite runtime."""
 
     def __init__(
@@ -266,35 +303,16 @@ class AiralogyEngine:
         )
         return box
 
-    def box_status(self) -> BoxStateInfo | None:
-        """Return the current box state, or None when this engine has no box."""
-        box = self._box
-        if box is None:
-            return None
-        return box.info().state
-
     async def _ensure_running_box(self) -> Box:
-        box = self._box
+        box = await self._current_running_box()
         if box is not None:
-            try:
-                if _is_running_state(box.info().state):
-                    return box
-            except Exception:
-                pass
-            self._box = None
-            self._box_active_counts.pop(box.id, None)
+            return box
 
         new_box = await self._create_box()
-        current_box = self._box
+        current_box = await self._current_running_box()
         if current_box is not None:
-            try:
-                if _is_running_state(current_box.info().state):
-                    _track_background_cleanup(
-                        asyncio.create_task(_stop_box_best_effort(new_box))
-                    )
-                    return current_box
-            except Exception:
-                pass
+            _track_background_cleanup(asyncio.create_task(_stop_box_best_effort(new_box)))
+            return current_box
 
         self._box = new_box
         return new_box

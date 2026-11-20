@@ -56,7 +56,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "airalogy", editable = "../airalogy" },
-    { name = "boxlite", specifier = "==0.9.5" },
+    { name = "boxlite", specifier = "==0.10.8" },
 ]
 
 [package.metadata.requires-dev]
@@ -89,18 +89,18 @@ wheels = [
 
 [[package]]
 name = "boxlite"
-version = "0.9.5"
+version = "0.10.8"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/65/1c/0c6399665aeeb057312b50600aaf7b56791aa5d174e914363aa58542e5de/boxlite-0.9.5-cp313-cp313-macosx_14_0_arm64.whl", hash = "sha256:a092252f8df79cb8da95d2c6f8d5865f6917e9d41b24b27b3dd301ee66988813", size = 34861292, upload-time = "2026-05-16T13:47:44.081Z" },
-    { url = "https://files.pythonhosted.org/packages/90/24/7f51aca1d85e0c0bda82cc10af0c82f39b316fbca062738b030324501f78/boxlite-0.9.5-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:515cbab5376b4a81ad67e1f3aacae4692978d13710c2a412874c9d9ff5475556", size = 37010785, upload-time = "2026-05-16T13:47:47.414Z" },
-    { url = "https://files.pythonhosted.org/packages/62/7d/ce13d093e4f2653f28efd4ae89989a286f4aa00d910b051e90e44c2ee30b/boxlite-0.9.5-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:4e2df5236136c9f263114671c649a27c15fb57c809e15a8771cf0c9176c70c02", size = 33110395, upload-time = "2026-05-16T13:47:50.382Z" },
-    { url = "https://files.pythonhosted.org/packages/ee/8f/03ddd8915aebde31534e7b28b4a40e5b386e84ac0774760f60c81ec20b44/boxlite-0.9.5-cp314-cp314-macosx_14_0_arm64.whl", hash = "sha256:51ccae9d665189278a194451e2178ed60e5f0eab0f2993f863bc6f670a4da890", size = 34861146, upload-time = "2026-05-16T13:47:53.397Z" },
-    { url = "https://files.pythonhosted.org/packages/f8/80/9eede0dd4e36c77ee8fcab3161ef98d39efc6eff3ed78643517458e62c80/boxlite-0.9.5-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:1ea7405f6bc64467e9152ada50bd0beb1ef04de475789c762c0c13a6f2c7b7ee", size = 37011759, upload-time = "2026-05-16T13:47:56.802Z" },
-    { url = "https://files.pythonhosted.org/packages/28/11/debb90db06be5d00b8852669b59a559e8b1b498686b9bfd5ed7718ed10a4/boxlite-0.9.5-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:40b441fb5d602a737e085d9f2a5702f4aa609442c6ec972a7f7a3fa5562e2e36", size = 33109317, upload-time = "2026-05-16T13:47:59.616Z" },
-    { url = "https://files.pythonhosted.org/packages/d0/bf/375e3e8994786946ffe76ff02b814394aac4b05f7b3aa36e969dbd098341/boxlite-0.9.5-cp314-cp314t-macosx_14_0_arm64.whl", hash = "sha256:ae3dce0bf2ac1449f906aea62cb439a6778b8192581fc1d2bf9ff46321896b64", size = 34864330, upload-time = "2026-05-16T13:48:02.687Z" },
-    { url = "https://files.pythonhosted.org/packages/49/ae/f9e7e6da083e4846d598d0c795f86505df0e44c4b76e13dbb74c2ff15fbc/boxlite-0.9.5-cp314-cp314t-manylinux_2_28_aarch64.whl", hash = "sha256:4ac2ff04991807d97451c51f5fb25769559eddfb10a0017eabe8ce996c4d83f9", size = 37012881, upload-time = "2026-05-16T13:48:06.412Z" },
-    { url = "https://files.pythonhosted.org/packages/6a/db/25c828b044dea57058b148dafec2348243b782b1090aeb388eccd0407a53/boxlite-0.9.5-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:d8f00bb59724d5bd88452347f8f104f8fc8c8d1f3bca3b39df455d184eceb1eb", size = 33113959, upload-time = "2026-05-16T13:52:06.276Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/f5/aece4fc7fbf55e4c989cb8fba61b103a2f032d65d12a73451a0a2bfa8a7b/boxlite-0.10.8-cp313-cp313-macosx_14_0_arm64.whl", hash = "sha256:83dc0e81f5184c06f9a8ce702f2c0a5067b9528c2886d743a8c70ee9f996556f", size = 40800467, upload-time = "2026-10-23T17:06:31.088Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/2c/82d5112949b862a935066d43bed012ad087854eb7c0e1cf1b9f4e8d72ba8/boxlite-0.10.8-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:f4184c20effa9770987b72e808200f72dfc32d84014f6b7cf3e0fa1a2810cb29", size = 43043443, upload-time = "2026-10-23T17:06:34.095Z" },
+    { url = "https://files.pythonhosted.org/packages/78/a5/5768eaaad42cb56450a581a95228c4fafb920f93533a251a5c7671deec6c/boxlite-0.10.8-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:6943c4715d3af83017656038a75295f9621b4c5ea9d47ada25e817aa04134555", size = 39015225, upload-time = "2026-10-23T17:06:37.278Z" },
+    { url = "https://files.pythonhosted.org/packages/94/a8/2e8ba023457883956464067ca390457500ff61d1848adaf4f2aa6392b428/boxlite-0.10.8-cp314-cp314-macosx_14_0_arm64.whl", hash = "sha256:e932948ef70d1d68f81560a0f9eb5dd7e86d55dac0bc956150ad4d3746953bf1", size = 40801650, upload-time = "2026-10-23T17:06:40.305Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/97/9c20121fc574663203b4be7b2822ed35b9599b275cc8b123c595ca59a803/boxlite-0.10.8-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:c4497fbafaa96addd22ecee06d8f32d89c74437cc6ea38ab63f11d96f082c7eb", size = 43048023, upload-time = "2026-10-23T17:06:43.528Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/c8/b845c974c3080745636dbed464242088ec0bfe43926ff0b6b6b829741d36/boxlite-0.10.8-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:b4cbbed750a41d9c6e0324f5aaa70951363d6b66a5e8414f8fcaf445554c8de3", size = 39014377, upload-time = "2026-10-23T17:06:47.24Z" },
+    { url = "https://files.pythonhosted.org/packages/10/82/a341fb922869dc43e3dacdb3a74aab342315178ef0f84169f2dfa78fb4af/boxlite-0.10.8-cp314-cp314t-macosx_14_0_arm64.whl", hash = "sha256:fee7769a165271012be1878e904da66ced19a4b82b3a55b3153634d39a48d13a", size = 40800921, upload-time = "2026-10-23T17:06:50.421Z" },
+    { url = "https://files.pythonhosted.org/packages/59/2e/d01df4c9c9d54feb9deba50db77d2b644e05d932c2f983683d1d3714050d/boxlite-0.10.8-cp314-cp314t-manylinux_2_28_aarch64.whl", hash = "sha256:25a160236ebd19c4bf09884a81d3865eb82555dc0f22406f07acc3d791ec7fc4", size = 43044012, upload-time = "2026-10-23T17:06:54.066Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/2f/da242d11a0be153b9698ac15a4daa9b42b9ac616984e5d77b6dda3c03d0b/boxlite-0.10.8-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:cf605309b6a19b9b75f34bf26d1bf887ab0396783febbf2d2a7c59b8a3016879", size = 39020301, upload-time = "2026-10-23T17:06:57.169Z" },
 ]
 
 [[package]]

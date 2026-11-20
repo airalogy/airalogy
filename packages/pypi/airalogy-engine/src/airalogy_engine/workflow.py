@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from airalogy.markdown import parse_aimd, parse_workflow_content
-from boxlite import Box, BoxOptions, BoxStateInfo, Boxlite, Options
+from boxlite import Box, BoxOptions, Boxlite, Options
 from boxlite.errors import BoxliteError
 
 from airalogy_engine.engine import (
@@ -27,7 +27,7 @@ from airalogy_engine.engine import (
     _copy_out_log,
     _exec_command_with_timeout,
     _is_pyo3_panic,
-    _is_running_state,
+    _BoxStatus,
     _resolve_boxlite_home,
     _stop_box_best_effort,
     _track_background_cleanup,
@@ -165,7 +165,7 @@ def _compare(left: Any, op: str, right: Any) -> bool:
     raise WorkflowExecutionError(f"Unsupported workflow condition operator: {op}")
 
 
-class AiralogyWorkflowEngine:
+class AiralogyWorkflowEngine(_BoxStatus):
     """Execute declarative AIMD workflow transitions.
 
     The engine returns Record drafts and transition outputs. It does not persist
@@ -277,35 +277,16 @@ class AiralogyWorkflowEngine:
         await box.copy_in(_WORKFLOW_EXECUTOR_PATH, f"{_WORKING_DIR}/", _COPY_OPTIONS)
         return box
 
-    def box_status(self) -> BoxStateInfo | None:
-        """Return the current workflow sandbox state, or None when no box exists."""
-        box = self._box
-        if box is None:
-            return None
-        return box.info().state
-
     async def _ensure_running_box(self) -> Box:
-        box = self._box
+        box = await self._current_running_box()
         if box is not None:
-            try:
-                if _is_running_state(box.info().state):
-                    return box
-            except Exception:
-                pass
-            self._box = None
-            self._box_active_counts.pop(box.id, None)
+            return box
 
         new_box = await self._create_box()
-        current_box = self._box
+        current_box = await self._current_running_box()
         if current_box is not None:
-            try:
-                if _is_running_state(current_box.info().state):
-                    _track_background_cleanup(
-                        asyncio.create_task(_stop_box_best_effort(new_box))
-                    )
-                    return current_box
-            except Exception:
-                pass
+            _track_background_cleanup(asyncio.create_task(_stop_box_best_effort(new_box)))
+            return current_box
         self._box = new_box
         return new_box
 
