@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.12
+
+### Patch Changes
+
+- c17ce65: Restore installation of the Python Engine from PyPI by updating BoxLite from the unavailable 0.9.5 release to 0.10.8. Preserve synchronous status queries and reuse of running protocol and workflow sandboxes with the updated SDK.
+- Updated dependencies [f2043e7]
+  - airalogy@0.19.0
+
 ## 0.0.11
 
 ### Patch Changes

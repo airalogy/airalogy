@@ -1,5 +1,11 @@
 # @airalogy/airalogy-engine
 
+## 0.0.7
+
+### Patch Changes
+
+- 15b4290: Update the Node SDK's default sandbox image to Airalogy Engine 0.19.0.
+
 ## 0.0.6
 
 ### Patch Changes

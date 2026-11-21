@@ -12,7 +12,7 @@ _DEFAULT_ROOTFS_PATH = str(
     _MONOREPO_ROOT / "packages/runtime/airalogy-engine-image/airalogy-engine-image"
 )
 _EXAMPLE_PROTOCOL = str(_MONOREPO_ROOT / "examples/airalogy-engine")
-_DEFAULT_IMAGE = "ghcr.io/airalogy/airalogy-engine:0.18.0"
+_DEFAULT_IMAGE = "ghcr.io/airalogy/airalogy-engine:0.19.0"
 
 
 @pytest.fixture(scope="session", autouse=True)
