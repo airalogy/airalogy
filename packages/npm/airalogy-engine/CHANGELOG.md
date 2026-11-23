@@ -1,5 +1,11 @@
 # @airalogy/airalogy-engine
 
+## 0.0.8
+
+### Patch Changes
+
+- 993209a: Use the Engine image containing the updated Python Core by default, so protocols run through either the Python or Node client preserve explicit `None` defaults in generated models.
+
 ## 0.0.7
 
 ### Patch Changes

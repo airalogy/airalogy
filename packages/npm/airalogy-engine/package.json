@@ -1,6 +1,6 @@
 {
   "name": "@airalogy/airalogy-engine",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Airalogy protocol execute sandbox",
   "type": "module",
   "repository": {

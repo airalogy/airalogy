@@ -2272,7 +2272,7 @@ onMounted(() => {
               </label>
               <label>
                 <span>{{ messages.engine.labels.image }}</span>
-                <input v-model="sandboxImage" placeholder="ghcr.io/airalogy/airalogy-engine:0.19.0" />
+                <input v-model="sandboxImage" placeholder="ghcr.io/airalogy/airalogy-engine:0.19.1" />
               </label>
             </div>
 
