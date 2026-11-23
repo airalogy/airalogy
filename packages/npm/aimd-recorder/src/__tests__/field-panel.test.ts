@@ -9,6 +9,26 @@ describe('standalone field panel', () => {
     '{{var|photo: FileIdJPG | None = None, title="Label photo"}}',
     '{{check|inspect, title="Inspect label"}} {{check|legacy}}',
   ].join('\n\n')
+  it('finishes a pointer activation before an adjacent required-field error changes the layout', async () => {
+    const panel = mount(AimdRecorder, { props: {
+      content: '{{var|location: str}} {{var|photo: FileIdJPG | None = None}}',
+      layout: 'field-panel', validationTriggers: ['blur'],
+    } })
+    try {
+      await flushPromises()
+      const target = panel.get('[data-panel-field="var:photo"] button')
+      const location = panel.get('[data-rec-focus-key="var:location"]')
+      await target.trigger('pointerdown', { button: 0 })
+      await location.trigger('blur')
+      await flushPromises()
+      expect(panel.find('[role=alert]').exists()).toBe(false)
+      window.dispatchEvent(new MouseEvent('click'))
+      await vi.waitFor(() => expect(panel.find('[role=alert]').exists()).toBe(true))
+    } finally {
+      panel.unmount()
+    }
+  })
+
   it('uses unique titled fields, keeps authored hints, and navigates by stable keys', async () => {
     const panel = mount(AimdRecorder, { props: { content, layout: 'field-panel', locale: 'en-US' } })
     await flushPromises()

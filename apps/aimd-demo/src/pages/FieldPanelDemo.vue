@@ -8,6 +8,7 @@ const { locale } = useDemoLocale()
 const zh = computed(() => locale.value === 'zh-CN')
 const content = computed(() => [
   `{{var|label: str, title="${zh.value ? '样本编号' : 'Sample label'}"}}`,
+  `{{var|location: str, title="${zh.value ? '位置' : 'Location'}"}}`,
   `{{var|photo: FileIdJPG | None = None, title="${zh.value ? '标签照片' : 'Label photo'}"}}`,
   `{{step|prepare, title="${zh.value ? '准备标签' : 'Prepare labels'}", check=True}}`,
   `{{check|review, title="${zh.value ? '核对编号' : 'Verify label'}"}}`,

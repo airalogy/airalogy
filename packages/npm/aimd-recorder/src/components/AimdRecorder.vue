@@ -879,8 +879,45 @@ async function validateField(
   return result
 }
 
+// A blur error can move the next control between pointerdown and click.
+let panelGesture: AbortController | undefined
+let panelValidationTimer: ReturnType<typeof setTimeout> | undefined
+const pendingPanelBlurs = new Set<string>()
+
+function endPanelGesture() {
+  panelGesture?.abort()
+  panelGesture = undefined
+  clearTimeout(panelValidationTimer)
+  for (const key of pendingPanelBlurs) void validateField(key, { trigger: "blur" })
+  pendingPanelBlurs.clear()
+}
+
+function beginPanelGesture(event: PointerEvent) {
+  if (!inPanel.value || event.button !== 0) return
+  endPanelGesture()
+  const view = (event.currentTarget as HTMLElement).ownerDocument.defaultView
+  if (!view) return
+  panelGesture = new AbortController()
+  const options = { capture: true, signal: panelGesture.signal }
+  const afterClick = () => {
+    clearTimeout(panelValidationTimer)
+    panelValidationTimer = setTimeout(endPanelGesture, 0)
+  }
+  view.addEventListener("click", afterClick, options)
+  // Some gestures finish outside the panel and never dispatch a click.
+  view.addEventListener("pointerup", () => {
+    panelValidationTimer = setTimeout(endPanelGesture, 350)
+  }, options)
+  view.addEventListener("pointercancel", endPanelGesture, options)
+  view.addEventListener("blur", endPanelGesture, { signal: panelGesture.signal })
+}
+
 function triggerFieldValidation(trigger: Exclude<AimdRecorderValidationTrigger, "submit">, fieldKey: string) {
   if (!props.validationTriggers.includes(trigger)) return
+  if (trigger === "blur" && panelGesture) {
+    pendingPanelBlurs.add(fieldKey)
+    return
+  }
   void validateField(fieldKey, { trigger })
 }
 
@@ -2099,6 +2136,8 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  pendingPanelBlurs.clear()
+  endPanelGesture()
   collectorRuntime.stopAll({ resetPermissions: true })
   for (const controller of serverAssignerAbortControllers.values()) {
     controller.abort()
@@ -2158,7 +2197,7 @@ defineExpose({
         </span>
       </div>
 
-      <div v-if="inlineNodes.length" ref="contentRoot" class="aimd-protocol-recorder__content aimd-renderer">
+      <div v-if="inlineNodes.length" ref="contentRoot" class="aimd-protocol-recorder__content aimd-renderer" @pointerdown.capture="beginPanelGesture">
         <InlineNodesOutlet :nodes="inlineNodes" />
       </div>
 
