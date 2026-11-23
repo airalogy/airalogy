@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.13
+
+### Patch Changes
+
+- 993209a: Use the Engine image containing the updated Python Core by default, so protocols run through either the Python or Node client preserve explicit `None` defaults in generated models.
+- Updated dependencies [993209a]
+  - airalogy@0.19.1
+
 ## 0.0.12
 
 ### Patch Changes
