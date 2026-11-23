@@ -88,6 +88,8 @@ export interface AimdRecorderMessages {
   }
   file: {
     choose: string
+    uploadPhoto: string
+    uploading: string
     selected: string
     clear: string
     open: string
@@ -364,6 +366,8 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
   },
   file: {
     choose: "Choose file",
+    uploadPhoto: "Upload photo",
+    uploading: "Uploading…",
     selected: "Selected file",
     clear: "Clear file",
     open: "Open file",
@@ -609,6 +613,8 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
   },
   file: {
     choose: "选择文件",
+    uploadPhoto: "上传照片",
+    uploading: "上传中…",
     selected: "已选择文件",
     clear: "清除文件",
     open: "打开文件",

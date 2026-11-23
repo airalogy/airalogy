@@ -43,3 +43,20 @@
   background: #f8fafb;
   border-bottom-color: #e4e9ef;
 }
+
+.aimd-recorder-panel .aimd-panel-field { min-width: 0; margin-bottom: 0.875rem; }
+.aimd-panel-label { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; margin-bottom: 0.25rem; overflow-wrap: anywhere; }
+.aimd-panel-label small { font-size: 0.8em; color: var(--aimd-text-muted, #586577); }
+.aimd-recorder-panel .aimd-panel-field .aimd-rec-inline--var-stacked:not(.aimd-rec-inline--var-stacked--checkbox) {
+  min-width: 100%; margin-inline: 0; box-sizing: border-box;
+}
+.aimd-recorder-panel .aimd-panel-upload { display: inline-flex; }
+.aimd-panel-upload button, .aimd-panel-outline button {
+  font: inherit; color: inherit; cursor: pointer; padding: 0.4em 0.7em; background: transparent;
+  border: 1px solid var(--aimd-border-color, #bdc7d2); border-radius: 5px; text-align: start;
+}
+.aimd-panel-upload button:disabled { opacity: 0.6; cursor: default; }
+.aimd-panel-outline { display: grid; gap: 0.25rem; }
+.aimd-panel-outline button { border: 0; justify-self: start; overflow-wrap: anywhere; max-width: 100%; }
+.aimd-panel-outline button:hover { text-decoration: underline; }
+.aimd-recorder-panel .aimd-rec-file-field__preview img { max-height: 120px; object-fit: contain; }

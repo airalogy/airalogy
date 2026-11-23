@@ -323,3 +323,9 @@ const fields = parseAndExtract('{{var|sequence: ATCG}} {{var|image: FileIdPNG}}'
 const { record, skipped } = createExampleRecord(fields)
 // record.var.sequence === "ATCG", skipped.includes("image")
 ```
+
+## 独立字段面板
+
+使用 `<AimdRecorder layout="field-panel" :content="source" v-model="record" />` 把协议变量显示为独立表单。它沿用正文的字段类型、校验和附件接口。
+
+使用 `uploadFile` 返回已保存的附件标识，以 `resolveFileInfo` 提供有权限的预览。用 `@navigate-field` 接收稳定的字段键，并调用正文 Recorder 实例的 `focusField(key)`。需要固定顺序或补充仅在模型中声明的字段时，可传入 `panelVariables`。

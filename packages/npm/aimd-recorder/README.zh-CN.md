@@ -394,3 +394,7 @@ const quiz = {
 - EN: <https://airalogy.github.io/airalogy/aimd/en/packages/aimd-recorder>
 - 中文: <https://airalogy.github.io/airalogy/aimd/zh/packages/aimd-recorder>
 - 文档源码：`docs/aimd/en/packages/aimd-recorder.md`、`docs/aimd/zh/packages/aimd-recorder.md`
+
+## 独立字段面板
+
+使用 `<AimdRecorder layout="field-panel" :content="source" v-model="record" />` 把协议变量显示为独立表单。它沿用正文的字段类型、校验和附件接口。

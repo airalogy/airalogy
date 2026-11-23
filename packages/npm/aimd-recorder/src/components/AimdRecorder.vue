@@ -145,6 +145,10 @@ const props = withDefaults(defineProps<{
   searchDefaultExpanded?: boolean
   /** Compact hides field metadata while preserving controls, validation and accessible names. */
   fieldDisplay?: 'compact' | 'detailed'
+  /** A standalone form projection of this protocol, using the same record and adapters. */
+  layout?: 'protocol' | 'field-panel'
+  /** Optional explicit field order, including variables declared only in the host schema. */
+  panelVariables?: string[]
 
   // ── Extension props ──────────────────────────────────────────────────────
 
@@ -256,6 +260,7 @@ const props = withDefaults(defineProps<{
   showSearch: true,
   searchDefaultExpanded: false,
   fieldDisplay: 'detailed',
+  layout: 'protocol',
   fieldMeta: undefined,
   serverAssigners: undefined,
   assigners: undefined,
@@ -286,6 +291,7 @@ const emit = defineEmits<{
   (e: "fields-change", fields: ExtractedAimdFields): void
   /** Parse / render error */
   (e: "error", message: string): void
+  (e: "navigate-field", fieldKey: string): void
   /** Local record validation completed. */
   (e: "validation", result: AimdRecorderValidationResult): void
 
@@ -332,7 +338,8 @@ const autoServerAssignerSignatures = new Map<string, string>()
 let autoServerAssignerScheduled = false
 
 const resolvedLocale = computed(() => resolveAimdRecorderLocale(props.locale))
-provide(fieldDisplayKey, computed(() => props.fieldDisplay))
+const inPanel = computed(() => props.layout === "field-panel")
+provide(fieldDisplayKey, computed(() => inPanel.value ? "panel" : props.fieldDisplay))
 const resolvedMessages = computed(() => createAimdRecorderMessages(resolvedLocale.value, props.messages))
 const resolvedTypePlugins = computed(() => createAimdTypePlugins(props.typePlugins))
 const resolvedServerAssigners = computed(() => props.serverAssigners ?? props.assigners)
@@ -1841,12 +1848,42 @@ function renderInlineQuiz(node: AimdQuizNode): VNode {
 // Rebuild pipeline
 // ---------------------------------------------------------------------------
 
+function buildPanelFields(nodes: Map<string, AimdVarNode>): VNode[] {
+  const vars = props.panelVariables ?? [...nodes.keys()]
+  return [...new Set(vars)].map(id => {
+    const node: AimdVarNode = nodes.get(id) ?? { type: "aimd", fieldType: "var", scope: "var", id, raw: "" }
+    const key = `var:${id}`
+    const title = effectiveFieldMeta.value[key]?.title || String(node.definition?.kwargs?.title || id)
+    const required = requiredFieldKeys.value.has(key)
+    return h("div", { key, class: "aimd-panel-field", role: "group", "aria-label": title, "data-panel-field": key }, [
+      h("div", { class: "aimd-panel-label" }, [
+        title, h("small", required ? resolvedMessages.value.common.required : resolvedMessages.value.common.optional),
+      ]),
+      renderInlineVar(node),
+    ])
+  })
+}
+
+const panelOutline = computed(() => {
+  const fields = extractedFields.value
+  const steps = new Map(fields.step_hierarchy?.map(field => [field.id, field.title]))
+  const checks = new Map(fields.check_definitions?.map(field => [field.id, field.title]))
+  return [
+    ...fields.var_table.map(field => ({ key: `var_table:${field.id}`, title: field.title || field.id })),
+    ...fields.step.map(id => ({ key: `step:${id}`, title: steps.get(id) || id })),
+    ...fields.check.map(id => ({ key: `check:${id}`, title: checks.get(id) || id })),
+    ...fields.quiz.map(field => ({ key: `quiz:${field.id}`, title: field.title || field.id })),
+  ]
+})
+
 async function rebuildInlineNodes(
   expectedRequestId?: number,
   focusSnapshot?: FocusSnapshot | null,
   expectedInlineRequestId?: number,
 ) {
   recordInitializedDuringRender = false
+  const panelNodes = new Map<string, AimdVarNode>()
+  const panel = inPanel.value
   const rendered = await renderToVue(props.content || "", {
     locale: resolvedLocale.value,
     groupStepBodies: true,
@@ -1863,11 +1900,15 @@ async function rebuildInlineNodes(
       pre: codeBlockPreRenderer,
     },
     aimdRenderers: {
-      var: node => renderInlineVar(node as AimdVarNode),
-      var_table: node => renderInlineVarTable(node as AimdVarTableNode),
-      step: (node, _ctx, children) => renderInlineStep(node as AimdStepNode, children),
-      check: (node, _ctx, children) => renderInlineCheck(node as AimdCheckNode, children),
-      quiz: node => renderInlineQuiz(node as AimdQuizNode),
+      var: node => {
+        if (!panel) return renderInlineVar(node as AimdVarNode)
+        if (!panelNodes.has(node.id)) panelNodes.set(node.id, node as AimdVarNode)
+        return h("span")
+      },
+      var_table: node => panel ? h("span") : renderInlineVarTable(node as AimdVarTableNode),
+      step: (node, _ctx, children) => panel ? h("span") : renderInlineStep(node as AimdStepNode, children),
+      check: (node, _ctx, children) => panel ? h("span") : renderInlineCheck(node as AimdCheckNode, children),
+      quiz: node => panel ? h("span") : renderInlineQuiz(node as AimdQuizNode),
     },
   })
 
@@ -1878,7 +1919,7 @@ async function rebuildInlineNodes(
     return
   }
 
-  inlineNodes.value = rendered.nodes
+  inlineNodes.value = panel ? buildPanelFields(panelNodes) : rendered.nodes
   await nextTick()
   restoreFocusSnapshot(contentRoot.value, focusSnapshot ?? null)
 
@@ -2042,7 +2083,7 @@ watch(
 )
 
 watch(
-  () => props.fieldDisplay,
+  () => [props.fieldDisplay, props.layout, props.panelVariables],
   () => {
     // Input events keep native controls current without rebuilding every keystroke.
     // Refresh their VNode props before switching the presentation of those controls.
@@ -2073,6 +2114,7 @@ defineExpose({
   validateField,
   clearValidation,
   focusFirstInvalidField,
+  focusField: focusInvalidField,
   runClientAssigner: clientAssignerRunner.triggerClientAssigner,
   runManualClientAssigners: clientAssignerRunner.triggerManualClientAssigners,
   startCollector: collectorRuntime.start,
@@ -2081,12 +2123,12 @@ defineExpose({
 </script>
 
 <template>
-  <div class="aimd-protocol-recorder" :class="{ 'aimd-protocol-recorder--compact': fieldDisplay === 'compact' }">
+  <div class="aimd-protocol-recorder" :class="{ 'aimd-protocol-recorder--compact': inPanel || fieldDisplay === 'compact', 'aimd-recorder-panel': inPanel }">
     <div v-if="renderError" class="aimd-protocol-recorder__error">{{ renderError }}</div>
 
     <template v-else>
       <AimdRecorderSearchToolbar
-        v-if="showRecordSearchToolbar"
+        v-if="!inPanel && showRecordSearchToolbar"
         v-model:field-key="recordSearch.fieldKey.value"
         v-model:query="recordSearch.query.value"
         :field-refs="recordSearch.fieldRefs.value"
@@ -2101,7 +2143,7 @@ defineExpose({
         @previous="recordSearch.focusPreviousMatch"
       />
 
-      <div v-if="showProtocolTimingSummary" class="aimd-protocol-recorder__timing">
+      <div v-if="!inPanel && showProtocolTimingSummary" class="aimd-protocol-recorder__timing">
         <span
           v-if="protocolEstimatedDurationMs > 0"
           class="aimd-protocol-recorder__timing-pill aimd-protocol-recorder__timing-pill--estimate"
@@ -2120,7 +2162,10 @@ defineExpose({
         <InlineNodesOutlet :nodes="inlineNodes" />
       </div>
 
-      <div v-else class="aimd-protocol-recorder__empty">{{ resolvedMessages.common.emptyContent }}</div>
+      <div v-else-if="!inPanel || !panelOutline.length" class="aimd-protocol-recorder__empty">{{ resolvedMessages.common.emptyContent }}</div>
+      <div v-if="inPanel && panelOutline.length" class="aimd-panel-outline">
+        <button v-for="entry in panelOutline" :key="entry.key" type="button" @click="emit('navigate-field', entry.key)">{{ entry.title }}</button>
+      </div>
     </template>
   </div>
 </template>

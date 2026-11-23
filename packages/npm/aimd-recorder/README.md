@@ -410,3 +410,7 @@ If `@airalogy/aimd-recorder` is useful in your work, please cite the Airalogy pa
       url={https://arxiv.org/abs/2506.18586},
 }
 ```
+
+## Standalone field panel
+
+Use `<AimdRecorder layout="field-panel" :content="source" v-model="record" />` for a standalone form using the protocol’s field types, validation and attachment hooks.

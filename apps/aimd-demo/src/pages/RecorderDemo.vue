@@ -65,6 +65,8 @@ watch(locale, () => {
     <h2 class="page-title">@airalogy/aimd-recorder</h2>
     <p class="page-desc">{{ messages.pages.recorder.desc }}</p>
 
+    <router-link to="/field-panel">{{ locale === 'zh-CN' ? '打开独立字段面板示例' : 'Open the standalone field panel example' }}</router-link>
+
     <DemoExamplePicker
       :selected-id="selectedExampleId"
       @select="handleExampleSelect"

@@ -521,6 +521,7 @@ export default defineComponent({
     const checkboxValue = ref(toBooleanValue(props.value))
     watch(() => props.value, value => { checkboxValue.value = toBooleanValue(value) })
     const fileUploadError = ref("")
+    const uploading = ref(false)
     const csvPreview = ref<CsvPreviewState | null>(null)
     const resolvedFileInfo = ref<FileDisplayInfo | null>(null)
     const lastSelectedFileInfo = ref<FileDisplayInfo | null>(null)
@@ -713,11 +714,12 @@ export default defineComponent({
         const input = event.target as HTMLInputElement
         const file = input.files?.[0]
         input.value = ""
-        if (!file) {
+        if (!file || uploading.value) {
           return
         }
 
         fileUploadError.value = ""
+        uploading.value = true
         const fileConfig = getFileInputConfig(type, node.definition?.kwargs, meta)
         try {
           const uploadedValue = props.uploadFile
@@ -747,6 +749,8 @@ export default defineComponent({
           })
         } catch {
           fileUploadError.value = props.messages.file.uploadFailed
+        } finally {
+          uploading.value = false
         }
       }
 
@@ -773,7 +777,7 @@ export default defineComponent({
         const optional = props.markOptional && !props.required
           ? h('span', { class: 'aimd-field__optional-marker' }, props.messages.common.optional)
           : null
-        if (fieldDisplay.value === 'compact') {
+        if (fieldDisplay.value !== 'detailed') {
           const actions = renderHeaderAssignerActions(headerAction)
           return actions || optional ? h('span', { class: 'aimd-rec-inline__compact-actions' }, [optional, actions]) : null
         }
@@ -930,7 +934,7 @@ export default defineComponent({
               },
               onBlur: onVarBlur,
             }),
-            fieldDisplay.value === 'compact'
+            fieldDisplay.value !== 'detailed'
               ? h('span', { class: 'aimd-rec-inline__boolean-state' }, checkboxValue.value ? props.messages.boolean.true : props.messages.boolean.false)
               : null,
           ]),
@@ -1055,6 +1059,11 @@ export default defineComponent({
         const displayInfo = resolvedFileInfo.value
         const fileName = displayInfo?.name || getFileDisplayName(props.value)
         const hasFileValue = Boolean(fileId || fileName)
+        const panel = fieldDisplay.value === "panel"
+        const chooseLabel = fileConfig.kind === "image" ? props.messages.file.uploadPhoto : props.messages.file.choose
+        const extensions = fileConfig.accept?.split(",").map(part => part.trim()).filter(part => part.startsWith("."))
+        const formats = extensions?.map(ext => ext.slice(1).toUpperCase()).join(" / ")
+        const panelLabel = formats ? `${chooseLabel} (${formats})` : chooseLabel
         const displayName = fileName || (hasFileValue ? props.messages.file.selected : placeholder || props.messages.file.choose)
         const resolvedUrl = displayInfo?.url || (fileId && props.resolveFile
           ? props.resolveFile(fileId)
@@ -1068,7 +1077,7 @@ export default defineComponent({
           "aria-label": accessibleLabel,
           type: "file",
           accept: fileConfig.accept,
-          disabled,
+          disabled: disabled || uploading.value,
           onChange: onFileChange,
           onBlur: onVarBlur,
         })
@@ -1204,7 +1213,13 @@ export default defineComponent({
                   ])
                   : null,
               ])
-              : h("label", {
+              : panel ? h("span", { class: "aimd-panel-upload" }, [
+                fileInput,
+                h("button", {
+                  type: "button", disabled: disabled || uploading.value,
+                  onClick: (event: MouseEvent) => (event.currentTarget as HTMLElement).parentElement?.querySelector("input")?.click(),
+                }, panelLabel),
+              ]) : h("label", {
                 class: [
                   "aimd-rec-file-field__trigger",
                   disabled ? "aimd-rec-file-field__trigger--disabled" : undefined,
@@ -1215,6 +1230,7 @@ export default defineComponent({
                 fileBadge,
                 fileTitle,
               ]),
+            uploading.value ? h("span", { role: "status" }, props.messages.file.uploading) : null,
             fileUploadError.value
               ? h("span", { class: "aimd-rec-file-field__error" }, fileUploadError.value)
               : null,

@@ -2,6 +2,8 @@
 
 ## Variable Definitions
 
+Label photo: {{var|label_photo: FileIdJPG | None = None, title="Label photo"}}
+
 Sample note: {{var|field_1: str | None, title = "Sample note"}}
 
 Enter sample name: {{var|sample_name: str, title = "Sample Name", description = "Human-readable label used throughout this protocol", examples = ["S-001", "Control A"]}}

@@ -323,3 +323,9 @@ const fields = parseAndExtract('{{var|sequence: ATCG}} {{var|image: FileIdPNG}}'
 const { record, skipped } = createExampleRecord(fields)
 // record.var.sequence === "ATCG", skipped.includes("image")
 ```
+
+## Standalone field panel
+
+Use `<AimdRecorder layout="field-panel" :content="source" v-model="record" />` for a standalone form using the protocol’s field types, validation and attachment hooks.
+
+Return the stored file reference from `uploadFile` and provide authorized preview metadata through `resolveFileInfo`. Handle `navigate-field` by calling `focusField(key)` on the protocol recorder. Pass `panelVariables` to select or order fields, including schema-only variables.

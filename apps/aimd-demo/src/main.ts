@@ -13,6 +13,7 @@ const router = createRouter({
     { path: '/core', component: () => import('./pages/CoreDemo.vue') },
     { path: '/editor', component: () => import('./pages/EditorDemo.vue') },
     { path: '/renderer', component: () => import('./pages/RendererDemo.vue') },
+    { path: '/field-panel', component: () => import('./pages/FieldPanelDemo.vue') },
     { path: '/recorder', component: () => import('./pages/RecorderDemo.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/editor' },
   ],
