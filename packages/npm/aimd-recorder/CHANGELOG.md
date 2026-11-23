@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.29.0
+
+### Minor Changes
+
+- ab332e3: Add a standalone record field panel with full-width controls, localized file selection and upload feedback, and navigation by step and checkpoint title.
+
 ## 1.28.0
 
 ### Minor Changes
