@@ -2,6 +2,8 @@
 
 ## 变量定义
 
+标签照片：{{var|label_photo: FileIdJPG | None = None, title="标签照片"}}
+
 样品备注：{{var|field_1: str | None, title = "样品备注"}}
 
 样品名称：{{var|sample_name: str, title = "样品名称", description = "在本协议中使用的可读名称", examples = ["S-001", "对照 A"]}}
