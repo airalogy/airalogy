@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from airalogy.types.registry import get_airalogy_type_registry
 
-from ..ast_nodes import VarNode, VarTableNode
+from ..ast_nodes import MISSING_DEFAULT, VarNode, VarTableNode
 from ..errors import InvalidSyntaxError
 from ..tokens import Token, TokenType
 
@@ -56,7 +56,7 @@ class VarParserMixin:
         value = token.value.strip()
 
         # Find the first colon that's not inside brackets
-        first_colon_outside_brackets = self._find_first_colon_outside_brackets(value)
+        first_colon_outside_brackets = self._find_outer_separator(value, ":")
 
         if first_colon_outside_brackets == -1:
             # No type annotation, parse as: name, key1 = val1, key2 = val2, ...
@@ -65,22 +65,29 @@ class VarParserMixin:
         # Has type annotation, parse as: name: type [= default], key1 = val1, ...
         return self._parse_var_with_type(value)
 
-    def _find_first_colon_outside_brackets(self, value: str) -> int:
+    def _find_outer_separator(self, value: str, separator: str) -> int:
         """
-        Find the first colon that's not inside brackets or strings.
+        Find the first separator outside brackets and quoted strings.
 
         Args:
             value: String to search
 
         Returns:
-            Index of first colon outside brackets, -1 if none found
+            Index of the first outer separator, or -1 if none is found
         """
         bracket_count = 0
         paren_count = 0
         in_string = False
         quote_char = None
+        escaped = False
 
         for i, char in enumerate(value):
+            if escaped:
+                escaped = False
+                continue
+            if in_string and char == "\\":
+                escaped = True
+                continue
             if char in ('"', "'") and not in_string:
                 in_string = True
                 quote_char = char
@@ -96,7 +103,7 @@ class VarParserMixin:
                     paren_count += 1
                 elif char == ")":
                     paren_count = max(0, paren_count - 1)
-                elif char == ":" and bracket_count == 0 and paren_count == 0:
+                elif char == separator and bracket_count == 0 and paren_count == 0:
                     return i
 
         return -1
@@ -136,7 +143,7 @@ class VarParserMixin:
                     except (ValueError, SyntaxError):
                         kwargs[key] = val
 
-        return name, None, None, kwargs
+        return name, None, MISSING_DEFAULT, kwargs
 
     def _parse_var_with_type(
         self, value: str
@@ -158,15 +165,16 @@ class VarParserMixin:
         tokens_list = self._split_by_comma(rest)
 
         if not tokens_list:
-            return name, None, None, {}
+            return name, None, MISSING_DEFAULT, {}
 
         # First token should be: type [= default]
         first_token = tokens_list[0].strip()
         type_annotation = None
-        default_value = None
+        default_value = MISSING_DEFAULT
 
-        if "=" in first_token:
-            type_part, default_part = first_token.split("=", 1)
+        eq = self._find_outer_separator(first_token, "=")
+        if eq >= 0:
+            type_part, default_part = first_token[:eq], first_token[eq + 1:]
             type_annotation = type_part.strip()
             default_str = default_part.strip()
             # Try to evaluate the default
@@ -384,7 +392,7 @@ class VarParserMixin:
                         position=token.position,
                         name=name,
                         type_annotation=item.get("type"),
-                        default_value=item.get("default"),
+                        default_value=item.get("default", MISSING_DEFAULT),
                         kwargs=item.get("kwargs", {}),
                     )
                 )
@@ -576,7 +584,6 @@ class VarParserMixin:
             name=table_name,
             subvars=subvars,
             type_annotation="list",  # Default to list type for legacy syntax
-            default_value=None,
             kwargs={},  # No additional kwargs for legacy syntax
             list_item_type=None,  # Will be auto-derived in __post_init__
             auto_item_type=None,  # Will be auto-derived in __post_init__

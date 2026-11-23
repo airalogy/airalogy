@@ -14,7 +14,7 @@
 export { getAimdFieldExampleCandidates, type AimdFieldExampleOptions } from './utils/field-example-candidates'
 export { default as remarkAimd } from './parser/remark-aimd'
 export { default as rehypeAimd } from './parser/rehype-aimd'
-export { isAimdNullableType, unwrapAimdNullableType } from './utils/nullable-type'
+export { isAimdNullableType, setAimdTypeNullable, unwrapAimdNullableType } from './utils/nullable-type'
 
 export {
   parseConnectorsContent,

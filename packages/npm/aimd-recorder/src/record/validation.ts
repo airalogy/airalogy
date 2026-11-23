@@ -323,16 +323,17 @@ export function getAimdRequiredFieldKeys(
     kwargs: Record<string, unknown> | undefined,
     inferredRequired: boolean,
     type?: string,
+    hasDefault = false,
   ) => {
     const required = schemaCoveredKeys.has(fieldKey)
       ? fieldMeta[fieldKey]?.required === true
-        || (schemaRequiredKeys.has(fieldKey) && !schemaNullableKeys.has(fieldKey))
+        || ((schemaRequiredKeys.has(fieldKey) || hasDefault) && !schemaNullableKeys.has(fieldKey))
       : resolveRequired(fieldMeta[fieldKey], kwargs, inferredRequired && !isNullableVarType(type))
     if (required) keys.add(fieldKey)
   }
 
   for (const field of fields.var_definitions ?? []) {
-    addWhenRequired(`var:${field.id}`, field.kwargs, !hasOwn(field, "default"), field.type)
+    addWhenRequired(`var:${field.id}`, field.kwargs, true, field.type, hasOwn(field, "default"))
   }
 
   for (const table of fields.var_table ?? []) {
@@ -343,11 +344,11 @@ export function getAimdRequiredFieldKeys(
       const columnKey = `${tableKey}:${column.id}`
       const required = schemaCovered
         ? fieldMeta[columnKey]?.required === true
-          || (schemaRequiredKeys.has(columnKey) && !schemaNullableKeys.has(columnKey))
+          || ((schemaRequiredKeys.has(columnKey) || hasOwn(column, "default")) && !schemaNullableKeys.has(columnKey))
         : resolveRequired(
             fieldMeta[columnKey],
             column.kwargs,
-            !hasOwn(column, "default") && !isNullableVarType(column.type),
+            !isNullableVarType(column.type),
           )
       if (required) keys.add(columnKey)
     }
@@ -645,6 +646,8 @@ function validateValue(
     rowIndex?: number
     column?: string
     inferredRequired?: boolean
+    hasDefault?: boolean
+    defaultValue?: unknown
     schemaCovered?: boolean
     schemaRequired?: boolean
     schemaNullable?: boolean
@@ -662,6 +665,7 @@ function validateValue(
     rowIndex,
     column,
     inferredRequired = false,
+    hasDefault = false,
     schemaCovered = false,
     schemaRequired = false,
     schemaNullable = false,
@@ -672,11 +676,12 @@ function validateValue(
   const explicitlyRequired = meta?.required === true || (!schemaCovered && kwargs?.required === true)
   const nullable = schemaCovered ? schemaNullable : isNullableVarType(type)
   const required = schemaCovered
-    ? schemaRequired || meta?.required === true
-    : resolveRequired(meta, kwargs, inferredRequired && !nullable)
+    ? schemaRequired || meta?.required === true || (hasDefault && !nullable && value !== undefined)
+    : resolveRequired(meta, kwargs, inferredRequired && (value === undefined ? !hasDefault : !nullable))
   const allowedNullableEmpty = value === null && nullable && !explicitlyRequired
 
-  if (required && isEmptyValue(value) && !allowedNullableEmpty) {
+  const allowedEmptyList = !schemaRequired && !explicitlyRequired && Array.isArray(value) && Array.isArray(input.defaultValue) && input.defaultValue.length === 0
+  if (required && isEmptyValue(value) && !allowedNullableEmpty && !allowedEmptyList) {
     addIssue(issues, fieldKey, section, "required", options.messages.required(label), value, details)
     return
   }
@@ -854,7 +859,9 @@ export function validateAimdRecord(
       kwargs: field.kwargs,
       meta: fieldMeta[fieldKey],
       enumValues: field.enum,
-      inferredRequired: !hasOwn(field, "default"),
+      inferredRequired: true,
+      hasDefault: hasOwn(field, "default"),
+      defaultValue: field.default,
       schemaCovered: schemaCoveredKeys.has(fieldKey),
       schemaRequired: schemaRequiredKeys.has(fieldKey),
       schemaNullable: schemaNullableKeys.has(fieldKey),
@@ -900,7 +907,9 @@ export function validateAimdRecord(
           enumValues: column.enum,
           rowIndex,
           column: column.id,
-          inferredRequired: !hasOwn(column, "default"),
+          inferredRequired: true,
+          hasDefault: hasOwn(column, "default"),
+          defaultValue: column.default,
           schemaCovered,
           schemaRequired: schemaRequiredKeys.has(columnMetaKey),
           schemaNullable: schemaNullableKeys.has(columnMetaKey),

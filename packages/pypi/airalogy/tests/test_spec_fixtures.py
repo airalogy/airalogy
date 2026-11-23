@@ -42,6 +42,17 @@ def test_choice_input_fixture_preserves_types_and_validates_arrays():
     model = namespace["VarModel"]
     value = model(status="Ready", tags=["A", "C"], levels=[1, 3], confirmed=None, blood_groups=["A+", "O"])
     assert value.tags == ["A", "C"]
+    assert "default_value" not in fields[0]
+    assert fields[3]["default_value"] is None
+    assert model.model_fields["status"].is_required()
+    omitted = model(status=None, tags=None, levels=[], blood_groups=[])
+    assert omitted.confirmed is None and omitted.unit == "mg"
+    assert model(confirmed=False, **omitted.model_dump(exclude={"confirmed"})).confirmed is False
+    with pytest.raises(ValidationError):
+        model.model_validate({**omitted.model_dump(), "unit": None})
+    exec(generate_model('{{var|rows, subvars=[var(note: str | None = None)]}}\n{{var|option: Literal["A=B", "other"] = "A=B"}}'), namespace)
+    result = namespace["VarModel"](rows=[{}])
+    assert result.rows[0].note is None and result.option == "A=B"
     assert value.blood_groups == ["A+", "O"]
     with pytest.raises(ValidationError):
         model(status="Ready", tags=["invalid"], levels=[1], confirmed=True, blood_groups=["A"])

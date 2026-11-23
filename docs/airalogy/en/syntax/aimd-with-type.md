@@ -51,7 +51,7 @@ In this new syntax, you add type information after the variable name with a colo
 
 ## Optional or Clearable Values
 
-When a field may intentionally be left empty, add `| None` to its type annotation. If the field should also start empty by default, set its default value to `None`:
+A nullable annotation allows an explicit null, but does not itself supply a default. For example, `note: str | None` accepts a null value; `note: str | None = None` also permits the key to be omitted. In contrast, `unit: str = "mg"` may be omitted to use the prefill, but cannot be null. In the visual editor, Required controls whether an input may be left blank, not whether it starts prefilled:
 
 ```aimd
 Blood Type: {{var|blood_type: BloodType | None = None}}
@@ -60,6 +60,8 @@ Observed Rash: {{var|reaction_rash: bool | None = None}}
 ```
 
 This syntax means the record value may be the declared type or `None`. In browser recorder UIs, select-backed nullable fields show a localized empty option such as `Not set`; selecting it stores `null` in the JSON record. If the user must choose one real value, omit `| None`.
+
+For an optional list of strings, use `{{var|tags: list[str] | None = None, title="Tags"}}`. Omitting the field or passing `null` leaves it unanswered; an explicit `[]` records zero items. Use `tags: list[str] = []` when omission should mean zero items instead. `list[str | None]` permits null items, not a null list.
 
 ## Adding Extra Information to Airalogy Fields
 

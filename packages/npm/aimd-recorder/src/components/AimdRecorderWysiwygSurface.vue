@@ -782,6 +782,11 @@ defineExpose({
   padding: 3px 5px;
 }
 
+/* The first inline field has no preceding line for its floating edit controls. */
+.aimd-recorder-wysiwyg-surface :deep(.ProseMirror > :first-child:has(.aimd-recorder-wysiwyg-node--inline)) {
+  padding-block-start: 2rem;
+}
+
 .aimd-recorder-wysiwyg-surface :deep(.aimd-recorder-wysiwyg-node__chrome--block) {
   top: 10px;
   right: 10px;

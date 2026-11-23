@@ -43,12 +43,13 @@ export function serializeAimdFieldValue(value: unknown): string {
 /** Edit common properties while retaining defaults and other parsed field metadata. */
 export function updateAimdInputField(
   original: string | undefined,
-  values: { id: string; type: string; title: string; defaultRaw: string; clearEnum?: boolean },
+  values: { id: string; type: string; title: string; defaultRaw: string; clearEnum?: boolean; clearRequiredOverride?: boolean },
 ): string {
   const definition = original ? parseVarDefinition(original) : undefined
   if (definition?.subvars) throw new Error('Table definitions must be edited with the table editor.')
   const kwargs = { ...definition?.kwargs }
   if (values.clearEnum) delete kwargs.enum
+  if (values.clearRequiredOverride) delete kwargs.required
   if (values.title.trim()) kwargs.title = values.title.trim()
   else delete kwargs.title
   let result = values.id.trim()

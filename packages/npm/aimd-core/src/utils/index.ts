@@ -3,7 +3,7 @@
  */
 
 export { getAimdFieldExampleCandidates, type AimdFieldExampleOptions } from './field-example-candidates'
-export { isAimdNullableType, unwrapAimdNullableType } from './nullable-type'
+export { isAimdNullableType, setAimdTypeNullable, unwrapAimdNullableType } from './nullable-type'
 
 export {
   findVarTable,

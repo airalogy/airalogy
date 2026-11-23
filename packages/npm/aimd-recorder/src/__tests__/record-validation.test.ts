@@ -28,14 +28,14 @@ describe("AimdRecorder validation", () => {
       var_definitions: [
         { id: "schema_name", type: "str", default: "" },
         { id: "aimd_name", type: "str" },
-        { id: "optional_name", type: "str", default: "" },
+        { id: "optional_name", type: "str | None", default: null },
       ],
       var_table: [{
         id: "samples",
         scope: "var_table",
         subvars: [
           { id: "sample_id", type: "str" },
-          { id: "note", type: "str", default: "" },
+          { id: "note", type: "str | None", default: null },
         ],
       }],
     }
@@ -54,7 +54,7 @@ describe("AimdRecorder validation", () => {
                 required: ["sample_id"],
                 properties: {
                   sample_id: { type: "string" },
-                  note: { type: "string" },
+                  note: { type: ["string", "null"] },
                 },
               },
             },
@@ -177,6 +177,44 @@ describe("AimdRecorder validation", () => {
       ["var:forced", "required"],
       ["var_table:samples:0:code", "required"],
     ])
+  })
+
+  it("distinguishes an omitted prefill, an explicitly cleared input and a valid false answer", async () => {
+    const wrapper = mount(AimdRecorder, { props: {
+      content: '{{var|unit: str = "mg"}} {{var|note: str | None = None}} {{var|flag: Literal[True, False]}}',
+      showSearch: false,
+    } })
+    await flushPromises()
+    const validate = () => (wrapper.vm as unknown as {
+      validate: (options: { focus: boolean }) => Promise<{ valid: boolean; issues: { fieldKey: string }[] }>
+    }).validate({ focus: false })
+    const unit = wrapper.get<HTMLInputElement>('[data-rec-focus-key="var:unit"]')
+    const flag = wrapper.get<HTMLSelectElement>('select[data-rec-focus-key="var:flag"]')
+    expect(unit.element.value).toBe('mg')
+    expect(flag.element.value).toBe('')
+    expect((await validate()).issues.map(issue => issue.fieldKey)).toEqual(['var:flag'])
+    expect(wrapper.get('.aimd-field__optional-marker').text()).toBe('Optional')
+    await flag.setValue('1')
+    expect((await validate()).valid).toBe(true)
+    await unit.setValue('')
+    expect((await validate()).issues.map(issue => issue.fieldKey)).toEqual(['var:unit'])
+    wrapper.unmount()
+  })
+
+  it("does not confuse a nullable list with a default-empty list", () => {
+    const fields = { ...EMPTY_FIELDS, var: ['nullable', 'omittable', 'empty'], var_definitions: [
+      { id: 'nullable', type: 'list[str] | None' },
+      { id: 'omittable', type: 'list[str] | None', default: null },
+      { id: 'empty', type: 'list[str]', default: [] },
+    ] }
+    const record = createEmptyProtocolRecordData()
+    const issues = () => validateAimdRecord(fields, record, { messages }).issues.map(issue => issue.fieldKey)
+    expect(issues()).toEqual(['var:nullable'])
+    record.var.nullable = null
+    record.var.empty = []
+    expect(issues()).toEqual([])
+    record.var.empty = null
+    expect(issues()).toEqual(['var:empty'])
   })
 
   it("accepts null for schema-required nullable fields and table columns", () => {

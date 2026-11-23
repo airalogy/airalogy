@@ -634,7 +634,7 @@ const remarkAimd: Plugin<[RemarkAimdOptions?], Root> = (options = {}) => {
                     return {
                       id: name,
                       type: subDef.type,
-                      default: subDef.default,
+                      ...(subDef.default !== undefined ? { default: subDef.default } : {}),
                       ...(enumValues.length > 0 ? { enum: enumValues } : {}),
                       title: title || name,
                       description,

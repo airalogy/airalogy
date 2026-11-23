@@ -27,7 +27,7 @@ describe('common input toolbar', () => {
   })
 
   it.each([
-    ['int', 'int'], ['float', 'float'], ['bool | None', 'bool | None'],
+    ['int', 'int'], ['float', 'float'], ['bool | None', 'Literal[True, False]'],
     ['date', 'date'], ['time', 'time'], ['datetime', 'datetime'], ['file', 'FileIdPDF'],
     ['choice', 'Literal["A", "B"]'], ['multiple-choice', 'list[Literal["A", "B"]]'],
   ])('opens %s already selected without requiring a manual ID', async (preset, type) => {
@@ -73,7 +73,7 @@ describe('common input toolbar', () => {
   it.each([
     ['choice', 'Literal["A", "C"]'],
     ['multiple-choice', 'list[Literal["A", "C"]]'],
-    ['bool | None', 'bool | None'],
+    ['bool | None', 'Literal[True, False]'],
   ])('replaces legacy enum metadata when changing to %s', async (preset, type) => {
     const field = 'status: str, enum=["A", "B"], description="Keep"'
     const wrapper = mount(AimdInputFieldDialog, { props: { visible: false, content: `{{var|${field}}}`, fieldContent: field, messages }, global: { stubs: { teleport: true } } })

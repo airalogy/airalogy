@@ -695,7 +695,13 @@ describe('field rendering nullable defaults', () => {
     expect(rendering.getVarInitialValue(node('int | None') as never, 'int | None', 'var:value')).toBeNull()
     expect(rendering.getVarInitialValue(node('date | None') as never, 'date | None', 'var:value')).toBeNull()
     expect(rendering.getVarInitialValue(node('str | None') as never, 'str | None', 'var:value')).toBeNull()
-    expect(rendering.getVarInitialValue(node('list[str] | None') as never, 'list[str] | None', 'var:value')).toEqual([])
+    const type = 'list[str] | None'
+    expect(rendering.getVarInitialValue(node(type) as never, type, 'var:value')).toBeNull()
+    for (const value of [null, [], ['tag']]) {
+      const withDefault = { ...node(type), definition: { id: 'value', type, default: value } }
+      expect(rendering.getVarInitialValue(withDefault as never, type, 'var:value')).toEqual(value)
+      expect(rendering.normalizeVarValue(node(type) as never, type, 'var:value', value, 'scalar-list')).toEqual(value)
+    }
   })
 })
 

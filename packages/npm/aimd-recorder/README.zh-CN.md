@@ -187,7 +187,7 @@ client assigner 也会用这些约束判断依赖是否就绪，因此依赖的�
 />
 ```
 
-Schema 契约同时支持 engine 的 `vars` / `steps` / `checks` 键和兼容用的 `research_variable` / `research_step` / `research_check` 别名，覆盖必填、类型、格式、pattern、枚举、数值边界、数组、对象及内建类型约束。对 Schema 标记为 required 且不可为空的 Recorder 输入，即使内存 Record 中已有该属性，空字符串和空数组仍会判为未填；可为空的属性接受 `null`，也不显示必填标记。Recorder 会先归一化上传文件等结构化值，再执行 Schema 校验。没有传 Schema 时，Recorder 回退到 AIMD 声明：没有默认值的字段视为必填，但类型包含 `None` 或使用 `Optional[...]` 的字段除外；AIMD 或 `fieldMeta` 中显式的 `required` 设置仍会生效。
+Schema 契约同时支持 engine 的 `vars` / `steps` / `checks` 键和兼容用的 `research_variable` / `research_step` / `research_check` 别名，覆盖必填、类型、格式、pattern、枚举、数值边界、数组、对象及内建类型约束。对 Schema 标记为 required 且不可为空的 Recorder 输入，即使内存 Record 中已有该属性，空字符串和空数组仍会判为未填；可为空的属性接受 `null`，也不显示必填标记。Recorder 会先归一化上传文件等结构化值，再执行 Schema 校验。没有 Schema 时，Recorder 按 AIMD 声明区分可空与默认值：`unit: str = "mg"` 可以省略，但主动清空会提示必填；`note: str | None = None` 可以留空，也可以省略。显式的 `required` 设置仍受支持。普通变量以必填为主且混有选填时，仅标出少数选填输入。
 
 默认在当前字段 `change` 和 `blur` 时即时校验，修正某个字段不会清除其他错误；可通过 `validationTriggers` 调整。`var_table` 错误使用 `var_table:samples:0:concentration` 这样的精确行列 key，错误展示和聚焦也会落到对应单元格。
 

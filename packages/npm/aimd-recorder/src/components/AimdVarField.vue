@@ -497,6 +497,7 @@ export default defineComponent({
     messages: { type: Object as PropType<AimdRecorderMessages>, required: true },
     fieldMeta: { type: Object as PropType<AimdFieldMeta | undefined>, default: undefined },
     required: { type: Boolean, default: false },
+    markOptional: { type: Boolean, default: false },
     displayValue: { type: [String, Number] as PropType<string | number>, default: "" },
     inputKind: { type: String as PropType<AimdVarInputKind>, required: true },
     typePlugin: { type: Object as PropType<AimdTypePlugin | undefined>, default: undefined },
@@ -553,7 +554,10 @@ export default defineComponent({
         }
         if (scalarListJsonDraft.value !== null) {
           const parsedDraft = parseScalarListJsonValue(scalarListJsonDraft.value, itemType)
-          if (parsedDraft.ok && !areArraysEqual(persistedItems, parsedDraft.value)) {
+          const nullMismatch = isNullableVarType(props.node.definition?.type) &&
+            (parsedDraft.ok || scalarListJsonDraft.value.trim() === 'null') &&
+            (scalarListJsonDraft.value.trim() === 'null') !== (value === null)
+          if (nullMismatch || (parsedDraft.ok && !areArraysEqual(persistedItems, parsedDraft.value))) {
             scalarListJsonDraft.value = null
             scalarListJsonError.value = ""
           }
@@ -766,9 +770,12 @@ export default defineComponent({
       }
 
       const renderVarLabel = (headerAction?: VNode | null): VNode | null => {
+        const optional = props.markOptional && !props.required
+          ? h('span', { class: 'aimd-field__optional-marker' }, props.messages.common.optional)
+          : null
         if (fieldDisplay.value === 'compact') {
           const actions = renderHeaderAssignerActions(headerAction)
-          return actions ? h('span', { class: 'aimd-rec-inline__compact-actions' }, [actions]) : null
+          return actions || optional ? h('span', { class: 'aimd-rec-inline__compact-actions' }, [optional, actions]) : null
         }
         const metaTitle = normalizeMetaString(meta?.title)
         const definitionTitle = getAimdFieldTitle(node.definition)
@@ -800,7 +807,7 @@ export default defineComponent({
           }, [
             h("span", { class: "aimd-field__title-row" }, [
               h("span", { class: "aimd-field__title", title: displayTitle }, displayTitle),
-              props.required ? h(AimdRequiredMarker, { label: props.messages.common.required }) : null,
+              props.required && !props.markOptional ? h(AimdRequiredMarker, { label: props.messages.common.required }) : optional,
             ]),
             hasCustomTitle ? h("span", { class: "aimd-field__key", title: id }, id) : null,
             renderFieldMetadataPopover(help),
@@ -839,7 +846,7 @@ export default defineComponent({
         const showEmptyEnumOption = emptyEnumValue === null || selectedEnumValue === ""
         const emptyEnumLabel = emptyEnumValue === null
           ? getAimdRecorderEmptyValueLabel(props.messages)
-          : placeholder ?? ""
+          : placeholder || props.messages.common.chooseValue
         return h("span", {
           class: [
             "aimd-rec-inline aimd-rec-inline--var-stacked aimd-field-wrapper",
@@ -1303,10 +1310,16 @@ export default defineComponent({
         }
         const getScalarListJsonDraft = () => (
           scalarListJsonDraft.value
-          ?? formatScalarListJsonValue(scalarListDraftRows.value ?? props.value, scalarListItemType)
+          ?? (props.value === null && isNullableVarType(type) ? 'null' : formatScalarListJsonValue(scalarListDraftRows.value ?? props.value, scalarListItemType))
         )
         const emitScalarListJsonDraft = (rawValue: string) => {
           scalarListJsonDraft.value = rawValue
+          if (rawValue.trim() === 'null' && isNullableVarType(type)) {
+            scalarListJsonError.value = ''
+            scalarListDraftRows.value = null
+            emit('change', { id, value: null, type, inputKind })
+            return
+          }
           const parsed = parseScalarListJsonValue(rawValue, scalarListItemType)
           if (!parsed.ok) {
             scalarListJsonError.value = getScalarListJsonErrorMessage(parsed.error)
@@ -1325,13 +1338,8 @@ export default defineComponent({
           if (scalarListMode.value === mode) {
             return
           }
-          if (mode === "json") {
-            scalarListJsonDraft.value = formatScalarListJsonValue(scalarListDraftRows.value ?? props.value, scalarListItemType)
-            scalarListJsonError.value = ""
-          } else {
-            scalarListJsonDraft.value = null
-            scalarListJsonError.value = ""
-          }
+          scalarListJsonDraft.value = null
+          scalarListJsonError.value = ""
           scalarListMode.value = mode
         }
         const modeButton = (mode: ScalarListEditMode, label: string) => h("button", {

@@ -28,7 +28,7 @@ export function createStepContext(): StepContext {
   }
 }
 
-function splitTopLevelCommaSegments(content: string): string[] {
+function splitTopLevelSegments(content: string, separator = ","): string[] {
   const parts: string[] = []
   let current = ""
   let quote: "\"" | "'" | null = null
@@ -92,7 +92,7 @@ function splitTopLevelCommaSegments(content: string): string[] {
       continue
     }
 
-    if (char === "," && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
+    if (char === separator && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
       const trimmed = current.trim()
       if (trimmed) {
         parts.push(trimmed)
@@ -142,7 +142,7 @@ function parseKeyValueLiteral(rawValue: string): unknown {
     if (!inner) {
       return []
     }
-    return splitTopLevelCommaSegments(inner).map(parseKeyValueLiteral)
+    return splitTopLevelSegments(inner).map(parseKeyValueLiteral)
   }
 
   if (value === "True" || value === "true") {
@@ -171,7 +171,7 @@ function parseKeyValueLiteral(rawValue: string): unknown {
 export function parseKeyValueParams(content: string): Record<string, unknown> {
   const params: Record<string, unknown> = {}
 
-  for (const part of splitTopLevelCommaSegments(content)) {
+  for (const part of splitTopLevelSegments(content)) {
     const match = part.match(/^(\w+)\s*=\s*([\s\S]+)$/)
     if (!match) {
       continue
@@ -203,7 +203,7 @@ function parseLiteralEnumValues(type: string | undefined): unknown[] {
   }
 
   return normalizeEnumValues(
-    splitTopLevelCommaSegments(match[1]).map(parseKeyValueLiteral),
+    splitTopLevelSegments(match[1]).map(parseKeyValueLiteral),
   )
 }
 
@@ -329,7 +329,7 @@ const NUMERIC_VAR_TYPES = new Set(["int", "integer", "float", "number"])
 export const NUMERIC_CONSTRAINT_KWARGS = ["gt", "ge", "lt", "le", "multiple_of"] as const
 
 export function isNumericVarType(type: string | undefined): boolean {
-  return type !== undefined && NUMERIC_VAR_TYPES.has(type.toLowerCase())
+  return NUMERIC_VAR_TYPES.has(unwrapAimdNullableType(type).toLowerCase())
 }
 
 export function parseDurationToMs(value: unknown): number | undefined {
@@ -424,7 +424,7 @@ export function parseStepContent(content: string): {
   props: Record<string, unknown>
 } {
   const trimmed = content.trim()
-  const parts = splitTopLevelCommaSegments(trimmed)
+  const parts = splitTopLevelSegments(trimmed)
   const id = parts[0].trim()
   let level = 1
   let check = false
@@ -487,7 +487,7 @@ export function parseCheckContent(content: string): {
   label: string
 } {
   const trimmed = content.trim()
-  const parts = splitTopLevelCommaSegments(trimmed)
+  const parts = splitTopLevelSegments(trimmed)
   const id = parts[0].trim()
   let checked_message: string | undefined
   let title: string | undefined
@@ -841,7 +841,7 @@ export function parseVarDefinition(content: string): AimdVarDefinition {
   }
 
   if (subvarsContent) {
-    const subvarParts = splitTopLevelCommaSegments(subvarsContent)
+    const subvarParts = splitTopLevelSegments(subvarsContent)
     subvarDefs = {}
 
     for (const part of subvarParts) {
@@ -855,7 +855,7 @@ export function parseVarDefinition(content: string): AimdVarDefinition {
     }
   }
 
-  const contentWithoutSubvars = splitTopLevelCommaSegments(trimmed)
+  const contentWithoutSubvars = splitTopLevelSegments(trimmed)
     .filter(part => !/^subvars\s*=/.test(part))
     .join(", ")
 
@@ -882,7 +882,7 @@ function parseSimpleVarDef(content: string): AimdVarDefinition {
     trimmed = trimmed.slice(5, -1).trim()
   }
 
-  const parts = splitTopLevelCommaSegments(trimmed)
+  const parts = splitTopLevelSegments(trimmed)
   const mainPart = (parts[0] || "").trim()
   const kvParts = parts.slice(1).filter(part => /^\w+\s*=/.test(part))
   const kvParams = parseKeyValueParams(kvParts.join(", "))
@@ -893,7 +893,7 @@ function parseSimpleVarDef(content: string): AimdVarDefinition {
       const defaultRaw = mainPart.slice(eqIndex + 1).trim()
       const result: AimdVarDefinition = {
         id: mainPart.slice(0, eqIndex).trim(),
-        default: parseDefaultValue(defaultRaw),
+        default: parseVarDefaultValue(defaultRaw),
         defaultRaw,
       }
       if (Object.keys(kvParams).length > 0) {
@@ -912,15 +912,15 @@ function parseSimpleVarDef(content: string): AimdVarDefinition {
   const id = mainPart.slice(0, colonIndex).trim()
   const rest = mainPart.slice(colonIndex + 1).trim()
 
-  const eqIndex = rest.indexOf("=")
+  const [annotation, ...defaults] = splitTopLevelSegments(rest, "=")
   let type: string
   let defaultValue: unknown
   let defaultRaw: string | undefined
 
-  if (eqIndex > 0) {
-    type = rest.slice(0, eqIndex).trim()
-    defaultRaw = rest.slice(eqIndex + 1).trim()
-    defaultValue = parseDefaultValue(defaultRaw)
+  if (defaults.length > 0) {
+    type = annotation
+    defaultRaw = defaults.join("=")
+    defaultValue = parseVarDefaultValue(defaultRaw)
   }
   else {
     type = rest.trim()
@@ -943,7 +943,7 @@ function parseSimpleVarDef(content: string): AimdVarDefinition {
 /**
  * Parse default value.
  */
-function parseDefaultValue(value: string): unknown {
+export function parseVarDefaultValue(value: string): unknown {
   const trimmed = value.trim()
 
   if (trimmed === "true" || trimmed === "True")
@@ -963,6 +963,9 @@ function parseDefaultValue(value: string): unknown {
 
   if ((trimmed.startsWith("\"") && trimmed.endsWith("\""))
     || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    if (trimmed.startsWith('"')) {
+      try { return JSON.parse(trimmed) } catch { /* Python literals may not be JSON. */ }
+    }
     return trimmed.slice(1, -1)
   }
 
@@ -974,7 +977,7 @@ function parseDefaultValue(value: string): unknown {
       return JSON.parse(trimmed)
     }
     catch {
-      // Fall through to preserving the raw literal for Python-style values.
+      if (trimmed.startsWith("[")) return parseKeyValueLiteral(trimmed)
     }
   }
 
@@ -992,7 +995,7 @@ export function validateVarDefaultType(def: AimdVarDefinition): string[] {
   }
 
   const warnings: string[] = []
-  const type = def.type.toLowerCase()
+  const type = unwrapAimdNullableType(def.type).toLowerCase()
   const value = def.default
 
   switch (type) {

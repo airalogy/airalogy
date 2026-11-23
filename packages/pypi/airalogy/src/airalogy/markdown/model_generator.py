@@ -2,6 +2,7 @@
 Model generator - generates Pydantic variable models from parsed AIMD.
 """
 
+import json
 import re
 from typing import Any, Dict, List, Set, Tuple
 
@@ -96,7 +97,7 @@ class ModelGenerator:
         for var in model_vars:
             # Check if Field is needed (for any kwargs or special parameters)
             if isinstance(var, VarNode):
-                if var.kwargs or var.default_value is not None:
+                if var.kwargs or var.has_default:
                     has_field_usage = True
 
                 # Check if any Airalogy types are used
@@ -123,7 +124,7 @@ class ModelGenerator:
                 # For VarTableNode, also check subvars for Field usage and types
                 if isinstance(var, VarTableNode):
                     for subvar in var.subvars:
-                        if subvar.kwargs or subvar.default_value is not None:
+                        if subvar.kwargs or subvar.has_default:
                             has_field_usage = True
                         if subvar.type_annotation:
                             if _type_matches("Literal", subvar.type_annotation):
@@ -176,7 +177,7 @@ class ModelGenerator:
             String representation for Python code
         """
         if isinstance(value, str):
-            return f'"{value}"'
+            return json.dumps(value, ensure_ascii=False)
         elif value is None:
             return "None"
         else:
@@ -184,15 +185,16 @@ class ModelGenerator:
 
     def _format_field_kwarg(self, key: str, value: Any) -> str:
         if isinstance(value, str):
-            return f'{key}="{value}"'
+            return f"{key}={self._format_default_value(value)}"
         return f"{key}={value}"
 
-    def _format_field_call(self, default_value: Any, kwargs: Dict[str, Any]) -> str:
+    def _format_field_call(self, var: VarNode) -> str:
         field_args = []
+        kwargs = var.kwargs
 
-        if default_value is not None:
+        if var.has_default:
             field_args.append(
-                f"default={self._format_default_value(default_value)}"
+                f"default={self._format_default_value(var.default_value)}"
             )
 
         json_schema_extra: Dict[str, Any] = {}
@@ -227,10 +229,10 @@ class ModelGenerator:
         type_annotation = var.type_annotation or "str"
 
         # Simple case: no default or kwargs
-        if var.default_value is None and not var.kwargs:
+        if not var.has_default and not var.kwargs:
             return f"    {name}: {type_annotation}"
 
-        field_call = self._format_field_call(var.default_value, var.kwargs)
+        field_call = self._format_field_call(var)
         return f"    {name}: {type_annotation} = {field_call}"
 
     def _generate_table_model(self, var: VarTableNode, nested_models: List[str]) -> str:
@@ -288,10 +290,10 @@ class ModelGenerator:
 
         # Generate the field definition for VarModel
         # Start with the base field definition (including kwargs, title, description, etc.)
-        if var.kwargs or var.default_value is not None:
+        if var.kwargs or var.has_default:
             # Generate the field definition manually since we need the correct type
             name = var.name
-            field_call = self._format_field_call(var.default_value, var.kwargs)
+            field_call = self._format_field_call(var)
             field_def = f"    {name}: list[{item_type_name}] = {field_call}"
         else:
             # Simple case: no kwargs or default

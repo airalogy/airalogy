@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 
 from .tokens import Position
 
+MISSING_DEFAULT = object()
+
 
 @dataclass
 class ASTNode:
@@ -33,8 +35,14 @@ class VarNode(ASTNode):
 
     name: str
     type_annotation: Optional[str] = None
-    default_value: Optional[Any] = None
+    default_value: Any = MISSING_DEFAULT
     kwargs: Dict[str, Any] = field(default_factory=dict)
+    has_default: bool = field(init=False)
+
+    def __post_init__(self):
+        self.has_default = self.default_value is not MISSING_DEFAULT
+        if not self.has_default:
+            self.default_value = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary format."""
@@ -42,7 +50,7 @@ class VarNode(ASTNode):
         result["name"] = self.name
         if self.type_annotation:
             result["type_annotation"] = self.type_annotation
-        if self.default_value is not None:
+        if self.has_default:
             result["default_value"] = self.default_value
         if self.kwargs:
             result["kwargs"] = self.kwargs
@@ -142,6 +150,7 @@ class VarTableNode(VarNode):
 
     def __post_init__(self):
         """Post-initialization to derive list item type."""
+        super().__post_init__()
         if self.list_item_type is None:
             # Derive from type_annotation if it's a list type
             if self.type_annotation and self.type_annotation.startswith("list["):

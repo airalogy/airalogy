@@ -75,6 +75,38 @@ describe('input authoring', () => {
     expect(wrapper.emitted('save')?.[0]).toEqual(['sample_name: str'])
   })
 
+  it.each([
+    ['str', 'str'], ['int', 'int'], ['float', 'float'], ['choice', 'Literal["A", "B"]'],
+    ['multiple-choice', 'list[Literal["A", "B"]]'], ['bool | None', 'bool'], ['date', 'date'],
+    ['time', 'time'], ['datetime', 'datetime'], ['list[str]', 'list[str]'], ['file', 'FileIdPDF'],
+    ['custom', 'list[str | None]'],
+  ])('can leave a new %s unset and reopen it', async (preset, type) => {
+    const wrapper = await openDialog()
+    await wrapper.get('[name="preset"]').setValue(preset)
+    if (preset.includes('choice')) await wrapper.get('[name="options"]').setValue('A\nB')
+    if (preset === 'custom') await wrapper.get('[name="type"]').setValue(type)
+    const toggle = wrapper.get<HTMLInputElement>('[role="switch"]')
+    expect(toggle.element.checked).toBe(true)
+    await toggle.setValue(false)
+    await wrapper.get('form').trigger('submit')
+    const saved = String(wrapper.emitted('save')?.[0]?.[0])
+    expect(saved).toBe(`field_1: ${type} | None = None`)
+    const editing = await openDialog('', saved)
+    expect(editing.get<HTMLInputElement>('[name="required"]').element.checked).toBe(false)
+    await editing.get('[name="required"]').setValue(true)
+    await editing.get('form').trigger('submit')
+    expect(editing.emitted('save')?.[0]).toEqual([`field_1: ${preset === 'bool | None' ? 'Literal[True, False]' : type}`])
+  })
+
+  it.each([['unit: str = "mg"', 'mg'], ['amount: int = 0', '0'], ['flag: bool = False', 'False']])('keeps the prefill independent of required: %s', async (source, initial) => {
+    const wrapper = await openDialog('', source)
+    expect(wrapper.get<HTMLInputElement>('[name="required"]').element.checked).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[name="default"]').element.value).toBe(initial)
+    await wrapper.get('[name="required"]').setValue(false)
+    await wrapper.get('form').trigger('submit')
+    expect(wrapper.emitted('save')?.[0]).toEqual([source.replace(' =', ' | None =')])
+  })
+
   it('creates and edits dropdown choices without requiring Literal syntax', async () => {
     const wrapper = await openDialog()
     await wrapper.get('select[name="preset"]').setValue('choice')
@@ -89,5 +121,29 @@ describe('input authoring', () => {
     const updated = parseVarDefinition(editing.emitted('save')?.[0]?.[0] as string)
     expect(updated.id).toBe('field_1')
     expect(updated.enum).toEqual(['Ready', 'Waiting'])
+  })
+
+  it('edits multiple choice defaults using the actual options', async () => {
+    const wrapper = await openDialog()
+    await wrapper.get('[name="preset"]').setValue('multiple-choice')
+    await wrapper.get('[name="options"]').setValue('A=B\nOther')
+    await wrapper.get('select[multiple]').setValue(['A=B'])
+    await wrapper.get('[name="required"]').setValue(false)
+    await wrapper.get('form').trigger('submit')
+    const parsed = parseVarDefinition(String(wrapper.emitted('save')?.[0]?.[0]))
+    expect(parsed.type).toBe('list[Literal["A=B", "Other"]] | None')
+    expect(parsed.default).toEqual(['A=B'])
+  })
+
+  it('only converts legacy Optional notation on request', async () => {
+    const source = 'comment: Optional[str] = None'
+    const wrapper = await openDialog('', source)
+    expect(wrapper.get<HTMLInputElement>('[name="required"]').element.checked).toBe(false)
+    await wrapper.get('form').trigger('submit')
+    expect(wrapper.emitted('save')?.[0]).toEqual([source])
+    const editing = await openDialog('', source)
+    await editing.get('button[type="button"]').trigger('click')
+    await editing.get('form').trigger('submit')
+    expect(editing.emitted('save')?.[0]).toEqual(['comment: str | None = None'])
   })
 })

@@ -222,7 +222,7 @@ export function useFieldRendering(options: FieldRenderingOptions) {
       typePlugin,
     })
     if (inputKind === "boolean-select") return null
-    if (isNullableVarType(type) && inputKind !== "scalar-list" && inputKind !== "checkbox") return null
+    if (isNullableVarType(type) && inputKind !== "checkbox") return null
     if (inputKind === "multi-select") return []
     if (inputKind === "checkbox") return false
     if (inputKind === "scalar-list") return []
@@ -252,6 +252,7 @@ export function useFieldRendering(options: FieldRenderingOptions) {
     }
 
     if (inputKind === "scalar-list") {
+      if (value == null && isNullableVarType(type)) return null
       return normalizeScalarListInputItems(
         getScalarListInputItems(value),
         getScalarListItemType(type) ?? "string",

@@ -29,6 +29,12 @@ export interface AimdEditorMessages {
   }
   inputField: {
     insert: string
+    required: string
+    noDefault: string
+    yes: string
+    no: string
+    invalidDefault: string
+    useType: (type: string) => string
     edit: string
     save: string
     name: string
@@ -295,6 +301,9 @@ const EN_US_MESSAGES: AimdEditorMessages = {
     options: 'Choices (one per line)', text: 'Text', integer: 'Integer', number: 'Decimal',
     multipleChoice: 'Multiple choice', more: 'More inputs', file: 'Attachment', insertType: label => `Insert ${label.toLowerCase()} input`,
     checkbox: 'Checkbox',
+    required: 'Required', noDefault: 'No preset value', yes: 'Yes', no: 'No',
+    invalidDefault: 'Choose a default that is valid for this input, or leave it unset.',
+    useType: type => `Use ${type}`,
     fileFormat: 'File format',
     time: 'Time', datetime: 'Date and time',
     choice: 'Single choice', boolean: 'Yes / no', date: 'Date', list: 'Text list', custom: 'Advanced / custom',
@@ -518,6 +527,9 @@ const ZH_CN_MESSAGES: AimdEditorMessages = {
     options: '选项（每行一个）', text: '文本', integer: '整数', number: '小数',
     multipleChoice: '多选', more: '更多输入框', file: '附件', insertType: label => `插入${label}输入框`,
     checkbox: '复选框',
+    required: '必填', noDefault: '不预填', yes: '是', no: '否',
+    invalidDefault: '请选择适用于此输入框的默认值，或留空不预填。',
+    useType: type => `改用 ${type}`,
     fileFormat: '文件格式',
     time: '时间', datetime: '日期时间',
     choice: '单选', boolean: '是／否', date: '日期', list: '文本列表', custom: '高级 / 自定义',

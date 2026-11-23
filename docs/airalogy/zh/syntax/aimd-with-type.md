@@ -51,7 +51,7 @@ class VarModel(BaseModel):
 
 ## 可选或可清空的值
 
-当某个字段允许用户留空时，可以在类型注解中追加 `| None`。如果这个字段默认也应该为空，可以同时把默认值写成 `None`：
+`note: str | None` 允许显式传入空值；`note: str | None = None` 还允许省略整个字段。相反，`unit: str = "mg"` 可以省略以采用默认单位，却不能传入空值。可视化编辑器中的“必填”控制是否允许留空，与是否预填默认值无关：
 
 ```aimd
 血型：{{var|blood_type: BloodType | None = None}}
@@ -60,6 +60,8 @@ class VarModel(BaseModel):
 ```
 
 这个语法表示记录值可以是声明的类型，也可以是 `None`。在浏览器 recorder UI 中，带 `None` 的下拉型字段会显示本地化的空值选项，例如 `未填写`；选择该项后，JSON Record 中保存为 `null`。如果用户必须选择一个真实值，就不要写 `| None`。
+
+选填的字符串列表建议写成 `{{var|tags: list[str] | None = None, title="标签"}}`。省略字段或提交 `null` 表示未填写；显式提交 `[]` 表示零项。若业务上不区分未填写与零项，可写 `tags: list[str] = []`。`list[str | None]` 则允许列表中的单项为空，不表示列表本身可空。
 
 ## 为Airalogy字段添加额外信息
 

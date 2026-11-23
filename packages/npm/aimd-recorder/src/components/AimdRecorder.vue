@@ -607,7 +607,7 @@ const serverAssignerByAssignedField = computed(() => (
 
 function createEnumOptions(values: unknown[]): NonNullable<AimdFieldMeta["enumOptions"]> {
   return values.map(value => ({
-    label: String(value),
+    label: typeof value === "boolean" ? resolvedMessages.value.boolean[value ? 'true' : 'false'] : String(value),
     value,
   }))
 }
@@ -678,6 +678,11 @@ const requiredFieldKeys = computed(() => getAimdRequiredFieldKeys(extractedField
   fieldMeta: effectiveFieldMeta.value,
   schema: props.validationSchema,
 }))
+const markOptionalInputs = computed(() => {
+  const vars = extractedFields.value.var_definitions ?? []
+  const optional = vars.filter(field => !requiredFieldKeys.value.has(`var:${field.id}`)).length
+  return optional > 0 && optional < vars.length - optional
+})
 const effectiveFieldState = computed<Record<string, AimdFieldState>>(() => {
   const keys = new Set([
     ...Object.keys(internalAssignerFieldState.value),
@@ -1370,6 +1375,7 @@ function renderInlineVar(node: AimdVarNode): VNode {
     messages: resolvedMessages.value,
     fieldMeta: meta,
     required,
+    markOptional: markOptionalInputs.value,
     displayValue,
     inputKind,
     typePlugin,

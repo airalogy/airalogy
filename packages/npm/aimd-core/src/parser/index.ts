@@ -36,6 +36,7 @@ export {
   parseVarEnumValues,
   parseVarListEnumValues,
   parseVarDefinition,
+  parseVarDefaultValue,
   parseRefsContent,
   validateMediaDefinition,
   validateFigDefinitions,

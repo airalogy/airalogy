@@ -706,6 +706,34 @@ describe('AimdVarField render behavior', () => {
     expect(wrapper.findAll<HTMLInputElement>('.aimd-rec-scalar-list__input').map(input => input.element.value)).toEqual(['aaa', 'bbb'])
   })
 
+  it('preserves the difference between an unanswered list and an explicit empty array in JSON mode', async () => {
+    const node: AimdVarNode = {
+      type: 'aimd', fieldType: 'var', scope: 'var', id: 'tags',
+      raw: '{{var|tags: list[str] | None = None}}',
+      definition: { id: 'tags', type: 'list[str] | None', default: null },
+    }
+    const wrapper = mount(AimdVarField, {
+      props: { node, value: null as any, inputKind: 'scalar-list', initialized: true, messages: createAimdRecorderMessages('en-US') },
+    })
+    const [items, json] = wrapper.findAll('.aimd-rec-scalar-list__mode-button')
+    await json.trigger('click')
+    await vi.dynamicImportSettled()
+    const editor = wrapper.findComponent({ name: 'AimdCodeField' })
+    expect(editor.props('modelValue')).toBe('null')
+    expect(wrapper.emitted('change')).toBeUndefined()
+
+    editor.vm.$emit('update:modelValue', '[]')
+    expect(wrapper.emitted('change')?.[0]?.[0]).toMatchObject({ value: [] })
+    await wrapper.setProps({ value: [] as any })
+    editor.vm.$emit('update:modelValue', 'null')
+    expect(wrapper.emitted('change')?.[1]?.[0]).toMatchObject({ value: null })
+    await wrapper.setProps({ value: null as any })
+    await items.trigger('click')
+    await json.trigger('click')
+    expect(wrapper.findComponent({ name: 'AimdCodeField' }).props('modelValue')).toBe('null')
+    expect(wrapper.emitted('change')).toHaveLength(2)
+  })
+
   it('parses numeric scalar-list JSON according to the item type', async () => {
     const node: AimdVarNode = {
       type: 'aimd',

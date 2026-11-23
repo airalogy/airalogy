@@ -54,3 +54,13 @@ export function isAimdNullableType(value: unknown): boolean {
   const { optional, union } = typeParts(value.trim())
   return optional !== undefined || (union.length > 1 && union.some(isEmptyType))
 }
+
+/** Change outer nullability without touching list items or quoted Literal values. */
+export function setAimdTypeNullable(value: string, nullable: boolean): string {
+  const type = value.trim() || 'str'
+  if (isAimdNullableType(type) === nullable) return type
+  if (nullable) return `${type} | None`
+  const { optional, union } = typeParts(type)
+  if (optional) return setAimdTypeNullable(optional, false)
+  return union.filter(part => !isEmptyType(part)).join(' | ')
+}
