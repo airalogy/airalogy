@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.29.1
+
+### Patch Changes
+
+- eaf649c: Preserve the intended field-panel click when an adjacent required field reports a blur error.
+
 ## 1.29.0
 
 ### Minor Changes
