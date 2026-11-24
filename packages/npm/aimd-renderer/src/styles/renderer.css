@@ -811,6 +811,19 @@
 .aimd-step__identity { display: inline-flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
 .aimd-step__id { font: 12px/1.4 monospace; color: #667085; overflow-wrap: anywhere; }
 .aimd-step__title { font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.rendered-aimd-document .research-step__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.4em;
+  min-width: 0;
+  max-width: 100%;
+}
+.aimd-record-report {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
 .aimd-field--step .aimd-field__step-num { font-weight: 600; }
 .aimd-field--step .aimd-field__name {
   font-weight: 500;

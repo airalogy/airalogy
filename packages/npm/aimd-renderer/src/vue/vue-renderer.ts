@@ -10,7 +10,7 @@ import {
   getAimdFieldExamples,
   getAimdFieldTitle,
 } from "@airalogy/aimd-core/utils"
-import { Fragment, h } from "vue"
+import { Fragment, h, isVNode } from "vue"
 import type { AimdCheckNode } from "@airalogy/aimd-core/types"
 import type { AimdRendererI18nOptions, AimdRendererLocale, AimdRendererMessages } from "../locales"
 import { resolveAimdAssetUrl } from "../common/assetUrls"
@@ -497,7 +497,9 @@ function isStepBodyVNode(node: unknown): node is VNode {
     || classNames.some((className) => typeof className === "string" && className.includes("aimd-step-body"))
 }
 
-function normalizeStepCardBodyChildren(children?: VNodeChild[]): VNodeChild[] {
+const stepPreviewClasses = new Set(["aimd-field__scope", "aimd-field__step-num", "aimd-step__identity"])
+
+function getStepBodyChildren(children?: VNodeChild[]): VNodeChild[] {
   if (!children || children.length === 0) {
     return []
   }
@@ -513,7 +515,9 @@ function normalizeStepCardBodyChildren(children?: VNodeChild[]): VNodeChild[] {
     }
   }
 
-  return children
+  // The HTML fallback supplies these direct children even for an empty step.
+  // Vue renders the heading itself. Keep only authored content in its body slot.
+  return children.filter(child => !isVNode(child) || !stepPreviewClasses.has(child.props?.class))
 }
 
 /**
@@ -722,7 +726,7 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
       ])
     }
 
-    // Edit mode - render step container with children
+    const body = getStepBodyChildren(children)
     return h("div", {
       "class": "aimd-field aimd-field--step aimd-field--editable research-step__item",
       "data-aimd-type": "step",
@@ -736,8 +740,8 @@ const defaultAimdRenderers: Record<string, AimdComponentRenderer> = {
         stepNode.title ? h("span", { class: "aimd-step__title" }, stepNode.title) : null,
         h("span", { class: "aimd-step__id" }, id),
       ]),
-      children && children.length > 0
-        ? h("div", { class: "research-step__content" }, children)
+      body.length > 0
+        ? h("div", { class: "research-step__content" }, body)
         : null,
     ])
   },
@@ -1829,7 +1833,7 @@ export function createStepCardRenderer(
     const isResult = Boolean(stepNode.result)
     const hasCheck = Boolean(stepNode.check)
     const level = Number(stepNode.level || 1)
-    const bodyChildren = normalizeStepCardBodyChildren(children)
+    const bodyChildren = getStepBodyChildren(children)
 
     const rootClasses = [
       "aimd-step-card",

@@ -33,7 +33,7 @@ import {
   type AimdRecordDataScope,
   type AimdRecordDataValue,
 } from '@airalogy/aimd-core/utils'
-import { defineComponent, h, ref, shallowRef, watch, type PropType, type VNode, type VNodeChild } from 'vue'
+import { defineComponent, h, isVNode, ref, shallowRef, watch, type PropType, type VNode, type VNodeChild } from 'vue'
 
 import type { AimdRendererOptions, RenderResult } from '../common/processor'
 import { renderToVue } from '../common/processor'
@@ -580,9 +580,11 @@ function createCheckRenderer(): AimdComponentRenderer {
     const normalized = isAimdPlainRecord(value) && 'checked' in value ? value.checked : value
     const checked = toAimdBooleanValue(normalized)
     const label = checkNode.label ?? node.id
-    const bodyChildren = children && children.length > 0
-      ? children
-      : [label]
+    // The HTML preview includes an unchecked input. Only the saved Record
+    // determines the state of the checkbox in a readonly report.
+    const bodyChildren = children?.filter(child =>
+      !(isVNode(child) && child.type === 'input' && child.props?.type === 'checkbox' && child.props.class === 'aimd-checkbox'),
+    )
     return h('label', recordFieldProps(node, 'aimd-record-check'), [
       h('input', {
         type: 'checkbox',
@@ -590,7 +592,7 @@ function createCheckRenderer(): AimdComponentRenderer {
         disabled: true,
         class: 'aimd-checkbox',
       }),
-      h('span', { class: 'aimd-record-check__body' }, bodyChildren),
+      h('span', { class: 'aimd-record-check__body' }, bodyChildren?.length ? bodyChildren : [label]),
     ])
   }
 }

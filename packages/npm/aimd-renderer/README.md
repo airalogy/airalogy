@@ -191,7 +191,7 @@ The Vue entry point provides three readonly views backed by the field structure 
 
 - `AimdRecordTable` renders Records as rows and Protocol fields as columns, with compact defaults, a column picker, and selection of up to four Records. The picker includes **Show all columns** and **Restore default columns** for protocol fields and metadata together. Hosts retain preferences through `v-model:field-keys` and `v-model:metadata-column-keys`; optional `defaultFieldKeys` and `defaultMetadataColumnKeys` define an independent reset target.
 - `AimdRecordCompare` transposes two to four selected Records into columns, compares every Protocol field by default, highlights differing fields, and can hide equal fields. Pass `fieldKeys` only when comparison should be limited to an explicit subset.
-- `AimdRecordReport` renders one complete AIMD Record report through the canonical readonly renderer.
+- `AimdRecordReport` renders one complete AIMD Record report through the canonical readonly renderer. A report shows the number, optional title and stable ID once per step. Long headings wrap to the width of the report. Each checkpoint displays its saved checkbox state once.
 
 In both the table and comparison views, hover a field name or focus it with the keyboard to inspect its AIMD title, canonical field id, type, description, examples, and enumerated options. The details use a viewport-level popover, so horizontally scrolling collection views do not clip the content.
 

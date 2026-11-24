@@ -1510,6 +1510,53 @@ describe('renderToVue', () => {
 // ---------------------------------------------------------------------------
 
 describe('readonly record rendering', () => {
+  it('shows one disabled checkbox per checkpoint with its saved state', async () => {
+    const wrapper = mount(AimdRecordReport, {
+      props: {
+        aimd: '{{check|aligned, title="Alignment"}}\n\n{{check|verified}}',
+        record: { data: { check: { aligned: { checked: true }, verified: { checked: false } } } },
+      },
+    })
+    await vi.waitFor(() => expect(wrapper.findAll('.aimd-record-check')).toHaveLength(2))
+    expect(wrapper.findAll<HTMLInputElement>('.aimd-record-check input').map(({ element }) =>
+      [element.checked, element.disabled])).toEqual([[true, true], [false, true]])
+    expect(wrapper.get('.aimd-check__title').text()).toBe('Alignment')
+    wrapper.unmount()
+  })
+
+  it.each([false, true])('renders a single step heading and preserves authored content (grouped: %s)', async (groupStepBodies) => {
+    const wrapper = mount(AimdRecordReport, {
+      props: {
+        aimd: [
+          '{{step|inspect_frame, title="Inspect frame"}}',
+          '{{step|align_frame, 2, title="Align frame"}}',
+          'Measure **offset**: {{var|offset: str}}.',
+          '{{step|archive_frame}} File the result.',
+          'See {{ref_step|align_frame}}.',
+        ].join('\n\n'),
+        record: { data: { var: { offset: 'fixture value' } } },
+        renderOptions: { groupStepBodies },
+      },
+    })
+
+    await vi.waitFor(() => expect(wrapper.text()).toContain('fixture value'))
+    for (const [id, title, number] of [
+      ['inspect_frame', 'Inspect frame', '1'],
+      ['align_frame', 'Align frame', '1.1'],
+      ['archive_frame', '', '2'],
+    ]) {
+      const step = wrapper.get(`#step-${id}`)
+      expect(step.findAll('.aimd-step__id').map(item => item.text())).toEqual([id])
+      expect(step.findAll('.aimd-step__title').map(item => item.text())).toEqual(title ? [title] : [])
+      expect(step.get('.research-step__sequence').text()).toContain(number)
+      expect(step.find('.aimd-field__step-num').exists()).toBe(false)
+    }
+    expect(wrapper.get('strong').text()).toBe('offset')
+    expect(wrapper.text()).toContain('File the result.')
+    expect(wrapper.get('[data-aimd-ref-target="align_frame"]').attributes('data-aimd-step-sequence')).toBe('1.1')
+    wrapper.unmount()
+  })
+
   it('normalizes bare record data and full record payload wrappers', () => {
     expect(normalizeRecordRenderValue({
       var: { sample_id: { value: 'S-001' } },

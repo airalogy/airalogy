@@ -142,7 +142,7 @@ import { AimdMarkdownPreview } from "@airalogy/aimd-renderer/vue"
 
 ## 多 Record 视图
 
-Vue 入口导出 `AimdRecordTable`、`AimdRecordCompare` 和 `AimdRecordReport`，分别提供可复用的 Record 表格、对比和完整报告视图。表格与对比视图共用 `aimd-core` 的 Record 列模型，宿主无需重复实现 AIMD 字段遍历和紧凑值渲染。`AimdRecordTable` 默认显示宿主提供的 metadata 列，并将它们放入同一列选择器；宿主需要保留选择时可绑定 `v-model:metadata-column-keys`。
+Vue 入口导出 `AimdRecordTable`、`AimdRecordCompare` 和 `AimdRecordReport`，分别提供可复用的 Record 表格、对比和完整报告视图。表格与对比视图共用 `aimd-core` 的 Record 列模型，宿主无需重复实现 AIMD 字段遍历和紧凑值渲染。`AimdRecordTable` 默认显示宿主提供的 metadata 列，并将它们放入同一列选择器；宿主需要保留选择时可绑定 `v-model:metadata-column-keys`。报告中每个步骤的编号、可选标题和标识各显示一次。长标题和标识会按报告宽度换行。每个核对项只显示一个复选框，反映记录保存时的状态。
 
 表格的“选择列”菜单内置“显示全部列”和“恢复默认列”。全选覆盖当前 AIMD 列模型的全部字段（包括步骤、检查及表格字段）和宿主提供的全部 metadata，不仅根据已有 Record 中填过的值推断列。宽表继续横向滚动，复杂值仍使用原有详情展示。全选后仍可逐列勾选；存在协议字段时至少保留一列。也支持空协议及空 Record 列表。
 

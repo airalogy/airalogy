@@ -191,7 +191,7 @@ Vue 入口提供三种基于同一 Protocol version 字段结构的只读视图�
 
 - `AimdRecordTable`：Record 为行、Protocol 字段为列，内建紧凑默认列、列选择和最多 4 条记录选择。“选择列”内置“显示全部列”和“恢复默认列”，同时处理协议字段与 metadata。宿主通过 `v-model:field-keys` 和 `v-model:metadata-column-keys` 保存偏好，也可用 `defaultFieldKeys`、`defaultMetadataColumnKeys` 指定独立的恢复目标。
 - `AimdRecordCompare`：字段为行、选中的 2–4 条 Record 为列，默认对比 Protocol 的全部字段，可高亮差异或仅显示差异。仅在需要限制对比范围时传入 `fieldKeys`。
-- `AimdRecordReport`：单条 Record 的完整 AIMD 报告，复用标准 readonly renderer。
+- `AimdRecordReport`：单条 Record 的完整 AIMD 报告，复用标准 readonly renderer。报告中每个步骤的编号、可选标题和标识各显示一次。长标题和标识会按报告宽度换行。每个核对项只显示一个复选框，反映记录保存时的状态。
 
 在表格和对比视图中，鼠标悬停在字段名上，或用键盘聚焦字段名，即可查看 AIMD title、规范字段 id、类型、description、examples 和枚举可选值。信息卡使用页面级浮层，不会被横向滚动区域裁切。
 
