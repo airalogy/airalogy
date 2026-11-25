@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.14.1
+
+### Patch Changes
+
+- 2d3a499: Keep the More inputs menu accessible in short or embedded editors. The menu opens on the side with room and scrolls when the viewport is short.
+
 ## 1.14.0
 
 ### Minor Changes

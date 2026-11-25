@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.31.1
+
+### Patch Changes
+
+- 2d3a499: Keep the More inputs menu accessible in short or embedded editors. The menu opens on the side with room and scrolls when the viewport is short.
+- 2d3a499: Distinguish the field definition disclosure from the labeled action that locates a field in the document.
+- 2d3a499: Show equivalent AIMD and JSON Schema field bounds once in the field panel, with localized labels for inclusive and exclusive limits.
+- 2d3a499: Keep the required asterisk beside the field title in detailed Record entry, including when long titles wrap on narrow screens.
+- 2d3a499: Round all four corners of the inset variable type badge in detailed Recorder fields.
+- Updated dependencies [2d3a499]
+  - @airalogy/aimd-editor@1.14.1
+
 ## 1.31.0
 
 ### Minor Changes
