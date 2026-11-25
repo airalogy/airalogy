@@ -1524,18 +1524,22 @@ describe('readonly record rendering', () => {
     wrapper.unmount()
   })
 
-  it.each([false, true])('renders a single step heading and preserves authored content (grouped: %s)', async (groupStepBodies) => {
+  it.each([
+    ['en-US', false], ['en-US', true],
+    ['zh-CN', false], ['zh-CN', true],
+  ] as const)('labels structured steps and preserves authored numbering (%s, grouped: %s)', async (locale, groupStepBodies) => {
     const wrapper = mount(AimdRecordReport, {
       props: {
         aimd: [
           '{{step|inspect_frame, title="Inspect frame"}}',
           '{{step|align_frame, 2, title="Align frame"}}',
+          '### 1.1 Frame dimensions',
           'Measure **offset**: {{var|offset: str}}.',
           '{{step|archive_frame}} File the result.',
           'See {{ref_step|align_frame}}.',
         ].join('\n\n'),
         record: { data: { var: { offset: 'fixture value' } } },
-        renderOptions: { groupStepBodies },
+        renderOptions: { locale, groupStepBodies },
       },
     })
 
@@ -1547,12 +1551,15 @@ describe('readonly record rendering', () => {
     ]) {
       const step = wrapper.get(`#step-${id}`)
       const heading = step.get('[role="heading"]')
-      expect(heading.text()).toBe(`${number}${title || id}`)
+      const sequence = locale === 'zh-CN' ? `步骤 ${number}：` : `Step ${number} :`
+      expect(heading.text()).toBe(`${sequence} ${title || id}`)
+      expect(heading.attributes('aria-label')).toBe(heading.text())
       expect(heading.attributes('title')).toBe(title ? id : undefined)
       expect(heading.attributes('aria-level')).toBe(String(number.split('.').length + 1))
       expect(step.classes()).not.toContain('aimd-field--editable')
       expect(step.find('.aimd-field__step-num').exists()).toBe(false)
     }
+    expect(wrapper.get('h3').text()).toBe('1.1 Frame dimensions')
     expect(wrapper.get('strong').text()).toBe('offset')
     expect(wrapper.text()).toContain('File the result.')
     expect(wrapper.get('[data-aimd-ref-target="align_frame"]').attributes('data-aimd-step-sequence')).toBe('1.1')

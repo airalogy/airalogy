@@ -579,6 +579,7 @@ function createVarTableRenderer(): AimdComponentRenderer {
 const renderRecordStep: AimdComponentRenderer = (node, ctx, children) => {
   const step = node as AimdStepNode
   const label = step.title || step.id
+  const sequence = ctx.messages.step.sequence(step.step)
   const body = getStepBodyChildren(children)
   return h('div', {
     class: 'aimd-record-step',
@@ -592,10 +593,11 @@ const renderRecordStep: AimdComponentRenderer = (node, ctx, children) => {
       class: 'aimd-record-step__heading',
       role: 'heading',
       'aria-level': step.level + 1,
-      'aria-label': `${ctx.messages.step.sequence(step.step)} ${label}`,
+      'aria-label': `${sequence} ${label}`,
       title: step.title ? step.id : undefined,
     }, [
-      h('span', { class: 'aimd-record-step__number' }, step.step),
+      h('span', { class: 'aimd-record-step__number' }, sequence),
+      ' ',
       h('span', label),
     ]),
     body.length ? h('div', body) : null,
