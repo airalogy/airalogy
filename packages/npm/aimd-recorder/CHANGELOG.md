@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.30.0
+
+### Minor Changes
+
+- 545b924: Use one grouped field panel for Record entry and reading. Read-only panels display the saved values without initializing missing fields. The panel follows the same detailed or compact field display setting as the document. Both modes expose field descriptions, identifiers, and navigation to the protocol.
+
+### Patch Changes
+
+- 545b924: Keep optional field markers fully visible in detailed and compact entry modes. Long field titles and identifiers wrap within the available space.
+
 ## 1.29.1
 
 ### Patch Changes
