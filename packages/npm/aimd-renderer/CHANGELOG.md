@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.15.1
+
+### Patch Changes
+
+- c64dad5: Open saved Record reports in detailed view by default and label each checkpoint before its title and saved status in both presentations.
+
 ## 2.15.0
 
 ### Minor Changes
