@@ -1,5 +1,12 @@
 # @airalogy/aira-reader
 
+## 0.1.13
+
+### Patch Changes
+
+- Updated dependencies [1022163]
+  - @airalogy/aimd-renderer@2.14.2
+
 ## 0.1.12
 
 ### Patch Changes
