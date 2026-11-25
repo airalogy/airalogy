@@ -177,7 +177,7 @@ export const AimdMarkdownPreview = defineComponent({
     },
     recordPresentation: {
       type: String as PropType<AimdRecordPresentation>,
-      default: 'compact',
+      default: 'detailed',
     },
     readonlyRecordData: {
       type: Object as PropType<AimdMarkdownPreviewReadonlyRecordData>,

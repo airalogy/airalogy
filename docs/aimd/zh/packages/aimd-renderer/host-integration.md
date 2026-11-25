@@ -77,4 +77,4 @@ const { nodes } = await renderToVue(content, {
 
 ## 只读报告的显示方式
 
-只读记录报告支持简洁和详细两种视图。两者显示同一份已保存数据，检查点区分已勾选、未勾选和未记录。 在 `AimdRecordReport` 或带 `readonlyRecordData` 的 `AimdMarkdownPreview` 上设置 `recordPresentation="compact"`（默认）或 `"detailed"`。详细视图突出步骤层级和记录值。切换时保留文档节点、字段引用和已保存的状态。
+只读记录报告默认使用详细视图，也可以切换为简洁视图。两种视图都依次显示“检查点”、标题和已保存的状态。 在 `AimdRecordReport` 或带 `readonlyRecordData` 的 `AimdMarkdownPreview` 上设置 `recordPresentation="detailed"`（默认）或 `"compact"`。详细视图突出步骤层级和记录值。切换时保留文档节点、字段引用和已保存的状态。

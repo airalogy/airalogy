@@ -1528,10 +1528,16 @@ describe('readonly record rendering', () => {
       },
     })
     await vi.waitFor(() => expect(wrapper.findAll('.aimd-record-check')).toHaveLength(4))
+    expect(wrapper.get('.rendered-aimd-document').attributes('data-record-presentation')).toBe('detailed')
     const savedNodes = wrapper.findAll('.aimd-record-check').map(check => check.element)
     for (const mode of ['compact', 'detailed'] as const) {
       await wrapper.setProps({ recordPresentation: mode })
       expect(wrapper.get('.rendered-aimd-document').attributes('data-record-presentation')).toBe(mode)
+      const label = locale === 'zh-CN' ? '检查点' : 'Checkpoint'
+      for (const check of wrapper.findAll('.aimd-record-check')) {
+        expect(check.findAll('.aimd-record-check__kind').map(item => item.text())).toEqual([label])
+        expect(check.element.firstElementChild?.textContent).toBe(label)
+      }
       expect(wrapper.findAll('.aimd-record-check__status').map(item => item.text())).toEqual([yes, no, absent, absent])
       expect(wrapper.findAll('.aimd-record-check__title').map(item => item.text())).toEqual(['Alignment', 'open', 'Legacy', 'absent'])
       expect(wrapper.findAll('.aimd-record-check').every((item, i) => item.element === savedNodes[i])).toBe(true)

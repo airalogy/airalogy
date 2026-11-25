@@ -2229,6 +2229,13 @@
   margin-block: .4em .15em;
 }
 
+.aimd-record-check__kind {
+  flex: none;
+  color: #526579;
+  font-size: .8125em;
+  font-weight: 600;
+}
+
 .aimd-record-check__status {
   flex: none;
   border-radius: .3em;

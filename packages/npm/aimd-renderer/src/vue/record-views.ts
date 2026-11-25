@@ -870,7 +870,7 @@ export const AimdRecordReport = defineComponent({
     },
     recordPresentation: {
       type: String as PropType<AimdRecordPresentation>,
-      default: 'compact',
+      default: undefined,
     },
     readonlyRecordRenderOptions: {
       type: Object as PropType<ReadonlyRecordVueRendererOptions>,

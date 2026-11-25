@@ -77,4 +77,4 @@ If you need full control of style loading, import `@airalogy/aimd-renderer/style
 
 ## Read-only report presentation
 
-Read-only Record reports support compact and detailed presentations. Both display the same saved data and distinguish checked, unchecked and unrecorded checkpoints. Set `recordPresentation="compact"` (default) or `"detailed"` on `AimdRecordReport` or on `AimdMarkdownPreview` with `readonlyRecordData`. Detailed presentation emphasizes step hierarchy and recorded values. Switching preserves document nodes, field references and saved state.
+Read-only Record reports open in the detailed presentation. Select the compact presentation for text-first reading. Both show the checkpoint label, title and saved status. Set `recordPresentation="detailed"` (default) or `"compact"` on `AimdRecordReport` or on `AimdMarkdownPreview` with `readonlyRecordData`. Detailed presentation emphasizes step hierarchy and recorded values. Switching preserves document nodes, field references and saved state.

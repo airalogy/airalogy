@@ -628,9 +628,11 @@ const renderRecordCheck: AimdComponentRenderer = (node, ctx, children) => {
     ...recordFieldProps(node, 'aimd-record-check'),
     'data-state': state,
   }, [
-    h('span', { class: 'aimd-record-check__status' }, ctx.messages.recordView[state]),
+    h('span', { class: 'aimd-record-check__kind' }, ctx.messages.recordView.checkpoint),
     ' ',
     h('strong', { class: 'aimd-record-check__title' }, fieldDisplayLabel(node)),
+    ' ',
+    h('span', { class: 'aimd-record-check__status' }, ctx.messages.recordView[state]),
     note ? h('span', { class: 'aimd-record-check__note' }, note) : null,
     body,
   ])
