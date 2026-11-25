@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.14.2
+
+### Patch Changes
+
+- 1022163: Show the localized step label before the number in read-only Record headings so readers can distinguish structured steps from numbering written in Markdown.
+
 ## 2.14.1
 
 ### Patch Changes
