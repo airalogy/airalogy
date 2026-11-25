@@ -331,3 +331,5 @@ Use `<AimdRecorder layout="field-panel" :content="source" v-model="record" />` f
 Return the stored file reference from `uploadFile` and provide authorized preview metadata through `resolveFileInfo`. Handle `navigate-field` by calling `focusField(key)` on the protocol recorder. Pass `panelVariables` to select or order fields, including schema-only variables.
 
 For a saved Record, pass `readonly` and its saved `model-value` to the same panel. Variables, tables, steps, checkpoints, and questions are grouped. Use the same `field-display` value for the document and the panel. Detailed mode shows field identifiers with the labels. Compact mode keeps them in the field details. The `navigate-field` event provides the field key. The read-only view preserves missing values, zero, and unchecked states.
+
+Expand a field heading to inspect its ID, type, description, examples, default and declared constraints independently of the recorded value.

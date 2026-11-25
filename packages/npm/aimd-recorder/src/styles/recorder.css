@@ -320,7 +320,7 @@
   display: inline-flex;
   flex-direction: column;
   align-items: stretch;
-  margin: 2px 4px !important;
+  margin: 2px var(--rec-inline-field-margin, 4px) !important;
   vertical-align: bottom;
   border: 1px solid var(--aimd-border-color);
   border-radius: 6px;

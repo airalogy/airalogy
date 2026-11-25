@@ -331,3 +331,5 @@ const { record, skipped } = createExampleRecord(fields)
 使用 `uploadFile` 返回已保存的附件标识，以 `resolveFileInfo` 提供有权限的预览。用 `@navigate-field` 接收稳定的字段键，并调用正文 Recorder 实例的 `focusField(key)`。需要固定顺序或补充仅在模型中声明的字段时，可传入 `panelVariables`。
 
 阅读已保存的记录时，给同一个面板传入 `readonly` 和当前修订的 `model-value`。变量、表格、步骤、检查点和题目分组展示。侧栏和正文可以共用一个 `field-display` 值。详细模式在名称下展示字段 ID，简洁模式可展开名称查看。宿主可通过 `navigate-field` 返回的字段键定位正文。阅读时会区分未记录、零值和未勾选。
+
+展开字段标题可查看字段 ID、类型、说明、示例、默认值和已声明的约束。填写值或历史实测值单独显示。

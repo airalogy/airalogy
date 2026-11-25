@@ -7,7 +7,7 @@ export interface PanelField {
   id: string
   key: string
   title: string
-  description?: string
+  definition: Array<{ label: keyof AimdRecorderMessages['definition']; text: string }>
   required?: boolean
   navigate: boolean
   control?: VNode | null
@@ -23,9 +23,6 @@ const groups = computed(() => {
   }
   return groups
 })
-function hasMetadata(field: PanelField) {
-  return Boolean(field.description || (!props.detailed && field.title !== field.id))
-}
 const FieldControl = ({ field }: { field: PanelField }) => field.control
 </script>
 
@@ -35,15 +32,19 @@ const FieldControl = ({ field }: { field: PanelField }) => field.control
       <summary>{{ messages.panel[scope] }}</summary>
       <div v-for="field in rows" :key="field.key" class="aimd-panel-field" role="group" :aria-label="field.title" :data-panel-key="field.key" :data-panel-field="scope === 'var' ? field.key : undefined">
         <div class="aimd-panel-heading">
-          <component :is="hasMetadata(field) ? 'details' : 'div'" class="aimd-panel-meta">
-            <component :is="hasMetadata(field) ? 'summary' : 'div'" class="aimd-panel-label">
+          <details class="aimd-panel-meta">
+            <summary class="aimd-panel-label">
               {{ field.title }}
               <small v-if="field.required !== undefined">{{ field.required ? messages.common.required : messages.common.optional }}</small>
               <code v-if="detailed && field.title !== field.id" class="aimd-panel-id">{{ field.id }}</code>
-            </component>
-            <code v-if="!detailed && field.title !== field.id" class="aimd-panel-id">{{ field.id }}</code>
-            <p v-if="field.description">{{ field.description }}</p>
-          </component>
+            </summary>
+            <dl class="aimd-panel-definition">
+              <dt>{{ messages.definition.id }}</dt><dd><code class="aimd-panel-id">{{ field.id }}</code></dd>
+              <template v-for="item in field.definition" :key="item.label">
+                <dt>{{ messages.definition[item.label] }}</dt><dd>{{ item.text }}</dd>
+              </template>
+            </dl>
+          </details>
           <button v-if="field.navigate" class="aimd-panel-jump" type="button" :aria-label="messages.panel.locate(field.title)" :title="messages.panel.locate(field.title)" :data-navigate-field="field.key" @click="$emit('navigate', field.key)">›</button>
         </div>
         <div v-if="field.control" class="aimd-panel-value"><FieldControl :field="field" /></div>

@@ -205,6 +205,17 @@ function resolveLocalSchemaReference(
   return isRecord(current) ? current : schema
 }
 
+/** Property schemas for the variable fields, using the same section aliases as validation. */
+export function getPanelVariableSchemas(schema?: AimdRecordValidationSchema): Map<string, Record<string, unknown>> {
+  const fields = new Map<string, Record<string, unknown>>()
+  const section = resolveSchemaSections(schema).find(entry => entry.section === "var")?.schema
+  if (!section || !isRecord(section.properties)) return fields
+  for (const [id, property] of Object.entries(section.properties)) {
+    if (isRecord(property)) fields.set(id, { ...resolveLocalSchemaReference(section, property), ...property })
+  }
+  return fields
+}
+
 function findArraySchema(
   root: Record<string, unknown>,
   candidate: unknown,

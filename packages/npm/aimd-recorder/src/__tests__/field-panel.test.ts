@@ -9,6 +9,24 @@ describe('standalone field panel', () => {
     '{{var|photo: FileIdJPG | None = None, title="Label photo"}}',
     '{{check|inspect, title="Inspect label"}} {{check|legacy}}',
   ].join('\n\n')
+  it.each([false, true])('shows protocol definitions separately from values (readonly=%s)', async readonly => {
+    const panel = mount(AimdRecorder, { props: {
+      content: '{{var|count: int = 0, title="Count"}}', layout: 'field-panel', readonly, locale: 'zh-CN',
+      modelValue: { var: { count: 17 } }, validationSchema: { research_variable: {
+        properties: { count: { $ref: '#/$defs/count' } },
+        $defs: { count: { type: 'integer', examples: [0, 8], minimum: 0, maximum: 20, description: 'Units counted' } },
+      } },
+    } })
+    await flushPromises()
+    const definition = panel.get('[data-panel-key="var:count"] dl')
+    const entries = Object.fromEntries(definition.findAll('dt').map(dt => [dt.text(), dt.element.nextElementSibling?.textContent]))
+    expect(entries).toMatchObject({ '字段 ID': 'count', '类型': 'int', '示例数据': '0\n8', '默认值': '0', '说明': 'Units counted' })
+    expect(entries['其他定义与约束']).toContain('minimum = 0')
+    expect(entries['其他定义与约束']).toContain('maximum = 20')
+    expect(definition.text()).not.toContain('17')
+    panel.unmount()
+  })
+
   it('finishes a pointer activation before an adjacent required-field error changes the layout', async () => {
     const panel = mount(AimdRecorder, { props: {
       content: '{{var|location: str}} {{var|photo: FileIdJPG | None = None}}',

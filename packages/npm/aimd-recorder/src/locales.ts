@@ -257,6 +257,7 @@ export interface AimdRecorderMessages {
     segmentRangeError: string
     segmentOutOfBounds: (end: number, length: number) => string
   }
+  definition: { id: string; type: string; description: string; default: string; examples: string; enum: string; columns: string; unit: string; placeholder: string; constraints: string }
   panel: { var: string; var_table: string; step: string; check: string; quiz: string; locate: (title: string) => string }
   common: {
     emptyValue?: string
@@ -532,6 +533,7 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     segmentRangeError: "Segment end must be greater than or equal to start.",
     segmentOutOfBounds: (end, length) => `Segment end ${end} exceeds sequence length ${length}.`,
   },
+  definition: { id: "Field ID", type: "Type", description: "Description", default: "Default value", examples: "Examples", enum: "Allowed values", columns: "Columns", unit: "Unit", placeholder: "Input hint", constraints: "Other definition properties" },
   panel: { var: "Variables", var_table: "Tables", step: "Steps", check: "Checkpoints", quiz: "Questions", locate: title => `Locate ${title} in the document` },
   common: {
     emptyValue: "Not set",
@@ -780,6 +782,7 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     segmentRangeError: "片段终点必须大于或等于起点。",
     segmentOutOfBounds: (end, length) => `片段终点 ${end} 超出了序列长度 ${length}。`,
   },
+  definition: { id: "字段 ID", type: "类型", description: "说明", default: "默认值", examples: "示例数据", enum: "可选值", columns: "表格列", unit: "单位", placeholder: "输入提示", constraints: "其他定义与约束" },
   panel: { var: "变量", var_table: "表格", step: "步骤", check: "检查点", quiz: "题目", locate: title => `在正文中定位「${title}」` },
   common: {
     emptyValue: "未填写",

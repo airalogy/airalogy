@@ -15,6 +15,8 @@ import type {
   ExtractedAimdFields,
 } from "@airalogy/aimd-core/types"
 import { AIMD_FILE_REFERENCE_VALUE_KEYS, collectAimdRecordFieldRefs, getAimdFieldEnumValues, getAimdFileKindFromType, getAimdFileValueId } from "@airalogy/aimd-core/utils"
+import { getPanelVariableSchemas } from "../record/validation"
+import { panelDefinition } from "../record/panel-definition"
 import RecorderFieldPanel, { type PanelField } from "./RecorderFieldPanel.vue"
 import { createAimdRendererMessages, createReadonlyRecordAimdRenderers, createReadonlyRecordRenderContext, parseAndExtract, renderToVue } from "@airalogy/aimd-renderer"
 import type { AimdComponentRenderer } from "@airalogy/aimd-renderer"
@@ -1901,6 +1903,7 @@ async function buildPanelFields(nodes: Map<string, AimdNode>): Promise<VNode[]> 
   const messages = createAimdRendererMessages(locale)
   const context = { ...createReadonlyRecordRenderContext(props.modelValue), locale, messages }
   const renderers = createReadonlyRecordAimdRenderers()
+  const variableSchemas = getPanelVariableSchemas(props.validationSchema)
   const rows: PanelField[] = []
   if (props.readonly) {
     // Historical values can outlive a field declaration. Keep them inspectable.
@@ -1948,7 +1951,7 @@ async function buildPanelFields(nodes: Map<string, AimdNode>): Promise<VNode[]> 
     }
     rows.push({
       key, id, scope, title: meta?.title || field?.title || field?.label || id,
-      description: meta?.description || field?.description,
+      definition: panelDefinition(node, field, meta, variableSchemas.get(id)),
       required: scope === "var" ? meta?.required ?? (field ? requiredFieldKeys.value.has(key) : undefined) : undefined,
       navigate: nodes.has(key), control,
     })
