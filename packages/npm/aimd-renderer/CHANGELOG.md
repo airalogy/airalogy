@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.14.1
+
+### Patch Changes
+
+- 4eab828: Show each step in Vue Record reports as a plain numbered heading, using its ID for untitled steps. Long headings wrap, and each checkpoint displays its saved state once.
+
 ## 2.14.0
 
 ### Minor Changes
