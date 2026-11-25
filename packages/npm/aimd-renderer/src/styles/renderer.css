@@ -819,6 +819,19 @@
   min-width: 0;
   max-width: 100%;
 }
+.aimd-record-step__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45em;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.aimd-record-step__number {
+  flex: none;
+  color: var(--aimd-text-secondary, #536273);
+  font-variant-numeric: tabular-nums;
+}
 .aimd-record-report {
   min-width: 0;
   max-width: 100%;

@@ -1546,9 +1546,11 @@ describe('readonly record rendering', () => {
       ['archive_frame', '', '2'],
     ]) {
       const step = wrapper.get(`#step-${id}`)
-      expect(step.findAll('.aimd-step__id').map(item => item.text())).toEqual([id])
-      expect(step.findAll('.aimd-step__title').map(item => item.text())).toEqual(title ? [title] : [])
-      expect(step.get('.research-step__sequence').text()).toContain(number)
+      const heading = step.get('[role="heading"]')
+      expect(heading.text()).toBe(`${number}${title || id}`)
+      expect(heading.attributes('title')).toBe(title ? id : undefined)
+      expect(heading.attributes('aria-level')).toBe(String(number.split('.').length + 1))
+      expect(step.classes()).not.toContain('aimd-field--editable')
       expect(step.find('.aimd-field__step-num').exists()).toBe(false)
     }
     expect(wrapper.get('strong').text()).toBe('offset')

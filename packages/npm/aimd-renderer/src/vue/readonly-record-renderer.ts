@@ -3,6 +3,7 @@ import type {
   AimdFigNode,
   AimdNode,
   AimdQuizNode,
+  AimdStepNode,
   AimdVarNode,
   AimdVarTableNode,
   RenderContext,
@@ -38,6 +39,8 @@ import { defineComponent, h, isVNode, ref, shallowRef, watch, type PropType, typ
 import type { AimdRendererOptions, RenderResult } from '../common/processor'
 import { renderToVue } from '../common/processor'
 import type { AimdComponentRenderer, AimdRendererContext, ElementRenderer, VueRendererOptions } from './vue-renderer'
+
+import { getStepBodyChildren } from './vue-renderer'
 
 export const AIMD_RECORD_RENDER_SCOPES = AIMD_RECORD_DATA_SCOPES
 
@@ -573,6 +576,32 @@ function createVarTableRenderer(): AimdComponentRenderer {
   }
 }
 
+const renderRecordStep: AimdComponentRenderer = (node, ctx, children) => {
+  const step = node as AimdStepNode
+  const label = step.title || step.id
+  const body = getStepBodyChildren(children)
+  return h('div', {
+    class: 'aimd-record-step',
+    id: `step-${step.id}`,
+    'data-aimd-type': 'step',
+    'data-aimd-id': step.id,
+    'data-aimd-step': step.step,
+    'data-aimd-level': step.level,
+  }, [
+    h('div', {
+      class: 'aimd-record-step__heading',
+      role: 'heading',
+      'aria-level': step.level + 1,
+      'aria-label': `${ctx.messages.step.sequence(step.step)} ${label}`,
+      title: step.title ? step.id : undefined,
+    }, [
+      h('span', { class: 'aimd-record-step__number' }, step.step),
+      h('span', label),
+    ]),
+    body.length ? h('div', body) : null,
+  ])
+}
+
 function createCheckRenderer(): AimdComponentRenderer {
   return (node, ctx, children) => {
     const checkNode = node as AimdCheckNode
@@ -694,6 +723,7 @@ export function createReadonlyRecordAimdRenderers(
   return {
     var: createVarRenderer(options.resolveAsset, options.markdownRenderOptions),
     var_table: createVarTableRenderer(),
+    step: renderRecordStep,
     check: createCheckRenderer(),
     quiz: createQuizRenderer(),
     fig: createFigRenderer(options.resolveAsset),

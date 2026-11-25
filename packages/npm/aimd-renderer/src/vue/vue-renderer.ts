@@ -499,7 +499,7 @@ function isStepBodyVNode(node: unknown): node is VNode {
 
 const stepPreviewClasses = new Set(["aimd-field__scope", "aimd-field__step-num", "aimd-step__identity"])
 
-function getStepBodyChildren(children?: VNodeChild[]): VNodeChild[] {
+export function getStepBodyChildren(children?: VNodeChild[]): VNodeChild[] {
   if (!children || children.length === 0) {
     return []
   }

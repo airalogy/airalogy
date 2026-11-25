@@ -2,4 +2,4 @@
 "@airalogy/aimd-renderer": patch
 ---
 
-Render a single heading for each step in Vue Record reports, wrap long titles and IDs to the available width, and show each checkpoint once with its saved state.
+Show each step in Vue Record reports as a plain numbered heading, using its ID for untitled steps. Long headings wrap, and each checkpoint displays its saved state once.
