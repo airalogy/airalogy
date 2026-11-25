@@ -27,5 +27,6 @@ describe("AimdRequiredMarker", () => {
 
   it("keeps the indicator in an inline title row when metadata uses a stacked label", () => {
     expect(recorderStyles).toMatch(/\.aimd-field__title-row \{[\s\S]*?display: inline-flex;[\s\S]*?align-items: baseline;/)
+    expect(recorderStyles).toMatch(/\.aimd-field__title-row:has\(> \.aimd-field__required-marker\)\s*\{\s*flex-wrap: nowrap;/)
   })
 })

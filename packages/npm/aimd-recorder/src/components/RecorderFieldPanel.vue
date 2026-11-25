@@ -34,9 +34,11 @@ const FieldControl = ({ field }: { field: PanelField }) => field.control
         <div class="aimd-panel-heading">
           <details class="aimd-panel-meta">
             <summary class="aimd-panel-label">
-              {{ field.title }}
-              <small v-if="field.required !== undefined">{{ field.required ? messages.common.required : messages.common.optional }}</small>
-              <code v-if="detailed && field.title !== field.id" class="aimd-panel-id">{{ field.id }}</code>
+              <span>
+                {{ field.title }}
+                <small v-if="field.required !== undefined">{{ field.required ? messages.common.required : messages.common.optional }}</small>
+                <code v-if="detailed && field.title !== field.id" class="aimd-panel-id">{{ field.id }}</code>
+              </span>
             </summary>
             <dl class="aimd-panel-definition">
               <dt>{{ messages.definition.id }}</dt><dd><code class="aimd-panel-id">{{ field.id }}</code></dd>
@@ -45,7 +47,7 @@ const FieldControl = ({ field }: { field: PanelField }) => field.control
               </template>
             </dl>
           </details>
-          <button v-if="field.navigate" class="aimd-panel-jump" type="button" :aria-label="messages.panel.locate(field.title)" :title="messages.panel.locate(field.title)" :data-navigate-field="field.key" @click="$emit('navigate', field.key)">›</button>
+          <button v-if="field.navigate" class="aimd-panel-jump" type="button" :aria-label="messages.panel.locate(field.title)" :title="messages.panel.locate(field.title)" :data-navigate-field="field.key" @click="$emit('navigate', field.key)">{{ messages.panel.locateLabel ?? messages.panel.locate(field.title) }}</button>
         </div>
         <div v-if="field.control" class="aimd-panel-value"><FieldControl :field="field" /></div>
       </div>

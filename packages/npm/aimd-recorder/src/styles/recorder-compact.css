@@ -65,19 +65,32 @@
 .aimd-panel-group > summary { cursor: pointer; font-weight: 650; padding: 0.45rem 0; }
 .aimd-recorder-panel .aimd-panel-field { min-width: 0; margin: 0; padding: 0.625rem 0; border-block-end: 1px solid var(--rec-border, #dde3eb); }
 .aimd-panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
-.aimd-panel-meta { min-width: 0; overflow-wrap: anywhere; }
+.aimd-panel-meta { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .aimd-panel-definition { display: grid; grid-template-columns: fit-content(35%) minmax(0, 1fr); gap: 0.25rem 0.75rem; margin: 0.5rem 0; font-size: 0.875em; }
 .aimd-panel-definition dt { color: var(--aimd-text-muted, #586577); }
 .aimd-panel-definition dd { min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.aimd-panel-label { font-weight: 600; }
-.aimd-panel-meta > summary { cursor: pointer; }
+.aimd-panel-label {
+  display: flex; align-items: center; gap: 0.5rem; min-height: 32px;
+  list-style: none; cursor: pointer; font-weight: 600;
+}
+.aimd-panel-label::-webkit-details-marker { display: none; }
+.aimd-panel-label::before {
+  content: ''; flex: none; width: 0.4rem; height: 0.4rem; box-sizing: border-box;
+  border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(-45deg);
+}
+.aimd-panel-meta[open] > .aimd-panel-label::before { transform: rotate(45deg); }
+.aimd-panel-label > span { min-width: 0; }
 .aimd-panel-meta small, .aimd-panel-meta code { color: var(--aimd-text-muted, #586577); font-size: 0.8em; font-weight: 400; }
 .aimd-panel-meta p, .aimd-panel-value p { margin: 0.25rem 0; }
-.aimd-panel-jump { background: transparent; color: var(--aimd-text-muted, #586577); border-radius: 4px; border: 0; cursor: pointer; min-width: 32px; min-height: 32px; }
+.aimd-panel-jump {
+  align-self: flex-start; max-width: 45%; min-height: 32px; padding: 0.25rem 0.5rem;
+  border: 0; border-radius: 4px; background: transparent; color: var(--aimd-text-muted, #586577);
+  font: inherit; font-size: 0.8125rem; overflow-wrap: anywhere; cursor: pointer;
+}
 .aimd-panel-jump:hover { background: #ebf2fb; }
 .aimd-panel-value { min-width: 0; overflow-x: auto; overflow-wrap: anywhere; }
 .aimd-panel-meta summary:focus-visible, .aimd-panel-group > summary:focus-visible, .aimd-panel-jump:focus-visible { outline: 2px solid #2864b5; outline-offset: -2px; }
-@media (pointer: coarse) { .aimd-panel-jump, .aimd-panel-meta summary, .aimd-panel-group > summary { min-height: 40px; align-content: center; } }
+@media (pointer: coarse) { .aimd-panel-jump, .aimd-panel-meta summary, .aimd-panel-group > summary { min-height: 44px; align-content: center; } }
 /* The row heading already identifies the field and its scope. */
 .aimd-panel-value .aimd-record-field__missing-name,
 .aimd-panel-value .aimd-record-check__kind,

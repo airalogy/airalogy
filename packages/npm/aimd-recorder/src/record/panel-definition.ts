@@ -43,6 +43,23 @@ export function panelDefinition(node: AimdNode, field?: AimdRecordFieldRef, meta
     }))
   }
   const displayed = new Set(["title", "type", "description", "unit", "default", "examples", "example", "enum", "placeholder", "$defs", "definitions", "$schema"])
+  // AIMD length limits apply to characters, items or properties according to the field type.
+  const lengthUnit = schema?.type === "array" ? "Items" : schema?.type === "object" ? "Properties" : "Length"
+  const constraints: Array<[Label, ...string[]]> = [
+    ["minimum", "ge"], ["exclusiveMinimum", "gt"], ["maximum", "le"], ["exclusiveMaximum", "lt"], ["multipleOf", "multiple_of"],
+    ["minLength"], ["maxLength"], ["minItems", "min_items"], ["maxItems", "max_items"], ["minProperties"], ["maxProperties"],
+  ]
+  for (const keys of constraints) {
+    const [key] = keys
+    if (key === "min" + lengthUnit) keys.push("min_length")
+    if (key === "max" + lengthUnit) keys.push("max_length")
+    const values = keys.filter(k => Object.prototype.hasOwnProperty.call(properties, k)).map(k => properties[k])
+    const [value] = values
+    // Keep conflicting or unrecognized definitions inspectable under their original names.
+    if (typeof value !== "number" || !values.every(v => v === value)) continue
+    add(key, value)
+    for (const k of keys) displayed.add(k)
+  }
   const remaining = Object.entries(properties).filter(([key]) => !displayed.has(key))
   if (meta?.pattern && properties.pattern === undefined) remaining.push(["pattern", meta.pattern])
   if (remaining.length) add("constraints", remaining.map(([key, value]) => key + " = " + formatAimdExampleValue(value)))

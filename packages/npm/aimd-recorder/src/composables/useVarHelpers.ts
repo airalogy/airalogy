@@ -1109,15 +1109,15 @@ function measureLabelTokenWidth(token: HTMLElement): number {
   const computed = window.getComputedStyle(token)
   const text = (token.textContent || "").trim()
   const textWidth = measureStyledTextWidth(text, computed)
-  const horizontal =
+  const paddingAndBorder =
     parsePx(computed.paddingLeft)
     + parsePx(computed.paddingRight)
     + parsePx(computed.borderLeftWidth)
     + parsePx(computed.borderRightWidth)
-    + parsePx(computed.marginLeft)
-    + parsePx(computed.marginRight)
-
-  return textWidth + horizontal
+  const minWidth = computed.minWidth?.endsWith("px") ? parsePx(computed.minWidth) : 0
+  const minBoxWidth = computed.boxSizing === "border-box" ? minWidth : minWidth + paddingAndBorder
+  return Math.max(textWidth + paddingAndBorder, minBoxWidth)
+    + parsePx(computed.marginLeft) + parsePx(computed.marginRight)
 }
 
 function getElementHorizontalSpace(element: HTMLElement): number {

@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import AimdEditorToolbar from '../vue/AimdEditorToolbar.vue'
 import AimdInputFieldDialog from '../vue/AimdInputFieldDialog.vue'
 import { createAimdEditorMessages } from '../vue/locales'
@@ -8,21 +8,35 @@ const messages = createAimdEditorMessages('zh-CN')
 
 describe('common input toolbar', () => {
   it('exposes six common inputs with distinct presets and compact labels', async () => {
-    const wrapper = mount(AimdEditorToolbar, { props: {
+    const wrapper = mount(AimdEditorToolbar, { attachTo: document.body, props: {
       showTopBar: false, showMdToolbar: false, showAimdToolbar: true, editorMode: 'wysiwyg',
       resolvedMessages: messages, localizedMdToolbarItems: [],
       localizedFieldTypes: [{ type: 'var', label: 'Input', desc: 'Input', color: '#000', svgIcon: '', icon: '' }],
     } })
-    const buttons = wrapper.findAll('.aimd-input-tools > button')
+    const buttons = wrapper.findAll('.aimd-input-tools > button:not([aria-haspopup])')
     expect(buttons.map(button => button.text())).toEqual(['文本', '整数', '小数', '单选', '多选', '是／否'])
     for (const button of buttons) await button.trigger('click')
     expect(wrapper.emitted('insert-input')?.map(event => event[0])).toEqual(['str', 'int', 'float', 'choice', 'multiple-choice', 'bool | None'])
     expect(buttons.every(button => button.attributes('title')?.startsWith('插入'))).toBe(true)
-    const more = wrapper.get('details')
-    ;(more.element as HTMLDetailsElement).open = true
-    await wrapper.get('.aimd-input-tools__menu button').trigger('click')
-    expect((more.element as HTMLDetailsElement).open).toBe(false)
-    expect(wrapper.emitted('insert-input')?.slice(-1)[0]).toEqual(['date'])
+    const more = wrapper.get('button[aria-haspopup="menu"]')
+    await more.trigger('click')
+    const menu = document.body.querySelector<HTMLElement>('[role="menu"]')!
+    expect(menu.parentElement).toBe(document.body)
+    expect(more.attributes('aria-expanded')).toBe('true')
+    const items = menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
+    expect(items).toHaveLength(6)
+    await vi.waitFor(() => expect(document.activeElement).toBe(items[0]))
+    items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }))
+    expect(document.activeElement).toBe(items[5])
+    items[5].dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await vi.waitFor(() => expect(menu.isConnected).toBe(false))
+    expect(document.activeElement).toBe(more.element)
+    await more.trigger('keydown', { key: 'ArrowUp' })
+    const custom = document.body.querySelector<HTMLButtonElement>('[role="menuitem"]:last-child')!
+    await vi.waitFor(() => expect(document.activeElement).toBe(custom))
+    custom.click()
+    expect(wrapper.emitted('insert-input')?.slice(-1)[0]).toEqual(['custom'])
+    await vi.waitFor(() => expect(more.attributes('aria-expanded')).toBe('false'))
     wrapper.unmount()
   })
 

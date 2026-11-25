@@ -9,6 +9,28 @@ describe('standalone field panel', () => {
     '{{var|photo: FileIdJPG | None = None, title="Label photo"}}',
     '{{check|inspect, title="Inspect label"}} {{check|legacy}}',
   ].join('\n\n')
+  it.each([
+    { fieldDisplay: 'detailed', locale: 'zh-CN', readonly: false, label: '定位正文' },
+    { fieldDisplay: 'compact', locale: 'en-US', readonly: true, label: 'Locate in document' },
+  ] as const)('keeps disclosure separate from navigation in $fieldDisplay mode', async ({ fieldDisplay, locale, readonly, label }) => {
+    const panel = mount(AimdRecorder, { props: { content, layout: 'field-panel', fieldDisplay, locale, readonly } })
+    await flushPromises()
+    const row = panel.get('[data-panel-key="var:sample"]')
+    const details = row.get('details').element as HTMLDetailsElement
+    const summary = row.get('summary').element as HTMLElement
+    const locate = row.get('[data-navigate-field]')
+    summary.click()
+    expect(details.open).toBe(true)
+    summary.click()
+    expect(details.open).toBe(false)
+    expect(panel.emitted('navigate-field')).toBeUndefined()
+    expect(locate.text()).toBe(label)
+    expect(locate.attributes('aria-label')).toContain('Label')
+    await locate.trigger('click')
+    expect(panel.emitted('navigate-field')).toEqual([['var:sample']])
+    panel.unmount()
+  })
+
   it.each([false, true])('shows protocol definitions separately from values (readonly=%s)', async readonly => {
     const panel = mount(AimdRecorder, { props: {
       content: '{{var|count: int = 0, title="Count"}}', layout: 'field-panel', readonly, locale: 'zh-CN',
@@ -21,9 +43,46 @@ describe('standalone field panel', () => {
     const definition = panel.get('[data-panel-key="var:count"] dl')
     const entries = Object.fromEntries(definition.findAll('dt').map(dt => [dt.text(), dt.element.nextElementSibling?.textContent]))
     expect(entries).toMatchObject({ '字段 ID': 'count', '类型': 'int', '示例数据': '0\n8', '默认值': '0', '说明': 'Units counted' })
-    expect(entries['其他定义与约束']).toContain('minimum = 0')
-    expect(entries['其他定义与约束']).toContain('maximum = 20')
+    expect(entries).toMatchObject({ '最小值（含）': '0', '最大值（含）': '20' })
     expect(definition.text()).not.toContain('17')
+    panel.unmount()
+  })
+
+  it.each([false, true])('shows matching AIMD and schema constraints once (readonly=%s)', async readonly => {
+    const panel = mount(AimdRecorder, { props: {
+      content: [
+        '{{var|sample_label: str, min_length=1}}', '{{var|count: int, ge=0, le=100}}',
+        '{{var|rate: float, gt=0, lt=1, multiple_of=0.25}}', '{{var|tags: list[str], max_length=3}}',
+      ].join('\n\n'),
+      validationSchema: { type: 'object', properties: {
+        sample_label: { type: 'string', minLength: 1 }, count: { type: 'integer', minimum: 0, maximum: 100 },
+        rate: { type: 'number', exclusiveMinimum: 0, exclusiveMaximum: 1, multipleOf: 0.25 },
+        tags: { type: 'array', items: { type: 'string' }, maxItems: 3 },
+      } }, layout: 'field-panel', locale: 'zh-CN', readonly,
+    } })
+    await flushPromises()
+    function rows(field: string) {
+      return panel.get(`[data-panel-key="var:${field}"] dl`).findAll('dt').map(dt => [dt.text(), dt.element.nextElementSibling?.textContent])
+    }
+    expect(rows('sample_label')).toEqual([['字段 ID','sample_label'], ['类型','str'], ['最小长度','1']])
+    expect(rows('count')).toEqual([['字段 ID','count'], ['类型','int'], ['最小值（含）','0'], ['最大值（含）','100']])
+    expect(rows('rate').slice(2)).toEqual([['大于','0'], ['小于','1'], ['倍数','0.25']])
+    expect(rows('tags')).toContainEqual(['最多项数','3'])
+    expect(rows('tags').flat().join(' ')).not.toMatch(/max_length|maxItems/)
+    panel.unmount()
+  })
+
+  it('retains differing bounds and distinguishes inclusive and exclusive limits', async () => {
+    const panel = mount(AimdRecorder, { props: {
+      content: '{{var|score: int, ge=0, gt=0, le=10}}',
+      validationSchema: { type: 'object', properties: { score: { type: 'integer', minimum: 1, format: 'int32' } } },
+      layout: 'field-panel', locale: 'en-US',
+    } })
+    await flushPromises()
+    const dl = panel.get('[data-panel-key="var:score"] dl')
+    const rows = Object.fromEntries(dl.findAll('dt').map(dt => [dt.text(), dt.element.nextElementSibling?.textContent]))
+    expect(rows).toMatchObject({ 'Greater than': '0', 'Maximum (inclusive)': '10' })
+    expect(rows['Other definition properties']?.split('\n').sort()).toEqual(['format = int32', 'ge = 0', 'minimum = 1'])
     panel.unmount()
   })
 

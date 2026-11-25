@@ -478,10 +478,13 @@
   height: 22px;
   margin-left: 3px;
   padding: 0 7px;
-  border-radius: 6px;
   overflow-wrap: normal;
   white-space: nowrap;
   word-break: normal;
+}
+/* This badge sits inside the header, clear of the card edges. */
+.aimd-protocol-recorder__content .aimd-rec-inline--var-stacked > .aimd-field__label > .aimd-field__scope {
+  border-radius: 6px;
 }
 .aimd-protocol-recorder__content .aimd-rec-inline--var-stacked .aimd-field__name {
   display: flex;

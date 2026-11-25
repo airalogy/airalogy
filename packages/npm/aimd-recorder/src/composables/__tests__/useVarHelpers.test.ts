@@ -949,7 +949,7 @@ describe('measureVarLabelWidth', () => {
     expect(measureVarLabelWidth(wrapper)).toBeGreaterThan(220)
   })
 
-  it('reserves label width for required markers', () => {
+  it('reserves the required marker’s minimum box width and both margins, even for a narrow glyph', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => ({
       measureText: (text: string) => ({ width: text.length * 8 }),
     } as unknown as CanvasRenderingContext2D))
@@ -966,6 +966,8 @@ describe('measureVarLabelWidth', () => {
         borderRightWidth: '0px',
         marginLeft: classList.contains('aimd-field__required-marker') ? '4px' : '0px',
         marginRight: classList.contains('aimd-field__required-marker') ? '5px' : '0px',
+        minWidth: classList.contains('aimd-field__required-marker') ? '12px' : 'auto',
+        boxSizing: 'border-box',
       } as CSSStyleDeclaration
     })
 
@@ -982,7 +984,7 @@ describe('measureVarLabelWidth', () => {
     requiredTitle?.parentElement?.classList.add('aimd-field__title-row')
     document.body.append(optionalWrapper, requiredWrapper)
 
-    expect(measureVarLabelWidth(requiredWrapper)).toBeGreaterThan(measureVarLabelWidth(optionalWrapper))
+    expect(measureVarLabelWidth(requiredWrapper) - measureVarLabelWidth(optionalWrapper)).toBe(12 + 4 + 5)
   })
 })
 

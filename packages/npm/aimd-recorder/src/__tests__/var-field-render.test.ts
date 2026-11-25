@@ -226,6 +226,7 @@ describe('AimdVarField render behavior', () => {
   })
 
   it('clips plain stacked var controls so rounded corners render cleanly', () => {
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked > \.aimd-field__label > \.aimd-field__scope\s*\{[^}]*border-radius: 6px;/)
     expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \{[\s\S]*?overflow: hidden;/)
     expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked:has\(\.aimd-field__metadata-host\) \{[\s\S]*?overflow: visible;/)
     expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--has-assigner-control \{[\s\S]*?overflow: hidden;/)

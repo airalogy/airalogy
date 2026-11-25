@@ -19,7 +19,7 @@ const content = ref("")
 
 ## Input Fields Without Manual IDs
 
-The toolbar groups Text, Integer, Decimal, Single choice, Multiple choice, and Yes/no shortcuts using icons and short labels with full insertion tooltips. More inputs contains dates, times, date/time, text lists, attachments, and custom types; controls wrap on narrow screens. Selecting a shortcut opens the corresponding preset. Hosts can pass `initialPreset` to `AimdInputFieldDialog`; standalone `AimdEditorToolbar` integrations handle its `insert-input` event.
+The toolbar groups Text, Integer, Decimal, Single choice, Multiple choice, and Yes/no shortcuts using icons and short labels with full insertion tooltips. More inputs contains dates, times, date/time, text lists, attachments, and custom types; controls wrap on narrow screens. The menu opens above or below the trigger as space permits and scrolls within the viewport. Selecting a shortcut opens the corresponding preset. Hosts can pass `initialPreset` to `AimdInputFieldDialog`; standalone `AimdEditorToolbar` integrations handle its `insert-input` event.
 
 Decimal maps to `float` without requiring users to understand floating-point terminology. Single choice generates `Literal[...]`; multiple choice generates `list[Literal[...]]`, storing one value and an array respectively. New inputs start with Required on. Turn it off to allow a blank value (`| None = None` when there is no other default). Set a prefill independently: a required unit can start at `mg`. Required yes/no uses `Literal[True, False]`; optional yes/no uses `bool | None`. An unanswered question is not No. These are data fields; use Quiz for questions with correct answers and scores.
 

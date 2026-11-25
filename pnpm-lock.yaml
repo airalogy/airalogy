@@ -288,6 +288,9 @@ importers:
       '@codingame/monaco-vscode-standalone-languages':
         specifier: ^20.2.1
         version: 20.5.0
+      '@floating-ui/dom':
+        specifier: ^1.7.5
+        version: 1.7.5
       '@lucide/vue':
         specifier: ^1.62.0
         version: 1.62.0(vue@3.5.27(typescript@5.8.3))

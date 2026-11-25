@@ -148,6 +148,13 @@
   max-width: 100%;
 }
 
+.aimd-field__title-row:has(> .aimd-field__required-marker) {
+  flex-wrap: nowrap;
+}
+.aimd-field__title-row > .aimd-field__title {
+  min-width: 0;
+}
+
 .aimd-field--no-style.aimd-field__label .aimd-field__name--with-metadata {
   align-items: flex-start;
   justify-content: center;

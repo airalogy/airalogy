@@ -257,8 +257,11 @@ export interface AimdRecorderMessages {
     segmentRangeError: string
     segmentOutOfBounds: (end: number, length: number) => string
   }
-  definition: { id: string; type: string; description: string; default: string; examples: string; enum: string; columns: string; unit: string; placeholder: string; constraints: string }
-  panel: { var: string; var_table: string; step: string; check: string; quiz: string; locate: (title: string) => string }
+  definition: { id: string; type: string; description: string; default: string; examples: string; enum: string; columns: string; unit: string; placeholder: string; constraints: string } & Partial<Record<
+    "minimum" | "exclusiveMinimum" | "maximum" | "exclusiveMaximum" | "multipleOf"
+    | "minLength" | "maxLength" | "minItems" | "maxItems" | "minProperties" | "maxProperties", string
+  >>
+  panel: { var: string; var_table: string; step: string; check: string; quiz: string; locateLabel?: string; locate: (title: string) => string }
   common: {
     emptyValue?: string
     emptyContent: string
@@ -533,8 +536,10 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     segmentRangeError: "Segment end must be greater than or equal to start.",
     segmentOutOfBounds: (end, length) => `Segment end ${end} exceeds sequence length ${length}.`,
   },
-  definition: { id: "Field ID", type: "Type", description: "Description", default: "Default value", examples: "Examples", enum: "Allowed values", columns: "Columns", unit: "Unit", placeholder: "Input hint", constraints: "Other definition properties" },
-  panel: { var: "Variables", var_table: "Tables", step: "Steps", check: "Checkpoints", quiz: "Questions", locate: title => `Locate ${title} in the document` },
+  definition: { id: "Field ID", type: "Type", description: "Description", default: "Default value", examples: "Examples", enum: "Allowed values", columns: "Columns", unit: "Unit", placeholder: "Input hint", constraints: "Other definition properties",
+    minimum: "Minimum (inclusive)", exclusiveMinimum: "Greater than", maximum: "Maximum (inclusive)", exclusiveMaximum: "Less than", multipleOf: "Multiple of",
+    minLength: "Minimum length", maxLength: "Maximum length", minItems: "Minimum items", maxItems: "Maximum items", minProperties: "Minimum properties", maxProperties: "Maximum properties" },
+  panel: { var: "Variables", var_table: "Tables", step: "Steps", check: "Checkpoints", quiz: "Questions", locateLabel: "Locate in document", locate: title => `Locate in document: ${title}` },
   common: {
     emptyValue: "Not set",
     emptyContent: "No renderable protocol content.",
@@ -782,8 +787,10 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     segmentRangeError: "片段终点必须大于或等于起点。",
     segmentOutOfBounds: (end, length) => `片段终点 ${end} 超出了序列长度 ${length}。`,
   },
-  definition: { id: "字段 ID", type: "类型", description: "说明", default: "默认值", examples: "示例数据", enum: "可选值", columns: "表格列", unit: "单位", placeholder: "输入提示", constraints: "其他定义与约束" },
-  panel: { var: "变量", var_table: "表格", step: "步骤", check: "检查点", quiz: "题目", locate: title => `在正文中定位「${title}」` },
+  definition: { id: "字段 ID", type: "类型", description: "说明", default: "默认值", examples: "示例数据", enum: "可选值", columns: "表格列", unit: "单位", placeholder: "输入提示", constraints: "其他定义与约束",
+    minimum: "最小值（含）", exclusiveMinimum: "大于", maximum: "最大值（含）", exclusiveMaximum: "小于", multipleOf: "倍数",
+    minLength: "最小长度", maxLength: "最大长度", minItems: "最少项数", maxItems: "最多项数", minProperties: "最少属性数", maxProperties: "最多属性数" },
+  panel: { var: "变量", var_table: "表格", step: "步骤", check: "检查点", quiz: "题目", locateLabel: "定位正文", locate: title => `定位正文中的「${title}」` },
   common: {
     emptyValue: "未填写",
     emptyContent: "没有可渲染的协议内容。",
