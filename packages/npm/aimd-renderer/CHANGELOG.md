@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.15.0
+
+### Minor Changes
+
+- 9facb41: Add compact and detailed presentations for read-only Record reports. Render checkpoints with a single title and localized saved state, preserve annotations, and distinguish missing observations from unchecked values.
+
 ## 2.14.2
 
 ### Patch Changes
