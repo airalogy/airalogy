@@ -5,6 +5,7 @@ import type {
   AimdCheckNode,
   AimdClientAssignerField,
   AimdCollectorValidationContext,
+  AimdNode,
   AimdQuizField,
   AimdQuizGradeResult,
   AimdQuizNode,
@@ -13,8 +14,9 @@ import type {
   AimdVarTableNode,
   ExtractedAimdFields,
 } from "@airalogy/aimd-core/types"
-import { getAimdFieldEnumValues } from "@airalogy/aimd-core/utils"
-import { parseAndExtract, renderToVue } from "@airalogy/aimd-renderer"
+import { AIMD_FILE_REFERENCE_VALUE_KEYS, collectAimdRecordFieldRefs, getAimdFieldEnumValues, getAimdFileKindFromType, getAimdFileValueId } from "@airalogy/aimd-core/utils"
+import RecorderFieldPanel, { type PanelField } from "./RecorderFieldPanel.vue"
+import { createAimdRendererMessages, createReadonlyRecordAimdRenderers, createReadonlyRecordRenderContext, parseAndExtract, renderToVue } from "@airalogy/aimd-renderer"
 import type { AimdComponentRenderer } from "@airalogy/aimd-renderer"
 import type { AimdRecorderMessagesInput } from "../locales"
 import {
@@ -339,6 +341,7 @@ let autoServerAssignerScheduled = false
 
 const resolvedLocale = computed(() => resolveAimdRecorderLocale(props.locale))
 const inPanel = computed(() => props.layout === "field-panel")
+const readingPanel = computed(() => inPanel.value && props.readonly)
 provide(fieldDisplayKey, computed(() => inPanel.value ? "panel" : props.fieldDisplay))
 const resolvedMessages = computed(() => createAimdRecorderMessages(resolvedLocale.value, props.messages))
 const resolvedTypePlugins = computed(() => createAimdTypePlugins(props.typePlugins))
@@ -755,7 +758,7 @@ function getStepTimerPayload(step: AimdStepRecordItem) {
 }
 
 function emitRecordUpdate() {
-  if (syncingFromExternal) return
+  if (syncingFromExternal || readingPanel.value) return
   emit("update:modelValue", cloneRecordData(localRecord))
 }
 
@@ -1885,33 +1888,73 @@ function renderInlineQuiz(node: AimdQuizNode): VNode {
 // Rebuild pipeline
 // ---------------------------------------------------------------------------
 
-function buildPanelFields(nodes: Map<string, AimdVarNode>): VNode[] {
-  const vars = props.panelVariables ?? [...nodes.keys()]
-  return [...new Set(vars)].map(id => {
-    const node: AimdVarNode = nodes.get(id) ?? { type: "aimd", fieldType: "var", scope: "var", id, raw: "" }
-    const key = `var:${id}`
-    const title = effectiveFieldMeta.value[key]?.title || String(node.definition?.kwargs?.title || id)
-    const required = requiredFieldKeys.value.has(key)
-    return h("div", { key, class: "aimd-panel-field", role: "group", "aria-label": title, "data-panel-field": key }, [
-      h("div", { class: "aimd-panel-label" }, [
-        title, h("small", required ? resolvedMessages.value.common.required : resolvedMessages.value.common.optional),
-      ]),
-      renderInlineVar(node),
-    ])
-  })
+async function buildPanelFields(nodes: Map<string, AimdNode>): Promise<VNode[]> {
+  const refs = collectAimdRecordFieldRefs(extractedFields.value).filter(field => !field.columnId)
+  const definitions = new Map(refs.map(field => [field.key, field]))
+  const variableIds = props.panelVariables ?? refs.filter(field => field.scope === "var").map(field => field.id)
+  const panelFields = new Map<string, { scope: PanelField["scope"]; id: string }>()
+  for (const id of variableIds) panelFields.set(`var:${id}`, { scope: "var", id })
+  for (const field of refs) {
+    if (field.scope !== "var") panelFields.set(field.key, field)
+  }
+  const locale = resolvedLocale.value
+  const messages = createAimdRendererMessages(locale)
+  const context = { ...createReadonlyRecordRenderContext(props.modelValue), locale, messages }
+  const renderers = createReadonlyRecordAimdRenderers()
+  const rows: PanelField[] = []
+  if (props.readonly) {
+    // Historical values can outlive a field declaration. Keep them inspectable.
+    for (const scope of ["var_table", "var", "step", "check", "quiz"] as const) {
+      for (const id of Object.keys(context.value?.[scope] ?? {})) {
+        if (scope === "var" && panelFields.has(`var_table:${id}`)) continue
+        panelFields.set(`${scope}:${id}`, { scope, id })
+      }
+    }
+  }
+  for (const [key, { scope, id }] of panelFields) {
+    const field = definitions.get(key)
+    const node = nodes.get(key) ?? { type: "aimd", fieldType: scope, scope, id, raw: "", columns: [] } as AimdNode
+    const meta = effectiveFieldMeta.value[key]
+    let control: VNode | null = null
+    if (!props.readonly) {
+      if (scope === "var") control = renderInlineVar(node as AimdVarNode)
+    } else if (scope === "quiz" && context.value?.quiz?.[id] == null) {
+      control = h("span", messages.recordView.notRecorded)
+    } else if (scope === "step") {
+      const saved = props.modelValue?.[scope]?.[id]
+      const state = typeof saved === "boolean" ? saved : saved?.checked
+      const status = typeof state !== "boolean" ? messages.recordView.notRecorded
+        : (state ? messages.recordView.completed : messages.recordView.incomplete)
+      control = h("div", [
+        h("span", status),
+        saved && saved.elapsed_ms > 0 ? h("p", resolvedMessages.value.step.recordedDuration(formatStepDuration(saved.elapsed_ms, locale))) : null,
+        saved?.annotation ? h("p", saved.annotation) : null,
+      ])
+    } else {
+      const variable = node as AimdVarNode
+      const type = variable.definition?.type || meta?.inputType || ""
+      const kind = scope === "var" && getAimdFileKindFromType(type, variable.definition?.kwargs, meta)
+      const fileId = kind && getAimdFileValueId(context.value?.var?.[id], AIMD_FILE_REFERENCE_VALUE_KEYS)
+      if (kind && fileId && props.resolveFileInfo) {
+        // A failed preview must leave the stored reference and every other field readable.
+        const result = await Promise.resolve().then(() => props.resolveFileInfo!(fileId, {
+          fieldKey: id, type, normalizedType: normalizeVarTypeName(type), node: variable, fieldMeta: meta, kind,
+        })).catch(() => null)
+        const asset = typeof result === "string" ? { url: result } : result
+        control = await createReadonlyRecordAimdRenderers({ resolveAsset: () => asset }).var(node, context)
+      } else {
+        control = await renderers[scope](node, context)
+      }
+    }
+    rows.push({
+      key, id, scope, title: meta?.title || field?.title || field?.label || id,
+      description: meta?.description || field?.description,
+      required: scope === "var" ? meta?.required ?? (field ? requiredFieldKeys.value.has(key) : undefined) : undefined,
+      navigate: nodes.has(key), control,
+    })
+  }
+  return rows.length ? [h(RecorderFieldPanel, { fields: rows, messages: resolvedMessages.value, detailed: props.fieldDisplay === "detailed", onNavigate: (key: string) => emit("navigate-field", key) })] : []
 }
-
-const panelOutline = computed(() => {
-  const fields = extractedFields.value
-  const steps = new Map(fields.step_hierarchy?.map(field => [field.id, field.title]))
-  const checks = new Map(fields.check_definitions?.map(field => [field.id, field.title]))
-  return [
-    ...fields.var_table.map(field => ({ key: `var_table:${field.id}`, title: field.title || field.id })),
-    ...fields.step.map(id => ({ key: `step:${id}`, title: steps.get(id) || id })),
-    ...fields.check.map(id => ({ key: `check:${id}`, title: checks.get(id) || id })),
-    ...fields.quiz.map(field => ({ key: `quiz:${field.id}`, title: field.title || field.id })),
-  ]
-})
 
 async function rebuildInlineNodes(
   expectedRequestId?: number,
@@ -1919,7 +1962,12 @@ async function rebuildInlineNodes(
   expectedInlineRequestId?: number,
 ) {
   recordInitializedDuringRender = false
-  const panelNodes = new Map<string, AimdVarNode>()
+  const panelNodes = new Map<string, AimdNode>()
+  function indexField(node: AimdNode) {
+    const key = node.fieldType + ":" + node.id
+    if (!panelNodes.has(key)) panelNodes.set(key, node)
+    return h("span")
+  }
   const panel = inPanel.value
   const rendered = await renderToVue(props.content || "", {
     locale: resolvedLocale.value,
@@ -1937,18 +1985,15 @@ async function rebuildInlineNodes(
       pre: codeBlockPreRenderer,
     },
     aimdRenderers: {
-      var: node => {
-        if (!panel) return renderInlineVar(node as AimdVarNode)
-        if (!panelNodes.has(node.id)) panelNodes.set(node.id, node as AimdVarNode)
-        return h("span")
-      },
-      var_table: node => panel ? h("span") : renderInlineVarTable(node as AimdVarTableNode),
-      step: (node, _ctx, children) => panel ? h("span") : renderInlineStep(node as AimdStepNode, children),
-      check: (node, _ctx, children) => panel ? h("span") : renderInlineCheck(node as AimdCheckNode, children),
-      quiz: node => panel ? h("span") : renderInlineQuiz(node as AimdQuizNode),
+      var: node => panel ? indexField(node) : renderInlineVar(node as AimdVarNode),
+      var_table: node => panel ? indexField(node) : renderInlineVarTable(node as AimdVarTableNode),
+      step: (node, _ctx, children) => panel ? indexField(node) : renderInlineStep(node as AimdStepNode, children),
+      check: (node, _ctx, children) => panel ? indexField(node) : renderInlineCheck(node as AimdCheckNode, children),
+      quiz: node => panel ? indexField(node) : renderInlineQuiz(node as AimdQuizNode),
     },
   })
 
+  const result = panel ? await buildPanelFields(panelNodes) : rendered.nodes
   if (
     (expectedRequestId !== undefined && expectedRequestId !== buildRequestId)
     || (expectedInlineRequestId !== undefined && expectedInlineRequestId !== inlineBuildRequestId)
@@ -1956,7 +2001,7 @@ async function rebuildInlineNodes(
     return
   }
 
-  inlineNodes.value = panel ? buildPanelFields(panelNodes) : rendered.nodes
+  inlineNodes.value = result
   await nextTick()
   restoreFocusSnapshot(contentRoot.value, focusSnapshot ?? null)
 
@@ -1988,6 +2033,10 @@ async function parseAndBuild() {
     internalValidationFieldState.value = {}
     emit("fields-change", extracted)
 
+    if (readingPanel.value) {
+      await rebuildInlineNodes(currentRequestId, undefined, currentInlineRequestId)
+      return
+    }
     const defaultsChanged = ensureDefaultsFromFields(localRecord, extracted)
     const assignerChanged = clientAssignerRunner.applyCurrentClientAssigners()
     if (defaultsChanged || assignerChanged) {
@@ -2016,8 +2065,12 @@ async function parseAndBuild() {
 // ---------------------------------------------------------------------------
 
 watch(
-  () => props.modelValue,
-  (value) => {
+  [() => props.modelValue, readingPanel],
+  ([value]) => {
+    if (readingPanel.value) {
+      scheduleInlineRebuild()
+      return
+    }
     const shouldRebuild = getRecordDataSignature(value) !== getRecordDataSignature(localRecord)
     if (!shouldRebuild) {
       return
@@ -2046,6 +2099,7 @@ watch(
   () => ({
     content: props.content,
     protocolContext: props.protocolContext,
+    readingPanel: readingPanel.value,
     locale: props.locale,
     messages: props.messages,
   }),
@@ -2120,7 +2174,7 @@ watch(
 )
 
 watch(
-  () => [props.fieldDisplay, props.layout, props.panelVariables],
+  () => [props.fieldDisplay, props.layout, props.panelVariables, props.resolveFileInfo],
   () => {
     // Input events keep native controls current without rebuilding every keystroke.
     // Refresh their VNode props before switching the presentation of those controls.
@@ -2201,10 +2255,7 @@ defineExpose({
         <InlineNodesOutlet :nodes="inlineNodes" />
       </div>
 
-      <div v-else-if="!inPanel || !panelOutline.length" class="aimd-protocol-recorder__empty">{{ resolvedMessages.common.emptyContent }}</div>
-      <div v-if="inPanel && panelOutline.length" class="aimd-panel-outline">
-        <button v-for="entry in panelOutline" :key="entry.key" type="button" @click="emit('navigate-field', entry.key)">{{ entry.title }}</button>
-      </div>
+      <div v-else class="aimd-protocol-recorder__empty">{{ resolvedMessages.common.emptyContent }}</div>
     </template>
   </div>
 </template>

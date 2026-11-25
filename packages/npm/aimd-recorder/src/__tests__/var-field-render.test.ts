@@ -235,8 +235,8 @@ describe('AimdVarField render behavior', () => {
     expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \{[\s\S]*?width: max-content;/)
     expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \.aimd-field--no-style\.aimd-field__label \{[\s\S]*?flex-wrap: nowrap;/)
     expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \.aimd-field__scope \{[\s\S]*?flex: 0 0 auto;[\s\S]*?white-space: nowrap;/)
-    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \.aimd-field__name \{[\s\S]*?flex: 0 0 auto;[\s\S]*?min-width: max-content;/)
-    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \.aimd-field__key \{[\s\S]*?overflow: visible;[\s\S]*?white-space: nowrap;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \.aimd-field__name \{[\s\S]*?flex: 1 1 auto;[\s\S]*?min-width: 0;/)
+    expect(recorderSurfaceStyles).toMatch(/\.aimd-protocol-recorder__content \.aimd-rec-inline--var-stacked \.aimd-field__key \{[\s\S]*?overflow-wrap: anywhere;[\s\S]*?white-space: normal;/)
   })
 
   it('keeps complex markdown tables scrollable without expanding the recorder', () => {

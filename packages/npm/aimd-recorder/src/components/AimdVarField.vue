@@ -774,7 +774,7 @@ export default defineComponent({
       }
 
       const renderVarLabel = (headerAction?: VNode | null): VNode | null => {
-        const optional = props.markOptional && !props.required
+        const optional = fieldDisplay.value !== "panel" && props.markOptional && !props.required
           ? h('span', { class: 'aimd-field__optional-marker' }, props.messages.common.optional)
           : null
         if (fieldDisplay.value !== 'detailed') {

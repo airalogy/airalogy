@@ -1137,9 +1137,9 @@ function getElementHorizontalSpace(element: HTMLElement): number {
 function measureFieldNameWidth(name: HTMLElement): number {
   const title = name.querySelector(".aimd-field__title") as HTMLElement | null
   const key = name.querySelector(".aimd-field__key") as HTMLElement | null
-  const requiredMarker = name.querySelector(".aimd-field__required-marker") as HTMLElement | null
+  const marker = name.querySelector<HTMLElement>(".aimd-field__required-marker, .aimd-field__optional-marker")
   const titleRowWidth = (title ? measureLabelTokenWidth(title) : 0)
-    + (requiredMarker ? measureLabelTokenWidth(requiredMarker) : 0)
+    + (marker ? measureLabelTokenWidth(marker) : 0)
   const visibleTokenWidth = Math.max(
     titleRowWidth,
     key ? measureLabelTokenWidth(key) : 0,
@@ -1153,16 +1153,23 @@ function measureFieldNameWidth(name: HTMLElement): number {
 }
 
 export function measureVarLabelWidth(wrapper: HTMLElement): number {
-  if (wrapper.closest('.aimd-protocol-recorder--compact')) return 0
+  const actions = wrapper.querySelector<HTMLElement>(".aimd-rec-inline__header-assigner-actions")
+  const actionsWidth = actions?.offsetWidth ?? 0
+  if (wrapper.closest(".aimd-protocol-recorder--compact")) {
+    const toolbar = wrapper.querySelector<HTMLElement>(":scope > .aimd-rec-inline__compact-actions")
+    if (!toolbar) return 0
+    const marker = toolbar.querySelector<HTMLElement>(".aimd-field__optional-marker")
+    return (marker ? measureLabelTokenWidth(marker) : 0) + actionsWidth + getElementHorizontalSpace(toolbar) + 2
+  }
   const scope = wrapper.querySelector(".aimd-field__scope--var") as HTMLElement | null
   const name = wrapper.querySelector(".aimd-field__name") as HTMLElement | null
   const id = wrapper.querySelector(".aimd-field__id") as HTMLElement | null
   if (scope && name) {
-    return measureLabelTokenWidth(scope) + measureFieldNameWidth(name) + 4
+    return measureLabelTokenWidth(scope) + measureFieldNameWidth(name) + actionsWidth + 4
   }
 
   if (scope && id) {
-    return measureLabelTokenWidth(scope) + measureLabelTokenWidth(id) + 4
+    return measureLabelTokenWidth(scope) + measureLabelTokenWidth(id) + actionsWidth + 4
   }
 
   const fallbackLabel = wrapper.querySelector(".aimd-field__label") as HTMLElement | null

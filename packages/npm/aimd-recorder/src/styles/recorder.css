@@ -142,6 +142,7 @@
 
 .aimd-field__title-row {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: baseline;
   min-width: 0;
   max-width: 100%;
@@ -669,6 +670,7 @@ td .field__wrapper--tagged {
 .aimd-check-field__title { font-size: 14px; font-weight: 600; line-height: 1.5; }
 .aimd-check-field__identity .aimd-check-field__key { font: 12px/1.4 monospace; color: #667085; }
 .aimd-field__optional-marker {
+  flex: none;
   margin-inline: 0.3rem;
   color: #526477;
   font-size: 0.75rem;

@@ -16,7 +16,7 @@ describe('standalone field panel', () => {
     } })
     try {
       await flushPromises()
-      const target = panel.get('[data-panel-field="var:photo"] button')
+      const target = panel.get('[data-panel-field="var:photo"] .aimd-panel-upload button')
       const location = panel.get('[data-rec-focus-key="var:location"]')
       await target.trigger('pointerdown', { button: 0 })
       await location.trigger('blur')
@@ -35,12 +35,84 @@ describe('standalone field panel', () => {
     expect(panel.findAll('[data-panel-field]').map(f => f.attributes('data-panel-field'))).toEqual(['var:sample', 'var:photo'])
     expect(panel.get('[data-rec-focus-key="var:sample"]').attributes('placeholder')).toBe('S-01')
     expect(panel.get('[data-panel-field="var:photo"]').text()).toContain('Optional')
-    expect(panel.findAll('.aimd-panel-outline button').map(b => b.text())).toEqual(['Prepare', 'Inspect label', 'legacy'])
-    await panel.get('.aimd-panel-outline button').trigger('click')
+    expect(panel.findAll('[data-panel-group=step] [data-panel-key], [data-panel-group=check] [data-panel-key]').map(b => b.attributes('aria-label'))).toEqual(['Prepare', 'Inspect label', 'legacy'])
+    expect(panel.get('[data-panel-key="var:sample"] .aimd-panel-label code').text()).toBe('sample')
+    await panel.setProps({ fieldDisplay: 'compact' })
+    await flushPromises()
+    expect(panel.get('.aimd-fields-list').attributes('data-field-display')).toBe('compact')
+    expect(panel.find('[data-panel-key="var:sample"] .aimd-panel-label code').exists()).toBe(false)
+    await panel.get('[data-navigate-field="step:start"]').trigger('click')
     expect(panel.emitted('navigate-field')).toEqual([['step:start']])
     await panel.setProps({ panelVariables: ['extra', 'photo', 'photo'], fieldMeta: { 'var:extra': {title:'Additional field'} } })
     await flushPromises()
     expect(panel.findAll('[data-panel-field]').map(f => f.attributes('aria-label'))).toEqual(['Additional field', 'Label photo'])
+  })
+
+  it('keeps the same grouped rows when reading and preserves missing, zero and unchecked values', async () => {
+    const panel = mount(AimdRecorder, { props: {
+      content: '{{var|n: int = 7}} {{var|zero: int}} {{check|verified}}',
+      layout: 'field-panel', readonly: true, locale: 'zh-CN',
+      modelValue: { var: {zero: 0}, check: { verified: { checked: false, annotation: '核对备注' } } },
+    } })
+    await flushPromises()
+    expect(panel.get('[data-panel-group="var"] > summary').text()).toBe('变量')
+    expect(panel.get('[data-panel-group="check"] > summary').text()).toBe('检查点')
+    expect(panel.get('[data-panel-key="var:n"] .aimd-panel-value').text()).toContain('未记录')
+    expect(panel.get('[data-panel-key="var:zero"] .aimd-panel-value').text()).toBe('0')
+    expect(panel.get('[data-panel-key="check:verified"]').text()).toContain('未勾选')
+    expect(panel.get('[data-panel-key="check:verified"]').text()).toContain('核对备注')
+    expect(panel.find('input, textarea, select, [contenteditable=true]').exists()).toBe(false)
+    expect(panel.emitted('update:modelValue')).toBeUndefined()
+    await panel.setProps({ modelValue: { var: {n: 22}, check: {} } })
+    await flushPromises()
+    expect(panel.get('[data-panel-key="var:n"] .aimd-panel-value').text()).toBe('22')
+    expect(panel.get('[data-panel-key="check:verified"] .aimd-record-check__status').text()).toBe('未记录')
+    panel.unmount()
+  })
+
+  it('keeps the displayed value when switching between reading and editing', async () => {
+    const panel = mount(AimdRecorder, { props: {
+      content: '{{var|count: int}}', layout: 'field-panel', readonly: true, modelValue: {var: {count: 0}},
+    } })
+    await flushPromises()
+    await panel.setProps({readonly: false})
+    await flushPromises()
+    expect((panel.get('input').element as HTMLInputElement).value).toBe('0')
+    await panel.setProps({readonly: true, modelValue: {var: {count: 12}}})
+    await flushPromises()
+    expect(panel.get('.aimd-panel-value').text()).toBe('12')
+    expect(panel.find('input').exists()).toBe(false)
+    panel.unmount()
+  })
+
+  it('displays saved table cells only once and keeps legacy question answers', async () => {
+    const panel = mount(AimdRecorder, { props: {
+      content: '{{var_table|readings, subvars=[count: int]}}',
+      layout: 'field-panel', readonly: true,
+      modelValue: {var: {readings: [{count: 0}]}, quiz: {review: 'Reviewed'}},
+    } })
+    await flushPromises()
+    expect(panel.get('[data-panel-key="var_table:readings"] td').text()).toBe('0')
+    expect(panel.find('[data-panel-key="var:readings"]').exists()).toBe(false)
+    expect(panel.get('[data-panel-key="quiz:review"] .aimd-panel-value').text()).toContain('Reviewed')
+    panel.unmount()
+  })
+
+  it('resolves a saved attachment for viewing and retains historical values without an upload control', async () => {
+    const resolveFileInfo = vi.fn().mockResolvedValue({ url: '/attachments/demo.jpg', name: 'demo.jpg', type: 'image/jpeg' })
+    const panel = mount(AimdRecorder, { props: {
+      content, layout: 'field-panel', readonly: true, resolveFileInfo,
+      modelValue: { var: { photo: 'airalogy.id.file.demo.jpg', archived: 'historical' } },
+    } })
+    await flushPromises()
+    const photo = panel.get('[data-panel-key="var:photo"]')
+    expect(photo.get('img').attributes('src')).toBe('/attachments/demo.jpg')
+    expect(resolveFileInfo).toHaveBeenCalledWith('airalogy.id.file.demo.jpg', expect.objectContaining({fieldKey: 'photo'}))
+    expect(panel.find('input[type=file]').exists()).toBe(false)
+    const archived = panel.get('[data-panel-key="var:archived"]')
+    expect(archived.text()).toContain('historical')
+    expect(archived.find('[data-navigate-field]').exists()).toBe(false)
+    panel.unmount()
   })
 
   it('shows upload progress, preserves a failed value and emits the confirmed reference on retry', async () => {

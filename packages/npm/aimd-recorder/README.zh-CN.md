@@ -398,3 +398,5 @@ const quiz = {
 ## 独立字段面板
 
 使用 `<AimdRecorder layout="field-panel" :content="source" v-model="record" />` 把协议变量显示为独立表单。它沿用正文的字段类型、校验和附件接口。
+
+阅读已保存的记录时，给同一个面板传入 `readonly` 和当前修订的 `model-value`。变量、表格、步骤、检查点和题目分组展示。侧栏和正文可以共用一个 `field-display` 值。详细模式在名称下展示字段 ID，简洁模式可展开名称查看。宿主可通过 `navigate-field` 返回的字段键定位正文。阅读时会区分未记录、零值和未勾选。

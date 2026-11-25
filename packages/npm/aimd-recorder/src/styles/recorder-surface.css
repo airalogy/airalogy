@@ -485,27 +485,28 @@
 }
 .aimd-protocol-recorder__content .aimd-rec-inline--var-stacked .aimd-field__name {
   display: flex;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   align-items: center;
-  min-width: max-content;
+  min-width: 0;
   padding: 4px 10px 4px 6px;
   font-size: 13px;
   font-weight: 600;
   color: #1565c0;
-  white-space: nowrap;
+  white-space: normal;
 }
 .aimd-protocol-recorder__content .aimd-rec-inline--var-stacked .aimd-field__name--with-metadata {
   align-items: flex-start;
   justify-content: center;
   gap: 2px;
   min-height: 34px;
-  white-space: nowrap;
+  white-space: normal;
 }
 .aimd-protocol-recorder__content .aimd-rec-inline--var-stacked .aimd-field__title,
 .aimd-protocol-recorder__content .aimd-rec-inline--var-stacked .aimd-field__key {
   overflow: visible;
-  overflow-wrap: normal;
-  white-space: nowrap;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
   word-break: normal;
 }
 .aimd-protocol-recorder__content .aimd-field__key {

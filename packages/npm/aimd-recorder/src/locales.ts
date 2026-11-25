@@ -257,6 +257,7 @@ export interface AimdRecorderMessages {
     segmentRangeError: string
     segmentOutOfBounds: (end: number, length: number) => string
   }
+  panel: { var: string; var_table: string; step: string; check: string; quiz: string; locate: (title: string) => string }
   common: {
     emptyValue?: string
     emptyContent: string
@@ -531,6 +532,7 @@ const EN_US_MESSAGES: AimdRecorderMessages = {
     segmentRangeError: "Segment end must be greater than or equal to start.",
     segmentOutOfBounds: (end, length) => `Segment end ${end} exceeds sequence length ${length}.`,
   },
+  panel: { var: "Variables", var_table: "Tables", step: "Steps", check: "Checkpoints", quiz: "Questions", locate: title => `Locate ${title} in the document` },
   common: {
     emptyValue: "Not set",
     emptyContent: "No renderable protocol content.",
@@ -778,6 +780,7 @@ const ZH_CN_MESSAGES: AimdRecorderMessages = {
     segmentRangeError: "片段终点必须大于或等于起点。",
     segmentOutOfBounds: (end, length) => `片段终点 ${end} 超出了序列长度 ${length}。`,
   },
+  panel: { var: "变量", var_table: "表格", step: "步骤", check: "检查点", quiz: "题目", locate: title => `在正文中定位「${title}」` },
   common: {
     emptyValue: "未填写",
     emptyContent: "没有可渲染的协议内容。",
