@@ -1510,17 +1510,37 @@ describe('renderToVue', () => {
 // ---------------------------------------------------------------------------
 
 describe('readonly record rendering', () => {
-  it('shows one disabled checkbox per checkpoint with its saved state', async () => {
+  it.each([
+    ['en-US', 'Checked', 'Unchecked', 'Not recorded'],
+    ['zh-CN', '已勾选', '未勾选', '未记录'],
+  ])('renders the saved checkpoint state once in either report presentation (%s)', async (locale, yes, no, absent) => {
     const wrapper = mount(AimdRecordReport, {
       props: {
-        aimd: '{{check|aligned, title="Alignment"}}\n\n{{check|verified}}',
-        record: { data: { check: { aligned: { checked: true }, verified: { checked: false } } } },
+        aimd: [
+          '{{check|aligned, title="Alignment"}} Verify **both** labels.',
+          '{{check|open}}',
+          '{{check|legacy, title="Legacy"}}',
+          '{{check|absent}}',
+          '{{var|minutes: int}} {{var|optional: str}}',
+        ].join('\n\n'),
+        record: { data: { var: { minutes: 0 }, check: { aligned: { checked: true, annotation: 'Saved note' }, open: false, legacy: { annotation: 'Existing note' } } } },
+        renderOptions: { locale },
       },
     })
-    await vi.waitFor(() => expect(wrapper.findAll('.aimd-record-check')).toHaveLength(2))
-    expect(wrapper.findAll<HTMLInputElement>('.aimd-record-check input').map(({ element }) =>
-      [element.checked, element.disabled])).toEqual([[true, true], [false, true]])
-    expect(wrapper.get('.aimd-check__title').text()).toBe('Alignment')
+    await vi.waitFor(() => expect(wrapper.findAll('.aimd-record-check')).toHaveLength(4))
+    const savedNodes = wrapper.findAll('.aimd-record-check').map(check => check.element)
+    for (const mode of ['compact', 'detailed'] as const) {
+      await wrapper.setProps({ recordPresentation: mode })
+      expect(wrapper.get('.rendered-aimd-document').attributes('data-record-presentation')).toBe(mode)
+      expect(wrapper.findAll('.aimd-record-check__status').map(item => item.text())).toEqual([yes, no, absent, absent])
+      expect(wrapper.findAll('.aimd-record-check__title').map(item => item.text())).toEqual(['Alignment', 'open', 'Legacy', 'absent'])
+      expect(wrapper.findAll('.aimd-record-check').every((item, i) => item.element === savedNodes[i])).toBe(true)
+      expect(wrapper.find('.aimd-record-check input, .aimd-check__id, .aimd-record-check .aimd-field__scope').exists()).toBe(false)
+      expect(wrapper.text()).toContain('Verify both labels.')
+      expect(wrapper.get('.aimd-record-check__note').text()).toBe('Saved note')
+      expect(wrapper.get('.aimd-record-field--scalar').text()).toBe('0')
+      expect(wrapper.get('.aimd-record-field__missing-label').text()).toBe(absent)
+    }
     wrapper.unmount()
   })
 
@@ -1630,10 +1650,10 @@ describe('readonly record rendering', () => {
 
     expect(collectVNodeText(nodes)).toContain('S-004')
     expect(collectVNodeText(nodes)).not.toContain('sample_id')
-    const input = findVNodeByType({ children: nodes }, 'input') as any
-    expect(input).toBeTruthy()
-    expect(input.props.checked).toBe(true)
-    expect(input.props.disabled).toBe(true)
+    const check = findVNodeByClass({ children: nodes }, 'aimd-record-check')
+    expect(check.props['data-state']).toBe('checked')
+    expect(findVNodeByType(check, 'input')).toBeNull()
+    expect(collectVNodeText(check)).toContain('Prepared.')
   })
 
   it('renders decimal-like record values without JSON string quotes', async () => {
@@ -1667,7 +1687,7 @@ describe('readonly record rendering', () => {
       },
     )
 
-    expect(collectVNodeText(nodes)).toContain('Missing')
+    expect(collectVNodeText(nodes)).toContain('Not recorded')
     expect(collectVNodeText(nodes)).toContain('Sample ID')
     const missing = findVNodeByType({ children: nodes }, 'span') as any
     expect(missing.props.title).toContain('data.var.sample_id')

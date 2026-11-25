@@ -3,7 +3,7 @@ import type {
   AimdRecordViewColumn,
 } from '@airalogy/aimd-core/utils'
 import type { Component, PropType, VNodeChild } from 'vue'
-import type { AimdMarkdownPreviewRenderOptions, AimdMarkdownPreviewUrlResolver } from './markdown-preview'
+import type { AimdRecordPresentation, AimdMarkdownPreviewRenderOptions, AimdMarkdownPreviewUrlResolver } from './markdown-preview'
 import type { ReadonlyRecordAssetResolver, ReadonlyRecordVueRendererOptions } from './readonly-record-renderer'
 import {
   createAimdRecordViewColumns,
@@ -868,6 +868,10 @@ export const AimdRecordReport = defineComponent({
       type: Object as PropType<AimdMarkdownPreviewRenderOptions>,
       default: () => ({}),
     },
+    recordPresentation: {
+      type: String as PropType<AimdRecordPresentation>,
+      default: 'compact',
+    },
     readonlyRecordRenderOptions: {
       type: Object as PropType<ReadonlyRecordVueRendererOptions>,
       default: () => ({}),
@@ -898,6 +902,7 @@ export const AimdRecordReport = defineComponent({
       content: props.aimd,
       mode: 'report',
       readonlyRecordData: props.record,
+      recordPresentation: props.recordPresentation,
       renderOptions: props.renderOptions,
       readonlyRecordRenderOptions: props.readonlyRecordRenderOptions,
       resolveAsset: props.resolveAsset,

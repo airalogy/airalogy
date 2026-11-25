@@ -86,6 +86,8 @@ export interface AimdRendererMessages {
     selectAll: string
     yes: string
     no: string
+    checked: string
+    unchecked: string
     completed: string
     incomplete: string
     notRecorded: string
@@ -200,6 +202,8 @@ const EN_US_MESSAGES: AimdRendererMessages = {
     selectAll: "Select records on this page",
     yes: "Yes",
     no: "No",
+    checked: "Checked",
+    unchecked: "Unchecked",
     completed: "Completed",
     incomplete: "Incomplete",
     notRecorded: "Not recorded",
@@ -290,6 +294,8 @@ const ZH_CN_MESSAGES: AimdRendererMessages = {
     selectAll: "选择当前页记录",
     yes: "是",
     no: "否",
+    checked: "已勾选",
+    unchecked: "未勾选",
     completed: "已完成",
     incomplete: "未完成",
     notRecorded: "未记录",

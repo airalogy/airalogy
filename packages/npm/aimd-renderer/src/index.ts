@@ -49,6 +49,7 @@ export {
 export {
   AimdMarkdownPreview,
   type AimdMarkdownPreviewRenderOptions,
+  type AimdRecordPresentation,
   type AimdMarkdownPreviewRenderResult,
   type AimdMarkdownPreviewReadonlyRecordData,
   type AimdMarkdownPreviewUrlResolver,

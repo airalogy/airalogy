@@ -1,5 +1,4 @@
 import type {
-  AimdCheckNode,
   AimdFigNode,
   AimdNode,
   AimdQuizNode,
@@ -89,6 +88,7 @@ export type ReadonlyRecordMarkdownRenderOptions = AimdRendererOptions
 type ReadonlyRecordVarValueRendererKind = 'file' | 'boolean' | 'markdown' | 'code' | 'dna' | 'scalar'
 
 interface ReadonlyRecordVarValueRendererContext {
+  messages: AimdRendererContext['messages']['recordView']
   node: AimdNode
   varNode: AimdVarNode
   definition: AimdVarNode['definition']
@@ -114,8 +114,8 @@ function fieldDisplayLabel(node: AimdNode): string {
   if ((node.fieldType === 'var' || node.fieldType === 'var_table') && 'definition' in node) {
     return getAimdFieldDisplayLabel(node.id, node.definition)
   }
-  if (node.fieldType === 'check' && 'label' in node && typeof node.label === 'string' && node.label.trim()) {
-    return node.label.trim()
+  if (node.fieldType === 'check') {
+    return node.title?.trim() || node.label?.trim() || node.id
   }
   if (node.fieldType === 'quiz' && 'title' in node && typeof node.title === 'string' && node.title.trim()) {
     return node.title.trim()
@@ -200,25 +200,25 @@ function resolveAssetForReference(
   })
 }
 
-function renderEmptyValue(node: AimdNode): VNode {
+function renderEmptyValue(node: AimdNode, missing: string): VNode {
   return h('span', recordFieldProps(node, 'aimd-record-field aimd-record-field--empty'), [
-    h('span', { class: 'aimd-record-field__missing-label' }, 'Missing'),
+    h('span', { class: 'aimd-record-field__missing-label' }, missing),
     h('span', { class: 'aimd-record-field__missing-name' }, fieldDisplayLabel(node)),
   ])
 }
 
-function renderScalarValue(node: AimdNode, value: unknown, className = ''): VNode {
+function renderScalarValue(node: AimdNode, value: unknown, missing: string): VNode {
   const displayValue = stringifyAimdDisplayValue(value)
   if (!displayValue) {
-    return renderEmptyValue(node)
+    return renderEmptyValue(node, missing)
   }
   return h('span', recordFieldProps(
     node,
-    ['aimd-record-field', 'aimd-record-field--scalar', className].filter(Boolean).join(' '),
+    'aimd-record-field aimd-record-field--scalar',
   ), displayValue)
 }
 
-function renderBooleanValue(node: AimdNode, value: unknown): VNode {
+function renderBooleanValue(node: AimdNode, value: unknown, messages: AimdRendererContext['messages']['recordView']): VNode {
   const checked = toAimdBooleanValue(value)
   return h('span', recordFieldProps(node, 'aimd-record-field aimd-record-field--boolean'), [
     h('input', {
@@ -227,7 +227,7 @@ function renderBooleanValue(node: AimdNode, value: unknown): VNode {
       disabled: true,
       class: 'aimd-checkbox',
     }),
-    h('span', { class: 'aimd-record-field__value' }, checked ? 'Yes' : 'No'),
+    h('span', { class: 'aimd-record-field__value' }, checked ? messages.yes : messages.no),
   ])
 }
 
@@ -333,10 +333,11 @@ function renderMarkdownValue(
   recordValue: RenderContext['value'],
   resolveAsset: ReadonlyRecordAssetResolver | undefined,
   renderOptions: ReadonlyRecordMarkdownRenderOptions | undefined,
+  missing: string,
 ): VNode {
   const displayValue = stringifyAimdDisplayValue(value)
   if (!displayValue) {
-    return renderEmptyValue(node)
+    return renderEmptyValue(node, missing)
   }
   return h(ReadonlyRecordMarkdownValue, {
     content: displayValue,
@@ -347,11 +348,11 @@ function renderMarkdownValue(
   })
 }
 
-function renderCodeValue(node: AimdNode, value: unknown, language?: unknown): VNode {
+function renderCodeValue(node: AimdNode, value: unknown, missing: string, language?: unknown): VNode {
   const lang = normalizeAimdString(language)
   const displayValue = stringifyAimdDisplayValue(value)
   if (!displayValue) {
-    return renderEmptyValue(node)
+    return renderEmptyValue(node, missing)
   }
   return h('pre', recordFieldProps(node, 'aimd-record-field aimd-record-field--code'), [
     h('code', {
@@ -360,13 +361,13 @@ function renderCodeValue(node: AimdNode, value: unknown, language?: unknown): VN
   ])
 }
 
-function renderDnaValue(node: AimdNode, value: unknown): VNode {
+function renderDnaValue(node: AimdNode, value: unknown, missing: string): VNode {
   const normalized = getAimdDisplayValue(value)
   const sequence = isAimdPlainRecord(normalized)
     ? normalizeAimdString(normalized.sequence) ?? stringifyAimdDisplayValue(normalized)
     : stringifyAimdDisplayValue(normalized)
   if (!sequence) {
-    return renderEmptyValue(node)
+    return renderEmptyValue(node, missing)
   }
   const name = isAimdPlainRecord(normalized) ? normalizeAimdString(normalized.name) : undefined
   return h('div', recordFieldProps(node, 'aimd-record-field aimd-record-field--dna'), [
@@ -380,9 +381,10 @@ function renderFileValue(
   value: unknown,
   asset: ReadonlyRecordAsset | null | undefined,
   kind: ReadonlyRecordAssetKind,
+  missing: string,
 ): VNode {
   if (!asset && !getAimdFileValueId(value, AIMD_FILE_REFERENCE_VALUE_KEYS)) {
-    return renderEmptyValue(node)
+    return renderEmptyValue(node, missing)
   }
   const mediaSrc = getAimdAssetMediaSource(asset)
   const href = asset?.href ?? asset?.url
@@ -449,41 +451,41 @@ function createReadonlyRecordVarValueRendererEntries(): ReadonlyRecordVarValueRe
   return [
     {
       kind: 'file',
-      render: ({ node, definition, kwargs, value, asset, fileId }) => {
+      render: ({ messages, node, definition, kwargs, value, asset, fileId }) => {
         if (!isAimdFileLikeType(definition?.type, kwargs) && !asset && !isAimdAiralogyFileId(fileId)) {
           return null
         }
         const kind = inferAimdAssetKind(asset, value, definition?.type, kwargs)
-        return renderFileValue(node, value, asset, kind)
+        return renderFileValue(node, value, asset, kind, messages.notRecorded)
       },
     },
     {
       kind: 'boolean',
-      render: ({ node, definition, kwargs, value }) =>
-        isAimdBooleanType(definition?.type, kwargs) ? renderBooleanValue(node, value) : null,
+      render: ({ messages, node, definition, kwargs, value }) =>
+        isAimdBooleanType(definition?.type, kwargs) ? renderBooleanValue(node, value, messages) : null,
     },
     {
       kind: 'markdown',
-      render: ({ node, definition, kwargs, value, recordValue, resolveAsset, markdownRenderOptions }) =>
+      render: ({ messages, node, definition, kwargs, value, recordValue, resolveAsset, markdownRenderOptions }) =>
         isAimdMarkdownType(definition?.type, kwargs)
-          ? renderMarkdownValue(node, value, recordValue, resolveAsset, markdownRenderOptions)
+          ? renderMarkdownValue(node, value, recordValue, resolveAsset, markdownRenderOptions, messages.notRecorded)
           : null,
     },
     {
       kind: 'code',
-      render: ({ node, definition, kwargs, value }) =>
+      render: ({ messages, node, definition, kwargs, value }) =>
         isAimdCodeType(definition?.type, kwargs)
-          ? renderCodeValue(node, value, kwargs?.language ?? kwargs?.lang ?? kwargs?.code_language ?? kwargs?.codeLanguage)
+          ? renderCodeValue(node, value, messages.notRecorded, kwargs?.language ?? kwargs?.lang ?? kwargs?.code_language ?? kwargs?.codeLanguage)
           : null,
     },
     {
       kind: 'dna',
-      render: ({ node, definition, kwargs, value }) =>
-        isAimdDnaType(definition?.type, kwargs) ? renderDnaValue(node, value) : null,
+      render: ({ messages, node, definition, kwargs, value }) =>
+        isAimdDnaType(definition?.type, kwargs) ? renderDnaValue(node, value, messages.notRecorded) : null,
     },
     {
       kind: 'scalar',
-      render: ({ node, value }) => renderScalarValue(node, value),
+      render: ({ messages, node, value }) => renderScalarValue(node, value, messages.notRecorded),
     },
   ]
 }
@@ -497,7 +499,7 @@ function renderReadonlyRecordVarValue(context: ReadonlyRecordVarValueRendererCon
       return vnode
     }
   }
-  return renderScalarValue(context.node, context.value)
+  return renderScalarValue(context.node, context.value, context.messages.notRecorded)
 }
 
 function createVarRenderer(
@@ -512,7 +514,10 @@ function createVarRenderer(
     const asset = resolveAssetForField(node, value, ctx.value, resolveRecordAsset)
     const fileId = getAimdFileValueId(value, AIMD_FILE_REFERENCE_VALUE_KEYS)
 
+    if ((value == null || value === '') && !asset)
+      return renderEmptyValue(node, ctx.messages.recordView.notRecorded)
     return renderReadonlyRecordVarValue({
+      messages: ctx.messages.recordView,
       node,
       varNode,
       definition,
@@ -553,7 +558,7 @@ function createVarTableRenderer(): AimdComponentRenderer {
 
     if (!columns.length || !rows.length) {
       return h('div', recordFieldProps(node, 'aimd-record-table aimd-record-table--empty'), [
-        h('span', { class: 'aimd-record-field__missing-label' }, 'Missing'),
+        h('span', { class: 'aimd-record-field__missing-label' }, ctx.messages.recordView.notRecorded),
         h('span', { class: 'aimd-record-field__missing-name' }, fieldDisplayLabel(node)),
       ])
     }
@@ -604,28 +609,31 @@ const renderRecordStep: AimdComponentRenderer = (node, ctx, children) => {
   ])
 }
 
-function createCheckRenderer(): AimdComponentRenderer {
-  return (node, ctx, children) => {
-    const checkNode = node as AimdCheckNode
-    const value = ctx.value?.check?.[node.id]
-    const normalized = isAimdPlainRecord(value) && 'checked' in value ? value.checked : value
-    const checked = toAimdBooleanValue(normalized)
-    const label = checkNode.label ?? node.id
-    // The HTML preview includes an unchecked input. Only the saved Record
-    // determines the state of the checkbox in a readonly report.
-    const bodyChildren = children?.filter(child =>
-      !(isVNode(child) && child.type === 'input' && child.props?.type === 'checkbox' && child.props.class === 'aimd-checkbox'),
-    )
-    return h('label', recordFieldProps(node, 'aimd-record-check'), [
-      h('input', {
-        type: 'checkbox',
-        checked,
-        disabled: true,
-        class: 'aimd-checkbox',
-      }),
-      h('span', { class: 'aimd-record-check__body' }, bodyChildren?.length ? bodyChildren : [label]),
-    ])
+// Read stored states only. Annotation-only legacy entries carry no checkbox value.
+function checkpointState(value: unknown): 'checked' | 'unchecked' | 'notRecorded' {
+  const raw = isAimdPlainRecord(value) ? value.checked : value
+  switch (typeof raw === 'string' ? raw.trim().toLowerCase() : raw) {
+    case true: case 1: case 'true': case '1': case 'yes': case 'on': return 'checked'
+    case false: case 0: case 'false': case '0': case 'no': case 'off': return 'unchecked'
+    default: return 'notRecorded'
   }
+}
+
+const renderRecordCheck: AimdComponentRenderer = (node, ctx, children) => {
+  const saved = ctx.value?.check?.[node.id]
+  const state = checkpointState(saved)
+  const note = isAimdPlainRecord(saved) && typeof saved.annotation === 'string' ? saved.annotation.trim() : ''
+  const body = children?.find(child => isVNode(child) && child.props?.class === 'aimd-check-body')
+  return h(body ? 'div' : 'span', {
+    ...recordFieldProps(node, 'aimd-record-check'),
+    'data-state': state,
+  }, [
+    h('span', { class: 'aimd-record-check__status' }, ctx.messages.recordView[state]),
+    ' ',
+    h('strong', { class: 'aimd-record-check__title' }, fieldDisplayLabel(node)),
+    note ? h('span', { class: 'aimd-record-check__note' }, note) : null,
+    body,
+  ])
 }
 
 function createQuizRenderer(): AimdComponentRenderer {
@@ -726,7 +734,7 @@ export function createReadonlyRecordAimdRenderers(
     var: createVarRenderer(options.resolveAsset, options.markdownRenderOptions),
     var_table: createVarTableRenderer(),
     step: renderRecordStep,
-    check: createCheckRenderer(),
+    check: renderRecordCheck,
     quiz: createQuizRenderer(),
     fig: createFigRenderer(options.resolveAsset),
   }

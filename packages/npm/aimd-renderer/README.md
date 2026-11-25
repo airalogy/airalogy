@@ -15,6 +15,8 @@ Default variable, step and checkpoint previews use matching localized type badge
 
 Checkpoint titles are optional: `{{check|safety_ready, title="Protective equipment"}}`. HTML and Vue previews display the title as text and the stable ID as secondary information. Untitled checkpoints retain their existing fallback label; following Markdown is never inferred as a title.
 
+Read-only Record reports support compact and detailed presentations. Both display the same saved data and distinguish checked, unchecked and unrecorded checkpoints.
+
 ## Install
 
 ```bash

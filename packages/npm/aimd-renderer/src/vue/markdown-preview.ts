@@ -11,6 +11,8 @@ import { createMermaidRenderer } from './vue-renderer'
 
 import '../styles/renderer.css'
 
+export type AimdRecordPresentation = 'compact' | 'detailed'
+
 type VueClassValue = string | unknown[] | Record<string, boolean>
 
 export interface AimdMarkdownPreviewRenderOptions extends AimdRendererOptions, VueRendererOptions {}
@@ -173,6 +175,10 @@ export const AimdMarkdownPreview = defineComponent({
       type: Boolean,
       default: false,
     },
+    recordPresentation: {
+      type: String as PropType<AimdRecordPresentation>,
+      default: 'compact',
+    },
     readonlyRecordData: {
       type: Object as PropType<AimdMarkdownPreviewReadonlyRecordData>,
       default: undefined,
@@ -330,6 +336,7 @@ export const AimdMarkdownPreview = defineComponent({
         ],
       }, [
         h('div', {
+          'data-record-presentation': readonlyRecord ? props.recordPresentation : undefined,
           class: [
             'aimd-renderer',
             readonlyRecord ? 'rendered-aimd-document' : null,

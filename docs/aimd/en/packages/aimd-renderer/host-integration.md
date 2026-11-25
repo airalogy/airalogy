@@ -74,3 +74,7 @@ This gives you a renderer-level step card with number badge, title, subtitle, re
 Renderer styles are loaded automatically when calling async render APIs (`renderToHtml` / `renderToVue`) in browser environments. The stylesheet includes KaTeX base styles for math output and AIMD renderer UI styles.
 
 If you need full control of style loading, import `@airalogy/aimd-renderer/styles` manually.
+
+## Read-only report presentation
+
+Read-only Record reports support compact and detailed presentations. Both display the same saved data and distinguish checked, unchecked and unrecorded checkpoints. Set `recordPresentation="compact"` (default) or `"detailed"` on `AimdRecordReport` or on `AimdMarkdownPreview` with `readonlyRecordData`. Detailed presentation emphasizes step hierarchy and recorded values. Switching preserves document nodes, field references and saved state.

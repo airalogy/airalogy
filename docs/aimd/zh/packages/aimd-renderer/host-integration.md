@@ -74,3 +74,7 @@ const { nodes } = await renderToVue(content, {
 在浏览器环境中调用异步渲染 API（`renderToHtml` / `renderToVue`）时，会自动加载 renderer 样式。这个样式表包含数学公式所需的 KaTeX 基础样式，也包含 AIMD renderer UI 样式。
 
 如果你需要完全控制样式加载，也可以手动引入 `@airalogy/aimd-renderer/styles`。
+
+## 只读报告的显示方式
+
+只读记录报告支持简洁和详细两种视图。两者显示同一份已保存数据，检查点区分已勾选、未勾选和未记录。 在 `AimdRecordReport` 或带 `readonlyRecordData` 的 `AimdMarkdownPreview` 上设置 `recordPresentation="compact"`（默认）或 `"detailed"`。详细视图突出步骤层级和记录值。切换时保留文档节点、字段引用和已保存的状态。
