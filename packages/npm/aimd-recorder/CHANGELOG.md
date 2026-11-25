@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.31.0
+
+### Minor Changes
+
+- eff4455: Expand field headings to inspect the declared ID, type, examples, default, and validation constraints while entering or reading a Record. Full-width scalar inputs fit the panel without horizontal scrolling.
+
 ## 1.30.0
 
 ### Minor Changes
