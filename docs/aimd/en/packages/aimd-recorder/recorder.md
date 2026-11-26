@@ -326,7 +326,7 @@ const { record, skipped } = createExampleRecord(fields)
 
 ## Standalone field panel
 
-Use `<AimdRecorder layout="field-panel" :content="source" v-model="record" />` for a standalone form using the protocol’s field types, validation and attachment hooks.
+Use `<AimdRecorder layout="field-panel" :content="source" v-model="record" />` for a standalone form using the protocol’s field types, validation and attachment hooks. Group headings collapse. Steps use their document numbers and indent by level.
 
 Return the stored file reference from `uploadFile` and provide authorized preview metadata through `resolveFileInfo`. Handle `navigate-field` by calling `focusField(key)` on the protocol recorder. Pass `panelVariables` to select or order fields, including schema-only variables.
 

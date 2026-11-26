@@ -1949,7 +1949,10 @@ async function buildPanelFields(nodes: Map<string, AimdNode>): Promise<VNode[]> 
         control = await renderers[scope](node, context)
       }
     }
+    const step = scope === "step" && nodes.has(key) ? node as AimdStepNode : undefined
     rows.push({
+      stepNumber: step ? contextStepNumbers.value[id] ?? step.step : undefined,
+      stepLevel: step?.level,
       key, id, scope, title: meta?.title || field?.title || field?.label || id,
       definition: panelDefinition(node, field, meta, variableSchemas.get(id)),
       required: scope === "var" ? meta?.required ?? (field ? requiredFieldKeys.value.has(key) : undefined) : undefined,

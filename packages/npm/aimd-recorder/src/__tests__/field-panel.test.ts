@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import AimdRecorder from '../components/AimdRecorder.vue'
+import { createEmptyStepRecordItem } from '../composables/useStepTimers'
 
 describe('standalone field panel', () => {
   const content = [
@@ -9,6 +10,19 @@ describe('standalone field panel', () => {
     '{{var|photo: FileIdJPG | None = None, title="Label photo"}}',
     '{{check|inspect, title="Inspect label"}} {{check|legacy}}',
   ].join('\n\n')
+  it.each(['compact', 'detailed'] as const)('shows authored step hierarchy in the %s panel', async fieldDisplay => {
+    const panel = mount(AimdRecorder, { props: {
+      layout: 'field-panel', fieldDisplay, readonly: true,
+      content: ['{{step|first}}', '{{step|child, 2}}', '{{step|leaf, 3}}', '{{step|second}}'].join('\n\n'),
+      modelValue: { step: { historical: { ...createEmptyStepRecordItem(), checked: true } } },
+    } })
+    await flushPromises()
+    const rows = panel.get('[data-panel-group="step"]').findAll('[data-panel-key]')
+    expect(rows.map(row => row.element.querySelector('.aimd-panel-step-number')?.textContent)).toEqual(['1', '1.1', '1.1.1', '2', undefined])
+    expect(rows.map(row => row.attributes('data-step-level'))).toEqual(['1', '2', '3', '1', undefined])
+    panel.unmount()
+  })
+
   it.each([
     { fieldDisplay: 'detailed', locale: 'zh-CN', readonly: false, label: '定位正文' },
     { fieldDisplay: 'compact', locale: 'en-US', readonly: true, label: 'Locate in document' },

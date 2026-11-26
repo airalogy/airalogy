@@ -11,6 +11,7 @@ const content = computed(() => [
   `{{var|location: str, title="${zh.value ? '位置' : 'Location'}"}}`,
   `{{var|photo: FileIdJPG | None = None, title="${zh.value ? '标签照片' : 'Label photo'}"}}`,
   `{{step|prepare, title="${zh.value ? '准备标签' : 'Prepare labels'}", check=True}}`,
+  `{{step|attach, 2, title="${zh.value ? '贴上标签' : 'Attach the label'}"}}`,
   `{{check|review, title="${zh.value ? '核对编号' : 'Verify label'}"}}`,
 ].join('\n\n'))
 const record = ref(createEmptyProtocolRecordData())

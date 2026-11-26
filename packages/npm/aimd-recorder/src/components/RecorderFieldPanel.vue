@@ -8,6 +8,8 @@ export interface PanelField {
   key: string
   title: string
   definition: Array<{ label: keyof AimdRecorderMessages['definition']; text: string }>
+  stepNumber?: string
+  stepLevel?: number
   required?: boolean
   navigate: boolean
   control?: VNode | null
@@ -30,11 +32,12 @@ const FieldControl = ({ field }: { field: PanelField }) => field.control
   <div class="aimd-fields-list" :data-field-display="detailed ? 'detailed' : 'compact'">
     <details v-for="[scope, rows] in groups" :key="scope" open class="aimd-panel-group" :data-panel-group="scope">
       <summary>{{ messages.panel[scope] }}</summary>
-      <div v-for="field in rows" :key="field.key" class="aimd-panel-field" role="group" :aria-label="field.title" :data-panel-key="field.key" :data-panel-field="scope === 'var' ? field.key : undefined">
+      <div v-for="field in rows" :key="field.key" class="aimd-panel-field" role="group" :aria-label="field.title" :data-panel-key="field.key" :data-step-level="field.stepLevel" :data-panel-field="scope === 'var' ? field.key : undefined">
         <div class="aimd-panel-heading">
           <details class="aimd-panel-meta">
             <summary class="aimd-panel-label">
               <span>
+                <span v-if="field.stepNumber" class="aimd-panel-step-number">{{ field.stepNumber }}</span>
                 {{ field.title }}
                 <small v-if="field.required !== undefined">{{ field.required ? messages.common.required : messages.common.optional }}</small>
                 <code v-if="detailed && field.title !== field.id" class="aimd-panel-id">{{ field.id }}</code>

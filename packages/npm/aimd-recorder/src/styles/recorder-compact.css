@@ -62,8 +62,29 @@
 }
 .aimd-fields-list { display: grid; min-width: 0; gap: 0.75rem; }
 .aimd-panel-group { min-width: 0; }
-.aimd-panel-group > summary { cursor: pointer; font-weight: 650; padding: 0.45rem 0; }
-.aimd-recorder-panel .aimd-panel-field { min-width: 0; margin: 0; padding: 0.625rem 0; border-block-end: 1px solid var(--rec-border, #dde3eb); }
+.aimd-panel-group > summary {
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: var(--rec-bg-soft, #f0f4f8);
+  color: var(--aimd-text-primary, #23364c);
+  font-size: 1.075rem;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.aimd-panel-group > summary::marker { font-size: 0.8em; }
+.aimd-panel-group[open] > summary { margin-block-end: 0.35rem; }
+.aimd-panel-group > .aimd-panel-field { margin-inline-start: 0.625rem; }
+.aimd-panel-group > [data-step-level="2"] { margin-inline-start: 1.375rem; }
+.aimd-panel-group > [data-step-level="3"] { margin-inline-start: 2.125rem; }
+.aimd-panel-step-number {
+  margin-inline-end: 0.25em;
+  color: var(--aimd-text-muted, #586577);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.aimd-recorder-panel .aimd-panel-field { min-width: 0; margin-block: 0; padding: 0.625rem 0; border-block-end: 1px solid var(--rec-border, #dde3eb); }
 .aimd-panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
 .aimd-panel-meta { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .aimd-panel-definition { display: grid; grid-template-columns: fit-content(35%) minmax(0, 1fr); gap: 0.25rem 0.75rem; margin: 0.5rem 0; font-size: 0.875em; }
@@ -71,7 +92,7 @@
 .aimd-panel-definition dd { min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .aimd-panel-label {
   display: flex; align-items: center; gap: 0.5rem; min-height: 32px;
-  list-style: none; cursor: pointer; font-weight: 600;
+  list-style: none; cursor: pointer; font-size: 0.9375rem; font-weight: 600;
 }
 .aimd-panel-label::-webkit-details-marker { display: none; }
 .aimd-panel-label::before {
