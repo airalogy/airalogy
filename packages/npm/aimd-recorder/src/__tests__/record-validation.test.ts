@@ -179,6 +179,34 @@ describe("AimdRecorder validation", () => {
     ])
   })
 
+  it("accepts an empty text default in fields and table cells while enforcing explicit requirements", () => {
+    const fields: ExtractedAimdFields = {
+      ...EMPTY_FIELDS,
+      var: ["notes", "mandatory"],
+      var_definitions: [
+        { id: "notes", type: "str", default: "" },
+        { id: "mandatory", type: "str", default: "", kwargs: { required: true } },
+      ],
+      var_table: [{ id: "rows", scope: "var_table", subvars: [{ id: "note", type: "str", default: "" }] }],
+    }
+    const schema = { vars: { type: "object", required: ["mandatory", "rows"], properties: {
+      notes: { type: "string", default: "" }, mandatory: { type: "string" },
+      rows: { type: "array", items: { type: "object", properties: { note: { type: "string", default: "" } } } },
+    } } }
+    const record = createEmptyProtocolRecordData()
+    record.var = { notes: "", mandatory: "", rows: [{ note: "" }] }
+    for (const contract of [undefined, schema]) {
+      expect([...getAimdRequiredFieldKeys(fields, { schema: contract })]).toEqual(["var:mandatory", "var_table:rows"])
+      const issues = validateAimdRecord(fields, record, { messages, schema: contract }).issues
+      expect(issues.map(issue => issue.fieldKey)).toEqual(["var:mandatory"])
+    }
+    record.var.mandatory = "ok"
+    record.var.notes = null
+    expect(validateAimdRecord(fields, record, { messages, schema }).valid).toBe(false)
+    delete record.var.notes
+    expect(validateAimdRecord(fields, record, { messages, schema }).valid).toBe(true)
+  })
+
   it("distinguishes an omitted prefill, an explicitly cleared input and a valid false answer", async () => {
     const wrapper = mount(AimdRecorder, { props: {
       content: '{{var|unit: str = "mg"}} {{var|note: str | None = None}} {{var|flag: Literal[True, False]}}',

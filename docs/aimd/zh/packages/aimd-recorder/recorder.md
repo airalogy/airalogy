@@ -144,6 +144,8 @@ if (!result?.valid) return
 
 Schema 契约同时接受 engine 键（`vars`、`steps`、`checks`）和兼容用的 platform 别名（`research_variable`、`research_step`、`research_check`），覆盖必填、类型、格式、pattern、枚举、数值边界、数组、对象及内建类型约束，也会先归一化上传文件等结构化值。Schema 标记为 required 且不可为空的 Recorder 输入即使已存在于内存 Record，空字符串和空数组仍会判为未填；可为空的属性接受 `null`，也不显示必填标记。没有 Schema 时，Recorder 按 AIMD 声明区分可空与默认值：`unit: str = "mg"` 可以省略，但主动清空会提示必填；`note: str | None = None` 可以留空，也可以省略。显式的 `required` 设置仍受支持。普通变量以必填为主且混有选填时，仅标出少数选填输入。
 
+默认值为空字符串的文本字段和表格列可以保留空字符串，显式声明必填时仍需填写。
+
 Recorder 默认只在当前字段 `change` 或 `blur` 时重新校验，不会清除其他字段的错误；可通过 `validationTriggers` 调整。表格错误使用 `var_table:samples:0:concentration` 这样的精确行列 key 记录、展示和聚焦。
 
 `AimdRecorder` 和 `AimdRecorderEditor` 都暴露 `validate()`、`validateField(fieldKey)`、`clearValidation(fieldKey?)` 和 `focusFirstInvalidField()`。校验结果包含 `issues` 和 `fieldState`。前端提交拦截通过后，仍应执行服务端 Pydantic 权威校验；服务端错误可通过已有 `fieldState` 属性回填。

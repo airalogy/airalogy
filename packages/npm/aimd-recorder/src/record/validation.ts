@@ -81,6 +81,10 @@ function isEmptyValue(value: unknown): boolean {
   return false
 }
 
+function isEmptyDefault(value: unknown): boolean {
+  return value === "" || (Array.isArray(value) && value.length === 0)
+}
+
 function resolveRequired(
   meta: AimdFieldMeta | undefined,
   kwargs: Record<string, unknown> | undefined,
@@ -344,7 +348,8 @@ export function getAimdRequiredFieldKeys(
   }
 
   for (const field of fields.var_definitions ?? []) {
-    addWhenRequired(`var:${field.id}`, field.kwargs, true, field.type, hasOwn(field, "default"))
+    const allowsEmpty = isEmptyDefault(field.default)
+    addWhenRequired(`var:${field.id}`, field.kwargs, !allowsEmpty, field.type, hasOwn(field, "default") && !allowsEmpty)
   }
 
   for (const table of fields.var_table ?? []) {
@@ -353,13 +358,14 @@ export function getAimdRequiredFieldKeys(
     const schemaCovered = schemaCoveredKeys.has(tableKey)
     for (const column of table.subvars ?? []) {
       const columnKey = `${tableKey}:${column.id}`
+      const allowsEmpty = isEmptyDefault(column.default)
       const required = schemaCovered
         ? fieldMeta[columnKey]?.required === true
-          || ((schemaRequiredKeys.has(columnKey) || hasOwn(column, "default")) && !schemaNullableKeys.has(columnKey))
+          || ((schemaRequiredKeys.has(columnKey) || (hasOwn(column, "default") && !allowsEmpty)) && !schemaNullableKeys.has(columnKey))
         : resolveRequired(
             fieldMeta[columnKey],
             column.kwargs,
-            !isNullableVarType(column.type),
+            !allowsEmpty && !isNullableVarType(column.type),
           )
       if (required) keys.add(columnKey)
     }
@@ -691,8 +697,10 @@ function validateValue(
     : resolveRequired(meta, kwargs, inferredRequired && (value === undefined ? !hasDefault : !nullable))
   const allowedNullableEmpty = value === null && nullable && !explicitlyRequired
 
-  const allowedEmptyList = !schemaRequired && !explicitlyRequired && Array.isArray(value) && Array.isArray(input.defaultValue) && input.defaultValue.length === 0
-  if (required && isEmptyValue(value) && !allowedNullableEmpty && !allowedEmptyList) {
+  const matchesEmptyDefault = (value === "" && input.defaultValue === "")
+    || (Array.isArray(value) && Array.isArray(input.defaultValue) && input.defaultValue.length === 0)
+  const allowedEmptyDefault = !schemaRequired && !explicitlyRequired && matchesEmptyDefault
+  if (required && isEmptyValue(value) && !allowedNullableEmpty && !allowedEmptyDefault) {
     addIssue(issues, fieldKey, section, "required", options.messages.required(label), value, details)
     return
   }

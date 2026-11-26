@@ -144,6 +144,8 @@ if (!result?.valid) return
 
 The schema contract accepts both engine keys (`vars`, `steps`, `checks`) and legacy platform aliases (`research_variable`, `research_step`, `research_check`). It validates required, type, format, pattern, enum, numeric, array, object, and built-in-type constraints, including normalized structured values such as uploaded files. Schema-required non-nullable recorder inputs reject empty strings and empty arrays even when the property already exists in the in-memory Record; nullable properties accept `null` and do not show a required marker. Without a schema, Recorder distinguishes nullability from a prefill: `unit: str = "mg"` may be omitted but cannot be cleared, while `note: str | None = None` may be blank or omitted. Explicit `required` overrides are respected. When most variables are required, only the optional minority is labeled.
 
+Text fields and table columns with an empty string as their default accept an empty string unless explicitly required.
+
 Recorder validates only the changed or blurred field by default and preserves unrelated errors; configure this with `validationTriggers`. Table errors are tracked, rendered, and focused by exact row and column keys such as `var_table:samples:0:concentration`.
 
 `AimdRecorder` and `AimdRecorderEditor` expose `validate()`, `validateField(fieldKey)`, `clearValidation(fieldKey?)`, and `focusFirstInvalidField()`. The validation result contains `issues` plus a `fieldState` map. Run authoritative server-side Pydantic validation after the client submit gate, and pass server errors through the existing `fieldState` prop.
