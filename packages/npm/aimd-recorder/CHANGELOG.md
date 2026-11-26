@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.31.2
+
+### Patch Changes
+
+- 92dfb8e: Distinguish field groups from individual entries and show document step numbers and nesting in compact and detailed field panels.
+
 ## 1.31.1
 
 ### Patch Changes
