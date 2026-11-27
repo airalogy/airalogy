@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.16.0
+
+### Minor Changes
+
+- 06508fb: Render ordinary Markdown documents in HTML and Vue with shared typography, GFM, and sanitized HTML while keeping AIMD examples literal.
+
 ## 2.15.1
 
 ### Patch Changes
