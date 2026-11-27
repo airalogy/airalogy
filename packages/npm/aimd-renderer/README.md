@@ -36,6 +36,16 @@ console.log(html)
 console.log(fields)
 ```
 
+## Ordinary Markdown
+
+For a `.md` document, pass `{ format: "md" }` to the HTML or Vue renderer, or use the Vue preview directly. This mode supports GitHub Flavored Markdown and sanitizes inline HTML and links. AIMD field examples remain literal text. In HTML hosts, import `@airalogy/aimd-renderer/styles` and wrap the output in an element with the `aimd-renderer` class. The Vue preview applies the shared typography automatically.
+
+```vue
+<AimdMarkdownPreview :content="minutes" format="md" />
+```
+
+Use `format="aimd"` for protocols. This is the default.
+
 ## Workflow UI
 
 Fenced `workflow` blocks render as structured Workflow UI panels instead of raw YAML. The renderer shows nodes, transitions, workflow-level assigners, transition inputs, target `assign` mappings, retry limits, and optional run-state overlays supplied by the host.

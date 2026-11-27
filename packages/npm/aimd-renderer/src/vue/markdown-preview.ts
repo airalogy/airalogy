@@ -163,6 +163,10 @@ export const AimdMarkdownPreview = defineComponent({
       type: String,
       default: '',
     },
+    format: {
+      type: String as PropType<AimdRendererOptions['format']>,
+      default: undefined,
+    },
     mode: {
       type: String as PropType<RenderContext['mode']>,
       default: 'preview',
@@ -223,6 +227,8 @@ export const AimdMarkdownPreview = defineComponent({
     const env = computed(() => toTemplateEnv(fields.value))
     const renderError = ref('')
     const rendering = ref(false)
+    const format = computed(() => props.format ?? props.renderOptions.format ?? 'aimd')
+    const isRecord = computed(() => format.value === 'aimd' && hasReadonlyRecordData(props.readonlyRecordData))
     let requestId = 0
 
     async function reload() {
@@ -242,12 +248,13 @@ export const AimdMarkdownPreview = defineComponent({
           ...props.renderOptions.elementRenderers,
           ...props.readonlyRecordRenderOptions.elementRenderers,
         }, props.mermaidComponent)
-        const rendered = hasReadonlyRecordData(props.readonlyRecordData)
-          ? await renderReadonlyRecordToVue(props.content, props.readonlyRecordData, {
+        const rendered = isRecord.value
+          ? await renderReadonlyRecordToVue(props.content, props.readonlyRecordData!, {
               gfm: true,
               math: true,
               ...props.renderOptions,
               ...props.readonlyRecordRenderOptions,
+              format: format.value,
               elementRenderers: mergedElementRenderers,
               resolveAsset: props.resolveAsset ?? props.readonlyRecordRenderOptions.resolveAsset,
             })
@@ -256,9 +263,10 @@ export const AimdMarkdownPreview = defineComponent({
               math: true,
               mode: props.mode,
               ...props.renderOptions,
+              format: format.value,
               elementRenderers: createElementRenderers(
                 props.renderOptions.elementRenderers,
-                props.mermaidComponent,
+                format.value === 'md' ? undefined : props.mermaidComponent,
               ),
               context: createRenderContext(props.mode, props.readonly, props.value, props.renderOptions),
             })
@@ -292,6 +300,7 @@ export const AimdMarkdownPreview = defineComponent({
     watch(
       () => [
         props.content,
+        format.value,
         props.mode,
         props.readonly,
         props.value,
@@ -319,7 +328,7 @@ export const AimdMarkdownPreview = defineComponent({
     })
 
     return () => {
-      const readonlyRecord = hasReadonlyRecordData(props.readonlyRecordData)
+      const readonlyRecord = isRecord.value
       const children: VNodeChild[] = renderError.value
         ? [h('pre', { class: 'aimd-markdown-preview__error' }, renderError.value)]
         : nodes.value

@@ -67,6 +67,8 @@ export type AimdHtmlNodeRenderer = (
 ) => Element | null | undefined
 
 export interface AimdRendererOptions extends ProcessorOptions, AimdRendererI18nOptions, AimdWorkflowRenderOptions {
+  /** Ordinary Markdown keeps AIMD syntax literal and sanitizes the generated HTML. */
+  format?: "aimd" | "md"
   assignerVisibility?: AimdAssignerVisibility
   aimdElementRenderers?: Partial<Record<AimdFieldType, AimdHtmlNodeRenderer>>
   resolveAssetUrl?: AimdAssetUrlResolver
@@ -527,6 +529,7 @@ function liftBlockVarElements(tree: HastRoot, blockVarTypes?: string[]): void {
 import { toHtml } from "hast-util-to-html"
 import rehypeKatex from "rehype-katex"
 import rehypeRaw from "rehype-raw"
+import rehypeSanitize from "rehype-sanitize"
 import remarkBreaks from "remark-breaks"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
@@ -1825,7 +1828,14 @@ function createBaseProcessor(options: AimdRendererOptions = {}) {
  * Create HTML output processor
  */
 export function createHtmlProcessor(options: AimdRendererOptions = {}) {
-  const { math = true, sanitize = true } = options
+  if (options.format === "md") {
+    const processor = unified().use(remarkParse)
+    if (options.gfm !== false) processor.use(remarkGfm)
+    if (options.breaks) processor.use(remarkBreaks)
+    return processor.use(remarkRehype, { allowDangerousHtml: true }).use(rehypeRaw).use(rehypeSanitize)
+  }
+
+  const { math = true } = options
   const aimdHandler = createAimdHandler(options)
 
   const processor = createBaseProcessor(options)
@@ -1851,16 +1861,17 @@ export function createHtmlProcessor(options: AimdRendererOptions = {}) {
 // Public render functions
 // ---------------------------------------------------------------------------
 
-/**
- * Render Markdown/AIMD to HTML string
- */
-export async function renderToHtml(
-  content: string,
-  options: AimdRendererOptions = {},
-): Promise<{ html: string, fields: ExtractedAimdFields }> {
-  await ensureRendererStylesLoaded()
+function renderPlainMarkdown(content: string, options: AimdRendererOptions) {
   const processor = createHtmlProcessor(options)
+  const hastTree = processor.runSync(processor.parse(content)) as HastRoot
+  return { hastTree, fields: createEmptyExtractedFields() }
+}
 
+async function renderDocument(content: string, options: AimdRendererOptions) {
+  await ensureRendererStylesLoaded()
+  if (options.format === "md") return renderPlainMarkdown(content, options)
+
+  const processor = createHtmlProcessor(options)
   const { content: protectedContent, file } = createAimdParseInput(content)
   const tree = processor.parse(protectedContent)
   const hastTree = await processor.run(tree, file) as HastRoot
@@ -1880,6 +1891,17 @@ export async function renderToHtml(
   await highlightVisibleAssigners(hastTree, options)
   moveReferenceSectionsToEnd(hastTree)
   renderWorkflowBlocks(hastTree, fields, options)
+  return { hastTree, fields }
+}
+
+/**
+ * Render Markdown/AIMD to HTML string
+ */
+export async function renderToHtml(
+  content: string,
+  options: AimdRendererOptions = {},
+): Promise<{ html: string, fields: ExtractedAimdFields }> {
+  const { hastTree, fields } = await renderDocument(content, options)
   const html = toHtml(hastTree, { allowDangerousHtml: true })
 
   return { html, fields }
@@ -1892,28 +1914,7 @@ export async function renderToVue(
   content: string,
   options: AimdRendererOptions & VueRendererOptions = {},
 ): Promise<RenderResult> {
-  await ensureRendererStylesLoaded()
-  const processor = createHtmlProcessor(options)
-
-  const { content: protectedContent, file } = createAimdParseInput(content)
-  const tree = processor.parse(protectedContent)
-  const hastTree = await processor.run(tree, file) as HastRoot
-
-  const fields = getExtractedFields(file)
-  annotateStepReferenceSequence(hastTree, fields, options)
-  assignFigureSequenceNumbers(hastTree, fields)
-  assignMediaSequenceNumbers(hastTree, fields, createAimdRendererMessages(options.locale, options.messages).media)
-  annotateCitationReferenceLabels(hastTree, fields)
-  liftBlockVarElements(hastTree, options.blockVarTypes)
-  if (options.groupStepBodies) {
-    groupStepBodies(hastTree)
-  }
-  if (options.groupCheckBodies) {
-    groupCheckBodies(hastTree)
-  }
-  await highlightVisibleAssigners(hastTree, options)
-  moveReferenceSectionsToEnd(hastTree)
-  renderWorkflowBlocks(hastTree, fields, options)
+  const { hastTree, fields } = await renderDocument(content, options)
   const nodes = renderToVNodes(hastTree, options)
 
   return { nodes, fields }
@@ -1922,7 +1923,8 @@ export async function renderToVue(
 /**
  * Parse Markdown/AIMD and extract field information (no rendering)
  */
-export function parseAndExtract(content: string): ExtractedAimdFields {
+export function parseAndExtract(content: string, options: Pick<AimdRendererOptions, "format"> = {}): ExtractedAimdFields {
+  if (options.format === "md") return createEmptyExtractedFields()
   const processor = unified()
     .use(remarkParse)
     .use(remarkAimd)
@@ -1941,6 +1943,11 @@ export function renderToHtmlSync(
   content: string,
   options: AimdRendererOptions = {},
 ): { html: string, fields: ExtractedAimdFields } {
+  if (options.format === "md") {
+    const { hastTree, fields } = renderPlainMarkdown(content, options)
+    return { html: toHtml(hastTree), fields }
+  }
+
   // Sync mode does not support KaTeX stylesheet loading, so keep math disabled here.
   const processor = createHtmlProcessor({ ...options, math: false })
 
@@ -1968,8 +1975,6 @@ export function renderToHtmlSync(
  * Create reusable renderer instance
  */
 export function createRenderer(options: AimdRendererOptions = {}) {
-  const processor = createHtmlProcessor(options)
-
   return {
     /**
      * Render to HTML
@@ -1992,7 +1997,7 @@ export function createRenderer(options: AimdRendererOptions = {}) {
      * Extract fields only
      */
     extractFields(content: string): ExtractedAimdFields {
-      return parseAndExtract(content)
+      return parseAndExtract(content, options)
     },
   }
 }

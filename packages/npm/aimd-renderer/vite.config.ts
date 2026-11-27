@@ -24,6 +24,7 @@ export default defineConfig({
         'remark-breaks',
         'remark-rehype',
         'rehype-raw',
+        'rehype-sanitize',
         'rehype-katex',
         'hast-util-to-html',
         'shiki',
